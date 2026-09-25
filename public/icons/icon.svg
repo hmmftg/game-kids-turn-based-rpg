@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="محله‌ی مهربانی">
+  <rect width="512" height="512" rx="96" fill="#cfe9ef" />
+  <rect x="96" y="232" width="128" height="160" fill="#2f6f8f" />
+  <rect x="288" y="200" width="128" height="192" fill="#8a4fa0" />
+  <path d="M80 240 160 168 240 240Z" fill="#123b3a" />
+  <path d="M272 208 352 136 432 208Z" fill="#123b3a" />
+  <circle cx="256" cy="392" r="36" fill="#f2b33d" />
+</svg>

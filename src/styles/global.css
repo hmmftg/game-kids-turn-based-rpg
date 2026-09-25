@@ -1,0 +1,234 @@
+@import './tokens.css';
+@import './hud.css';
+
+/* Locally bundled Persian subset — no font CDN, no remote requests. */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('../assets/fonts/vazirmatn-Regular-subset.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('../assets/fonts/vazirmatn-Bold-subset.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-fa);
+  font-size: var(--font-size-md);
+  color: var(--color-ink);
+  background: var(--color-sky);
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+#root {
+  position: relative;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 4px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.app {
+  position: absolute;
+  inset: 0;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.layer--overlay {
+  background: var(--color-overlay);
+  z-index: 40;
+}
+
+.panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+  max-width: min(720px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin: 0 0 var(--space-3);
+}
+
+.text {
+  font-size: var(--font-size-md);
+  line-height: 1.8;
+  margin: 0;
+}
+
+.text--soft {
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-sm);
+}
+
+.btn {
+  min-inline-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--duration-fast) ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn--secondary {
+  background: var(--color-surface-strong);
+  color: var(--color-ink);
+}
+
+.btn--accent {
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+
+.btn--large {
+  min-inline-size: var(--touch-large);
+  min-block-size: var(--touch-large);
+  font-size: var(--font-size-lg);
+}
+
+.btn--icon {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.draft-badge {
+  position: absolute;
+  inset-block-start: calc(var(--safe-top) + var(--space-2));
+  inset-inline-start: calc(var(--safe-left) + var(--space-2));
+  z-index: 60;
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* Landscape blocker: pure CSS so it works before React hydrates. */
+.orientation-blocker {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  .orientation-blocker {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--color-sky);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    text-align: center;
+    padding: var(--space-5);
+  }
+}
+
+.rotate-icon {
+  width: 96px;
+  height: 96px;
+  border: 8px solid var(--color-ink);
+  border-radius: var(--radius-md);
+  animation: rotate-hint 2.4s ease-in-out infinite;
+}
+
+@keyframes rotate-hint {
+  0%,
+  40% {
+    transform: rotate(0deg);
+  }
+  60%,
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-icon {
+    animation: none;
+    transform: rotate(90deg);
+  }
+}

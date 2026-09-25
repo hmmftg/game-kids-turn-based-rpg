@@ -3,6 +3,7 @@ agent: devin-local
 session: paint-bathtub
 created: 2026-09-23T13:24:33Z
 ---
+
 # Persian Children’s Three.js RPG Vertical Slice
 
 Build a privacy-first, offline-capable Persian RTL browser RPG for ages 3–7, using a lightweight React Three Fiber hub and three nonviolent, scholar-reviewed daily-manners quests.
