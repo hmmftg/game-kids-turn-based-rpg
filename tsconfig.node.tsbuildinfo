@@ -1,0 +1,1 @@
+{"root":["./vite.config.ts","./vitest.config.ts","./playwright.config.ts","./scripts/check-budgets.ts","./scripts/validate-content.ts","./e2e/slice.spec.ts"],"version":"6.0.3"}
