@@ -33,9 +33,17 @@ export function selectQuestStickerId(questId: QuestId): string {
   return getQuestDefinition(questId).stickerId;
 }
 
-/** Autosave is only allowed from a stable mode, after a stable transition. */
+/**
+ * Autosave is only allowed from a stable mode, after a stable transition, and
+ * never over a `recovered` save: a corrupt or newer-version payload stays
+ * untouched until the parent confirms a reset.
+ */
 export function shouldAutosave(previous: GameState, next: GameState): boolean {
-  return next.autosaveToken !== previous.autosaveToken && isStableMode(next.mode);
+  return (
+    next.autosaveToken !== previous.autosaveToken &&
+    isStableMode(next.mode) &&
+    next.saveHealth !== 'recovered'
+  );
 }
 
 export function selectIsOverlayOpen(state: GameState): boolean {

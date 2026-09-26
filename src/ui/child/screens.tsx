@@ -21,15 +21,20 @@ export function OrientationScreen() {
   );
 }
 
+/**
+ * Non-covering notice shown in place of the hub hint when WebGL is missing.
+ * It must not overlay the quest trail or other DOM controls — the DOM fallback
+ * is how the child actually plays.
+ */
 export function WebglFallbackScreen({ onContinue }: { readonly onContinue: () => void }) {
   return (
-    <div className="layer" data-testid="webgl-fallback">
-      <h1 className="title">{FA.webglTitle}</h1>
+    <section className="webgl-fallback" data-testid="webgl-fallback">
+      <h1 className="subtitle">{FA.webglTitle}</h1>
       <p className="text">{FA.webglHint}</p>
       <button type="button" className="btn btn--large" onClick={onContinue}>
         {FA.webglAction}
       </button>
-    </div>
+    </section>
   );
 }
 

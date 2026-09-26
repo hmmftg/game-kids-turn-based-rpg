@@ -37,7 +37,12 @@ export class IndexedDbSaveRepository implements SaveRepository {
   constructor(private readonly clock: () => number = () => Date.now()) {}
 
   private connect(): Promise<IDBDatabase> {
-    this.db ??= openDatabase();
+    // A rejected open is never cached: a transient IndexedDB failure must not
+    // disable saving for the rest of the session — the next call retries.
+    this.db ??= openDatabase().catch((error: unknown) => {
+      this.db = null;
+      throw error;
+    });
     return this.db;
   }
 

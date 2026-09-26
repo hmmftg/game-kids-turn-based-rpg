@@ -93,6 +93,59 @@ describe('gameReducer — boot and title', () => {
     state = gameReducer(state, { type: 'START_PRESSED' }, NOW);
     expect(state.mode).toBe('hub');
   });
+
+  it('applies a boot that finishes while the portrait blocker is up', () => {
+    let state = gameReducer(
+      createInitialState(NOW),
+      { type: 'ORIENTATION_CHANGED', orientation: 'portrait' },
+      NOW,
+    );
+    expect(state.mode).toBe('orientationBlocked');
+    state = gameReducer(state, { type: 'BOOT_LOADED', persisted: null, health: 'fresh' }, NOW);
+    expect(state.mode).toBe('orientationBlocked');
+    expect(state.saveHealth).toBe('fresh');
+    state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW);
+    expect(state.mode).toBe('title');
+  });
+
+  it('restores the saved avatar even when boot completes under the blocker', () => {
+    const persisted = { ...createFreshPersistedState(NOW), avatarId: 'avatar-arta' as const };
+    let state = gameReducer(
+      createInitialState(NOW),
+      { type: 'ORIENTATION_CHANGED', orientation: 'portrait' },
+      NOW,
+    );
+    state = gameReducer(state, { type: 'BOOT_LOADED', persisted, health: 'loaded' }, NOW);
+    expect(state.avatarId).toBe('avatar-arta');
+    state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW);
+    expect(state.mode).toBe('title');
+    state = gameReducer(state, { type: 'START_PRESSED' }, NOW);
+    expect(state.mode).toBe('hub');
+  });
+
+  it('keeps a failed boot fatal once the device is landscape again', () => {
+    let state = gameReducer(
+      createInitialState(NOW),
+      { type: 'ORIENTATION_CHANGED', orientation: 'portrait' },
+      NOW,
+    );
+    state = gameReducer(state, { type: 'BOOT_FAILED', reason: 'idb' }, NOW);
+    expect(state.mode).toBe('orientationBlocked');
+    state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW);
+    expect(state.mode).toBe('fatalFallback');
+    expect(state.fatalReason).toBe('idb');
+  });
+
+  it('never autosaves over a recovered save', () => {
+    const recovered = gameReducer(
+      createInitialState(NOW),
+      { type: 'BOOT_LOADED', persisted: null, health: 'recovered' },
+      NOW,
+    );
+    const started = gameReducer(recovered, { type: 'START_PRESSED' }, NOW);
+    expect(started.mode).toBe('avatarSelect');
+    expect(shouldAutosave(recovered, started)).toBe(false);
+  });
 });
 
 describe('gameReducer — invalid transitions', () => {

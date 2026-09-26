@@ -95,20 +95,30 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
 
   switch (command.type) {
     case 'BOOT_LOADED': {
-      if (state.mode !== 'boot') return state;
+      // A portrait rotation may interrupt boot; the result is still applied and
+      // surfaces as soon as the device is landscape again.
+      const booting = state.mode === 'boot' || state.interruptedMode === 'boot';
+      if (!booting) return state;
+      const blocked = state.mode === 'orientationBlocked';
       const base: GameState = {
         ...state,
-        mode: 'title',
+        mode: blocked ? 'orientationBlocked' : 'title',
         resumeMode: 'title',
+        interruptedMode: blocked ? 'title' : state.interruptedMode,
         saveHealth: command.health,
         corruptSaveDetected: command.health === 'recovered',
       };
       return command.persisted ? applyPersisted(base, command.persisted) : base;
     }
 
-    case 'BOOT_FAILED':
-      if (state.mode !== 'boot') return state;
+    case 'BOOT_FAILED': {
+      const booting = state.mode === 'boot' || state.interruptedMode === 'boot';
+      if (!booting) return state;
+      if (state.mode === 'orientationBlocked') {
+        return { ...state, interruptedMode: 'fatalFallback', fatalReason: command.reason };
+      }
       return { ...state, mode: 'fatalFallback', fatalReason: command.reason };
+    }
 
     case 'ORIENTATION_CHANGED': {
       if (state.orientation === command.orientation) return state;

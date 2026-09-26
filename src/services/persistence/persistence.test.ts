@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IndexedDbSaveRepository } from './indexedDbRepository.ts';
 import { MemorySaveRepository } from './memoryRepository.ts';
 import { healthFromLoadResult, persistedFromLoadResult } from './repository.ts';
@@ -72,5 +72,29 @@ describe('save health reporting', () => {
     await repository.save({ nonsense: true } as never);
     const result = await repository.load();
     expect(result.status).toBe('corrupt');
+  });
+});
+
+describe('IndexedDB repository resilience', () => {
+  it('reconnects after a transient open failure instead of staying broken', async () => {
+    const repository = new IndexedDbSaveRepository(() => NOW);
+    const realOpen = indexedDB.open.bind(indexedDB);
+    let shouldFail = true;
+    const spy = vi.spyOn(indexedDB, 'open').mockImplementation(((
+      name: string,
+      version?: number,
+    ) => {
+      if (!shouldFail) return realOpen(name, version);
+      const request = { error: new Error('transient-open') } as IDBOpenDBRequest;
+      queueMicrotask(() => request.onerror?.(new Event('error')));
+      return request;
+    }) as typeof indexedDB.open);
+    try {
+      await expect(repository.load()).rejects.toThrow('transient-open');
+      shouldFail = false;
+      await expect(repository.load()).resolves.toMatchObject({ status: 'empty' });
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

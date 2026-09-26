@@ -7,9 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { isStableMode } from '../domain/game/checkpoints.ts';
 import { createInitialState, toPersistedState } from '../domain/game/initialState.ts';
 import { gameReducer } from '../domain/game/reducer.ts';
-import { shouldAutosave } from '../domain/game/selectors.ts';
 import type { Command, GameState } from '../domain/game/types.ts';
 import { audioService } from '../services/audio/audioService.ts';
 import {
@@ -44,6 +44,7 @@ export function GameProvider({
   const [updateReady, setUpdateReady] = useState(false);
   const repositoryRef = useRef<SaveRepository | null>(repository ?? null);
   const previousRef = useRef<GameState>(state);
+  const lastSavedTokenRef = useRef(state.autosaveToken);
   const updateRef = useRef<() => void>(() => {});
 
   // Boot: capabilities first, then the save, so the reducer sees a coherent world.
@@ -76,11 +77,20 @@ export function GameProvider({
     };
   }, []);
 
-  // Autosave, but only after a stable transition (never mid-animation/encounter).
+  // Autosave once the game is back in a stable mode (never mid-encounter).
+  // A token bump under an overlay stays pending until then, and audio/quality
+  // changes always flush so pause-menu settings survive a reload. A corrupt or
+  // newer-version save is never overwritten; the gated reset writes fresh data.
   useEffect(() => {
     const previous = previousRef.current;
     previousRef.current = state;
-    if (!shouldAutosave(previous, state)) return;
+    if (state.saveHealth === 'recovered') return;
+    const settingsChanged =
+      previous.audio !== state.audio || previous.qualityTier !== state.qualityTier;
+    const stableSaveDue =
+      isStableMode(state.mode) && state.autosaveToken !== lastSavedTokenRef.current;
+    if (!settingsChanged && !stableSaveDue) return;
+    lastSavedTokenRef.current = state.autosaveToken;
     void repositoryRef.current?.save(toPersistedState(state)).catch(() => {
       /* storage may be evicted; the game stays playable */
     });
@@ -123,8 +133,18 @@ export function GameProvider({
   }, []);
 
   const resetProgress = useCallback(() => {
-    void repositoryRef.current?.clear();
-    dispatch({ type: 'RESET_PROGRESS' });
+    const repo = repositoryRef.current;
+    if (!repo) {
+      dispatch({ type: 'RESET_PROGRESS' });
+      return;
+    }
+    // Clear first so the autosave triggered by the reset cannot race it.
+    void repo
+      .clear()
+      .catch(() => {
+        /* storage may be evicted; the game stays playable */
+      })
+      .finally(() => dispatch({ type: 'RESET_PROGRESS' }));
   }, []);
 
   const playSfx = useCallback((id: string) => {

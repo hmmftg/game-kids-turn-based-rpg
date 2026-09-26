@@ -4,7 +4,7 @@ import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
 import type { AnchorId, IconId, QuestId } from '../domain/game/types.ts';
-import { getQuestDefinition } from '../domain/quests/definitions.ts';
+import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { canStartQuest } from '../domain/quests/prerequisites.ts';
 import { DialogueCard } from '../ui/child/DialogueCard.tsx';
 import { EncounterPanel } from '../ui/child/EncounterPanel.tsx';
@@ -58,8 +58,10 @@ export function App() {
     (questId: QuestId) => {
       const definition = getQuestDefinition(questId);
       const anchor = anchorForNpc(definition.steps[0]?.npcId ?? 'npc-elder');
-      if (anchor) hubRef.current?.goTo(anchor.id);
-      openNpc(nodeForQuest(questId));
+      const open = () => openNpc(nodeForQuest(questId));
+      // The avatar walks to the landmark first and the dialogue opens on
+      // arrival; without a walker (no WebGL) the dialogue opens directly.
+      if (!anchor || !hubRef.current?.goTo(anchor.id, open)) open();
     },
     [openNpc],
   );
@@ -134,18 +136,16 @@ export function App() {
   }
 
   if (state.avatarId === null) return <LoadingScreen />;
-  if (!state.webglAvailable && state.mode === 'hub') {
-    // The whole slice stays playable through the DOM trail when WebGL is missing.
-    return (
-      <div className="hud" data-testid="hud">
-        <WebglFallbackScreen onContinue={() => goToQuest('quest-greeting')} />
-        <QuestTrail statuses={statuses} onGo={goToQuest} />
-      </div>
-    );
-  }
 
   const dialogueNode = state.dialogue ? getDialogueNode(state.dialogue.nodeId) : null;
   const offeredQuest = dialogueNode?.offersQuestId ?? null;
+  // First unfinished chapter — the big fallback button continues progress
+  // instead of always reopening the greeting quest.
+  const continueQuestId =
+    QUEST_DEFINITIONS.find((quest) => {
+      const status = statuses[quest.id];
+      return status === 'available' || status === 'active';
+    })?.id ?? 'quest-greeting';
 
   return (
     <div className="hud" data-testid="hud">
@@ -227,7 +227,13 @@ export function App() {
         ) : null}
 
         {state.mode === 'hub' ? (
-          <p className="text text--soft hud__hint">{FA.hotspotHint}</p>
+          state.webglAvailable ? (
+            <p className="text text--soft hud__hint">{FA.hotspotHint}</p>
+          ) : (
+            // The whole slice stays playable through the DOM trail when WebGL
+            // is missing; the notice must not cover the trail or the HUD.
+            <WebglFallbackScreen onContinue={() => goToQuest(continueQuestId)} />
+          )
         ) : null}
       </div>
     </div>

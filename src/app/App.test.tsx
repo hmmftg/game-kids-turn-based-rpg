@@ -64,4 +64,39 @@ describe('App', () => {
     await user.click(screen.getByTestId('parent-gate-cancel'));
     await waitFor(() => expect(screen.queryByTestId('parent-gate')).toBeNull());
   });
+
+  it('keeps the quest trail usable alongside the WebGL fallback notice', async () => {
+    const { user } = renderApp();
+    await reachHub(user);
+
+    expect(await screen.findByTestId('webgl-fallback')).toBeInTheDocument();
+    await user.click(screen.getByTestId('trail-quest-greeting'));
+    expect(await screen.findByTestId('start-quest')).toBeInTheDocument();
+  });
+
+  it('persists pause-menu settings after resuming', async () => {
+    const repository = new MemorySaveRepository();
+    const { user } = renderApp(repository);
+    await reachHub(user);
+
+    await user.click(screen.getByTestId('pause-button'));
+    await user.click(await screen.findByTestId('toggle-music'));
+    await user.click(screen.getByTestId('resume-button'));
+
+    await waitFor(() => {
+      expect(repository.peek()).toMatchObject({ audio: { musicMuted: true } });
+    });
+  });
+
+  it('does not overwrite an unreadable save before a gated reset', async () => {
+    const corrupt = { schemaVersion: 'nope', avatarId: 'avatar-aban' };
+    const repository = new MemorySaveRepository(corrupt);
+    const { user } = renderApp(repository);
+
+    await user.click(await screen.findByTestId('start-button'));
+    await user.click(await screen.findByTestId('avatar-aban'));
+    await screen.findByTestId('hud');
+
+    expect(repository.peek()).toEqual(corrupt);
+  });
 });

@@ -17,8 +17,12 @@ import {
 } from './models/modelProvider.ts';
 
 export interface HubHandle {
-  /** Walk to an anchor from a DOM action button (the accessible alternative to tapping). */
-  readonly goTo: (anchor: AnchorId) => void;
+  /**
+   * Walk to an anchor from a DOM action button (the accessible alternative to
+   * tapping). Returns false when walking is not possible right now. `onArrive`,
+   * when given, runs once the avatar reaches the anchor.
+   */
+  readonly goTo: (anchor: AnchorId, onArrive?: () => void) => boolean;
   readonly cancel: () => void;
 }
 
@@ -93,7 +97,7 @@ export function Hub({
   const walker = useWalker('anchor-square', onArrive, interactive);
   useImperativeHandle(
     handleRef,
-    () => ({ goTo: (anchor) => void walker.walkTo(anchor), cancel: walker.cancel }),
+    () => ({ goTo: (anchor, onArrive) => walker.walkTo(anchor, onArrive), cancel: walker.cancel }),
     [walker],
   );
 

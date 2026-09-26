@@ -12,7 +12,11 @@ export interface Walker {
   readonly bobbing: number;
   readonly at: AnchorId;
   readonly moving: boolean;
-  readonly walkTo: (target: AnchorId) => boolean;
+  /**
+   * Walk to an anchor. `onArrived`, when given, replaces the hook-level
+   * `onArrive` for this walk's final arrival only.
+   */
+  readonly walkTo: (target: AnchorId, onArrived?: () => void) => boolean;
   readonly cancel: () => void;
 }
 
@@ -35,27 +39,37 @@ export function useWalker(
   const [bobbing, setBobbing] = useState(0);
   const [at, setAt] = useState<AnchorId>(start);
   const [moving, setMoving] = useState(false);
+  const pendingArrival = useRef<(() => void) | null>(null);
+
+  const finishWalk = useCallback(
+    (anchor: AnchorId) => {
+      const pending = pendingArrival.current;
+      pendingArrival.current = null;
+      if (pending) pending();
+      else onArrive(anchor);
+    },
+    [onArrive],
+  );
 
   const cancel = useCallback(() => {
     queue.current = [];
+    pendingArrival.current = null;
     invalidate();
   }, [invalidate]);
 
   const walkTo = useCallback(
-    (target: AnchorId) => {
+    (target: AnchorId, onArrived?: () => void) => {
       if (!enabled) return false;
       const path = findPath(at, target);
       if (path.length === 0) return false;
       queue.current = [...path.slice(1)];
+      pendingArrival.current = onArrived ?? null;
       setMoving(queue.current.length > 0);
-      if (queue.current.length === 0) {
-        onArrive(target);
-        return true;
-      }
-      invalidate();
+      if (queue.current.length === 0) finishWalk(target);
+      else invalidate();
       return true;
     },
-    [at, enabled, invalidate, onArrive],
+    [at, enabled, invalidate, finishWalk],
   );
 
   useEffect(() => {
@@ -81,7 +95,7 @@ export function useWalker(
       setAt(next);
       if (queue.current.length === 0) {
         setMoving(false);
-        onArrive(next);
+        finishWalk(next);
       }
     } else {
       setPosition({

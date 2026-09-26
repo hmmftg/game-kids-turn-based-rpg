@@ -41,4 +41,21 @@ describe('content validation', () => {
       expect(record.review.reviewedAt).toBe('');
     }
   });
+
+  it('rejects approved dialogue that still lacks named reviewers', () => {
+    const node = DIALOGUE_NODES[0];
+    if (!node) throw new Error('expected dialogue nodes');
+    const original = node.review;
+    (node as { review: typeof original }).review = { ...original, status: 'approved' };
+    try {
+      const report = validateContent({ requireApproved: true });
+      expect(
+        report.issues.some(
+          (issue) => issue.code === 'incomplete-review' && issue.where === node.id,
+        ),
+      ).toBe(true);
+    } finally {
+      (node as { review: typeof original }).review = original;
+    }
+  });
 });

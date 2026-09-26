@@ -355,6 +355,13 @@ export function validateContent(
         where: node.id,
         message: `Dialogue node is "${node.review.status}".`,
       });
+    } else if (!isFullyReviewed(node.review)) {
+      issues.push({
+        severity: 'error',
+        code: 'incomplete-review',
+        where: node.id,
+        message: 'Approved dialogue must name its reviewers and review date.',
+      });
     }
   }
 
