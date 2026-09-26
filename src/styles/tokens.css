@@ -1,0 +1,53 @@
+/* Design tokens. Sizes are CSS pixels; touch targets never go below 64px. */
+:root {
+  --color-sky: #cfe8ff;
+  --color-ground: #f4e6c8;
+  --color-surface: #fffaf2;
+  --color-surface-strong: #ffffff;
+  --color-ink: #23303d;
+  --color-ink-soft: #5a6b7b;
+  --color-primary: #2f6f4f;
+  --color-primary-ink: #ffffff;
+  --color-accent: #e08a3c;
+  --color-accent-soft: #ffe2bd;
+  --color-focus: #1b4f9c;
+  --color-overlay: rgba(23, 33, 43, 0.62);
+  --color-sticker: #f5c451;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+
+  --touch-min: 64px;
+  --touch-large: 96px;
+
+  --font-fa: 'Vazirmatn', system-ui, sans-serif;
+  --font-size-sm: 16px;
+  --font-size-md: 20px;
+  --font-size-lg: 28px;
+  --font-size-xl: 40px;
+
+  --shadow-card: 0 6px 18px rgba(35, 48, 61, 0.18);
+  --duration-fast: 160ms;
+  --duration-slow: 420ms;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 1ms;
+    --duration-slow: 1ms;
+  }
+}
