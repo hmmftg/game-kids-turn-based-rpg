@@ -1,2 +1,14 @@
-node_modules
-dist
+node_modules/
+dist/
+dist-ssr/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+*.local
+.DS_Store
+.vite/
+.tsbuildinfo
+*.tsbuildinfo
+dev-dist/
