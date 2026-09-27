@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { ComponentType } from 'react';
-import type { HeadwearId } from '../../domain/game/types.ts';
+import type { HeadwearId, QualityTier } from '../../domain/game/types.ts';
 
 export interface Palette {
   readonly body: string;
@@ -13,6 +13,20 @@ export interface GroundPoint {
   readonly z: number;
 }
 
+/**
+ * Decorative density driven by the existing quality tier. The tier is the only
+ * quality system; `detailLevel` is purely how much decoration models draw —
+ * low keeps silhouettes and key accents, medium is the standard look, high adds
+ * secondary accents. It never changes the rendering pipeline.
+ */
+export type DetailLevel = 0 | 1 | 2;
+
+export function detailLevelFor(tier: QualityTier): DetailLevel {
+  if (tier === 'low') return 0;
+  if (tier === 'medium') return 1;
+  return 2;
+}
+
 export interface FigureProps {
   readonly position: GroundPoint;
   readonly rotationY?: number;
@@ -22,6 +36,8 @@ export interface FigureProps {
   readonly label?: string;
   /** Cosmetic headwear layer; omitted/'none' leaves the head uncovered. */
   readonly headwear?: HeadwearId;
+  /** Decorative density; omitted defaults to the medium look. */
+  readonly detailLevel?: DetailLevel;
 }
 
 export interface LandmarkProps {
@@ -29,6 +45,7 @@ export interface LandmarkProps {
   readonly palette: Palette;
   readonly height?: number;
   readonly width?: number;
+  readonly detailLevel?: DetailLevel;
 }
 
 export interface PropProps {
@@ -36,6 +53,7 @@ export interface PropProps {
   readonly palette: Palette;
   readonly scale?: number;
   readonly shape?: 'box' | 'cylinder';
+  readonly detailLevel?: DetailLevel;
 }
 
 /**

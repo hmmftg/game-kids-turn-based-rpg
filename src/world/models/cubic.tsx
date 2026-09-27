@@ -1,15 +1,11 @@
-import { useMemo } from 'react';
-import * as THREE from 'three';
 import type { HeadwearId } from '../../domain/game/types.ts';
 import type { FigureProps, LandmarkProps, PropProps } from './modelProvider.ts';
 import { noRaycast } from './raycast.ts';
+import { BOX, CYLINDER, sharedLambert } from './shared.ts';
 
-const BOX = new THREE.BoxGeometry(1, 1, 1);
-const CYLINDER = new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
-
-function useMaterial(color: string): THREE.MeshLambertMaterial {
-  return useMemo(() => new THREE.MeshLambertMaterial({ color }), [color]);
-}
+// Materials come from the module-level registry so repeated details across the
+// whole scene share one MeshLambertMaterial instance per color.
+const useMaterial = sharedLambert;
 
 const HEADWEAR_COLORS: Record<Exclude<HeadwearId, 'none'>, string> = {
   scarf: '#c96f8d',

@@ -16,6 +16,7 @@ import {
   NPC_PALETTE,
   PROP_PALETTE,
   useModels,
+  type DetailLevel,
 } from './models/modelProvider.ts';
 
 export interface HubHandle {
@@ -34,6 +35,8 @@ export interface HubProps {
   readonly questStatuses: Record<QuestId, QuestStatus>;
   readonly completedCount: number;
   readonly interactive: boolean;
+  /** Decorative density derived from the quality tier (0/1/2). */
+  readonly detailLevel: DetailLevel;
   /** The quest the objective chip currently points at, if any. */
   readonly suggestedQuestId: QuestId | null;
   readonly onArrive: (anchor: AnchorId) => void;
@@ -169,6 +172,7 @@ export function Hub({
   questStatuses,
   completedCount,
   interactive,
+  detailLevel,
   suggestedQuestId,
   onArrive,
   handleRef,
@@ -286,6 +290,7 @@ export function Hub({
             <models.Landmark
               position={{ x: anchor.x, z: anchor.z - 1.2 }}
               palette={LANDMARK_PALETTE}
+              detailLevel={detailLevel}
             />
             <Hotspot
               x={anchor.x}
@@ -325,13 +330,23 @@ export function Hub({
             rotationY={facing}
             palette={NPC_PALETTE}
             label={anchor.npcId ?? ''}
+            detailLevel={detailLevel}
           />
         );
       })}
 
-      <models.Prop position={{ x: 1.4, z: 1.2 }} palette={PROP_PALETTE} shape="cylinder" />
-      <models.Prop position={{ x: -1.5, z: -1.1 }} palette={PROP_PALETTE} />
-      <models.Prop position={{ x: 4.6, z: 1.4 }} palette={PROP_PALETTE} />
+      <models.Prop
+        position={{ x: 1.4, z: 1.2 }}
+        palette={PROP_PALETTE}
+        shape="cylinder"
+        detailLevel={detailLevel}
+      />
+      <models.Prop
+        position={{ x: -1.5, z: -1.1 }}
+        palette={PROP_PALETTE}
+        detailLevel={detailLevel}
+      />
+      <models.Prop position={{ x: 4.6, z: 1.4 }} palette={PROP_PALETTE} detailLevel={detailLevel} />
 
       {/* Progress keepsake: the neighbourhood tree grows with each completed chapter. */}
       <group position={[-1.2, 0, 1.6]} name="keepsake" ref={treeRef}>
@@ -356,6 +371,7 @@ export function Hub({
         palette={AVATAR_PALETTES[avatarId]}
         headwear={headwear}
         label="avatar"
+        detailLevel={detailLevel}
       />
     </group>
   );
