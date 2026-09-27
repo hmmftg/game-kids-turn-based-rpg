@@ -36,6 +36,17 @@ export type ResumableMode = (typeof RESUMABLE_MODES)[number];
 export const AVATAR_IDS = ['avatar-aban', 'avatar-arta'] as const;
 export type AvatarId = (typeof AVATAR_IDS)[number];
 
+/**
+ * Cosmetic headwear a kid can put on their avatar. 'none' is the uncovered
+ * default; every option is a presentation choice, never a gameplay identity.
+ */
+export const HEADWEAR_IDS = ['none', 'scarf', 'chador', 'kolah', 'kufi', 'beanie'] as const;
+export type HeadwearId = (typeof HEADWEAR_IDS)[number];
+
+export function isHeadwearId(value: unknown): value is HeadwearId {
+  return typeof value === 'string' && (HEADWEAR_IDS as readonly string[]).includes(value);
+}
+
 export const QUEST_IDS = [
   'quest-greeting',
   'quest-helping',
@@ -133,6 +144,12 @@ export interface GameState extends PersistedState {
   readonly saveHealth: SaveHealth;
   /** Non-blocking notice that an unreadable save was set aside for this session. */
   readonly corruptSaveDetected: boolean;
+  /**
+   * Session-only cosmetic choice. Lives on the profile index (ProfileMeta),
+   * never in PersistedState, so it needs no save-schema migration and never
+   * changes gameplay.
+   */
+  readonly headwear: HeadwearId;
   readonly fatalReason: string | null;
   /** Bumped on every transition that should be autosaved. */
   readonly autosaveToken: number;
@@ -158,6 +175,7 @@ export type Command =
   | { readonly type: 'SWITCH_PLAYER' }
   | { readonly type: 'START_PRESSED' }
   | { readonly type: 'SELECT_AVATAR'; readonly avatarId: AvatarId }
+  | { readonly type: 'SET_HEADWEAR'; readonly headwear: HeadwearId }
   | { readonly type: 'ENTER_HUB' }
   | { readonly type: 'OPEN_DIALOGUE'; readonly npcId: NpcId; readonly nodeId: string }
   | { readonly type: 'CLOSE_DIALOGUE' }

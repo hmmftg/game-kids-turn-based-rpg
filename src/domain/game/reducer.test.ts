@@ -378,6 +378,18 @@ describe('gameReducer — player profiles', () => {
     expect(fresh.quests['quest-greeting'].status).not.toBe('completed');
   });
 
+  it('sets headwear cosmetically without autosaving or touching gameplay', () => {
+    const hub = atHub();
+    const next = gameReducer(hub, { type: 'SET_HEADWEAR', headwear: 'chador' }, NOW);
+    expect(next.headwear).toBe('chador');
+    expect(next.quests).toBe(hub.quests);
+    expect(next.stickers).toBe(hub.stickers);
+    expect(next.encounter).toBe(hub.encounter);
+    expect(next.autosaveToken).toBe(hub.autosaveToken);
+    // Idempotent: the same pick is a no-op by reference.
+    expect(gameReducer(next, { type: 'SET_HEADWEAR', headwear: 'chador' }, NOW)).toBe(next);
+  });
+
   it('rejects profile commands from the wrong modes', () => {
     const title = boot();
     const hub = atHub();

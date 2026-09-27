@@ -43,6 +43,7 @@ export function createInitialState(now = 0): GameState {
     webglAvailable: true,
     saveHealth: 'fresh',
     corruptSaveDetected: false,
+    headwear: 'none',
     fatalReason: null,
     autosaveToken: 0,
   };

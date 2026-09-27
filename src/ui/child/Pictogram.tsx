@@ -37,7 +37,62 @@ function renderShape(shape: string) {
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
   };
+  // Headwear pickers all share one smiling face; only the covering differs.
+  const face = (
+    <>
+      <circle cx="24" cy="31" r="9" {...stroke} />
+      <path d="M20 34a5 5 0 0 0 8 0" {...stroke} />
+      <circle cx="21" cy="29" r="1.2" fill="currentColor" />
+      <circle cx="27" cy="29" r="1.2" fill="currentColor" />
+    </>
+  );
   switch (shape) {
+    case 'headwear-none':
+      return (
+        <>
+          {face}
+          <path d="M17 25q7-7 14 0" {...stroke} />
+        </>
+      );
+    case 'headwear-scarf':
+      return (
+        <>
+          {face}
+          <path d="M13 31a11 11 0 0 1 22 0" {...stroke} />
+          <path d="M12 30v8M36 30v8" {...stroke} />
+        </>
+      );
+    case 'headwear-chador':
+      return (
+        <>
+          {face}
+          <path d="M11 44V27a13 17 0 0 1 26 0V44" {...stroke} />
+        </>
+      );
+    case 'headwear-kolah':
+      return (
+        <>
+          {face}
+          <path d="M14 26a10 7 0 0 1 20 0" {...stroke} />
+          <path d="M14 26h20" {...stroke} />
+        </>
+      );
+    case 'headwear-kufi':
+      return (
+        <>
+          {face}
+          <path d="M16 26a8 5 0 0 1 16 0" {...stroke} />
+          <path d="M16 26h16" {...stroke} />
+        </>
+      );
+    case 'headwear-beanie':
+      return (
+        <>
+          {face}
+          <path d="M14 26a10 8 0 0 1 20 0" {...stroke} />
+          <circle cx="24" cy="14" r="2.6" {...stroke} />
+        </>
+      );
     case 'hand-wave':
       return (
         <>

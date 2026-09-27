@@ -1,4 +1,5 @@
-import type { AvatarId, QuestId } from '../../domain/game/types.ts';
+import { FA } from '../../content/fa/strings.ts';
+import type { AvatarId, HeadwearId, QuestId } from '../../domain/game/types.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
 
 /**
@@ -24,6 +25,16 @@ export const QUEST_EMOJI: Readonly<Record<QuestId, string>> = {
 export const AVATAR_EMOJI: Readonly<Record<AvatarId, string>> = {
   'avatar-aban': '👧',
   'avatar-arta': '🧒',
+};
+
+/** Persian label per headwear option; the SVG pictogram carries the meaning. */
+export const HEADWEAR_LABEL: Readonly<Record<HeadwearId, string>> = {
+  none: FA.headwearNone,
+  scarf: FA.headwearScarf,
+  chador: FA.headwearChador,
+  kolah: FA.headwearKolah,
+  kufi: FA.headwearKufi,
+  beanie: FA.headwearBeanie,
 };
 
 /** Pickable badges a kid uses to spot their own card on the player picker. */

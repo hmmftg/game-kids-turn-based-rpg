@@ -2,7 +2,7 @@ import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import type { AnchorId, AvatarId, QuestId, QuestStatus } from '../domain/game/types.ts';
+import type { AnchorId, AvatarId, HeadwearId, QuestId, QuestStatus } from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
 import { ANCHORS, getAnchor } from './navigation/graph.ts';
@@ -30,6 +30,7 @@ export interface HubHandle {
 
 export interface HubProps {
   readonly avatarId: AvatarId;
+  readonly headwear: HeadwearId;
   readonly questStatuses: Record<QuestId, QuestStatus>;
   readonly completedCount: number;
   readonly interactive: boolean;
@@ -164,6 +165,7 @@ function QuestMarker({
 
 export function Hub({
   avatarId,
+  headwear,
   questStatuses,
   completedCount,
   interactive,
@@ -352,6 +354,7 @@ export function Hub({
         rotationY={walker.heading}
         bobbing={walker.bobbing}
         palette={AVATAR_PALETTES[avatarId]}
+        headwear={headwear}
         label="avatar"
       />
     </group>

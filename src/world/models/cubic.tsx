@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import type { HeadwearId } from '../../domain/game/types.ts';
 import type { FigureProps, LandmarkProps, PropProps } from './modelProvider.ts';
 import { noRaycast } from './raycast.ts';
 
@@ -8,6 +9,141 @@ const CYLINDER = new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
 
 function useMaterial(color: string): THREE.MeshLambertMaterial {
   return useMemo(() => new THREE.MeshLambertMaterial({ color }), [color]);
+}
+
+const HEADWEAR_COLORS: Record<Exclude<HeadwearId, 'none'>, string> = {
+  scarf: '#c96f8d',
+  chador: '#44465e',
+  kolah: '#8a5a33',
+  kufi: '#efe6d2',
+  beanie: '#5b8ab5',
+};
+
+/**
+ * Cosmetic headwear layer. The head is a 0.42×0.38×0.38 box centred at
+ * y ≈ 1.14 (+bob lift); every variant wraps it while leaving the face (+z)
+ * open, and uses only the shared box/cylinder primitives — no extra
+ * geometry, materials or per-frame work.
+ */
+function Headwear({ id, lift }: { readonly id: HeadwearId; readonly lift: number }) {
+  const main = useMaterial(id === 'none' ? '#000000' : HEADWEAR_COLORS[id]);
+  const accent = useMaterial(id === 'kufi' ? '#d9cba8' : '#e8eef4');
+  if (id === 'none') return null;
+  return (
+    <group position={[0, lift, 0]} name={`headwear-${id}`}>
+      {id === 'scarf' ? (
+        <>
+          {/* wrap: crown slab + side and back panels; the face stays open */}
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[0, 1.38, 0]}
+            scale={[0.52, 0.14, 0.5]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[-0.245, 1.2, -0.02]}
+            scale={[0.07, 0.34, 0.42]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[0.245, 1.2, -0.02]}
+            scale={[0.07, 0.34, 0.42]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[0, 1.2, -0.225]}
+            scale={[0.52, 0.36, 0.09]}
+            raycast={noRaycast}
+          />
+        </>
+      ) : null}
+      {id === 'chador' ? (
+        <>
+          {/* one continuous drape over head and body, open at the face */}
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[0, 1.4, -0.02]}
+            scale={[0.54, 0.16, 0.52]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[-0.3, 0.85, -0.03]}
+            scale={[0.09, 1.0, 0.46]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[0.3, 0.85, -0.03]}
+            scale={[0.09, 1.0, 0.46]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={main}
+            position={[0, 0.85, -0.27]}
+            scale={[0.62, 1.05, 0.1]}
+            raycast={noRaycast}
+          />
+        </>
+      ) : null}
+      {id === 'kolah' ? (
+        <mesh
+          geometry={CYLINDER}
+          material={main}
+          position={[0, 1.43, 0]}
+          scale={[0.46, 0.2, 0.46]}
+          raycast={noRaycast}
+        />
+      ) : null}
+      {id === 'kufi' ? (
+        <>
+          <mesh
+            geometry={CYLINDER}
+            material={main}
+            position={[0, 1.39, 0]}
+            scale={[0.42, 0.12, 0.42]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={CYLINDER}
+            material={accent}
+            position={[0, 1.345, 0]}
+            scale={[0.45, 0.06, 0.45]}
+            raycast={noRaycast}
+          />
+        </>
+      ) : null}
+      {id === 'beanie' ? (
+        <>
+          <mesh
+            geometry={CYLINDER}
+            material={main}
+            position={[0, 1.42, 0]}
+            scale={[0.5, 0.18, 0.5]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={accent}
+            position={[0, 1.56, 0]}
+            scale={[0.16, 0.16, 0.16]}
+            raycast={noRaycast}
+          />
+        </>
+      ) : null}
+    </group>
+  );
 }
 
 /** Soft blob shadow: one transparent disc, no shadow maps anywhere in the scene. */
@@ -25,7 +161,14 @@ function BlobShadow({ radius = 0.5 }: { readonly radius?: number }) {
  * cylinder geometries. Both avatars use identical proportions and identical
  * mechanics; only the palette differs.
  */
-export function CubicFigure({ position, rotationY = 0, palette, bobbing = 0, label }: FigureProps) {
+export function CubicFigure({
+  position,
+  rotationY = 0,
+  palette,
+  bobbing = 0,
+  label,
+  headwear = 'none',
+}: FigureProps) {
   const body = useMaterial(palette.body);
   const head = useMaterial(palette.head);
   const limb = useMaterial(palette.limb);
@@ -62,6 +205,7 @@ export function CubicFigure({ position, rotationY = 0, palette, bobbing = 0, lab
         scale={[0.42, 0.38, 0.38]}
         raycast={noRaycast}
       />
+      <Headwear id={headwear} lift={lift} />
     </group>
   );
 }

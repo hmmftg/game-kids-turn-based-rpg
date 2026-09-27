@@ -3,6 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import type {
   AnchorId,
   AvatarId,
+  HeadwearId,
   QualityTier,
   QuestId,
   QuestStatus,
@@ -69,6 +70,7 @@ function InvalidateOnChange({ token }: { readonly token: unknown }) {
 
 export interface WorldCanvasProps {
   readonly avatarId: AvatarId;
+  readonly headwear: HeadwearId;
   readonly questStatuses: Record<QuestId, QuestStatus>;
   readonly completedCount: number;
   readonly interactive: boolean;
@@ -81,6 +83,7 @@ export interface WorldCanvasProps {
 
 export function WorldCanvas({
   avatarId,
+  headwear,
   questStatuses,
   completedCount,
   interactive,
@@ -130,11 +133,12 @@ export function WorldCanvas({
         <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
         <InvalidateOnChange
-          token={`${avatarId}:${completedCount}:${String(interactive)}:${zoom}`}
+          token={`${avatarId}:${headwear}:${completedCount}:${String(interactive)}:${zoom}`}
         />
         <ModelContext.Provider value={CUBIC_MODELS}>
           <Hub
             avatarId={avatarId}
+            headwear={headwear}
             questStatuses={questStatuses}
             completedCount={completedCount}
             interactive={interactive}

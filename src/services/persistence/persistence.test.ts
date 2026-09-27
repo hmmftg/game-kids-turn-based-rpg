@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IndexedDbSaveRepository } from './indexedDbRepository.ts';
 import { MemorySaveRepository } from './memoryRepository.ts';
-import { healthFromLoadResult, persistedFromLoadResult } from './repository.ts';
+import { healthFromLoadResult, parseProfileIndex, persistedFromLoadResult } from './repository.ts';
 import type { SaveRepository } from './repository.ts';
 import { createFreshPersistedState } from '../../domain/game/initialState.ts';
 
@@ -60,6 +60,7 @@ function contracts(name: string, create: () => SaveRepository) {
           nameFa: 'سارا',
           avatarId: 'avatar-aban' as const,
           badge: '🐱',
+          headwear: 'scarf' as const,
           createdAt: NOW,
           lastPlayedAt: NOW,
           stickerCount: 2,
@@ -68,6 +69,15 @@ function contracts(name: string, create: () => SaveRepository) {
       expect(await repository.listProfiles()).toEqual([]);
       await repository.writeProfiles(profiles);
       expect(await repository.listProfiles()).toEqual(profiles);
+    });
+
+    it('defaults missing or unknown headwear on profile cards to none', () => {
+      const parsed = parseProfileIndex([
+        { id: 'a', avatarId: 'avatar-aban', badge: '🐱' },
+        { id: 'b', avatarId: 'avatar-arta', badge: '🦊', headwear: 'chador' },
+        { id: 'c', avatarId: 'avatar-arta', badge: '🐰', headwear: 'crown' },
+      ]);
+      expect(parsed.map((profile) => profile.headwear)).toEqual(['none', 'chador', 'none']);
     });
   });
 }
