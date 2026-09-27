@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { FA } from '../../content/fa/strings.ts';
-import { AVATAR_EMOJI } from './emoji.ts';
+import { AVATAR_EMOJI, BADGE_EMOJIS } from './emoji.ts';
 import { Pictogram } from './Pictogram.tsx';
 
 export function LoadingScreen() {
@@ -103,36 +104,69 @@ export function TitleScreen({
 export function AvatarSelectScreen({
   onSelect,
 }: {
-  readonly onSelect: (id: 'avatar-aban' | 'avatar-arta') => void;
+  readonly onSelect: (id: 'avatar-aban' | 'avatar-arta', badge: string) => void;
 }) {
+  const [avatarId, setAvatarId] = useState<'avatar-aban' | 'avatar-arta' | null>(null);
   return (
     <div className="layer" data-testid="avatar-select">
-      <h1 className="subtitle">{FA.chooseAvatar}</h1>
-      <div className="row">
-        <button
-          type="button"
-          className="btn btn--large avatar-choice avatar-choice--aban"
-          onClick={() => onSelect('avatar-aban')}
-          data-testid="avatar-aban"
-        >
-          <span className="emoji avatar-choice__emoji" aria-hidden="true">
-            {AVATAR_EMOJI['avatar-aban']}
-          </span>
-          {FA.avatarAban}
-        </button>
-        <button
-          type="button"
-          className="btn btn--large avatar-choice avatar-choice--arta"
-          onClick={() => onSelect('avatar-arta')}
-          data-testid="avatar-arta"
-        >
-          <span className="emoji avatar-choice__emoji" aria-hidden="true">
-            {AVATAR_EMOJI['avatar-arta']}
-          </span>
-          {FA.avatarArta}
-        </button>
-      </div>
-      <p className="text text--soft">{FA.avatarHint}</p>
+      {avatarId === null ? (
+        <>
+          <h1 className="subtitle">{FA.chooseAvatar}</h1>
+          <div className="row">
+            <button
+              type="button"
+              className="btn btn--large avatar-choice avatar-choice--aban"
+              onClick={() => setAvatarId('avatar-aban')}
+              data-testid="avatar-aban"
+            >
+              <span className="emoji avatar-choice__emoji" aria-hidden="true">
+                {AVATAR_EMOJI['avatar-aban']}
+              </span>
+              {FA.avatarAban}
+            </button>
+            <button
+              type="button"
+              className="btn btn--large avatar-choice avatar-choice--arta"
+              onClick={() => setAvatarId('avatar-arta')}
+              data-testid="avatar-arta"
+            >
+              <span className="emoji avatar-choice__emoji" aria-hidden="true">
+                {AVATAR_EMOJI['avatar-arta']}
+              </span>
+              {FA.avatarArta}
+            </button>
+          </div>
+          <p className="text text--soft">{FA.avatarHint}</p>
+        </>
+      ) : (
+        <>
+          <h1 className="subtitle">{FA.chooseBadge}</h1>
+          <div className="row badge-row" data-testid="badge-row">
+            {BADGE_EMOJIS.map((badge, index) => (
+              <button
+                key={badge}
+                type="button"
+                className="btn btn--icon badge-choice"
+                onClick={() => onSelect(avatarId, badge)}
+                data-testid={`badge-${index}`}
+                aria-label={badge}
+              >
+                <span className="emoji avatar-choice__emoji" aria-hidden="true">
+                  {badge}
+                </span>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => setAvatarId(null)}
+            data-testid="badge-back"
+          >
+            {FA.back}
+          </button>
+        </>
+      )}
     </div>
   );
 }

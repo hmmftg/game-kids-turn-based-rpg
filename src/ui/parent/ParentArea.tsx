@@ -4,7 +4,9 @@ import { FA } from '../../content/fa/strings.ts';
 import { SOURCE_RECORDS } from '../../content/sources/records.ts';
 import { AUDIO_MANIFEST } from '../../services/audio/manifest.ts';
 import type { GameState } from '../../domain/game/types.ts';
+import type { ProfileMeta } from '../../services/persistence/repository.ts';
 import type { CacheStatus } from '../../services/pwa/serviceWorker.ts';
+import { AVATAR_EMOJI } from '../child/emoji.ts';
 
 const CACHE_LABEL: Record<CacheStatus, string> = {
   unsupported: '—',
@@ -20,15 +22,24 @@ const CACHE_LABEL: Record<CacheStatus, string> = {
 export function ParentArea({
   state,
   cacheStatus,
+  profiles,
+  activeProfileId,
   onClose,
   onReset,
+  onResetProfile,
+  onRenameProfile,
 }: {
   readonly state: GameState;
   readonly cacheStatus: CacheStatus;
+  readonly profiles: readonly ProfileMeta[];
+  readonly activeProfileId: string | null;
   readonly onClose: () => void;
   readonly onReset: () => void;
+  readonly onResetProfile: (id: string) => void;
+  readonly onRenameProfile: (id: string, nameFa: string) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [confirmingProfileId, setConfirmingProfileId] = useState<string | null>(null);
 
   return (
     <div className="layer layer--overlay" data-testid="parent-area">
@@ -71,6 +82,62 @@ export function ParentArea({
           <h3 className="subtitle">{FA.parentInstall}</h3>
           <p className="text text--soft">{FA.installBody}</p>
         </section>
+
+        {profiles.length > 0 ? (
+          <section data-testid="parent-profiles">
+            <h3 className="subtitle">{FA.parentProfiles}</h3>
+            <ul className="column">
+              {profiles.map((profile, index) => (
+                <li key={profile.id} className="row parent-profile" dir="rtl">
+                  <span className="emoji" aria-hidden="true">
+                    {profile.badge}
+                    {AVATAR_EMOJI[profile.avatarId]}
+                  </span>
+                  <input
+                    className="parent-profile__name"
+                    type="text"
+                    dir="rtl"
+                    defaultValue={profile.nameFa}
+                    placeholder={profile.nameFa || `${FA.playerFallback} ${index + 1}`}
+                    aria-label={FA.profileNameHint}
+                    data-testid={`rename-${profile.id}`}
+                    onBlur={(event) => {
+                      const nameFa = event.currentTarget.value.trim();
+                      if (nameFa !== profile.nameFa) onRenameProfile(profile.id, nameFa);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur();
+                    }}
+                  />
+                  <span className="text--soft">⭐ {profile.stickerCount}</span>
+                  {profile.id === activeProfileId ? <span className="text--soft">●</span> : null}
+                  {confirmingProfileId === profile.id ? (
+                    <button
+                      type="button"
+                      className="btn btn--accent"
+                      onClick={() => {
+                        setConfirmingProfileId(null);
+                        onResetProfile(profile.id);
+                      }}
+                      data-testid={`parent-reset-confirm-${profile.id}`}
+                    >
+                      {FA.parentResetYes}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn--secondary"
+                      onClick={() => setConfirmingProfileId(profile.id)}
+                      data-testid={`parent-reset-${profile.id}`}
+                    >
+                      {FA.parentReset}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section>
           <h3 className="subtitle">{FA.parentDiagnostics}</h3>

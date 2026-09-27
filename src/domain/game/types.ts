@@ -8,6 +8,7 @@
 export const MODES = [
   'boot',
   'orientationBlocked',
+  'profileSelect',
   'title',
   'avatarSelect',
   'hub',
@@ -22,7 +23,14 @@ export const MODES = [
 export type Mode = (typeof MODES)[number];
 
 /** Modes the child can be returned to after an overlay (pause / parent gate) closes. */
-export const RESUMABLE_MODES = ['title', 'avatarSelect', 'hub', 'dialogue', 'encounter'] as const;
+export const RESUMABLE_MODES = [
+  'profileSelect',
+  'title',
+  'avatarSelect',
+  'hub',
+  'dialogue',
+  'encounter',
+] as const;
 export type ResumableMode = (typeof RESUMABLE_MODES)[number];
 
 export const AVATAR_IDS = ['avatar-aban', 'avatar-arta'] as const;
@@ -135,10 +143,19 @@ export type Command =
       readonly type: 'BOOT_LOADED';
       readonly persisted: PersistedState | null;
       readonly health: SaveHealth;
+      /** True when at least one player profile exists → land on the picker. */
+      readonly hasProfiles?: boolean;
     }
   | { readonly type: 'BOOT_FAILED'; readonly reason: string }
   | { readonly type: 'ORIENTATION_CHANGED'; readonly orientation: 'landscape' | 'portrait' }
   | { readonly type: 'WEBGL_AVAILABILITY_CHANGED'; readonly available: boolean }
+  | {
+      readonly type: 'SELECT_PROFILE';
+      readonly persisted: PersistedState | null;
+      readonly health: SaveHealth;
+    }
+  | { readonly type: 'START_NEW_PLAYER' }
+  | { readonly type: 'SWITCH_PLAYER' }
   | { readonly type: 'START_PRESSED' }
   | { readonly type: 'SELECT_AVATAR'; readonly avatarId: AvatarId }
   | { readonly type: 'ENTER_HUB' }

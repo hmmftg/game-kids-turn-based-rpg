@@ -38,11 +38,46 @@ function contracts(name: string, create: () => SaveRepository) {
       await repository.clear();
       expect((await repository.load()).status).toBe('empty');
     });
+
+    it('keeps profile slots fully isolated', async () => {
+      const repository = create();
+      await repository.save(sampleState(), 'profile:one');
+      await repository.save({ ...sampleState(), avatarId: 'avatar-arta' }, 'profile:two');
+      const one = await repository.load('profile:one');
+      const two = await repository.load('profile:two');
+      expect(persistedFromLoadResult(one)?.avatarId).toBe('avatar-aban');
+      expect(persistedFromLoadResult(two)?.avatarId).toBe('avatar-arta');
+      await repository.clear('profile:one');
+      expect((await repository.load('profile:one')).status).toBe('empty');
+      expect((await repository.load('profile:two')).status).toBe('loaded');
+    });
+
+    it('round-trips the profile index and ignores malformed entries', async () => {
+      const repository = create();
+      const profiles = [
+        {
+          id: 'profile-a',
+          nameFa: 'سارا',
+          avatarId: 'avatar-aban' as const,
+          badge: '🐱',
+          createdAt: NOW,
+          lastPlayedAt: NOW,
+          stickerCount: 2,
+        },
+      ];
+      expect(await repository.listProfiles()).toEqual([]);
+      await repository.writeProfiles(profiles);
+      expect(await repository.listProfiles()).toEqual(profiles);
+    });
   });
 }
 
 beforeEach(async () => {
-  await new IndexedDbSaveRepository(() => NOW).clear();
+  const repository = new IndexedDbSaveRepository(() => NOW);
+  await repository.clear();
+  await repository.clear('profiles');
+  await repository.clear('profile:one');
+  await repository.clear('profile:two');
 });
 
 contracts('memory', () => new MemorySaveRepository(undefined, () => NOW));

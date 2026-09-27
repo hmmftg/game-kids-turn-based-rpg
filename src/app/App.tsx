@@ -10,6 +10,7 @@ import { DialogueCard } from '../ui/child/DialogueCard.tsx';
 import { npcEmoji } from '../ui/child/emoji.ts';
 import { EncounterPanel } from '../ui/child/EncounterPanel.tsx';
 import { PauseMenu } from '../ui/child/PauseMenu.tsx';
+import { ProfileSelectScreen } from '../ui/child/ProfileSelectScreen.tsx';
 import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
 import {
   AvatarSelectScreen,
@@ -37,8 +38,22 @@ function nodeForAnchor(anchor: AnchorId): string | null {
 }
 
 export function App() {
-  const { state, dispatch, cacheStatus, updateReady, applyUpdate, resetProgress, playSfx } =
-    useGame();
+  const {
+    state,
+    dispatch,
+    cacheStatus,
+    updateReady,
+    applyUpdate,
+    resetProgress,
+    playSfx,
+    profiles,
+    activeProfileId,
+    selectProfile,
+    startNewPlayer,
+    chooseAvatar,
+    resetProfile,
+    renameProfile,
+  } = useGame();
   const hubRef = useRef<HubHandle>(null);
   const statuses = selectQuestStatuses(state);
   const completed = selectCompletedQuestCount(state);
@@ -74,6 +89,20 @@ export function App() {
     case 'orientationBlocked':
       return <OrientationScreen />;
 
+    case 'profileSelect':
+      return (
+        <ProfileSelectScreen
+          profiles={profiles}
+          onSelect={selectProfile}
+          onNew={() => {
+            playSfx('sfx-choice');
+            startNewPlayer();
+          }}
+          onReset={resetProfile}
+          onParent={() => dispatch({ type: 'OPEN_PARENT_GATE' })}
+        />
+      );
+
     case 'fatalFallback':
       return <ErrorScreen reason={state.fatalReason} onRestart={resetProgress} />;
 
@@ -93,9 +122,9 @@ export function App() {
     case 'avatarSelect':
       return (
         <AvatarSelectScreen
-          onSelect={(avatarId) => {
+          onSelect={(avatarId, badge) => {
             playSfx('sfx-choice');
-            dispatch({ type: 'SELECT_AVATAR', avatarId });
+            chooseAvatar(avatarId, badge);
           }}
         />
       );
@@ -113,8 +142,12 @@ export function App() {
         <ParentArea
           state={state}
           cacheStatus={cacheStatus}
+          profiles={profiles}
+          activeProfileId={activeProfileId}
           onClose={() => dispatch({ type: 'CLOSE_PARENT' })}
           onReset={resetProgress}
+          onResetProfile={resetProfile}
+          onRenameProfile={renameProfile}
         />
       );
 
@@ -129,6 +162,7 @@ export function App() {
           onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
           onParentArea={() => dispatch({ type: 'OPEN_PARENT_GATE' })}
           onApplyUpdate={applyUpdate}
+          onSwitchPlayer={() => dispatch({ type: 'SWITCH_PLAYER' })}
         />
       );
 

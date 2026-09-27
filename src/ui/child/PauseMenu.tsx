@@ -16,6 +16,7 @@ export function PauseMenu({
   onQualityChange,
   onParentArea,
   onApplyUpdate,
+  onSwitchPlayer,
 }: {
   readonly audio: AudioSettings;
   readonly qualityTier: QualityTier;
@@ -25,6 +26,7 @@ export function PauseMenu({
   readonly onQualityChange: (tier: QualityTier) => void;
   readonly onParentArea: () => void;
   readonly onApplyUpdate: () => void;
+  readonly onSwitchPlayer: () => void;
 }) {
   return (
     <div className="layer layer--overlay" data-testid="pause-menu">
@@ -95,6 +97,17 @@ export function PauseMenu({
             data-testid="resume-button"
           >
             {FA.resumePlay}
+          </button>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={onSwitchPlayer}
+            data-testid="switch-player"
+          >
+            <span className="emoji" aria-hidden="true">
+              🔁
+            </span>{' '}
+            {FA.switchPlayer}
           </button>
           <button
             type="button"

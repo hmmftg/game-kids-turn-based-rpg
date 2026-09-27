@@ -7,6 +7,14 @@ async function startGame(page: Page, avatar: 'avatar-aban' | 'avatar-arta' = 'av
   await page.goto('/');
   await page.getByTestId('start-button').click();
   await page.getByTestId(avatar).click();
+  await page.getByTestId('badge-0').click();
+  await expect(page.getByTestId('hud')).toBeVisible();
+}
+
+/** Returning devices land on «کی بازی می‌کند؟» — pick the first card. */
+async function resumeFromPicker(page: Page) {
+  await expect(page.getByTestId('profile-select')).toBeVisible();
+  await page.locator('[data-testid^="profile-card-"]').first().click();
   await expect(page.getByTestId('hud')).toBeVisible();
 }
 
@@ -69,7 +77,7 @@ test.describe('vertical slice', () => {
     await startGame(page);
     await playQuest(page, 'quest-greeting');
     await page.reload();
-    await page.getByTestId('start-button').click();
+    await resumeFromPicker(page);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
     await expect(page.getByTestId('trail-quest-helping')).toBeEnabled();
   });
@@ -81,10 +89,31 @@ test.describe('vertical slice', () => {
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null || true);
     await context.setOffline(true);
     await page.reload();
-    await page.getByTestId('start-button').click();
-    await expect(page.getByTestId('hud')).toBeVisible();
+    await resumeFromPicker(page);
     await playQuest(page, 'quest-greeting');
     await context.setOffline(false);
+  });
+
+  test('two siblings keep separate progress on one device', async ({ page }) => {
+    await startGame(page, 'avatar-aban');
+    await playQuest(page, 'quest-greeting');
+
+    // Kid2 registers from the picker via pause → switch player.
+    await page.getByTestId('pause-button').click();
+    await page.getByTestId('switch-player').click();
+    await expect(page.getByTestId('profile-select')).toBeVisible();
+    await page.getByTestId('profile-new').click();
+    await page.getByTestId('avatar-arta').click();
+    await page.getByTestId('badge-1').click();
+    await expect(page.getByTestId('hud')).toBeVisible();
+    await expect(page.getByTestId('trail-quest-greeting')).not.toContainText('انجام شد');
+
+    // Back to the picker: kid1's card restores exactly their progress.
+    await page.getByTestId('pause-button').click();
+    await page.getByTestId('switch-player').click();
+    await expect(page.locator('[data-testid^="profile-card-"]')).toHaveCount(2);
+    await page.locator('[data-testid^="profile-card-"]').first().click();
+    await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
   });
 
   test('a device without WebGL still plays through the DOM fallback', async ({ page }) => {

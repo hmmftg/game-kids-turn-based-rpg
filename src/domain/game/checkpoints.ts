@@ -4,7 +4,13 @@ import type { Checkpoint, GameState, Mode, QuestId } from './types.ts';
  * Modes in which the child is not inside an animation or a turn, so reloading
  * from here can never strand them. Autosave is only allowed from these modes.
  */
-const STABLE_MODES: readonly Mode[] = ['title', 'avatarSelect', 'hub', 'parentArea'];
+const STABLE_MODES: readonly Mode[] = [
+  'profileSelect',
+  'title',
+  'avatarSelect',
+  'hub',
+  'parentArea',
+];
 
 export function isStableMode(mode: Mode): boolean {
   return STABLE_MODES.includes(mode);

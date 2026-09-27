@@ -1,7 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { createFreshPersistedState } from '../domain/game/initialState.ts';
 import { MemorySaveRepository } from '../services/persistence/memoryRepository.ts';
+import { profileSlotKey } from '../services/persistence/repository.ts';
 import { App } from './App.tsx';
 import { GameProvider } from './GameProvider.tsx';
 
@@ -24,6 +26,7 @@ function renderApp(repository = new MemorySaveRepository()) {
 async function reachHub(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByTestId('start-button'));
   await user.click(await screen.findByTestId('avatar-aban'));
+  await user.click(await screen.findByTestId('badge-0'));
   await screen.findByTestId('hud');
 }
 
@@ -83,8 +86,12 @@ describe('App', () => {
     await user.click(await screen.findByTestId('toggle-music'));
     await user.click(screen.getByTestId('resume-button'));
 
-    await waitFor(() => {
-      expect(repository.peek()).toMatchObject({ audio: { musicMuted: true } });
+    await waitFor(async () => {
+      const [profile] = await repository.listProfiles();
+      expect(profile).toBeDefined();
+      expect(repository.peek(profileSlotKey(profile!.id))).toMatchObject({
+        audio: { musicMuted: true },
+      });
     });
   });
 
@@ -95,8 +102,63 @@ describe('App', () => {
 
     await user.click(await screen.findByTestId('start-button'));
     await user.click(await screen.findByTestId('avatar-aban'));
+    await user.click(await screen.findByTestId('badge-0'));
     await screen.findByTestId('hud');
 
     expect(repository.peek()).toEqual(corrupt);
+  });
+
+  it('keeps sibling profiles separate and resets one card', async () => {
+    const repository = new MemorySaveRepository();
+    await repository.writeProfiles([
+      {
+        id: 'profile-kid1',
+        nameFa: '',
+        avatarId: 'avatar-aban',
+        badge: '🐱',
+        createdAt: 1,
+        lastPlayedAt: 1,
+        stickerCount: 1,
+      },
+      {
+        id: 'profile-kid2',
+        nameFa: '',
+        avatarId: 'avatar-arta',
+        badge: '🦊',
+        createdAt: 2,
+        lastPlayedAt: 2,
+        stickerCount: 0,
+      },
+    ]);
+    await repository.save(
+      {
+        ...createFreshPersistedState(1),
+        avatarId: 'avatar-aban',
+        stickers: ['sticker-greeting'],
+      },
+      profileSlotKey('profile-kid1'),
+    );
+    const { user } = renderApp(repository);
+
+    // Boot lands on the picker; kid1's card restores their progress.
+    expect(await screen.findByTestId('profile-select')).toBeInTheDocument();
+    await user.click(screen.getByTestId('profile-card-profile-kid1'));
+    await screen.findByTestId('hud');
+    expect(screen.getByTestId('sticker-sticker-greeting')).toBeInTheDocument();
+
+    // Switching back to the picker keeps kid2's card fresh, and a confirmed
+    // reset wipes only kid1's slot — never kid2's.
+    await user.click(screen.getByTestId('pause-button'));
+    await user.click(await screen.findByTestId('switch-player'));
+    await screen.findByTestId('profile-select');
+    await user.click(screen.getByTestId('profile-reset-profile-kid1'));
+    await user.click(screen.getByTestId('profile-reset-profile-kid1'));
+
+    await waitFor(async () => {
+      const result = await repository.load(profileSlotKey('profile-kid1'));
+      expect(result.status).toBe('loaded');
+      if (result.status === 'loaded') expect(result.state.stickers).toEqual([]);
+    });
+    expect((await repository.load(profileSlotKey('profile-kid2'))).status).toBe('empty');
   });
 });

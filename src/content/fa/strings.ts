@@ -13,6 +13,16 @@ export const FA = {
   avatarAban: 'آبان',
   avatarArta: 'آرتا',
   avatarHint: 'هر دو مثل هم بازی می‌کنند',
+  chooseBadge: 'یک نشان برای خودت انتخاب کن',
+
+  whoIsPlaying: 'کی بازی می‌کند؟',
+  newPlayer: 'بازیکن جدید',
+  playerFallback: 'بازیکن',
+  resetCard: 'از اول',
+  resetCardConfirm: 'مطمئنی؟',
+  switchPlayer: 'تعویض بازیکن',
+  parentProfiles: 'بازیکن‌ها',
+  profileNameHint: 'نام (دلخواه)',
 
   rotateTitle: 'گوشی را بچرخان',
   rotateHint: 'بازی در حالت افقی انجام می‌شود',

@@ -1,4 +1,5 @@
 import type { AvatarId, QuestId } from '../../domain/game/types.ts';
+import type { ProfileMeta } from '../../services/persistence/repository.ts';
 
 /**
  * Emoji decoration for pre-readers: instantly recognisable, colourful, and
@@ -24,6 +25,15 @@ export const AVATAR_EMOJI: Readonly<Record<AvatarId, string>> = {
   'avatar-aban': '👧',
   'avatar-arta': '🧒',
 };
+
+/** Pickable badges a kid uses to spot their own card on the player picker. */
+export const BADGE_EMOJIS = ['🐱', '🦊', '🐰', '🐻', '🦁', '🐸', '🐼', '🐵'] as const;
+
+/** First badge no existing profile uses, so siblings rarely collide. */
+export function pickProfileBadge(existing: readonly ProfileMeta[]): string {
+  const used = new Set(existing.map((profile) => profile.badge));
+  return BADGE_EMOJIS.find((badge) => !used.has(badge)) ?? BADGE_EMOJIS[0];
+}
 
 export function npcEmoji(npcId: string): string {
   return NPC_EMOJI[npcId] ?? '💬';

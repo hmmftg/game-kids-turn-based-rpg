@@ -100,11 +100,12 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       const booting = state.mode === 'boot' || state.interruptedMode === 'boot';
       if (!booting) return state;
       const blocked = state.mode === 'orientationBlocked';
+      const landing: ResumableMode = command.hasProfiles ? 'profileSelect' : 'title';
       const base: GameState = {
         ...state,
-        mode: blocked ? 'orientationBlocked' : 'title',
-        resumeMode: 'title',
-        interruptedMode: blocked ? 'title' : state.interruptedMode,
+        mode: blocked ? 'orientationBlocked' : landing,
+        resumeMode: landing,
+        interruptedMode: blocked ? landing : state.interruptedMode,
         saveHealth: command.health,
         corruptSaveDetected: command.health === 'recovered',
       };
@@ -141,6 +142,56 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
     case 'WEBGL_AVAILABILITY_CHANGED':
       if (state.webglAvailable === command.available) return state;
       return { ...state, webglAvailable: command.available };
+
+    case 'SELECT_PROFILE': {
+      // The provider has already loaded the slot; a missing payload means the
+      // kid starts over under that profile (fresh or corrupt storage).
+      if (state.mode !== 'profileSelect') return state;
+      const persisted = command.persisted;
+      const next: ResumableMode = persisted
+        ? persisted.avatarId === null
+          ? 'avatarSelect'
+          : 'hub'
+        : 'title';
+      const base: GameState = {
+        ...state,
+        mode: next,
+        resumeMode: next,
+        interruptedMode: null,
+        encounter: null,
+        dialogue: null,
+        saveHealth: command.health,
+        corruptSaveDetected: command.health === 'recovered',
+      };
+      return persisted ? applyPersisted(base, persisted) : base;
+    }
+
+    case 'START_NEW_PLAYER': {
+      if (state.mode !== 'profileSelect' && state.mode !== 'title') return state;
+      return stable(
+        {
+          ...state,
+          ...createFreshPersistedState(now),
+          encounter: null,
+          dialogue: null,
+          saveHealth: 'fresh',
+          corruptSaveDetected: false,
+        },
+        { mode: 'avatarSelect', resumeMode: 'avatarSelect' },
+        now,
+      );
+    }
+
+    case 'SWITCH_PLAYER': {
+      // Stable transition: the departing profile autosaves before the picker
+      // opens, so progress is never lost by swapping players mid-session.
+      if (state.mode !== 'paused' && state.mode !== 'hub') return state;
+      return stable(
+        state,
+        { mode: 'profileSelect', resumeMode: 'profileSelect', encounter: null, dialogue: null },
+        now,
+      );
+    }
 
     case 'START_PRESSED': {
       if (state.mode !== 'title') return state;
@@ -239,11 +290,13 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       return { ...state, mode: state.resumeMode };
 
     case 'OPEN_PARENT_GATE':
-      if (state.mode !== 'paused' && state.mode !== 'title') return state;
+      if (state.mode !== 'paused' && state.mode !== 'title' && state.mode !== 'profileSelect') {
+        return state;
+      }
       return {
         ...state,
         mode: 'parentGate',
-        resumeMode: state.mode === 'title' ? 'title' : state.resumeMode,
+        resumeMode: state.mode === 'paused' ? state.resumeMode : state.mode,
       };
 
     case 'PARENT_GATE_PASSED':
@@ -270,7 +323,13 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       return stable(state, { qualityTier: command.tier }, now);
 
     case 'RESET_PROGRESS': {
-      if (state.mode !== 'parentArea' && state.mode !== 'fatalFallback') return state;
+      if (
+        state.mode !== 'parentArea' &&
+        state.mode !== 'fatalFallback' &&
+        state.mode !== 'profileSelect'
+      ) {
+        return state;
+      }
       return stable(
         {
           ...state,
@@ -281,7 +340,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
           corruptSaveDetected: false,
           fatalReason: null,
         },
-        { mode: 'title', resumeMode: 'title' },
+        { mode: 'profileSelect', resumeMode: 'profileSelect' },
         now,
       );
     }

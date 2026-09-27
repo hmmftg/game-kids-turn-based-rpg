@@ -174,7 +174,7 @@ describe('gameReducer — invalid transitions', () => {
   it('ignores every command except reset in the fatal fallback', () => {
     const fatal = gameReducer(atHub(), { type: 'FATAL_ERROR', reason: 'webgl-context-lost' }, NOW);
     expect(gameReducer(fatal, { type: 'START_PRESSED' }, NOW)).toBe(fatal);
-    expect(gameReducer(fatal, { type: 'RESET_PROGRESS' }, NOW).mode).toBe('title');
+    expect(gameReducer(fatal, { type: 'RESET_PROGRESS' }, NOW).mode).toBe('profileSelect');
   });
 
   it('refuses to start a quest whose prerequisites are unmet', () => {
@@ -308,13 +308,83 @@ describe('gameReducer — overlays, orientation and reset', () => {
     state = gameReducer(state, { type: 'PARENT_GATE_PASSED' }, NOW);
     expect(state.mode).toBe('parentArea');
     const reset = gameReducer(state, { type: 'RESET_PROGRESS' }, NOW);
-    expect(reset.mode).toBe('title');
+    expect(reset.mode).toBe('profileSelect');
     expect(reset.avatarId).toBeNull();
     expect(reset.stickers).toEqual([]);
     expect(shouldAutosave(state, reset)).toBe(true);
   });
 
   it('exposes every documented mode as reachable or explicitly terminal', () => {
-    expect(MODES).toHaveLength(11);
+    expect(MODES).toHaveLength(12);
+  });
+});
+
+describe('gameReducer — player profiles', () => {
+  const picker = (): GameState =>
+    gameReducer(
+      createInitialState(NOW),
+      { type: 'BOOT_LOADED', persisted: null, health: 'fresh', hasProfiles: true },
+      NOW,
+    );
+
+  it('lands on the player picker when profiles exist', () => {
+    const state = picker();
+    expect(state.mode).toBe('profileSelect');
+    expect(state.resumeMode).toBe('profileSelect');
+  });
+
+  it('selecting a profile applies its save and lands in the hub', () => {
+    const persisted = {
+      ...createFreshPersistedState(NOW),
+      avatarId: 'avatar-arta' as const,
+      stickers: ['sticker-greeting' as const],
+    };
+    const state = gameReducer(
+      picker(),
+      { type: 'SELECT_PROFILE', persisted, health: 'loaded' },
+      NOW,
+    );
+    expect(state.mode).toBe('hub');
+    expect(state.avatarId).toBe('avatar-arta');
+    expect(state.stickers).toEqual(['sticker-greeting']);
+  });
+
+  it('sends a profile without a save (or corrupt) back through the title flow', () => {
+    const fresh = gameReducer(
+      picker(),
+      { type: 'SELECT_PROFILE', persisted: null, health: 'fresh' },
+      NOW,
+    );
+    expect(fresh.mode).toBe('title');
+    const recovered = gameReducer(
+      picker(),
+      { type: 'SELECT_PROFILE', persisted: null, health: 'recovered' },
+      NOW,
+    );
+    expect(recovered.corruptSaveDetected).toBe(true);
+  });
+
+  it('starts a new player with a clean slate under the picker', () => {
+    const played = playQuest(atHub(), 'quest-greeting');
+    const switched = gameReducer(played, { type: 'PAUSE' }, NOW);
+    const pickerState = gameReducer(switched, { type: 'SWITCH_PLAYER' }, NOW);
+    expect(pickerState.mode).toBe('profileSelect');
+    expect(shouldAutosave(switched, pickerState)).toBe(true);
+
+    const fresh = gameReducer(pickerState, { type: 'START_NEW_PLAYER' }, NOW);
+    expect(fresh.mode).toBe('avatarSelect');
+    expect(fresh.avatarId).toBeNull();
+    expect(fresh.stickers).toEqual([]);
+    expect(fresh.quests['quest-greeting'].status).not.toBe('completed');
+  });
+
+  it('rejects profile commands from the wrong modes', () => {
+    const title = boot();
+    const hub = atHub();
+    expect(
+      gameReducer(title, { type: 'SELECT_PROFILE', persisted: null, health: 'fresh' }, NOW),
+    ).toBe(title);
+    expect(gameReducer(hub, { type: 'START_NEW_PLAYER' }, NOW)).toBe(hub);
+    expect(gameReducer(title, { type: 'SWITCH_PLAYER' }, NOW)).toBe(title);
   });
 });
