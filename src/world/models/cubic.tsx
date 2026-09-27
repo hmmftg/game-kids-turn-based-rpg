@@ -419,6 +419,16 @@ export function CubicFigure({
 
 const LANDMARK_FACE_Z = (width: number) => width / 2 + 0.01;
 
+/**
+ * Interaction clearance: landmarks sit at `anchor.z - 1.2` with their face
+ * pointing toward the anchor, where the hotspot ring and avatar approach
+ * point live. Decorative details must stay behind `LANDMARK_MAX_DETAIL_Z` in
+ * local z so a fixed `LANDMARK_DETAIL_CLEARANCE` gap remains to the hotspot.
+ */
+export const LANDMARK_DETAIL_CLEARANCE = 0.45;
+export const LANDMARK_MAX_DETAIL_Z = 1.2 - LANDMARK_DETAIL_CLEARANCE;
+const capDetailZ = (z: number) => Math.min(z, LANDMARK_MAX_DETAIL_Z);
+
 /** home: door + windows + roof trim. */
 function HomeGateDetails({ width, height, level }: VariantDetailProps) {
   const faceZ = LANDMARK_FACE_Z(width);
@@ -450,15 +460,15 @@ function ShopDetails({ width, height, level }: VariantDetailProps) {
   return (
     <>
       <Detail level={level} min={1}>
-        <AwningDetail position={[0, height * 0.62, faceZ + 0.28]} width={width * 0.9} />
+        <AwningDetail position={[0, height * 0.62, capDetailZ(faceZ + 0.28)]} width={width * 0.9} />
         <WindowDetail position={[0, height * 0.38, faceZ]} width={0.5} height={0.42} />
       </Detail>
       <Detail level={level} min={2}>
-        <SignDetail position={[width * 0.8, 0, faceZ + 0.2]} />
+        <SignDetail position={[width * 0.8, 0, capDetailZ(faceZ + 0.2)]} />
         <mesh
           geometry={BOX}
           material={sharedLambert(DETAIL_COLORS.door)}
-          position={[-width * 0.75, 0.14, faceZ + 0.15]}
+          position={[-width * 0.75, 0.14, capDetailZ(faceZ + 0.15)]}
           scale={[0.3, 0.28, 0.3]}
           raycast={noRaycast}
         />
@@ -473,13 +483,13 @@ function GardenDetails({ width, level }: VariantDetailProps) {
   return (
     <>
       <Detail level={level} min={1}>
-        <FenceRun position={[0, 0, faceZ + 0.35]} posts={4} spacing={width * 0.32} />
-        <PlantCluster position={[-width * 0.35, 0, faceZ + 0.15]} />
-        <PlantCluster position={[width * 0.3, 0, faceZ + 0.12]} />
+        <FenceRun position={[0, 0, capDetailZ(faceZ + 0.35)]} posts={4} spacing={width * 0.32} />
+        <PlantCluster position={[-width * 0.35, 0, capDetailZ(faceZ + 0.15)]} />
+        <PlantCluster position={[width * 0.3, 0, capDetailZ(faceZ + 0.12)]} />
       </Detail>
       <Detail level={level} min={2}>
-        <FlowerPatch position={[0, 0, faceZ + 0.18]} />
-        <PlantCluster position={[width * 0.05, 0, faceZ + 0.35]} scale={0.8} />
+        <FlowerPatch position={[0, 0, capDetailZ(faceZ + 0.18)]} />
+        <PlantCluster position={[width * 0.05, 0, capDetailZ(faceZ + 0.35)]} scale={0.8} />
       </Detail>
     </>
   );
@@ -496,21 +506,21 @@ function SquareDetails({ width, height, level }: VariantDetailProps) {
         <mesh
           geometry={CYLINDER}
           material={sharedLambert(DETAIL_COLORS.signPost)}
-          position={[-width * 0.8, 0.5, faceZ + 0.3]}
+          position={[-width * 0.8, 0.5, capDetailZ(faceZ + 0.3)]}
           scale={[0.05, 1.0, 0.05]}
           raycast={noRaycast}
         />
         <mesh
           geometry={CYLINDER}
           material={sharedLambert(DETAIL_COLORS.signPost)}
-          position={[width * 0.8, 0.5, faceZ + 0.3]}
+          position={[width * 0.8, 0.5, capDetailZ(faceZ + 0.3)]}
           scale={[0.05, 1.0, 0.05]}
           raycast={noRaycast}
         />
         <mesh
           geometry={BOX}
           material={sharedLambert(DETAIL_COLORS.awning)}
-          position={[0, 0.92, faceZ + 0.3]}
+          position={[0, 0.92, capDetailZ(faceZ + 0.3)]}
           scale={[width * 1.6 - 0.1, 0.18, 0.03]}
           raycast={noRaycast}
         />

@@ -284,6 +284,42 @@ export function AwningDetail({
   );
 }
 
+/**
+ * Minimum distance a path stone keeps from either endpoint anchor, so stones
+ * can never intrude into hotspot / destination-marker clearance.
+ */
+export const PATH_STONE_CLEARANCE = 1.2;
+
+/**
+ * Stone positions along a segment, excluding a fixed clear zone at each end.
+ * Pure and exported so tests can assert clearance numerically.
+ */
+export function pathStonePositions(
+  from: { readonly x: number; readonly z: number },
+  to: { readonly x: number; readonly z: number },
+  count = 4,
+  offset = 0.55,
+  clearance = PATH_STONE_CLEARANCE,
+): Xyz[] {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const length = Math.hypot(dx, dz);
+  const usable = length - 2 * clearance;
+  if (usable <= 0 || length === 0) return [];
+  // Normal to the path direction: stones sit on both sides of the corridor.
+  const nx = (-dz / length) * offset;
+  const nz = (dx / length) * offset;
+  const stones: Xyz[] = [];
+  for (let i = 0; i < count; i++) {
+    const along = clearance + (usable * (i + 1)) / (count + 1);
+    const x = from.x + (dx / length) * along;
+    const z = from.z + (dz / length) * along;
+    const side = i % 2 === 1 ? 1 : -1;
+    stones.push([x + nx * side, 0.05, z + nz * side]);
+  }
+  return stones;
+}
+
 /** Edge stones along a path segment between two points (visual only). */
 export function PathEdgeStones({
   from,
@@ -296,23 +332,9 @@ export function PathEdgeStones({
   readonly count?: number;
   readonly offset?: number;
 }) {
-  const dx = to.x - from.x;
-  const dz = to.z - from.z;
-  const length = Math.hypot(dx, dz) || 1;
-  // Normal to the path direction: stones sit on both sides of the corridor.
-  const nx = (-dz / length) * offset;
-  const nz = (dx / length) * offset;
-  const stones: Xyz[] = [];
-  for (let i = 1; i <= count; i++) {
-    const t = i / (count + 1);
-    const x = from.x + dx * t;
-    const z = from.z + dz * t;
-    const side = i % 2 === 0 ? 1 : -1;
-    stones.push([x + nx * side, 0.05, z + nz * side]);
-  }
   return (
     <group raycast={noRaycast}>
-      {stones.map((position, i) => (
+      {pathStonePositions(from, to, count, offset).map((position, i) => (
         <mesh
           key={i}
           geometry={BOX}
