@@ -67,34 +67,32 @@ export function App() {
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
   const previousCompletedRef = useRef<number | null>(null);
-  const profileRef = useRef(activeProfileId);
-  // A persisted checkpoint carries the completion time of the earlier session,
-  // so only a checkpoint stamped after this session started is a fresh win.
-  const [sessionStartedAt] = useState(() => Date.now());
+  // Highest checkpoint timestamp observed this session. Persisted checkpoints
+  // carry the earlier session's completion time and re-hydrated ones repeat a
+  // timestamp already seen, so only a strictly newer 'questCompleted' stamp is
+  // a fresh win — reload, profile select, and switch-back can never replay it.
+  const seenCheckpointAtRef = useRef<number | null>(null);
 
   // Presentation-only celebration: the reducer has already completed the quest
   // and granted the sticker before this fires; the overlay just reports it.
-  // Hydrating a profile (on select, switch, or boot) must not re-trigger it:
-  // the count re-baselines when the active profile changes, and the checkpoint
-  // timestamp must belong to this session.
   useEffect(() => {
-    const profileChanged = profileRef.current !== activeProfileId;
-    profileRef.current = activeProfileId;
+    const seenAt = seenCheckpointAtRef.current;
+    seenCheckpointAtRef.current = Math.max(seenAt ?? 0, state.checkpoint.at);
     const previous = previousCompletedRef.current;
     previousCompletedRef.current = completed;
     if (
-      !profileChanged &&
       previous !== null &&
       completed > previous &&
       state.checkpoint.kind === 'questCompleted' &&
       state.checkpoint.questId !== null &&
-      state.checkpoint.at >= sessionStartedAt
+      seenAt !== null &&
+      state.checkpoint.at > seenAt
     ) {
       setCelebrating(state.checkpoint.questId);
       playSfx('sfx-success');
       playSfx('sfx-sticker');
     }
-  }, [completed, state.checkpoint, activeProfileId, sessionStartedAt, playSfx]);
+  }, [completed, state.checkpoint, playSfx]);
 
   const openNpc = useCallback(
     (nodeId: string | null) => {

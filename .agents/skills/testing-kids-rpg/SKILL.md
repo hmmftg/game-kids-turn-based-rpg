@@ -11,7 +11,7 @@ description: How to run and drive the Persian RTL kids turn-based RPG (mahalle-y
 - Window management: `wmctrl -r "محله‌ی مهربانی" -b add,maximized_vert,maximized_horz`; resize with `wmctrl -r <title> -e 0,x,y,w,h`. Portrait resize triggers the app's orientation blocker.
 - Flow: profile select → avatar + badge → hub. Tap the yellow-ringed NPC; the avatar walks and dialogue opens on arrival. Encounter phases: intro→demonstrate→playerChoice→worldResponse→reinforce→complete; a wrong icon produces retry copy, not failure.
 - Parent gate: press-and-hold button ~3s (use mouse_move then left_mouse_down + wait — left_mouse_down does not take coordinates).
-- Known pitfalls (may be fixed): Canvas unmount (parent area, orientation blocker) fires three.js `forceContextLoss` → `webglcontextlost` → app flips `webglAvailable=false` permanently; celebration overlay replays after every reload.
+- Historical pitfalls fixed in the UX acceptance pass: Canvas teardown (parent area, orientation blocker) no longer reports as genuine WebGL loss; persisted quest-completion checkpoints no longer replay the celebration on reload or profile switch-back.
 - Emoji render as tofu boxes in this Chrome (no emoji font) — distinguish environment font issues from app bugs.
 
 ## Devin Secrets Needed

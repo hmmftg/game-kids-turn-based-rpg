@@ -33,9 +33,10 @@ async function playQuest(page: Page, questId: (typeof QUESTS)[number]) {
   // The last reinforce closes the quest and returns to the hub with a new
   // sticker; the celebration overlay must be dismissed before tapping onward.
   const dismiss = page.getByTestId('celebration-continue');
-  const celebrated = await dismiss
-    .waitFor({ state: 'visible', timeout: 2000 })
-    .then(() => true, () => false);
+  const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 2000 }).then(
+    () => true,
+    () => false,
+  );
   if (celebrated) await dismiss.click();
   await expect(page.getByTestId(`trail-${questId}`)).toContainText('انجام شد');
 }
