@@ -3,7 +3,7 @@ import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { SOURCE_RECORDS } from '../../content/sources/records.ts';
 import { AUDIO_MANIFEST } from '../../services/audio/manifest.ts';
-import type { GameState } from '../../domain/game/types.ts';
+import type { GameState, QualityTier } from '../../domain/game/types.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
 import type { CacheStatus } from '../../services/pwa/serviceWorker.ts';
 import { AVATAR_EMOJI } from '../child/emoji.ts';
@@ -19,6 +19,12 @@ const CACHE_LABEL: Record<CacheStatus, string> = {
  * Parent-only area: provenance, credits, privacy, local diagnostics and a
  * confirmed reset. No external links, no network calls, no child-visible entry.
  */
+const TIER_LABEL: Record<QualityTier, string> = {
+  low: FA.qualityLow,
+  medium: FA.qualityMedium,
+  high: FA.qualityHigh,
+};
+
 export function ParentArea({
   state,
   cacheStatus,
@@ -28,6 +34,9 @@ export function ParentArea({
   onReset,
   onResetProfile,
   onRenameProfile,
+  onQualityChange,
+  updateReady,
+  onApplyUpdate,
 }: {
   readonly state: GameState;
   readonly cacheStatus: CacheStatus;
@@ -37,14 +46,35 @@ export function ParentArea({
   readonly onReset: () => void;
   readonly onResetProfile: (id: string) => void;
   readonly onRenameProfile: (id: string, nameFa: string) => void;
+  readonly onQualityChange: (tier: QualityTier) => void;
+  readonly updateReady: boolean;
+  readonly onApplyUpdate: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [confirmingProfileId, setConfirmingProfileId] = useState<string | null>(null);
 
   return (
-    <div className="layer layer--overlay" data-testid="parent-area">
-      <div className="panel column" dir="rtl">
+    <div className="layer layer--overlay layer--parent" data-testid="parent-area">
+      <div className="panel panel--parent column" dir="rtl">
         <h2 className="subtitle">{FA.parentArea}</h2>
+
+        <section data-testid="parent-quality">
+          <h3 className="subtitle">{FA.quality}</h3>
+          <div className="row" role="group" aria-label={FA.quality}>
+            {(['low', 'medium', 'high'] as const).map((tier) => (
+              <button
+                key={tier}
+                type="button"
+                className="btn btn--secondary"
+                aria-pressed={state.qualityTier === tier}
+                onClick={() => onQualityChange(tier)}
+                data-testid={`quality-${tier}`}
+              >
+                {TIER_LABEL[tier]}
+              </button>
+            ))}
+          </div>
+        </section>
 
         <section>
           <h3 className="subtitle">{FA.parentSources}</h3>
@@ -81,6 +111,19 @@ export function ParentArea({
         <section>
           <h3 className="subtitle">{FA.parentInstall}</h3>
           <p className="text text--soft">{FA.installBody}</p>
+          {updateReady ? (
+            <div className="row" data-testid="update-prompt">
+              <span className="text">{FA.updateAvailable}</span>
+              <button
+                type="button"
+                className="btn btn--accent"
+                onClick={onApplyUpdate}
+                data-testid="apply-update"
+              >
+                {FA.updateApply}
+              </button>
+            </div>
+          ) : null}
         </section>
 
         {profiles.length > 0 ? (

@@ -31,6 +31,7 @@ export const QUEST_COPY: readonly QuestCopy[] = [
     questId: 'quest-greeting',
     titleFa: 'سلام و ادب',
     childSummaryFa: 'وقتی کسی می‌آید، سلام می‌کنیم.',
+    objectiveFa: 'برو پیش همسایه',
     steps: [
       {
         stepId: 'greeting-1',
@@ -58,6 +59,7 @@ export const QUEST_COPY: readonly QuestCopy[] = [
     questId: 'quest-helping',
     titleFa: 'کمک و مهربانی',
     childSummaryFa: 'وقتی کسی سبد سنگین دارد، کمک می‌کنیم.',
+    objectiveFa: 'برو پیش مغازه‌دار',
     steps: [
       {
         stepId: 'helping-1',
@@ -85,6 +87,7 @@ export const QUEST_COPY: readonly QuestCopy[] = [
     questId: 'quest-tidying',
     titleFa: 'پاکیزگی و نظم',
     childSummaryFa: 'چیزهای روی زمین را جمع می‌کنیم و دست‌هایمان را می‌شوییم.',
+    objectiveFa: 'برو پیش باغبان',
     steps: [
       {
         stepId: 'tidying-1',
@@ -120,6 +123,7 @@ export const QUEST_COPY: readonly QuestCopy[] = [
     questId: 'quest-finale',
     titleFa: 'جشن محله',
     childSummaryFa: 'با هم محله را برای جشن آماده می‌کنیم.',
+    objectiveFa: 'برو به میدان',
     steps: [
       {
         stepId: 'finale-1',

@@ -1,37 +1,40 @@
 import { FA } from '../../content/fa/strings.ts';
-import type { AudioSettings, QualityTier } from '../../domain/game/types.ts';
+import type { AudioSettings } from '../../domain/game/types.ts';
 
-const TIER_LABEL: Record<QualityTier, string> = {
-  low: FA.qualityLow,
-  medium: FA.qualityMedium,
-  high: FA.qualityHigh,
-};
-
+/**
+ * Child-facing pause: resume is the single dominant action; sound toggles and
+ * player switching are secondary. Technical settings (rendering quality,
+ * diagnostics, updates) live in the parent area, not here.
+ */
 export function PauseMenu({
   audio,
-  qualityTier,
-  updateReady,
   onResume,
   onAudioChange,
-  onQualityChange,
   onParentArea,
-  onApplyUpdate,
   onSwitchPlayer,
 }: {
   readonly audio: AudioSettings;
-  readonly qualityTier: QualityTier;
-  readonly updateReady: boolean;
   readonly onResume: () => void;
   readonly onAudioChange: (patch: Partial<AudioSettings>) => void;
-  readonly onQualityChange: (tier: QualityTier) => void;
   readonly onParentArea: () => void;
-  readonly onApplyUpdate: () => void;
   readonly onSwitchPlayer: () => void;
 }) {
   return (
     <div className="layer layer--overlay" data-testid="pause-menu">
       <div className="panel column">
         <h2 className="subtitle">{FA.pause}</h2>
+
+        <button
+          type="button"
+          className="btn btn--large"
+          onClick={onResume}
+          data-testid="resume-button"
+        >
+          <span className="emoji" aria-hidden="true">
+            ▶️
+          </span>{' '}
+          {FA.resumePlay}
+        </button>
 
         <div className="row">
           <button
@@ -60,44 +63,7 @@ export function PauseMenu({
           </button>
         </div>
 
-        <div className="row" role="group" aria-label={FA.quality}>
-          {(['low', 'medium', 'high'] as const).map((tier) => (
-            <button
-              key={tier}
-              type="button"
-              className="btn btn--secondary"
-              aria-pressed={qualityTier === tier}
-              onClick={() => onQualityChange(tier)}
-              data-testid={`quality-${tier}`}
-            >
-              {TIER_LABEL[tier]}
-            </button>
-          ))}
-        </div>
-
-        {updateReady ? (
-          <div className="row" data-testid="update-prompt">
-            <span className="text">{FA.updateAvailable}</span>
-            <button
-              type="button"
-              className="btn btn--accent"
-              onClick={onApplyUpdate}
-              data-testid="apply-update"
-            >
-              {FA.updateApply}
-            </button>
-          </div>
-        ) : null}
-
         <div className="row">
-          <button
-            type="button"
-            className="btn btn--large"
-            onClick={onResume}
-            data-testid="resume-button"
-          >
-            {FA.resumePlay}
-          </button>
           <button
             type="button"
             className="btn btn--secondary"

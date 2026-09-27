@@ -60,6 +60,16 @@ export const FA = {
 
   cancelWalk: 'ایستادن',
   hotspotHint: 'جای چشمک‌زن را لمس کن',
+  tapHere: 'اینجا را لمس کن',
+  backToHood: 'برگرد به محله',
+  keepGoing: 'ادامه بده',
+  wellDone: 'آفرین!',
+  youDidIt: 'انجامش دادی!',
+  gotSticker: 'برچسب گرفتی',
+  albumTitle: 'آلبوم برچسب‌ها',
+  seeStickers: 'دیدن برچسب‌ها',
+  stickerLocked: 'هنوز پیدا نشده',
+  albumEmpty: 'با هر کار، یک برچسب می‌گیری',
 
   parentArea: 'بخش بزرگ‌ترها',
   parentGateTitle: 'این بخش برای بزرگ‌ترهاست',
