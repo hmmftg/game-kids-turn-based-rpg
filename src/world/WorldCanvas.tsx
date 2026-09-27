@@ -11,6 +11,23 @@ import { maxPixelRatioFor } from '../services/device/capabilities.ts';
 import { Hub, type HubHandle } from './Hub.tsx';
 import { CUBIC_MODELS } from './models/cubicModels.ts';
 import { ModelContext } from './models/modelProvider.ts';
+import { ANCHORS } from './navigation/graph.ts';
+
+/**
+ * Screen-space footprint of the whole hub. The camera looks along (1,1,1), so a
+ * ground anchor projects to |x−z|/√2 horizontally and (x+z)/√6 vertically, plus
+ * ~0.82 per unit of model height. The margins cover hotspot rings and the
+ * NPC/landmark offsets so every landmark stays inside the viewport — without
+ * this, landscape phones (wide but short) cropped the top and bottom of the
+ * neighbourhood.
+ */
+const FIT = (() => {
+  const side =
+    Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x - anchor.z) / Math.SQRT2)) + 1.7;
+  const depth =
+    Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x + anchor.z) / Math.sqrt(6))) + 2.9;
+  return { width: side * 2, height: depth * 2 };
+})();
 
 /** Pauses the render loop while the tab is hidden and redraws once on return. */
 function VisibilityPause() {
@@ -57,8 +74,15 @@ export function WorldCanvas({
   const [zoom, setZoom] = useState(70);
 
   // Locked isometric framing: no orbit controls, no camera input of any kind.
+  // Zoom fits the whole neighbourhood, limited by the tighter viewport axis.
   useEffect(() => {
-    const onResize = () => setZoom(Math.max(46, Math.min(96, window.innerWidth / 14)));
+    const onResize = () =>
+      setZoom(
+        Math.min(
+          96,
+          Math.max(20, Math.min(window.innerWidth / FIT.width, window.innerHeight / FIT.height)),
+        ),
+      );
     onResize();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);

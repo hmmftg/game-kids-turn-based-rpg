@@ -70,6 +70,11 @@ export interface IconDefinition {
   readonly labelFa: string;
   /** Pictogram shape key rendered by `ui/child/Pictogram`. */
   readonly shape: string;
+  /**
+   * Per-icon colour: pre-readers navigate by colour + silhouette, so each icon
+   * owns one vivid hue (never the only carrier of meaning).
+   */
+  readonly color: string;
   readonly animationCue: string;
 }
 

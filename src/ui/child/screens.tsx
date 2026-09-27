@@ -1,4 +1,5 @@
 import { FA } from '../../content/fa/strings.ts';
+import { AVATAR_EMOJI } from './emoji.ts';
 import { Pictogram } from './Pictogram.tsx';
 
 export function LoadingScreen() {
@@ -29,6 +30,9 @@ export function OrientationScreen() {
 export function WebglFallbackScreen({ onContinue }: { readonly onContinue: () => void }) {
   return (
     <section className="webgl-fallback" data-testid="webgl-fallback">
+      <span className="emoji" style={{ fontSize: 40 }} aria-hidden="true">
+        🕹️
+      </span>
       <h1 className="subtitle">{FA.webglTitle}</h1>
       <p className="text">{FA.webglHint}</p>
       <button type="button" className="btn btn--large" onClick={onContinue}>
@@ -47,6 +51,9 @@ export function ErrorScreen({
 }) {
   return (
     <div className="layer" role="alert" data-testid="error-screen">
+      <span className="emoji title__emoji" aria-hidden="true">
+        🧸
+      </span>
       <h1 className="title">{FA.errorTitle}</h1>
       <p className="text">{FA.errorHint}</p>
       <button type="button" className="btn btn--large" onClick={onRestart}>
@@ -70,7 +77,12 @@ export function TitleScreen({
 }) {
   return (
     <div className="layer" data-testid="title-screen">
-      <h1 className="title">{FA.appTitle}</h1>
+      <h1 className="title">
+        <span className="emoji title__emoji" aria-hidden="true">
+          🏘️
+        </span>
+        {FA.appTitle}
+      </h1>
       {notice ? <p className="text text--soft">{notice}</p> : null}
       <button type="button" className="btn btn--large" onClick={onStart} data-testid="start-button">
         <Pictogram shape="play" />
@@ -103,6 +115,9 @@ export function AvatarSelectScreen({
           onClick={() => onSelect('avatar-aban')}
           data-testid="avatar-aban"
         >
+          <span className="emoji avatar-choice__emoji" aria-hidden="true">
+            {AVATAR_EMOJI['avatar-aban']}
+          </span>
           {FA.avatarAban}
         </button>
         <button
@@ -111,6 +126,9 @@ export function AvatarSelectScreen({
           onClick={() => onSelect('avatar-arta')}
           data-testid="avatar-arta"
         >
+          <span className="emoji avatar-choice__emoji" aria-hidden="true">
+            {AVATAR_EMOJI['avatar-arta']}
+          </span>
           {FA.avatarArta}
         </button>
       </div>

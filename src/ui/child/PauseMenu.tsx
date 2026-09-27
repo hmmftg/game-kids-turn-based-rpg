@@ -39,6 +39,9 @@ export function PauseMenu({
             onClick={() => onAudioChange({ musicMuted: !audio.musicMuted })}
             data-testid="toggle-music"
           >
+            <span className="emoji" aria-hidden="true">
+              {audio.musicMuted ? '🔇' : '🎵'}
+            </span>{' '}
             {FA.music}: {audio.musicMuted ? FA.off : FA.on}
           </button>
           <button
@@ -48,6 +51,9 @@ export function PauseMenu({
             onClick={() => onAudioChange({ sfxMuted: !audio.sfxMuted })}
             data-testid="toggle-sfx"
           >
+            <span className="emoji" aria-hidden="true">
+              {audio.sfxMuted ? '🔕' : '🔔'}
+            </span>{' '}
             {FA.sfx}: {audio.sfxMuted ? FA.off : FA.on}
           </button>
         </div>

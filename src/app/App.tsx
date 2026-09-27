@@ -7,6 +7,7 @@ import type { AnchorId, IconId, QuestId } from '../domain/game/types.ts';
 import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { canStartQuest } from '../domain/quests/prerequisites.ts';
 import { DialogueCard } from '../ui/child/DialogueCard.tsx';
+import { npcEmoji } from '../ui/child/emoji.ts';
 import { EncounterPanel } from '../ui/child/EncounterPanel.tsx';
 import { PauseMenu } from '../ui/child/PauseMenu.tsx';
 import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
@@ -182,6 +183,8 @@ export function App() {
         {state.mode === 'dialogue' && dialogueNode ? (
           <DialogueCard
             speakerFa={getNpcCopy(dialogueNode.npcId)?.nameFa}
+            speakerEmoji={npcEmoji(dialogueNode.npcId)}
+            iconId={dialogueNode.iconId}
             textFa={dialogueNode.textFa}
             testId="npc-dialogue"
           >

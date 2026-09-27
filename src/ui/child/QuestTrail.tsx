@@ -2,7 +2,7 @@ import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
 import type { QuestId, QuestStatus, StickerId } from '../../domain/game/types.ts';
-import { Pictogram } from './Pictogram.tsx';
+import { questEmoji } from './emoji.ts';
 
 const STATUS_LABEL: Record<QuestStatus, string> = {
   locked: FA.questLocked,
@@ -35,7 +35,9 @@ export function QuestTrail({
             aria-disabled={locked}
             data-testid={`trail-${quest.id}`}
           >
-            <Pictogram shape={status === 'completed' ? 'star' : 'arrow-forward'} size={36} />
+            <span className="emoji trail__emoji" aria-hidden="true">
+              {questEmoji(quest.id)}
+            </span>
             <span className="trail__title">{copy.titleFa}</span>
             <span className="text--soft">{STATUS_LABEL[status]}</span>
           </button>
@@ -55,7 +57,9 @@ export function StickerShelf({ stickers }: { readonly stickers: readonly Sticker
           const label = quest ? getQuestCopy(quest.id).stickerLabelFa : sticker;
           return (
             <span key={sticker} className="sticker" data-testid={`sticker-${sticker}`}>
-              <Pictogram shape="star" size={40} />
+              <span className="emoji sticker__emoji" aria-hidden="true">
+                {quest ? questEmoji(quest.id) : '⭐'}
+              </span>
               <span className="text--soft">{label}</span>
             </span>
           );

@@ -1,13 +1,16 @@
 /**
  * Pictograms are geometric, high-contrast and never rely on colour alone:
- * each one pairs a distinct silhouette with a visible Persian label.
+ * each one pairs a distinct silhouette with a visible Persian label. `color`
+ * tints the stroke and adds a soft disc so icons read as colourful badges.
  */
 export function Pictogram({
   shape,
   size = 56,
+  color,
 }: {
   readonly shape: string;
   readonly size?: number;
+  readonly color?: string | undefined;
 }) {
   return (
     <svg
@@ -15,10 +18,12 @@ export function Pictogram({
       width={size}
       height={size}
       viewBox="0 0 48 48"
+      style={color ? { color } : undefined}
       aria-hidden="true"
       focusable="false"
       role="presentation"
     >
+      {color ? <circle cx="24" cy="24" r="23" fill={color} opacity={0.14} /> : null}
       {renderShape(shape)}
     </svg>
   );

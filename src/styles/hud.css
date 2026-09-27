@@ -40,6 +40,13 @@
   inset-block-end: calc(var(--safe-bottom) + var(--space-3));
   inset-inline: calc(var(--safe-left) + var(--space-3)) calc(var(--safe-right) + var(--space-3));
   justify-content: center;
+  /* The strip is a positioning container: clicks pass through its empty
+     areas (e.g. where it overlaps the quest trail) to elements beneath. */
+  pointer-events: none;
+}
+
+.hud__bottom > * {
+  pointer-events: auto;
 }
 
 .hud__hint {
@@ -175,7 +182,41 @@
   block-size: 48px;
   border-radius: var(--radius-sm);
   background: var(--color-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   animation: demo-bob var(--duration-slow) ease-in-out infinite alternate;
+}
+
+/* Emoji glyphs come from the system emoji font: colourful and offline-safe. */
+.emoji {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-style: normal;
+  line-height: 1;
+}
+
+.trail__emoji {
+  font-size: 34px;
+}
+
+.sticker__emoji {
+  font-size: 34px;
+}
+
+.dialogue-card__emoji {
+  font-size: 30px;
+  margin-inline-end: var(--space-2);
+  vertical-align: middle;
+}
+
+.avatar-choice__emoji {
+  display: block;
+  font-size: 44px;
+}
+
+.title__emoji {
+  display: block;
+  font-size: 56px;
 }
 
 @keyframes demo-bob {
