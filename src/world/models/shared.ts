@@ -8,6 +8,34 @@ import * as THREE from 'three';
 export const BOX = new THREE.BoxGeometry(1, 1, 1);
 export const CYLINDER = new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
 export const PLANE = new THREE.PlaneGeometry(1, 1);
+export const CIRCLE = new THREE.CircleGeometry(1, 16);
+
+/**
+ * Blob-shadow material shared by every figure/landmark shadow disc.
+ */
+export const SHADOW_MATERIAL = new THREE.MeshBasicMaterial({
+  color: '#000000',
+  transparent: true,
+  opacity: 0.16,
+  depthWrite: false,
+});
+
+/**
+ * Shared-resource lifetime contract.
+ *
+ * Everything in this module is owned by the module itself: `BOX`, `CYLINDER`,
+ * `PLANE`, `CIRCLE`, `SHADOW_MATERIAL`, and every `MeshLambertMaterial` handed
+ * out by `sharedLambert` live for the whole app session and are deliberately
+ * reused by many meshes.
+ *
+ * The world canvas is intentionally remounted during parent-area and
+ * orientation transitions. To keep one mesh's unmount from disposing a
+ * resource the other meshes still use, subtrees built exclusively from these
+ * shared resources carry `dispose={null}` at their boundary (see the model
+ * components and the decoration groups in `Hub.tsx`). Locally owned
+ * JSX-created resources (e.g. the hotspot/destination ring geometry) are NOT
+ * covered by that boundary and keep normal R3F disposal.
+ */
 
 /**
  * Module-level material registry: the same color always resolves to the same

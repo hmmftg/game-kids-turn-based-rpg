@@ -15,26 +15,43 @@ export interface GroundDecoration {
 }
 
 export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
-  { x: 2, z: -2, kind: 'flower', minDetail: 1 },
-  { x: -2, z: -2, kind: 'plant', minDetail: 1 },
-  { x: 2.2, z: 2.2, kind: 'flower', minDetail: 1 },
-  { x: 4, z: -2.6, kind: 'stone', minDetail: 1 },
-  { x: -2.2, z: -3.4, kind: 'stone', minDetail: 1 },
-  { x: 3.2, z: 3.4, kind: 'stone', minDetail: 1 },
-  { x: 1.6, z: -4.6, kind: 'plant', minDetail: 1 },
-  { x: -4.6, z: 1.9, kind: 'flower', minDetail: 1 },
-  { x: -4.6, z: -2, kind: 'stone', minDetail: 1 },
-  { x: -3.4, z: -1.6, kind: 'patch', minDetail: 1, scale: 2.4 },
-  { x: 2.6, z: -4.2, kind: 'patch', minDetail: 1, scale: 2.8 },
-  { x: -1.6, z: 4.4, kind: 'patch', minDetail: 1, scale: 2.6 },
-  { x: 1.8, z: 4.8, kind: 'flower', minDetail: 2 },
-  { x: -2.6, z: 4, kind: 'stone', minDetail: 2 },
-  { x: 5, z: 2.6, kind: 'plant', minDetail: 2 },
-  { x: -1.8, z: -4.9, kind: 'flower', minDetail: 2 },
-  { x: 4.4, z: 4.4, kind: 'plant', minDetail: 2 },
-  { x: -5.2, z: 2.6, kind: 'flower', minDetail: 2 },
-  { x: 5.4, z: -3, kind: 'stone', minDetail: 2 },
+  { x: 2, z: -2.6, kind: 'flower', minDetail: 1 },
+  { x: -2.2, z: -2.4, kind: 'plant', minDetail: 1 },
+  { x: 2.6, z: 2.6, kind: 'flower', minDetail: 1 },
+  { x: 4, z: -2.8, kind: 'stone', minDetail: 1 },
+  { x: -2.4, z: -3.8, kind: 'stone', minDetail: 1 },
+  { x: 3.6, z: 3.8, kind: 'stone', minDetail: 1 },
+  { x: 1.8, z: -5.2, kind: 'plant', minDetail: 1 },
+  { x: -4.2, z: 3.4, kind: 'flower', minDetail: 1 },
+  { x: -4.6, z: -2.4, kind: 'stone', minDetail: 1 },
+  { x: -3.8, z: -3.4, kind: 'patch', minDetail: 1, scale: 2.4 },
+  { x: 3, z: -5.4, kind: 'patch', minDetail: 1, scale: 2.4 },
+  { x: -3, z: 4.6, kind: 'patch', minDetail: 1, scale: 2.4 },
+  { x: 2.4, z: 4.6, kind: 'flower', minDetail: 2 },
+  { x: -3, z: 3.6, kind: 'stone', minDetail: 2 },
+  { x: 5, z: 3.2, kind: 'plant', minDetail: 2 },
+  { x: -2.2, z: -5.2, kind: 'flower', minDetail: 2 },
+  { x: 4.8, z: 4.8, kind: 'plant', minDetail: 2 },
+  { x: -5.4, z: 3, kind: 'flower', minDetail: 2 },
+  { x: 5.6, z: -3.4, kind: 'stone', minDetail: 2 },
 ];
+
+/**
+ * Conservative bounding radius of one decoration's rendered footprint, so
+ * validation tests the whole occupied area — not just the slot center.
+ * `patch` is a 1×1 plane scaled by `scale`; the organic kinds are roughly
+ * unit-sized clusters scaled likewise.
+ */
+const KIND_FOOTPRINT: Record<GroundDecoration['kind'], number> = {
+  patch: 0.55,
+  flower: 0.55,
+  plant: 0.55,
+  stone: 0.5,
+};
+
+export function decorationFootprint(slot: GroundDecoration): number {
+  return (slot.scale ?? 1) * KIND_FOOTPRINT[slot.kind];
+}
 
 interface ExclusionZone {
   readonly x: number;
@@ -90,15 +107,20 @@ function distToSegment(
   return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
 }
 
-/** True when a decoration at (x, z) clears every exclusion zone and corridor. */
-export function isDecorationClear(x: number, z: number): boolean {
+/**
+ * True when a decoration footprint centred at (x, z) clears every exclusion
+ * zone and corridor. `radius` is the decoration's bounding radius (see
+ * `decorationFootprint`) — a footprint-aware check, not just the center.
+ */
+export function isDecorationClear(x: number, z: number, radius = 0): boolean {
   for (const zone of POINT_ZONES) {
-    if (Math.hypot(x - zone.x, z - zone.z) < zone.radius) return false;
+    if (Math.hypot(x - zone.x, z - zone.z) < zone.radius + radius) return false;
   }
   for (const edge of EDGES) {
     const from = getAnchor(edge.from);
     const to = getAnchor(edge.to);
-    if (distToSegment(x, z, from.x, from.z, to.x, to.z) < CORRIDOR_HALF_WIDTH) return false;
+    if (distToSegment(x, z, from.x, from.z, to.x, to.z) < CORRIDOR_HALF_WIDTH + radius)
+      return false;
   }
   return true;
 }

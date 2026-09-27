@@ -22,7 +22,7 @@ import {
   PlantCluster,
   StoneCluster,
 } from './models/details.tsx';
-import { BOX, PLANE, sharedLambert } from './models/shared.ts';
+import { BOX, CYLINDER, PLANE, sharedLambert } from './models/shared.ts';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
@@ -259,7 +259,7 @@ function KeepsakeTree({
       !reducedMotion && Math.abs(completedCount - shown) > 0.02
         ? 1 + Math.abs(completedCount - shown) * 0.35
         : 1;
-    trunkRef.current.scale.set(1, trunk, 1);
+    trunkRef.current.scale.set(0.3, trunk, 0.3);
     trunkRef.current.position.y = trunk / 2;
     canopyRef.current.scale.set(canopy * bounce, 0.5 * bounce, canopy * bounce);
     canopyRef.current.position.y = trunk + 0.22;
@@ -267,15 +267,20 @@ function KeepsakeTree({
 
   const trunk = 0.3 + completedCount * 0.35;
   const canopy = 0.7 + completedCount * 0.18;
-  // Blossoms are a progression cue: one per completed chapter, up to 3.
-  const blossoms = Math.min(completedCount, 3);
+  // Blossoms are a progression cue: one per completed chapter (4 quests).
+  const blossoms = Math.min(completedCount, 4);
 
   return (
-    <group position={[-1.2, 0, 1.6]} name="keepsake">
-      <mesh ref={trunkRef} position={[0, trunk / 2, 0]} scale={[1, trunk, 1]} raycast={noRaycast}>
-        <cylinderGeometry args={[0.12, 0.16, 1, 8]} />
-        <meshLambertMaterial color="#8a5a33" />
-      </mesh>
+    // dispose={null}: this subtree uses only module-level shared resources.
+    <group position={[-1.2, 0, 1.6]} name="keepsake" dispose={null}>
+      <mesh
+        ref={trunkRef}
+        position={[0, trunk / 2, 0]}
+        scale={[0.3, trunk, 0.3]}
+        geometry={CYLINDER}
+        material={sharedLambert('#8a5a33')}
+        raycast={noRaycast}
+      />
       <Detail level={detailLevel} min={2}>
         {/* two branch tiers peeking out of the canopy */}
         <mesh
@@ -511,41 +516,45 @@ export function Hub({
       />
 
       {/* Visual path decoration derived from EDGES — read-only, never alters
-          anchors, pathfinding, or movement. */}
-      <Detail level={detailLevel} min={1}>
-        {EDGES.map((edge) => (
-          <PathEdgeStones
-            key={`${edge.from}-${edge.to}`}
-            from={getAnchor(edge.from)}
-            to={getAnchor(edge.to)}
-            count={detailLevel >= 2 ? 6 : 4}
-          />
-        ))}
-      </Detail>
-
-      {/* Fixed authored ground decoration (decorations.ts validates every slot
-          against anchors, NPCs, landmarks, props and path corridors). */}
-      {GROUND_DECORATIONS.map((slot, i) =>
-        detailLevel >= slot.minDetail ? (
-          slot.kind === 'flower' ? (
-            <FlowerPatch key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
-          ) : slot.kind === 'stone' ? (
-            <StoneCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
-          ) : slot.kind === 'plant' ? (
-            <PlantCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
-          ) : (
-            <mesh
-              key={i}
-              geometry={PLANE}
-              material={sharedLambert('#e2cfa4')}
-              position={[slot.x, 0.005, slot.z]}
-              rotation={[-Math.PI / 2, 0, 0]}
-              scale={[slot.scale ?? 2, slot.scale ?? 2, 1]}
-              raycast={noRaycast}
+          anchors, pathfinding, or movement. dispose={null}: this block and
+          the authored GROUND_DECORATIONS below consume only module-level
+          shared resources, so canvas remounts must not dispose them. */}
+      <group dispose={null}>
+        <Detail level={detailLevel} min={1}>
+          {EDGES.map((edge) => (
+            <PathEdgeStones
+              key={`${edge.from}-${edge.to}`}
+              from={getAnchor(edge.from)}
+              to={getAnchor(edge.to)}
+              count={detailLevel >= 2 ? 6 : 4}
             />
-          )
-        ) : null,
-      )}
+          ))}
+        </Detail>
+
+        {/* Fixed authored ground decoration (decorations.ts validates every slot
+          against anchors, NPCs, landmarks, props and path corridors). */}
+        {GROUND_DECORATIONS.map((slot, i) =>
+          detailLevel >= slot.minDetail ? (
+            slot.kind === 'flower' ? (
+              <FlowerPatch key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+            ) : slot.kind === 'stone' ? (
+              <StoneCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+            ) : slot.kind === 'plant' ? (
+              <PlantCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+            ) : (
+              <mesh
+                key={i}
+                geometry={PLANE}
+                material={sharedLambert('#e2cfa4')}
+                position={[slot.x, 0.005, slot.z]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={[slot.scale ?? 2, slot.scale ?? 2, 1]}
+                raycast={noRaycast}
+              />
+            )
+          ) : null,
+        )}
+      </group>
 
       <KeepsakeTree completedCount={completedCount} detailLevel={detailLevel} />
 

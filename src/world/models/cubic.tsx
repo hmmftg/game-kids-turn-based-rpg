@@ -19,7 +19,7 @@ import {
   StoneCluster,
   WindowDetail,
 } from './details.tsx';
-import { BOX, CYLINDER, DETAIL_COLORS, sharedLambert } from './shared.ts';
+import { BOX, CIRCLE, CYLINDER, DETAIL_COLORS, SHADOW_MATERIAL, sharedLambert } from './shared.ts';
 
 // Materials come from the module-level registry so repeated details across the
 // whole scene share one MeshLambertMaterial instance per color.
@@ -163,10 +163,14 @@ function Headwear({ id, lift }: { readonly id: HeadwearId; readonly lift: number
 /** Soft blob shadow: one transparent disc, no shadow maps anywhere in the scene. */
 function BlobShadow({ radius = 0.5 }: { readonly radius?: number }) {
   return (
-    <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={noRaycast}>
-      <circleGeometry args={[radius, 16]} />
-      <meshBasicMaterial color="#000000" transparent opacity={0.16} depthWrite={false} />
-    </mesh>
+    <mesh
+      position={[0, 0.02, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      geometry={CIRCLE}
+      material={SHADOW_MATERIAL}
+      scale={[radius, radius, 1]}
+      raycast={noRaycast}
+    />
   );
 }
 
@@ -372,7 +376,12 @@ export function CubicFigure({
   const lift = Math.sin(bobbing) * 0.05;
 
   return (
-    <group position={[position.x, 0, position.z]} rotation={[0, rotationY, 0]} name={label ?? ''}>
+    <group
+      position={[position.x, 0, position.z]}
+      rotation={[0, rotationY, 0]}
+      name={label ?? ''}
+      dispose={null}
+    >
       <BlobShadow radius={0.42} />
       <mesh
         geometry={CYLINDER}
@@ -578,14 +587,14 @@ export function CubicLandmark({
   const roof = useMaterial(palette.head);
   if (variant === 'fountain') {
     return (
-      <group position={[position.x, 0, position.z]}>
+      <group position={[position.x, 0, position.z]} dispose={null}>
         <BlobShadow radius={1.0} />
         <FountainDetails level={detailLevel} />
       </group>
     );
   }
   return (
-    <group position={[position.x, 0, position.z]}>
+    <group position={[position.x, 0, position.z]} dispose={null}>
       <BlobShadow radius={width * 0.7} />
       <mesh
         geometry={BOX}
@@ -631,7 +640,7 @@ export function CubicProp({
 }: PropProps) {
   const material = useMaterial(palette.body);
   return (
-    <group position={[position.x, 0, position.z]}>
+    <group position={[position.x, 0, position.z]} dispose={null}>
       <mesh
         geometry={shape === 'box' ? BOX : CYLINDER}
         material={material}
