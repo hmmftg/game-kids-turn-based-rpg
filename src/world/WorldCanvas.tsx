@@ -11,7 +11,7 @@ import type {
 import { maxPixelRatioFor } from '../services/device/capabilities.ts';
 import { Hub, type HubHandle } from './Hub.tsx';
 import { CUBIC_MODELS } from './models/cubicModels.ts';
-import { ModelContext } from './models/modelProvider.ts';
+import { ModelContext, detailLevelFor } from './models/modelProvider.ts';
 import { ANCHORS } from './navigation/graph.ts';
 
 /**
@@ -96,6 +96,9 @@ export function WorldCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneAlive = useRef(false);
   const [zoom, setZoom] = useState(70);
+  // The quality tier is the only quality system; the world only derives how
+  // much decoration it draws from it, never a different render pipeline.
+  const detailLevel = detailLevelFor(qualityTier);
 
   // Locked isometric framing: no orbit controls, no camera input of any kind.
   // Zoom fits the whole neighbourhood, limited by the tighter viewport axis.
@@ -121,9 +124,16 @@ export function WorldCanvas({
         shadows={false}
         camera={{ position: [10, 10, 10], zoom, near: -100, far: 200 }}
         gl={{ antialias: qualityTier !== 'low', powerPreference: 'low-power', alpha: false }}
-        onCreated={({ gl, camera }) => {
+        onCreated={({ gl, camera, scene }) => {
           gl.setClearColor('#cfe8ff');
           camera.lookAt(0, 0, 0);
+          if (import.meta.env.DEV) {
+            // Perf-gate hook for scripts/measure-world.mjs; dev server only.
+            const w = window as unknown as Record<string, unknown>;
+            w.__worldRenderer = gl;
+            w.__worldScene = scene;
+            w.__worldCamera = camera;
+          }
           gl.domElement.addEventListener('webglcontextlost', (event) => {
             event.preventDefault();
             if (sceneAlive.current) onContextLost();
@@ -133,7 +143,7 @@ export function WorldCanvas({
         <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
         <InvalidateOnChange
-          token={`${avatarId}:${headwear}:${completedCount}:${String(interactive)}:${zoom}`}
+          token={`${avatarId}:${headwear}:${completedCount}:${String(interactive)}:${zoom}:${qualityTier}`}
         />
         <ModelContext.Provider value={CUBIC_MODELS}>
           <Hub
@@ -142,6 +152,7 @@ export function WorldCanvas({
             questStatuses={questStatuses}
             completedCount={completedCount}
             interactive={interactive}
+            detailLevel={detailLevel}
             onArrive={onArrive}
             handleRef={handleRef}
             suggestedQuestId={suggestedQuestId}
