@@ -133,7 +133,7 @@ export function PlantCluster({
   scale = 1,
 }: {
   readonly position: Xyz;
-  readonly scale?: number;
+  readonly scale?: number | undefined;
 }) {
   return (
     <group position={position} scale={scale} raycast={noRaycast}>
@@ -168,7 +168,7 @@ export function FlowerPatch({
   scale = 1,
 }: {
   readonly position: Xyz;
-  readonly scale?: number;
+  readonly scale?: number | undefined;
 }) {
   return (
     <group position={position} scale={scale} raycast={noRaycast}>
@@ -197,7 +197,7 @@ export function StoneCluster({
   scale = 1,
 }: {
   readonly position: Xyz;
-  readonly scale?: number;
+  readonly scale?: number | undefined;
 }) {
   return (
     <group position={position} scale={scale} raycast={noRaycast}>
