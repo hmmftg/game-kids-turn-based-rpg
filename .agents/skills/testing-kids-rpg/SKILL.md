@@ -17,3 +17,15 @@ description: How to run and drive the Persian RTL kids turn-based RPG (mahalle-y
 ## Devin Secrets Needed
 
 - None.
+
+## State inspection
+
+- Profile/headwear state lives in IndexedDB: db `mahalle-ye-mehrabani`, store `progress`, key `profiles` — readable via `browser_console` for verifying persisted cosmetic choices.
+
+## Emulation
+
+- `prefers-reduced-motion` can be emulated via `chromium.connectOverCDP('http://localhost:29229')` + `Emulation.setEmulatedMedia`.
+
+## Pitfalls
+
+- Batched blind clicks through pause → switch-player → new-player can desync (a world click can open a dialogue and eat an iteration). Screenshot between steps and verify state before proceeding.
