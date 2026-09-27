@@ -145,6 +145,56 @@ describe('UX pass', () => {
     });
   });
 
+  it('does not replay the celebration when a completed profile is reloaded', async () => {
+    const repository = new MemorySaveRepository();
+    const first = renderApp(repository);
+    await reachHub(first.user);
+    await completeFirstQuest(first.user);
+    await first.user.click(await screen.findByTestId('celebration-continue'));
+    first.unmount();
+
+    // A fresh session (new App + provider) over the same save: selecting the
+    // profile hydrates the persisted 'questCompleted' checkpoint, which must
+    // not count as a new completion.
+    const second = renderApp(repository);
+    const [profile] = await repository.listProfiles();
+    await second.user.click(await screen.findByTestId(`profile-card-${profile!.id}`));
+    await screen.findByTestId('hud');
+    expect(screen.queryByTestId('quest-celebration')).toBeNull();
+    expect(screen.getByTestId('objective-chip')).toHaveTextContent(
+      getQuestCopy('quest-helping').objectiveFa,
+    );
+  });
+
+  it('still celebrates a second quest completed later in the same session', async () => {
+    const repository = new MemorySaveRepository();
+    const first = renderApp(repository);
+    await reachHub(first.user);
+    await completeFirstQuest(first.user);
+    await first.user.click(await screen.findByTestId('celebration-continue'));
+
+    // Completing the next quest in the same session must still celebrate.
+    await first.user.click(screen.getByTestId('trail-quest-helping'));
+    await first.user.click(await screen.findByTestId('start-quest'));
+    await first.user.click(await screen.findByTestId('advance-intro'));
+    for (let guard = 0; guard < 20; guard += 1) {
+      if (screen.queryByTestId('choices')) {
+        await pickChoice(first.user, 0);
+        continue;
+      }
+      if (
+        (await advanceIfPresent(first.user, 'advance-intro')) ||
+        (await advanceIfPresent(first.user, 'advance-demonstrate')) ||
+        (await advanceIfPresent(first.user, 'advance-response')) ||
+        (await advanceIfPresent(first.user, 'advance-reinforce'))
+      ) {
+        continue;
+      }
+      if (await advanceIfPresent(first.user, 'advance-complete')) break;
+    }
+    expect(await screen.findByTestId('quest-celebration')).toBeInTheDocument();
+  });
+
   it('celebration Continue works instantly with no timers (reduced-motion safe)', async () => {
     const user = userEvent.setup();
     let done = false;

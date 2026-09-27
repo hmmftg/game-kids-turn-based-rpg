@@ -67,25 +67,34 @@ export function App() {
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
   const previousCompletedRef = useRef<number | null>(null);
+  const profileRef = useRef(activeProfileId);
+  // A persisted checkpoint carries the completion time of the earlier session,
+  // so only a checkpoint stamped after this session started is a fresh win.
+  const [sessionStartedAt] = useState(() => Date.now());
 
   // Presentation-only celebration: the reducer has already completed the quest
   // and granted the sticker before this fires; the overlay just reports it.
-  // The first observed count is a hydration baseline — replaying a persisted
-  // 'questCompleted' checkpoint on load must not re-trigger the overlay.
+  // Hydrating a profile (on select, switch, or boot) must not re-trigger it:
+  // the count re-baselines when the active profile changes, and the checkpoint
+  // timestamp must belong to this session.
   useEffect(() => {
+    const profileChanged = profileRef.current !== activeProfileId;
+    profileRef.current = activeProfileId;
     const previous = previousCompletedRef.current;
     previousCompletedRef.current = completed;
     if (
+      !profileChanged &&
       previous !== null &&
       completed > previous &&
       state.checkpoint.kind === 'questCompleted' &&
-      state.checkpoint.questId !== null
+      state.checkpoint.questId !== null &&
+      state.checkpoint.at >= sessionStartedAt
     ) {
       setCelebrating(state.checkpoint.questId);
       playSfx('sfx-success');
       playSfx('sfx-sticker');
     }
-  }, [completed, state.checkpoint, playSfx]);
+  }, [completed, state.checkpoint, activeProfileId, sessionStartedAt, playSfx]);
 
   const openNpc = useCallback(
     (nodeId: string | null) => {
