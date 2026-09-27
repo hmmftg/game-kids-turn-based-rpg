@@ -2,10 +2,27 @@ import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import type { AnchorId, AvatarId, HeadwearId, QuestId, QuestStatus } from '../domain/game/types.ts';
+import type {
+  AnchorId,
+  AvatarId,
+  HeadwearId,
+  LandmarkId,
+  NpcId,
+  QuestId,
+  QuestStatus,
+} from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
-import { ANCHORS, getAnchor } from './navigation/graph.ts';
+import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
+import { GROUND_DECORATIONS } from './decorations.ts';
+import {
+  Detail,
+  FlowerPatch,
+  PathEdgeStones,
+  PlantCluster,
+  StoneCluster,
+} from './models/details.tsx';
+import { BOX, CYLINDER, PLANE, sharedLambert } from './models/shared.ts';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
@@ -17,6 +34,8 @@ import {
   PROP_PALETTE,
   useModels,
   type DetailLevel,
+  type FigureVisualRole,
+  type LandmarkVisualVariant,
 } from './models/modelProvider.ts';
 
 export interface HubHandle {
@@ -41,6 +60,42 @@ export interface HubProps {
   readonly suggestedQuestId: QuestId | null;
   readonly onArrive: (anchor: AnchorId) => void;
   readonly handleRef: Ref<HubHandle> | undefined;
+}
+
+/** Map domain landmark ids to presentation variants (model layer stays domain-free). */
+function landmarkVariant(id: LandmarkId | null): LandmarkVisualVariant | undefined {
+  switch (id) {
+    case 'landmark-square':
+      return 'square';
+    case 'landmark-home-gate':
+      return 'home-gate';
+    case 'landmark-shop':
+      return 'shop';
+    case 'landmark-garden':
+      return 'garden';
+    case 'landmark-fountain':
+      return 'fountain';
+    default:
+      return undefined;
+  }
+}
+
+/** Map domain npc ids to visual roles (accessories only — no gameplay meaning). */
+function figureRole(id: NpcId | null): FigureVisualRole | undefined {
+  switch (id) {
+    case 'npc-elder':
+      return 'elder';
+    case 'npc-neighbour':
+      return 'neighbour';
+    case 'npc-shopkeeper':
+      return 'shopkeeper';
+    case 'npc-gardener':
+      return 'gardener';
+    case 'npc-child-friend':
+      return 'friend';
+    default:
+      return undefined;
+  }
 }
 
 const GROUND = new THREE.PlaneGeometry(40, 40);
@@ -166,6 +221,137 @@ function QuestMarker({
   );
 }
 
+/**
+ * Progress keepsake: the neighbourhood tree grows with each completed chapter.
+ * Explicit refs (not group.children indices) so decorative children can be
+ * added freely; `completedCount` remains the only progression input and the
+ * existing easing/invalidate contract is unchanged.
+ */
+function KeepsakeTree({
+  completedCount,
+  detailLevel,
+}: {
+  readonly completedCount: number;
+  readonly detailLevel: DetailLevel;
+}) {
+  const trunkRef = useRef<THREE.Mesh>(null);
+  const canopyRef = useRef<THREE.Group>(null);
+  const growth = useRef(completedCount);
+  const reducedMotion = prefersReducedMotion();
+  const invalidate = useThree((state) => state.invalidate);
+
+  useFrame((_, delta) => {
+    const current = growth.current;
+    if (current === completedCount || !trunkRef.current || !canopyRef.current) return;
+    // Demand-rendered canvas: keep invalidating until the grow settles.
+    invalidate();
+    if (reducedMotion) {
+      growth.current = completedCount;
+    } else {
+      const direction = Math.sign(completedCount - current);
+      const next = current + direction * Math.min(Math.abs(completedCount - current), delta * 1.6);
+      growth.current = next;
+    }
+    const shown = growth.current;
+    const trunk = 0.3 + shown * 0.35;
+    const canopy = 0.7 + shown * 0.18;
+    const bounce =
+      !reducedMotion && Math.abs(completedCount - shown) > 0.02
+        ? 1 + Math.abs(completedCount - shown) * 0.35
+        : 1;
+    trunkRef.current.scale.set(0.3, trunk, 0.3);
+    trunkRef.current.position.y = trunk / 2;
+    canopyRef.current.scale.set(canopy * bounce, 0.5 * bounce, canopy * bounce);
+    canopyRef.current.position.y = trunk + 0.22;
+  });
+
+  const trunk = 0.3 + completedCount * 0.35;
+  const canopy = 0.7 + completedCount * 0.18;
+  // Blossoms are a progression cue: one per completed chapter (4 quests).
+  const blossoms = Math.min(completedCount, 4);
+
+  return (
+    // dispose={null}: this subtree uses only module-level shared resources.
+    <group position={[-1.2, 0, 1.6]} name="keepsake" dispose={null}>
+      <mesh
+        ref={trunkRef}
+        position={[0, trunk / 2, 0]}
+        scale={[0.3, trunk, 0.3]}
+        geometry={CYLINDER}
+        material={sharedLambert('#8a5a33')}
+        raycast={noRaycast}
+      />
+      <Detail level={detailLevel} min={2}>
+        {/* two branch tiers peeking out of the canopy */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#8a5a33')}
+          position={[0.22, trunk * 0.72, 0]}
+          rotation={[0, 0, -0.6]}
+          scale={[0.34, 0.08, 0.08]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#8a5a33')}
+          position={[-0.2, trunk * 0.55, -0.08]}
+          rotation={[0, 0.4, 0.55]}
+          scale={[0.3, 0.07, 0.07]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <group ref={canopyRef} position={[0, trunk + 0.22, 0]} scale={[canopy, 0.5, canopy]}>
+        <mesh geometry={BOX} material={sharedLambert('#4f8f4f')} raycast={noRaycast} />
+        <Detail level={detailLevel} min={1}>
+          {/* satellite leaf clusters (scale along with the canopy group) */}
+          <mesh
+            geometry={BOX}
+            material={sharedLambert('#3f743f')}
+            position={[0.55, 0.1, 0.3]}
+            scale={[0.5, 0.6, 0.5]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={sharedLambert('#5d9c5d')}
+            position={[-0.5, 0.2, -0.35]}
+            scale={[0.45, 0.55, 0.45]}
+            raycast={noRaycast}
+          />
+          {/* blossoms: one per completed chapter — progression cue */}
+          {Array.from({ length: blossoms }, (_, i) => (
+            <mesh
+              key={i}
+              geometry={BOX}
+              material={sharedLambert('#e88bb0')}
+              position={[0.3 - i * 0.3, 0.62, 0.35 - i * 0.2]}
+              scale={[0.14, 0.14, 0.14]}
+              raycast={noRaycast}
+            />
+          ))}
+        </Detail>
+        <Detail level={detailLevel} min={2}>
+          <mesh
+            geometry={BOX}
+            material={sharedLambert('#5d9c5d')}
+            position={[0.1, 0.55, -0.5]}
+            scale={[0.4, 0.4, 0.4]}
+            raycast={noRaycast}
+          />
+        </Detail>
+      </group>
+      <Detail level={detailLevel} min={1}>
+        {/* planter ring at the base */}
+        <StoneCluster position={[0.55, 0, 0.2]} scale={0.8} />
+        <StoneCluster position={[-0.5, 0, -0.35]} scale={0.7} />
+      </Detail>
+      <Detail level={detailLevel} min={2}>
+        <FlowerPatch position={[-0.55, 0, 0.45]} scale={0.7} />
+      </Detail>
+    </group>
+  );
+}
+
 export function Hub({
   avatarId,
   headwear,
@@ -212,43 +398,6 @@ export function Hub({
     if (walked) setWalkTarget(anchor);
   };
 
-  // The keepsake tree eases toward the true completed count so a completion
-  // reads as the world visibly growing, not as a silent prop change. Under
-  // reduced motion it snaps straight to the final height.
-  const growth = useRef(completedCount);
-  const treeRef = useRef<THREE.Group>(null);
-  const reducedMotion = prefersReducedMotion();
-  const invalidate = useThree((state) => state.invalidate);
-  useFrame((_, delta) => {
-    const current = growth.current;
-    if (current === completedCount || !treeRef.current) return;
-    // Demand-rendered canvas: keep invalidating until the grow settles.
-    invalidate();
-    if (reducedMotion) {
-      growth.current = completedCount;
-    } else {
-      const direction = Math.sign(completedCount - current);
-      const next = current + direction * Math.min(Math.abs(completedCount - current), delta * 1.6);
-      growth.current = next;
-    }
-    const shown = growth.current;
-    const trunk = 0.3 + shown * 0.35;
-    const canopy = 0.7 + shown * 0.18;
-    const bounce =
-      !reducedMotion && Math.abs(completedCount - shown) > 0.02
-        ? 1 + Math.abs(completedCount - shown) * 0.35
-        : 1;
-    const trunkMesh = treeRef.current.children[0];
-    const canopyMesh = treeRef.current.children[1];
-    if (!trunkMesh || !canopyMesh) return;
-    trunkMesh.scale.set(1, trunk, 1);
-    trunkMesh.position.y = trunk / 2;
-    canopyMesh.scale.set(canopy * bounce, 0.5 * bounce, canopy * bounce);
-    canopyMesh.position.y = trunk + 0.22;
-  });
-  const initialTrunk = 0.3 + completedCount * 0.35;
-  const initialCanopy = 0.7 + completedCount * 0.18;
-
   return (
     <group>
       <hemisphereLight args={['#ffffff', '#c8b78f', 1.1]} />
@@ -291,6 +440,7 @@ export function Hub({
               position={{ x: anchor.x, z: anchor.z - 1.2 }}
               palette={LANDMARK_PALETTE}
               detailLevel={detailLevel}
+              variant={landmarkVariant(anchor.landmarkId)}
             />
             <Hotspot
               x={anchor.x}
@@ -316,6 +466,15 @@ export function Hub({
         <DestinationMarker x={getAnchor(walkTarget).x} z={getAnchor(walkTarget).z} />
       ) : null}
 
+      {/* The fountain is scenery at a non-walkable anchor: decorative only,
+          no hotspot, no quest marker, no movement target, no animation. */}
+      <models.Landmark
+        position={{ x: getAnchor('anchor-fountain').x, z: getAnchor('anchor-fountain').z }}
+        palette={LANDMARK_PALETTE}
+        detailLevel={detailLevel}
+        variant="fountain"
+      />
+
       {ANCHORS.filter((anchor) => anchor.npcId !== null).map((anchor) => {
         const npcX = anchor.x + 0.9;
         const npcZ = anchor.z - 0.4;
@@ -331,6 +490,7 @@ export function Hub({
             palette={NPC_PALETTE}
             label={anchor.npcId ?? ''}
             detailLevel={detailLevel}
+            role={figureRole(anchor.npcId)}
           />
         );
       })}
@@ -339,30 +499,64 @@ export function Hub({
         position={{ x: 1.4, z: 1.2 }}
         palette={PROP_PALETTE}
         shape="cylinder"
+        variant="planter"
         detailLevel={detailLevel}
       />
       <models.Prop
         position={{ x: -1.5, z: -1.1 }}
         palette={PROP_PALETTE}
+        variant="basket"
         detailLevel={detailLevel}
       />
-      <models.Prop position={{ x: 4.6, z: 1.4 }} palette={PROP_PALETTE} detailLevel={detailLevel} />
+      <models.Prop
+        position={{ x: 4.6, z: 1.4 }}
+        palette={PROP_PALETTE}
+        variant="crate"
+        detailLevel={detailLevel}
+      />
 
-      {/* Progress keepsake: the neighbourhood tree grows with each completed chapter. */}
-      <group position={[-1.2, 0, 1.6]} name="keepsake" ref={treeRef}>
-        <mesh position={[0, initialTrunk / 2, 0]} scale={[1, initialTrunk, 1]} raycast={noRaycast}>
-          <cylinderGeometry args={[0.12, 0.16, 1, 8]} />
-          <meshLambertMaterial color="#8a5a33" />
-        </mesh>
-        <mesh
-          position={[0, initialTrunk + 0.22, 0]}
-          scale={[initialCanopy, 0.5, initialCanopy]}
-          raycast={noRaycast}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshLambertMaterial color="#4f8f4f" />
-        </mesh>
+      {/* Visual path decoration derived from EDGES — read-only, never alters
+          anchors, pathfinding, or movement. dispose={null}: this block and
+          the authored GROUND_DECORATIONS below consume only module-level
+          shared resources, so canvas remounts must not dispose them. */}
+      <group dispose={null}>
+        <Detail level={detailLevel} min={1}>
+          {EDGES.map((edge) => (
+            <PathEdgeStones
+              key={`${edge.from}-${edge.to}`}
+              from={getAnchor(edge.from)}
+              to={getAnchor(edge.to)}
+              count={detailLevel >= 2 ? 6 : 4}
+            />
+          ))}
+        </Detail>
+
+        {/* Fixed authored ground decoration (decorations.ts validates every slot
+          against anchors, NPCs, landmarks, props and path corridors). */}
+        {GROUND_DECORATIONS.map((slot, i) =>
+          detailLevel >= slot.minDetail ? (
+            slot.kind === 'flower' ? (
+              <FlowerPatch key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+            ) : slot.kind === 'stone' ? (
+              <StoneCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+            ) : slot.kind === 'plant' ? (
+              <PlantCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+            ) : (
+              <mesh
+                key={i}
+                geometry={PLANE}
+                material={sharedLambert('#e2cfa4')}
+                position={[slot.x, 0.005, slot.z]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={[slot.scale ?? 2, slot.scale ?? 2, 1]}
+                raycast={noRaycast}
+              />
+            )
+          ) : null,
+        )}
       </group>
+
+      <KeepsakeTree completedCount={completedCount} detailLevel={detailLevel} />
 
       <models.Figure
         position={walker.position}
@@ -372,6 +566,7 @@ export function Hub({
         headwear={headwear}
         label="avatar"
         detailLevel={detailLevel}
+        role="avatar"
       />
     </group>
   );
