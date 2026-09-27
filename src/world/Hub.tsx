@@ -180,6 +180,9 @@ export function Hub({
       goTo: (anchor, onArrived) => {
         const walked = walker.walkTo(anchor, () => {
           setWalkTarget(null);
+          // Arrival side effects (sound, first-use hint) always run; the
+          // caller's callback (e.g. opening the quest dialogue) runs on top.
+          onArrive(anchor);
           onArrived?.();
         });
         if (walked) setWalkTarget(anchor);
@@ -190,11 +193,16 @@ export function Hub({
         walker.cancel();
       },
     }),
-    [walker],
+    [walker, onArrive],
   );
 
   const walkHere = (anchor: AnchorId) => {
-    const walked = walker.walkTo(anchor, () => setWalkTarget(null));
+    const walked = walker.walkTo(anchor, () => {
+      setWalkTarget(null);
+      // Tapping the world is a full interaction: clear the marker and fire
+      // the shared arrival handler so NPC taps open their dialogue.
+      onArrive(anchor);
+    });
     if (walked) setWalkTarget(anchor);
   };
 
