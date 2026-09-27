@@ -2,7 +2,15 @@ import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import type { AnchorId, AvatarId, HeadwearId, QuestId, QuestStatus } from '../domain/game/types.ts';
+import type {
+  AnchorId,
+  AvatarId,
+  HeadwearId,
+  LandmarkId,
+  NpcId,
+  QuestId,
+  QuestStatus,
+} from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
 import { ANCHORS, getAnchor } from './navigation/graph.ts';
@@ -17,6 +25,8 @@ import {
   PROP_PALETTE,
   useModels,
   type DetailLevel,
+  type FigureVisualRole,
+  type LandmarkVisualVariant,
 } from './models/modelProvider.ts';
 
 export interface HubHandle {
@@ -41,6 +51,42 @@ export interface HubProps {
   readonly suggestedQuestId: QuestId | null;
   readonly onArrive: (anchor: AnchorId) => void;
   readonly handleRef: Ref<HubHandle> | undefined;
+}
+
+/** Map domain landmark ids to presentation variants (model layer stays domain-free). */
+function landmarkVariant(id: LandmarkId | null): LandmarkVisualVariant | undefined {
+  switch (id) {
+    case 'landmark-square':
+      return 'square';
+    case 'landmark-home-gate':
+      return 'home-gate';
+    case 'landmark-shop':
+      return 'shop';
+    case 'landmark-garden':
+      return 'garden';
+    case 'landmark-fountain':
+      return 'fountain';
+    default:
+      return undefined;
+  }
+}
+
+/** Map domain npc ids to visual roles (accessories only — no gameplay meaning). */
+function figureRole(id: NpcId | null): FigureVisualRole | undefined {
+  switch (id) {
+    case 'npc-elder':
+      return 'elder';
+    case 'npc-neighbour':
+      return 'neighbour';
+    case 'npc-shopkeeper':
+      return 'shopkeeper';
+    case 'npc-gardener':
+      return 'gardener';
+    case 'npc-child-friend':
+      return 'friend';
+    default:
+      return undefined;
+  }
 }
 
 const GROUND = new THREE.PlaneGeometry(40, 40);
@@ -291,6 +337,7 @@ export function Hub({
               position={{ x: anchor.x, z: anchor.z - 1.2 }}
               palette={LANDMARK_PALETTE}
               detailLevel={detailLevel}
+              variant={landmarkVariant(anchor.landmarkId)}
             />
             <Hotspot
               x={anchor.x}
@@ -316,6 +363,15 @@ export function Hub({
         <DestinationMarker x={getAnchor(walkTarget).x} z={getAnchor(walkTarget).z} />
       ) : null}
 
+      {/* The fountain is scenery at a non-walkable anchor: decorative only,
+          no hotspot, no quest marker, no movement target, no animation. */}
+      <models.Landmark
+        position={{ x: getAnchor('anchor-fountain').x, z: getAnchor('anchor-fountain').z }}
+        palette={LANDMARK_PALETTE}
+        detailLevel={detailLevel}
+        variant="fountain"
+      />
+
       {ANCHORS.filter((anchor) => anchor.npcId !== null).map((anchor) => {
         const npcX = anchor.x + 0.9;
         const npcZ = anchor.z - 0.4;
@@ -331,6 +387,7 @@ export function Hub({
             palette={NPC_PALETTE}
             label={anchor.npcId ?? ''}
             detailLevel={detailLevel}
+            role={figureRole(anchor.npcId)}
           />
         );
       })}
@@ -339,14 +396,21 @@ export function Hub({
         position={{ x: 1.4, z: 1.2 }}
         palette={PROP_PALETTE}
         shape="cylinder"
+        variant="planter"
         detailLevel={detailLevel}
       />
       <models.Prop
         position={{ x: -1.5, z: -1.1 }}
         palette={PROP_PALETTE}
+        variant="basket"
         detailLevel={detailLevel}
       />
-      <models.Prop position={{ x: 4.6, z: 1.4 }} palette={PROP_PALETTE} detailLevel={detailLevel} />
+      <models.Prop
+        position={{ x: 4.6, z: 1.4 }}
+        palette={PROP_PALETTE}
+        variant="crate"
+        detailLevel={detailLevel}
+      />
 
       {/* Progress keepsake: the neighbourhood tree grows with each completed chapter. */}
       <group position={[-1.2, 0, 1.6]} name="keepsake" ref={treeRef}>
@@ -372,6 +436,7 @@ export function Hub({
         headwear={headwear}
         label="avatar"
         detailLevel={detailLevel}
+        role="avatar"
       />
     </group>
   );
