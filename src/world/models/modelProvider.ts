@@ -27,6 +27,15 @@ export function detailLevelFor(tier: QualityTier): DetailLevel {
   return 2;
 }
 
+/**
+ * Presentation-only identities. `Hub` maps domain ids (`landmark-*`, `npc-*`)
+ * to these variants so the model layer never sees gameplay identifiers.
+ */
+export type LandmarkVisualVariant = 'square' | 'home-gate' | 'shop' | 'garden' | 'fountain';
+export type FigureVisualRole =
+  'elder' | 'neighbour' | 'shopkeeper' | 'gardener' | 'friend' | 'avatar';
+export type PropVisualVariant = 'basket' | 'crate' | 'planter';
+
 export interface FigureProps {
   readonly position: GroundPoint;
   readonly rotationY?: number;
@@ -38,6 +47,8 @@ export interface FigureProps {
   readonly headwear?: HeadwearId;
   /** Decorative density; omitted defaults to the medium look. */
   readonly detailLevel?: DetailLevel;
+  /** Visual identity for accessories; omitted renders a plain villager. */
+  readonly role?: FigureVisualRole | undefined;
 }
 
 export interface LandmarkProps {
@@ -46,6 +57,8 @@ export interface LandmarkProps {
   readonly height?: number;
   readonly width?: number;
   readonly detailLevel?: DetailLevel;
+  /** Which landmark silhouette/details to draw; omitted is a plain building. */
+  readonly variant?: LandmarkVisualVariant | undefined;
 }
 
 export interface PropProps {
@@ -54,6 +67,8 @@ export interface PropProps {
   readonly scale?: number;
   readonly shape?: 'box' | 'cylinder';
   readonly detailLevel?: DetailLevel;
+  /** Recognizable prop identity; omitted is a bare shape. */
+  readonly variant?: PropVisualVariant | undefined;
 }
 
 /**
