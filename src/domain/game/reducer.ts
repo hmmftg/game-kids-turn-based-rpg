@@ -176,6 +176,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
           dialogue: null,
           saveHealth: 'fresh',
           corruptSaveDetected: false,
+          headwear: 'none',
         },
         { mode: 'avatarSelect', resumeMode: 'avatarSelect' },
         now,
@@ -212,6 +213,12 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
         now,
       );
     }
+
+    // Cosmetic only: never wrapped in stable() — changing how the avatar
+    // looks must not bump autosave or touch gameplay state.
+    case 'SET_HEADWEAR':
+      if (state.headwear === command.headwear) return state;
+      return { ...state, headwear: command.headwear };
 
     case 'ENTER_HUB': {
       if (state.mode === 'hub') return state;
@@ -338,6 +345,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
           dialogue: null,
           saveHealth: 'fresh',
           corruptSaveDetected: false,
+          headwear: 'none',
           fatalReason: null,
         },
         { mode: 'profileSelect', resumeMode: 'profileSelect' },

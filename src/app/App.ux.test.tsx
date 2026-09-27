@@ -31,6 +31,7 @@ function renderApp(repository = new MemorySaveRepository()) {
 async function reachHub(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByTestId('start-button'));
   await user.click(await screen.findByTestId('avatar-aban'));
+  await user.click(await screen.findByTestId('headwear-next'));
   await user.click(await screen.findByTestId('badge-0'));
   await screen.findByTestId('hud');
 }
@@ -85,6 +86,7 @@ async function switchToNewPlayer(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('switch-player'));
   await user.click(await screen.findByTestId('profile-new'));
   await user.click(await screen.findByTestId('avatar-arta'));
+  await user.click(await screen.findByTestId('headwear-next'));
   await user.click(await screen.findByTestId('badge-1'));
   await screen.findByTestId('hud');
 }
@@ -106,6 +108,7 @@ describe('UX pass', () => {
     expect(screen.queryByTestId('objective-chip')).toBeNull();
 
     await user.click(await screen.findByTestId('avatar-aban'));
+    await user.click(await screen.findByTestId('headwear-next'));
     await user.click(await screen.findByTestId('badge-0'));
     await screen.findByTestId('hud');
 
@@ -314,5 +317,51 @@ describe('UX pass', () => {
     const hint = screen.getByTestId('interaction-hint');
     expect(hint).toHaveTextContent('👆');
     expect(hint).toHaveTextContent(FA.tapHere);
+  });
+
+  it('offers every headwear option with a visible selected state and live preview', async () => {
+    const { user } = renderApp();
+    await user.click(await screen.findByTestId('start-button'));
+    await user.click(await screen.findByTestId('avatar-aban'));
+
+    const row = await screen.findByTestId('headwear-row');
+    const options = row.querySelectorAll('button');
+    expect(options).toHaveLength(6);
+
+    // Default is the uncovered look; selection state is not colour-only.
+    expect(screen.getByTestId('headwear-option-none')).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByTestId('headwear-option-chador'));
+    expect(screen.getByTestId('headwear-option-chador')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('headwear-option-none')).toHaveAttribute('aria-pressed', 'false');
+    // Preview swaps immediately: the chador pictogram replaces the hair glyph.
+    expect(screen.getByTestId('headwear-preview').querySelector('svg')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('headwear-next'));
+    await user.click(await screen.findByTestId('badge-0'));
+    await screen.findByTestId('hud');
+  });
+
+  it('remembers headwear on the profile card without touching the save slot', async () => {
+    const repository = new MemorySaveRepository();
+    const { user } = renderApp(repository);
+    await user.click(await screen.findByTestId('start-button'));
+    await user.click(await screen.findByTestId('avatar-aban'));
+    await user.click(await screen.findByTestId('headwear-option-scarf'));
+    await user.click(await screen.findByTestId('headwear-next'));
+    await user.click(await screen.findByTestId('badge-0'));
+    await screen.findByTestId('hud');
+
+    // The choice lives on the index card, never inside PersistedState.
+    const [profile] = await repository.listProfiles();
+    expect(profile?.headwear).toBe('scarf');
+    expect(repository.peek(profileSlotKey(profile!.id))).not.toHaveProperty('headwear');
+
+    // Switching away and back restores it for the world layer.
+    await user.click(screen.getByTestId('pause-button'));
+    await user.click(screen.getByTestId('switch-player'));
+    await user.click(await screen.findByTestId(`profile-card-${profile!.id}`));
+    await screen.findByTestId('hud');
+    expect((await repository.listProfiles())[0]?.headwear).toBe('scarf');
   });
 });

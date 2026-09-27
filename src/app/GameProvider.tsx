@@ -14,7 +14,7 @@ import {
   toPersistedState,
 } from '../domain/game/initialState.ts';
 import { gameReducer } from '../domain/game/reducer.ts';
-import type { AvatarId, Command, GameState } from '../domain/game/types.ts';
+import type { AvatarId, Command, GameState, HeadwearId } from '../domain/game/types.ts';
 import { audioService } from '../services/audio/audioService.ts';
 import {
   currentOrientation,
@@ -45,6 +45,7 @@ function newProfileId(): string {
 function makeProfile(
   avatarId: AvatarId,
   badge: string,
+  headwear: HeadwearId,
   stickerCount: number,
   now: number,
 ): ProfileMeta {
@@ -53,6 +54,7 @@ function makeProfile(
     nameFa: '',
     avatarId,
     badge,
+    headwear,
     createdAt: now,
     lastPlayedAt: now,
     stickerCount,
@@ -123,6 +125,7 @@ export function GameProvider({
             const meta = makeProfile(
               persisted.avatarId ?? 'avatar-aban',
               pickProfileBadge(list),
+              'none',
               persisted.stickers.length,
               persisted.lastPlayedAt,
             );
@@ -279,6 +282,9 @@ export function GameProvider({
             persisted: persistedFromLoadResult(result),
             health: healthFromLoadResult(result),
           });
+          // The index card carries the cosmetic pick; the save slot doesn't.
+          const meta = profilesRef.current.find((entry) => entry.id === id);
+          dispatch({ type: 'SET_HEADWEAR', headwear: meta?.headwear ?? 'none' });
           if (persistedFromLoadResult(result) === null) {
             dispatch({ type: 'SET_QUALITY_TIER', tier: detectQualityTier() });
           }
@@ -296,19 +302,20 @@ export function GameProvider({
   }, [setActiveProfile]);
 
   const chooseAvatar = useCallback(
-    (avatarId: AvatarId, badge: string) => {
+    (avatarId: AvatarId, badge: string, headwear: HeadwearId) => {
       const existingId = activeProfileIdRef.current;
       if (existingId === null) {
-        const meta = makeProfile(avatarId, badge, 0, Date.now());
+        const meta = makeProfile(avatarId, badge, headwear, 0, Date.now());
         setActiveProfile(meta.id);
         writeProfileList([...profilesRef.current, meta]);
       } else {
         writeProfileList(
           profilesRef.current.map((entry) =>
-            entry.id === existingId ? { ...entry, avatarId, badge } : entry,
+            entry.id === existingId ? { ...entry, avatarId, badge, headwear } : entry,
           ),
         );
       }
+      dispatch({ type: 'SET_HEADWEAR', headwear });
       dispatch({ type: 'SELECT_AVATAR', avatarId });
     },
     [setActiveProfile, writeProfileList],

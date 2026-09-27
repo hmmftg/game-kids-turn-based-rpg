@@ -1,6 +1,7 @@
 import { FA } from '../../content/fa/strings.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
 import { AVATAR_EMOJI } from './emoji.ts';
+import { Pictogram } from './Pictogram.tsx';
 
 function persianDigits(value: number): string {
   return String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);
@@ -41,6 +42,11 @@ export function ProfileSelectScreen({
               <span className="emoji profile-card__avatar" aria-hidden="true">
                 {AVATAR_EMOJI[profile.avatarId]}
               </span>
+              {profile.headwear && profile.headwear !== 'none' ? (
+                <span className="profile-card__headwear" aria-hidden="true">
+                  <Pictogram shape={`headwear-${profile.headwear}`} size={24} />
+                </span>
+              ) : null}
               <span className="trail__title">
                 {profile.nameFa || `${FA.playerFallback} ${persianDigits(index + 1)}`}
               </span>

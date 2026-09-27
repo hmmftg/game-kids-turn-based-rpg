@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { ComponentType } from 'react';
+import type { HeadwearId } from '../../domain/game/types.ts';
 
 export interface Palette {
   readonly body: string;
@@ -19,6 +20,8 @@ export interface FigureProps {
   /** Phase of the idle/walk bob, in radians. */
   readonly bobbing?: number;
   readonly label?: string;
+  /** Cosmetic headwear layer; omitted/'none' leaves the head uncovered. */
+  readonly headwear?: HeadwearId;
 }
 
 export interface LandmarkProps {

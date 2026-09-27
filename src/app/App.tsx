@@ -164,9 +164,9 @@ export function App() {
     case 'avatarSelect':
       return (
         <AvatarSelectScreen
-          onSelect={(avatarId, badge) => {
+          onSelect={(avatarId, badge, headwear) => {
             playSfx('sfx-choice');
-            chooseAvatar(avatarId, badge);
+            chooseAvatar(avatarId, badge, headwear);
           }}
         />
       );
@@ -228,6 +228,7 @@ export function App() {
       {state.webglAvailable ? (
         <WorldCanvas
           avatarId={state.avatarId}
+          headwear={state.headwear}
           questStatuses={statuses}
           completedCount={completed}
           interactive={state.mode === 'hub'}

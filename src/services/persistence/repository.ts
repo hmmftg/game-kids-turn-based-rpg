@@ -1,4 +1,5 @@
-import type { AvatarId, PersistedState, SaveHealth } from '../../domain/game/types.ts';
+import { isHeadwearId } from '../../domain/game/types.ts';
+import type { AvatarId, HeadwearId, PersistedState, SaveHealth } from '../../domain/game/types.ts';
 
 /** The pre-profiles save key; kept so existing single-save data can migrate. */
 export const LEGACY_SLOT_KEY = 'save';
@@ -20,6 +21,12 @@ export interface ProfileMeta {
   readonly avatarId: AvatarId;
   /** Badge emoji the kid picked — their main way to recognise their card. */
   readonly badge: string;
+  /**
+   * Cosmetic headwear choice. Lives only on the index card, not inside the
+   * per-profile save, so it never touches the save schema. Absent on indexes
+   * written before this feature → defaults to 'none'.
+   */
+  readonly headwear?: HeadwearId;
   readonly createdAt: number;
   readonly lastPlayedAt: number;
   readonly stickerCount: number;
@@ -49,6 +56,7 @@ export function parseProfileIndex(raw: unknown): ProfileMeta[] {
       nameFa: typeof entry.nameFa === 'string' ? entry.nameFa : '',
       avatarId: entry.avatarId,
       badge: entry.badge,
+      headwear: isHeadwearId(entry.headwear) ? entry.headwear : 'none',
       createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : 0,
       lastPlayedAt: typeof entry.lastPlayedAt === 'number' ? entry.lastPlayedAt : 0,
       stickerCount: typeof entry.stickerCount === 'number' ? entry.stickerCount : 0,

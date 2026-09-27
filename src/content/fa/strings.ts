@@ -14,6 +14,13 @@ export const FA = {
   avatarArta: 'آرتا',
   avatarHint: 'هر دو مثل هم بازی می‌کنند',
   chooseBadge: 'یک نشان برای خودت انتخاب کن',
+  chooseHeadwear: 'روی سرت چه می‌پوشی؟',
+  headwearNone: 'فقط مو',
+  headwearScarf: 'روسری',
+  headwearChador: 'چادر',
+  headwearKolah: 'کلاه',
+  headwearKufi: 'کلاه کوچک',
+  headwearBeanie: 'کلاه بافتنی',
 
   whoIsPlaying: 'کی بازی می‌کند؟',
   newPlayer: 'بازیکن جدید',
