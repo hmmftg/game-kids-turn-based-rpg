@@ -66,14 +66,17 @@ export function App() {
   const [worldHintSeen, setWorldHintSeen] = useState(false);
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
-  const previousCompletedRef = useRef(completed);
+  const previousCompletedRef = useRef<number | null>(null);
 
   // Presentation-only celebration: the reducer has already completed the quest
   // and granted the sticker before this fires; the overlay just reports it.
+  // The first observed count is a hydration baseline — replaying a persisted
+  // 'questCompleted' checkpoint on load must not re-trigger the overlay.
   useEffect(() => {
     const previous = previousCompletedRef.current;
     previousCompletedRef.current = completed;
     if (
+      previous !== null &&
       completed > previous &&
       state.checkpoint.kind === 'questCompleted' &&
       state.checkpoint.questId !== null
