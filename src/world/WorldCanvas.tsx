@@ -55,6 +55,7 @@ export interface WorldCanvasProps {
   readonly completedCount: number;
   readonly interactive: boolean;
   readonly qualityTier: QualityTier;
+  readonly suggestedQuestId: QuestId | null;
   readonly onArrive: (anchor: AnchorId) => void;
   readonly onContextLost: () => void;
   readonly handleRef?: Ref<HubHandle>;
@@ -66,6 +67,7 @@ export function WorldCanvas({
   completedCount,
   interactive,
   qualityTier,
+  suggestedQuestId,
   onArrive,
   onContextLost,
   handleRef,
@@ -118,6 +120,7 @@ export function WorldCanvas({
             interactive={interactive}
             onArrive={onArrive}
             handleRef={handleRef}
+            suggestedQuestId={suggestedQuestId}
           />
         </ModelContext.Provider>
       </Canvas>

@@ -86,6 +86,7 @@ function childTextsOf(
   const texts = [
     { where: `${copy.questId}.titleFa`, text: copy.titleFa },
     { where: `${copy.questId}.childSummaryFa`, text: copy.childSummaryFa },
+    { where: `${copy.questId}.objectiveFa`, text: copy.objectiveFa },
     { where: `${copy.questId}.completionFa`, text: copy.completionFa },
     { where: `${copy.questId}.stickerLabelFa`, text: copy.stickerLabelFa },
   ];

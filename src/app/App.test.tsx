@@ -147,12 +147,23 @@ describe('App', () => {
     expect(screen.getByTestId('sticker-sticker-greeting')).toBeInTheDocument();
 
     // Switching back to the picker keeps kid2's card fresh, and a confirmed
-    // reset wipes only kid1's slot — never kid2's.
+    // reset wipes only kid1's slot — never kid2's. Destructive resets only
+    // live behind the parent gate; child-facing profile cards can't wipe.
     await user.click(screen.getByTestId('pause-button'));
     await user.click(await screen.findByTestId('switch-player'));
     await screen.findByTestId('profile-select');
-    await user.click(screen.getByTestId('profile-reset-profile-kid1'));
-    await user.click(screen.getByTestId('profile-reset-profile-kid1'));
+    expect(screen.queryByTestId('profile-reset-profile-kid1')).toBeNull();
+
+    await user.click(screen.getByTestId('parent-entry-profiles'));
+    const hold = await screen.findByTestId('parent-gate-hold');
+    await user.pointer({ keys: '[MouseLeft>]', target: hold });
+    expect(
+      await screen.findByTestId('parent-area', undefined, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    await user.pointer('[MouseLeft]');
+
+    await user.click(screen.getByTestId('parent-reset-profile-kid1'));
+    await user.click(screen.getByTestId('parent-reset-confirm-profile-kid1'));
 
     await waitFor(async () => {
       const result = await repository.load(profileSlotKey('profile-kid1'));

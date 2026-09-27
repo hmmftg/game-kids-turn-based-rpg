@@ -1,17 +1,21 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
 import type { AnchorId, IconId, QuestId } from '../domain/game/types.ts';
 import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
-import { canStartQuest } from '../domain/quests/prerequisites.ts';
+import { canStartQuest, nextSuggestedQuest } from '../domain/quests/prerequisites.ts';
+import { QuestCelebration } from '../ui/child/Celebration.tsx';
 import { DialogueCard } from '../ui/child/DialogueCard.tsx';
 import { npcEmoji } from '../ui/child/emoji.ts';
 import { EncounterPanel } from '../ui/child/EncounterPanel.tsx';
+import { InteractionHint } from '../ui/child/InteractionHint.tsx';
+import { ObjectiveChip } from '../ui/child/ObjectiveChip.tsx';
 import { PauseMenu } from '../ui/child/PauseMenu.tsx';
 import { ProfileSelectScreen } from '../ui/child/ProfileSelectScreen.tsx';
 import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
+import { StickerAlbum } from '../ui/child/StickerAlbum.tsx';
 import {
   AvatarSelectScreen,
   ErrorScreen,
@@ -57,6 +61,31 @@ export function App() {
   const hubRef = useRef<HubHandle>(null);
   const statuses = selectQuestStatuses(state);
   const completed = selectCompletedQuestCount(state);
+  const suggestedQuestId = nextSuggestedQuest(state);
+  // Session-only UI affordances: never persisted, never part of game state.
+  const [worldHintSeen, setWorldHintSeen] = useState(false);
+  const [albumOpen, setAlbumOpen] = useState(false);
+  const [celebrating, setCelebrating] = useState<QuestId | null>(null);
+  const previousCompletedRef = useRef<number | null>(null);
+
+  // Presentation-only celebration: the reducer has already completed the quest
+  // and granted the sticker before this fires; the overlay just reports it.
+  // The first observed count is a hydration baseline — replaying a persisted
+  // 'questCompleted' checkpoint on load must not re-trigger the overlay.
+  useEffect(() => {
+    const previous = previousCompletedRef.current;
+    previousCompletedRef.current = completed;
+    if (
+      previous !== null &&
+      completed > previous &&
+      state.checkpoint.kind === 'questCompleted' &&
+      state.checkpoint.questId !== null
+    ) {
+      setCelebrating(state.checkpoint.questId);
+      playSfx('sfx-success');
+      playSfx('sfx-sticker');
+    }
+  }, [completed, state.checkpoint, playSfx]);
 
   const openNpc = useCallback(
     (nodeId: string | null) => {
@@ -68,7 +97,14 @@ export function App() {
     [dispatch],
   );
 
-  const onArrive = useCallback((anchor: AnchorId) => openNpc(nodeForAnchor(anchor)), [openNpc]);
+  const onArrive = useCallback(
+    (anchor: AnchorId) => {
+      setWorldHintSeen(true);
+      playSfx('sfx-arrive');
+      openNpc(nodeForAnchor(anchor));
+    },
+    [openNpc, playSfx],
+  );
 
   const goToQuest = useCallback(
     (questId: QuestId) => {
@@ -98,7 +134,6 @@ export function App() {
             playSfx('sfx-choice');
             startNewPlayer();
           }}
-          onReset={resetProfile}
           onParent={() => dispatch({ type: 'OPEN_PARENT_GATE' })}
         />
       );
@@ -148,6 +183,9 @@ export function App() {
           onReset={resetProgress}
           onResetProfile={resetProfile}
           onRenameProfile={renameProfile}
+          onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
+          updateReady={updateReady}
+          onApplyUpdate={applyUpdate}
         />
       );
 
@@ -155,13 +193,9 @@ export function App() {
       return (
         <PauseMenu
           audio={state.audio}
-          qualityTier={state.qualityTier}
-          updateReady={updateReady}
           onResume={() => dispatch({ type: 'RESUME' })}
           onAudioChange={(audio) => dispatch({ type: 'SET_AUDIO_SETTINGS', audio })}
-          onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
           onParentArea={() => dispatch({ type: 'OPEN_PARENT_GATE' })}
-          onApplyUpdate={applyUpdate}
           onSwitchPlayer={() => dispatch({ type: 'SWITCH_PLAYER' })}
         />
       );
@@ -194,6 +228,7 @@ export function App() {
           onArrive={onArrive}
           onContextLost={() => dispatch({ type: 'WEBGL_AVAILABILITY_CHANGED', available: false })}
           handleRef={hubRef}
+          suggestedQuestId={suggestedQuestId}
         />
       ) : null}
 
@@ -203,14 +238,24 @@ export function App() {
           className="btn btn--secondary"
           onClick={() => dispatch({ type: 'PAUSE' })}
           data-testid="pause-button"
+          aria-label={FA.pause}
         >
+          <span className="emoji" aria-hidden="true">
+            ⏸️
+          </span>{' '}
           {FA.pause}
         </button>
-        <StickerShelf stickers={state.stickers} />
+        <StickerShelf stickers={state.stickers} onOpen={() => setAlbumOpen(true)} />
       </div>
 
+      {state.mode === 'hub' || state.mode === 'dialogue' ? (
+        <div className="hud__objective">
+          <ObjectiveChip questId={suggestedQuestId} />
+        </div>
+      ) : null}
+
       <div className="hud__side">
-        <QuestTrail statuses={statuses} onGo={goToQuest} />
+        <QuestTrail statuses={statuses} currentId={suggestedQuestId} onGo={goToQuest} />
       </div>
 
       <div className="hud__bottom">
@@ -243,7 +288,7 @@ export function App() {
               onClick={() => dispatch({ type: 'CLOSE_DIALOGUE' })}
               data-testid="close-dialogue"
             >
-              {FA.back}
+              {FA.backToHood}
             </button>
           </DialogueCard>
         ) : null}
@@ -256,7 +301,7 @@ export function App() {
               dispatch({ type: 'ADVANCE_PHASE' });
             }}
             onChoose={(iconId: IconId, correct: boolean) => {
-              playSfx('sfx-choice');
+              playSfx(correct ? 'sfx-choice' : 'sfx-retry');
               dispatch({ type: 'CHOOSE', iconId, correct });
             }}
             onLeave={() => dispatch({ type: 'ABANDON_ENCOUNTER' })}
@@ -265,7 +310,11 @@ export function App() {
 
         {state.mode === 'hub' ? (
           state.webglAvailable ? (
-            <p className="text text--soft hud__hint">{FA.hotspotHint}</p>
+            worldHintSeen ? (
+              <p className="text text--soft hud__hint">{FA.hotspotHint}</p>
+            ) : (
+              <InteractionHint />
+            )
           ) : (
             // The whole slice stays playable through the DOM trail when WebGL
             // is missing; the notice must not cover the trail or the HUD.
@@ -273,6 +322,14 @@ export function App() {
           )
         ) : null}
       </div>
+
+      {albumOpen ? (
+        <StickerAlbum stickers={state.stickers} onClose={() => setAlbumOpen(false)} />
+      ) : null}
+
+      {celebrating !== null && state.mode === 'hub' ? (
+        <QuestCelebration questId={celebrating} onDone={() => setCelebrating(null)} />
+      ) : null}
     </div>
   );
 }

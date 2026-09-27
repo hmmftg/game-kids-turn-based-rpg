@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
@@ -11,60 +12,118 @@ const STATUS_LABEL: Record<QuestStatus, string> = {
   completed: FA.questCompleted,
 };
 
-/** Visual trail of chapters: shape + label, never colour alone. */
+const STATUS_GLYPH: Record<QuestStatus, string> = {
+  locked: '🔒',
+  available: '○',
+  active: '👈',
+  completed: '⭐',
+};
+
+/**
+ * Visual journey of chapters. States are carried by glyph + shape + scale +
+ * label, never colour alone: locked shows a lock, completed a star, and the
+ * next quest gets the «go here» marker, a connector and a larger node.
+ *
+ * Layout adapts: tall viewports get a vertical rail at the inline edge, short
+ * landscape viewports get a compact icon rail, and very wide screens get a
+ * horizontal journey — ordered in DOM order under `dir="rtl"`, so the path
+ * reads right-to-left like a Persian page. The trail scrolls internally and
+ * the current node is kept in view; the page itself never scrolls sideways.
+ */
 export function QuestTrail({
   statuses,
+  currentId,
   onGo,
 }: {
   readonly statuses: Record<QuestId, QuestStatus>;
+  readonly currentId: QuestId | null;
   readonly onGo: (questId: QuestId) => void;
 }) {
+  const currentRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    currentRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [currentId]);
+
   return (
-    <nav className="trail" aria-label={FA.questTrail} data-testid="quest-trail">
-      {QUEST_DEFINITIONS.map((quest) => {
+    <nav className="trail" aria-label={FA.questTrail} data-testid="quest-trail" dir="rtl">
+      {QUEST_DEFINITIONS.map((quest, index) => {
         const status = statuses[quest.id];
         const copy = getQuestCopy(quest.id);
         const locked = status === 'locked';
+        const current = quest.id === currentId && status !== 'completed';
+        const label = `${copy.titleFa} — ${STATUS_LABEL[status]}`;
         return (
-          <button
-            key={quest.id}
-            type="button"
-            className={`btn btn--icon trail__item trail__item--${status}`}
-            onClick={() => onGo(quest.id)}
-            disabled={locked}
-            aria-disabled={locked}
-            data-testid={`trail-${quest.id}`}
-          >
-            <span className="emoji trail__emoji" aria-hidden="true">
-              {questEmoji(quest.id)}
-            </span>
-            <span className="trail__title">{copy.titleFa}</span>
-            <span className="text--soft">{STATUS_LABEL[status]}</span>
-          </button>
+          <div key={quest.id} className={`trail__step${index === 0 ? ' trail__step--first' : ''}`}>
+            <button
+              ref={current ? currentRef : undefined}
+              type="button"
+              className={`btn btn--icon trail__item trail__item--${status}${
+                current ? ' trail__item--current' : ''
+              }`}
+              onClick={() => onGo(quest.id)}
+              disabled={locked}
+              aria-disabled={locked}
+              aria-current={current ? 'step' : undefined}
+              aria-label={label}
+              data-testid={`trail-${quest.id}`}
+            >
+              <span className="trail__badge" aria-hidden="true">
+                {STATUS_GLYPH[status]}
+              </span>
+              <span className="emoji trail__emoji" aria-hidden="true">
+                {questEmoji(quest.id)}
+              </span>
+              <span className="trail__title">{copy.titleFa}</span>
+              <span className="text--soft trail__status">{STATUS_LABEL[status]}</span>
+              {current ? (
+                <span className="trail__here" aria-hidden="true">
+                  {FA.goThere}
+                </span>
+              ) : null}
+            </button>
+          </div>
         );
       })}
     </nav>
   );
 }
 
-export function StickerShelf({ stickers }: { readonly stickers: readonly StickerId[] }) {
+/**
+ * Compact HUD sticker chip. Shows earned stickers at a glance and opens the
+ * full album; the album itself is an overlay in `StickerAlbum`.
+ */
+export function StickerShelf({
+  stickers,
+  onOpen,
+}: {
+  readonly stickers: readonly StickerId[];
+  readonly onOpen: () => void;
+}) {
   return (
-    <section className="stickers" aria-label={FA.stickers} data-testid="sticker-shelf">
-      {stickers.length === 0 ? <p className="text text--soft">{FA.noStickers}</p> : null}
-      <div className="row">
-        {stickers.map((sticker) => {
-          const quest = QUEST_DEFINITIONS.find((entry) => entry.stickerId === sticker);
-          const label = quest ? getQuestCopy(quest.id).stickerLabelFa : sticker;
-          return (
-            <span key={sticker} className="sticker" data-testid={`sticker-${sticker}`}>
-              <span className="emoji sticker__emoji" aria-hidden="true">
-                {quest ? questEmoji(quest.id) : '⭐'}
+    <button
+      type="button"
+      className="btn stickers"
+      onClick={onOpen}
+      aria-label={FA.seeStickers}
+      data-testid="sticker-shelf"
+    >
+      {stickers.length === 0 ? (
+        <span className="text--soft">{FA.noStickers}</span>
+      ) : (
+        <span className="row stickers__row">
+          {stickers.map((sticker) => {
+            const quest = QUEST_DEFINITIONS.find((entry) => entry.stickerId === sticker);
+            return (
+              <span key={sticker} className="sticker" data-testid={`sticker-${sticker}`}>
+                <span className="emoji sticker__emoji" aria-hidden="true">
+                  {quest ? questEmoji(quest.id) : '⭐'}
+                </span>
               </span>
-              <span className="text--soft">{label}</span>
-            </span>
-          );
-        })}
-      </div>
-    </section>
+            );
+          })}
+        </span>
+      )}
+    </button>
   );
 }

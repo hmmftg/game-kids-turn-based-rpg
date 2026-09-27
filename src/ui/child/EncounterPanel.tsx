@@ -35,7 +35,7 @@ export function EncounterPanel({
       onClick={onLeave}
       data-testid="leave-encounter"
     >
-      {FA.back}
+      {FA.backToHood}
     </button>
   );
 
@@ -87,6 +87,7 @@ export function EncounterPanel({
         <DialogueCard
           textFa={correct ? stepCopy.successFa : stepCopy.retryFa}
           testId="encounter-response"
+          variant={correct ? undefined : 'retry'}
         >
           {next(correct ? FA.next : FA.watchAgain, correct ? 'advance-response' : 'retry-response')}
         </DialogueCard>

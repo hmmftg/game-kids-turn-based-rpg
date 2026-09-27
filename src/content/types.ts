@@ -83,6 +83,8 @@ export interface QuestCopy {
   readonly titleFa: string;
   /** One short idea per card, simple Persian, no shame/fear/merit claims. */
   readonly childSummaryFa: string;
+  /** Two-to-four-word "what do I do now" cue for the persistent objective chip. */
+  readonly objectiveFa: string;
   readonly steps: readonly QuestStepCopy[];
   readonly completionFa: string;
   readonly stickerLabelFa: string;

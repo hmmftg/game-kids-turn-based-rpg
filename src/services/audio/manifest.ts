@@ -51,6 +51,38 @@ export const AUDIO_MANIFEST: readonly AudioAsset[] = [
     licence: 'placeholder-silence',
     note: 'صدای برچسب — جای‌نگه‌دار خاموش.',
   },
+  {
+    id: 'sfx-tap',
+    bus: 'sfx',
+    url: null,
+    loop: false,
+    licence: 'placeholder-silence',
+    note: 'صدای لمس — جای‌نگه‌دار خاموش.',
+  },
+  {
+    id: 'sfx-arrive',
+    bus: 'sfx',
+    url: null,
+    loop: false,
+    licence: 'placeholder-silence',
+    note: 'صدای رسیدن — جای‌نگه‌دار خاموش.',
+  },
+  {
+    id: 'sfx-retry',
+    bus: 'sfx',
+    url: null,
+    loop: false,
+    licence: 'placeholder-silence',
+    note: 'صدای ملایم تلاش دوباره — جای‌نگه‌دار خاموش.',
+  },
+  {
+    id: 'sfx-unlock',
+    bus: 'sfx',
+    url: null,
+    loop: false,
+    licence: 'placeholder-silence',
+    note: 'صدای باز شدن کار جدید — جای‌نگه‌دار خاموش.',
+  },
 ];
 
 export type AudioId = (typeof AUDIO_MANIFEST)[number]['id'];
