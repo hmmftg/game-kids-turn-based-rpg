@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type Ref, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import type {
   AnchorId,
@@ -42,6 +42,24 @@ function VisibilityPause() {
   return null;
 }
 
+/**
+ * Tracks whether the scene tree is alive. R3F calls renderer.forceContextLoss()
+ * while unmounting <Canvas>, which fires the same 'webglcontextlost' event as a
+ * genuine GPU loss; the flag lets that handler skip teardown-induced loss so
+ * leaving for the parent area or the orientation blocker does not strand the
+ * hub on the DOM fallback. Child effects unmount before the renderer is
+ * disposed, so the flag is already false by then.
+ */
+function CanvasLiveness({ flagRef }: { readonly flagRef: RefObject<boolean> }) {
+  useEffect(() => {
+    flagRef.current = true;
+    return () => {
+      flagRef.current = false;
+    };
+  }, [flagRef]);
+  return null;
+}
+
 /** Redraws when React state that the scene depends on changes. */
 function InvalidateOnChange({ token }: { readonly token: unknown }) {
   const invalidate = useThree((state) => state.invalidate);
@@ -73,6 +91,7 @@ export function WorldCanvas({
   handleRef,
 }: WorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const sceneAlive = useRef(false);
   const [zoom, setZoom] = useState(70);
 
   // Locked isometric framing: no orbit controls, no camera input of any kind.
@@ -104,10 +123,11 @@ export function WorldCanvas({
           camera.lookAt(0, 0, 0);
           gl.domElement.addEventListener('webglcontextlost', (event) => {
             event.preventDefault();
-            onContextLost();
+            if (sceneAlive.current) onContextLost();
           });
         }}
       >
+        <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
         <InvalidateOnChange
           token={`${avatarId}:${completedCount}:${String(interactive)}:${zoom}`}

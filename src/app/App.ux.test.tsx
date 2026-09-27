@@ -50,9 +50,12 @@ async function advanceIfPresent(
   return true;
 }
 
-/** Plays quest-greeting picking the correct (first) icon at each step. */
-async function completeFirstQuest(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByTestId('trail-quest-greeting'));
+/** Plays one quest picking the correct (first) icon at each step. */
+async function completeQuest(
+  user: ReturnType<typeof userEvent.setup>,
+  questId: 'quest-greeting' | 'quest-helping' | 'quest-tidying' | 'quest-finale',
+) {
+  await user.click(screen.getByTestId(`trail-${questId}`));
   await user.click(await screen.findByTestId('start-quest'));
   await user.click(await screen.findByTestId('advance-intro'));
   for (let guard = 0; guard < 20; guard += 1) {
@@ -70,6 +73,28 @@ async function completeFirstQuest(user: ReturnType<typeof userEvent.setup>) {
     }
     if (await advanceIfPresent(user, 'advance-complete')) break;
   }
+}
+
+function completeFirstQuest(user: ReturnType<typeof userEvent.setup>) {
+  return completeQuest(user, 'quest-greeting');
+}
+
+/** Pause → switch player → create a new profile → land back on the hub. */
+async function switchToNewPlayer(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByTestId('pause-button'));
+  await user.click(screen.getByTestId('switch-player'));
+  await user.click(await screen.findByTestId('profile-new'));
+  await user.click(await screen.findByTestId('avatar-arta'));
+  await user.click(await screen.findByTestId('badge-1'));
+  await screen.findByTestId('hud');
+}
+
+/** Pause → switch player → pick an existing profile card → land on the hub. */
+async function switchToProfile(user: ReturnType<typeof userEvent.setup>, profileId: string) {
+  await user.click(screen.getByTestId('pause-button'));
+  await user.click(screen.getByTestId('switch-player'));
+  await user.click(await screen.findByTestId(`profile-card-${profileId}`));
+  await screen.findByTestId('hud');
 }
 
 describe('UX pass', () => {
@@ -143,6 +168,76 @@ describe('UX pass', () => {
       quests: { 'quest-greeting': { status: 'completed' } },
       stickers: ['sticker-greeting'],
     });
+  });
+
+  it('does not replay the celebration when a completed profile is reloaded', async () => {
+    const repository = new MemorySaveRepository();
+    const first = renderApp(repository);
+    await reachHub(first.user);
+    await completeFirstQuest(first.user);
+    await first.user.click(await screen.findByTestId('celebration-continue'));
+    first.unmount();
+
+    // A fresh session (new App + provider) over the same save: selecting the
+    // profile hydrates the persisted 'questCompleted' checkpoint, which must
+    // not count as a new completion.
+    const second = renderApp(repository);
+    const [profile] = await repository.listProfiles();
+    await second.user.click(await screen.findByTestId(`profile-card-${profile!.id}`));
+    await screen.findByTestId('hud');
+    expect(screen.queryByTestId('quest-celebration')).toBeNull();
+    expect(screen.getByTestId('objective-chip')).toHaveTextContent(
+      getQuestCopy('quest-helping').objectiveFa,
+    );
+  });
+
+  it('still celebrates a second quest completed later in the same session', async () => {
+    const repository = new MemorySaveRepository();
+    const first = renderApp(repository);
+    await reachHub(first.user);
+    await completeFirstQuest(first.user);
+    await first.user.click(await screen.findByTestId('celebration-continue'));
+
+    // Completing the next quest in the same session must still celebrate.
+    await completeQuest(first.user, 'quest-helping');
+    expect(await screen.findByTestId('quest-celebration')).toBeInTheDocument();
+  });
+
+  it('does not replay the celebration when switching back to a profile', async () => {
+    const repository = new MemorySaveRepository();
+    const { user } = renderApp(repository);
+    await reachHub(user);
+    await completeFirstQuest(user);
+    await user.click(await screen.findByTestId('celebration-continue'));
+    const [profileA] = await repository.listProfiles();
+
+    await switchToNewPlayer(user);
+    await switchToProfile(user, profileA!.id);
+
+    // Kid A's hydrated 'questCompleted' checkpoint repeats a timestamp already
+    // seen this session — re-hydration is not a fresh win.
+    expect(screen.queryByTestId('quest-celebration')).toBeNull();
+  });
+
+  it('still celebrates for a different kid and after switching back', async () => {
+    const repository = new MemorySaveRepository();
+    const { user } = renderApp(repository);
+    await reachHub(user);
+    await completeFirstQuest(user);
+    await user.click(await screen.findByTestId('celebration-continue'));
+    const [profileA] = await repository.listProfiles();
+
+    // Kid B completes their own first quest: a genuinely new checkpoint.
+    await switchToNewPlayer(user);
+    await completeFirstQuest(user);
+    expect(await screen.findByTestId('quest-celebration')).toBeInTheDocument();
+    await user.click(await screen.findByTestId('celebration-continue'));
+
+    // Back to Kid A: no replay, and their next real completion still fires.
+    await switchToProfile(user, profileA!.id);
+    expect(screen.queryByTestId('quest-celebration')).toBeNull();
+    await completeQuest(user, 'quest-helping');
+    expect(await screen.findByTestId('quest-celebration')).toBeInTheDocument();
   });
 
   it('celebration Continue works instantly with no timers (reduced-motion safe)', async () => {

@@ -67,19 +67,26 @@ export function App() {
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
   const previousCompletedRef = useRef<number | null>(null);
+  // Highest checkpoint timestamp observed this session. Persisted checkpoints
+  // carry the earlier session's completion time and re-hydrated ones repeat a
+  // timestamp already seen, so only a strictly newer 'questCompleted' stamp is
+  // a fresh win — reload, profile select, and switch-back can never replay it.
+  const seenCheckpointAtRef = useRef<number | null>(null);
 
   // Presentation-only celebration: the reducer has already completed the quest
   // and granted the sticker before this fires; the overlay just reports it.
-  // The first observed count is a hydration baseline — replaying a persisted
-  // 'questCompleted' checkpoint on load must not re-trigger the overlay.
   useEffect(() => {
+    const seenAt = seenCheckpointAtRef.current;
+    seenCheckpointAtRef.current = Math.max(seenAt ?? 0, state.checkpoint.at);
     const previous = previousCompletedRef.current;
     previousCompletedRef.current = completed;
     if (
       previous !== null &&
       completed > previous &&
       state.checkpoint.kind === 'questCompleted' &&
-      state.checkpoint.questId !== null
+      state.checkpoint.questId !== null &&
+      seenAt !== null &&
+      state.checkpoint.at > seenAt
     ) {
       setCelebrating(state.checkpoint.questId);
       playSfx('sfx-success');

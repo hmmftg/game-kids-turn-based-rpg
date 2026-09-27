@@ -30,7 +30,14 @@ async function playQuest(page: Page, questId: (typeof QUESTS)[number]) {
     await page.getByTestId('advance-response').click();
     await page.getByTestId('advance-reinforce').click();
   }
-  // The last reinforce closes the quest and returns to the hub with a new sticker.
+  // The last reinforce closes the quest and returns to the hub with a new
+  // sticker; the celebration overlay must be dismissed before tapping onward.
+  const dismiss = page.getByTestId('celebration-continue');
+  const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 2000 }).then(
+    () => true,
+    () => false,
+  );
+  if (celebrated) await dismiss.click();
   await expect(page.getByTestId(`trail-${questId}`)).toContainText('انجام شد');
 }
 
@@ -55,7 +62,7 @@ test.describe('vertical slice', () => {
     for (const questId of QUESTS) {
       await playQuest(page, questId);
     }
-    await expect(page.getByTestId('sticker-shelf')).toContainText('جشن');
+    await expect(page.getByTestId('sticker-sticker-finale')).toBeVisible();
   });
 
   test('a wrong choice re-demonstrates instead of failing the child', async ({ page }) => {
@@ -78,6 +85,9 @@ test.describe('vertical slice', () => {
     await playQuest(page, 'quest-greeting');
     await page.reload();
     await resumeFromPicker(page);
+    // Hydrating the persisted 'questCompleted' checkpoint is not a fresh win:
+    // the celebration must not replay after a reload.
+    await expect(page.getByTestId('quest-celebration')).toHaveCount(0);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
     await expect(page.getByTestId('trail-quest-helping')).toBeEnabled();
   });
