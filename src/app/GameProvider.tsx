@@ -239,6 +239,18 @@ export function GameProvider({
     audioService.applySettings(state.audio);
   }, [state.audio]);
 
+  // Background music belongs to the playable world modes; menus are silent.
+  // unlock() inside a settled-gesture context is a no-op once running, so the
+  // first real tap (which reaches 'hub') is what actually starts the loop.
+  useEffect(() => {
+    const worldModes = ['hub', 'dialogue', 'encounter', 'paused'];
+    if (worldModes.includes(state.mode)) {
+      void audioService.unlock().then(() => audioService.play('music-hub'));
+    } else {
+      audioService.stopMusic();
+    }
+  }, [state.mode]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onResize = () =>

@@ -18,6 +18,7 @@ export class AudioService {
   #sfxGain: GainNode | null = null;
   #buffers = new Map<string, AudioBuffer>();
   #music: AudioBufferSourceNode | null = null;
+  #musicId: string | null = null;
   #settings: AudioSettings = {
     musicMuted: false,
     sfxMuted: false,
@@ -67,6 +68,7 @@ export class AudioService {
     const asset = AUDIO_MANIFEST.find((entry) => entry.id === id);
     if (!asset || asset.url === null) return; // silent placeholder
     if (!this.#unlocked || !this.#context) return;
+    if (asset.bus === 'music' && this.#musicId === asset.id) return; // already playing
     const buffer = await this.#load(asset);
     if (!buffer) return;
     const source = this.#context.createBufferSource();
@@ -77,12 +79,14 @@ export class AudioService {
     if (asset.bus === 'music') {
       this.#music?.stop();
       this.#music = source;
+      this.#musicId = asset.id;
     }
   }
 
   stopMusic(): void {
     this.#music?.stop();
     this.#music = null;
+    this.#musicId = null;
   }
 
   async setSuspended(suspended: boolean): Promise<void> {

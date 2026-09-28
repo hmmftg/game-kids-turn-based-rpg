@@ -14,74 +14,75 @@ export interface AudioAsset {
 /**
  * Audio manifest.
  *
- * TEMPORARY: every slot is silent. No third-party or unverified music is
- * downloaded or bundled; final audio must arrive with written licence terms and
- * attribution before release. The game is fully playable with no audio at all.
+ * All assets are synthesized by `scripts/generate-audio.ts` and bundled under
+ * `public/audio/` — no third-party music, no remote URLs. They are soft
+ * placeholder timbres; replace with licensed recordings before release.
+ * The game stays fully playable if a fetch or decode fails.
  */
 export const AUDIO_MANIFEST: readonly AudioAsset[] = [
   {
     id: 'music-hub',
     bus: 'music',
-    url: null,
+    url: './audio/music-hub.wav',
     loop: true,
-    licence: 'placeholder-silence',
-    note: 'موسیقی محله — جای‌نگه‌دار خاموش تا رسیدن نسخه‌ی دارای مجوز.',
+    licence: 'generated-local-placeholder',
+    note: 'موسیقی محله — ملودی آرام ساخته‌شده با ژنراتور داخلی.',
   },
   {
     id: 'sfx-choice',
     bus: 'sfx',
-    url: null,
+    url: './audio/sfx-choice.wav',
     loop: false,
-    licence: 'placeholder-silence',
-    note: 'صدای انتخاب — جای‌نگه‌دار خاموش.',
+    licence: 'generated-local-placeholder',
+    note: 'صدای انتخاب — دو نت کوتاه.',
   },
   {
     id: 'sfx-success',
     bus: 'sfx',
-    url: null,
+    url: './audio/sfx-success.wav',
     loop: false,
-    licence: 'placeholder-silence',
-    note: 'صدای موفقیت — جای‌نگه‌دار خاموش.',
+    licence: 'generated-local-placeholder',
+    note: 'صدای موفقیت — سه نت صعودی.',
   },
   {
     id: 'sfx-sticker',
     bus: 'sfx',
-    url: null,
+    url: './audio/sfx-sticker.wav',
     loop: false,
-    licence: 'placeholder-silence',
-    note: 'صدای برچسب — جای‌نگه‌دار خاموش.',
+    licence: 'generated-local-placeholder',
+    note: 'صدای برچسب — جلای کوتاه.',
   },
   {
     id: 'sfx-tap',
     bus: 'sfx',
-    url: null,
+    url: './audio/sfx-tap.wav',
     loop: false,
-    licence: 'placeholder-silence',
-    note: 'صدای لمس — جای‌نگه‌دار خاموش.',
+    licence: 'generated-local-placeholder',
+    note: 'صدای لمس — تک‌نت خیلی کوتاه.',
   },
   {
     id: 'sfx-arrive',
     bus: 'sfx',
-    url: null,
+    url: './audio/sfx-arrive.wav',
     loop: false,
-    licence: 'placeholder-silence',
-    note: 'صدای رسیدن — جای‌نگه‌دار خاموش.',
+    licence: 'generated-local-placeholder',
+    note: 'صدای رسیدن — دو نت ملایم.',
   },
   {
     id: 'sfx-retry',
     bus: 'sfx',
-    url: null,
+    url: './audio/sfx-retry.wav',
     loop: false,
-    licence: 'placeholder-silence',
-    note: 'صدای ملایم تلاش دوباره — جای‌نگه‌دار خاموش.',
+    licence: 'generated-local-placeholder',
+    note: 'صدای ملایم تلاش دوباره — دو نت نزولی.',
   },
   {
     id: 'sfx-unlock',
     bus: 'sfx',
-    url: null,
+    url: './audio/sfx-unlock.wav',
     loop: false,
-    licence: 'placeholder-silence',
-    note: 'صدای باز شدن کار جدید — جای‌نگه‌دار خاموش.',
+    licence: 'generated-local-placeholder',
+    note: 'صدای باز شدن کار جدید — چهار نت صعودی.',
   },
 ];
 
