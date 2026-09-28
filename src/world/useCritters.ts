@@ -4,6 +4,7 @@ import type * as THREE from 'three';
 import type { DetailLevel } from './models/modelProvider.ts';
 import {
   BIRD_PERCHES,
+  CAT_FOOTPRINT,
   CAT_PATROLS,
   CRITTER_BOUNDS,
   EAGLE_ORBIT,
@@ -71,6 +72,11 @@ interface RuntimeCritter {
   spotId: string | undefined;
   soarAngle: number;
   soarDone: number;
+  /** Last settled transform — where the critter returns when motion disables. */
+  restX: number;
+  restY: number;
+  restZ: number;
+  restHeading: number;
   timer: ReturnType<typeof setTimeout> | null;
 }
 
@@ -129,6 +135,10 @@ export function createCritterController(effects: ControllerEffects): Controller 
     spotId: p.spotId,
     soarAngle: 0,
     soarDone: 0,
+    restX: p.position[0],
+    restY: p.position[1],
+    restZ: p.position[2],
+    restHeading: p.rotationY,
     timer: null,
   }));
 
@@ -211,7 +221,17 @@ export function createCritterController(effects: ControllerEffects): Controller 
         break;
       }
       case 'bird': {
-        const perch = pickSpot(rt.seed, BIRD_PERCHES, new Set([...claimed, rt.spotId]));
+        // Ground perches compete with cats (and other birds) by location, not
+        // by spot id — exclude any ground perch near another critter's
+        // current or resting position.
+        const occupiedNear = (p: { readonly position: Xyz }) =>
+          critters.some(
+            (other) =>
+              other !== rt &&
+              Math.hypot(other.x - p.position[0], other.z - p.position[2]) < CAT_FOOTPRINT + 0.2,
+          );
+        const pool = BIRD_PERCHES.filter((p) => p.host !== 'ground' || !occupiedNear(p));
+        const perch = pickSpot(rt.seed, pool, new Set([...claimed, rt.spotId]));
         if (!perch) {
           controller.schedule(rt, idleDelay(rt.kind, rt.seed));
           return;
@@ -264,6 +284,10 @@ export function createCritterController(effects: ControllerEffects): Controller 
       effects.invalidate();
       return;
     }
+    rt.restX = rt.x;
+    rt.restY = rt.y;
+    rt.restZ = rt.z;
+    rt.restHeading = rt.heading;
     setMoving(rt, false);
     controller.schedule(rt, idleDelay(rt.kind, nextSeed(rt.seed)));
   };
@@ -332,9 +356,21 @@ export function createCritterController(effects: ControllerEffects): Controller 
           if (rt.kind === 'fish') controller.fishMoving = false;
           // Release the spot claimed for a move that never arrived.
           rt.spotId = undefined;
+          // Snap back to the last settled transform — never leave a critter
+          // parked mid-air in a perched pose.
+          rt.x = rt.restX;
+          rt.y = rt.restY;
+          rt.z = rt.restZ;
+          rt.heading = rt.restHeading;
+          if (rt.node) {
+            rt.node.position.set(rt.x, rt.y, rt.z);
+            rt.node.rotation.y = rt.heading;
+            rt.node.rotation.z = 0;
+          }
           setMoving(rt, false);
         }
       }
+      effects.invalidate();
       return;
     }
     for (const rt of critters) {

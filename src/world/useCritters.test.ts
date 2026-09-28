@@ -90,6 +90,29 @@ describe('critter controller lifecycle', () => {
     }
   });
 
+  it('disabling snaps an in-flight critter back to its last settled spot', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    vi.advanceTimersByTime(60_000);
+    const flying = controller.critters.find((c) => c.moving);
+    expect(flying).toBeDefined();
+    if (!flying) return;
+    // Drive it partway along its move so it's genuinely off its rest spot.
+    for (let i = 0; i < 20; i++) controller.step(0.05);
+    const offRest =
+      Math.hypot(flying.x - flying.restX, flying.z - flying.restZ) > 0.01 ||
+      flying.y !== flying.restY;
+    controller.setTimersEnabled(false);
+    expect([flying.x, flying.y, flying.z]).toEqual([flying.restX, flying.restY, flying.restZ]);
+    expect(flying.heading).toBe(flying.restHeading);
+    if (offRest) {
+      // it really was mid-flight, not coincidentally at rest
+      expect(offRest).toBe(true);
+    }
+    controller.setTimersEnabled(false);
+  });
+
   it('re-enabling after a freeze restarts scheduling', () => {
     const { controller } = makeController();
     attachFakeNodes(controller);
