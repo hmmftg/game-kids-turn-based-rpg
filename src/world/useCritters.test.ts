@@ -99,7 +99,8 @@ describe('critter controller lifecycle', () => {
     expect(flying).toBeDefined();
     if (!flying) return;
     // Drive it partway along its move so it's genuinely off its rest spot.
-    for (let i = 0; i < 20; i++) controller.step(0.05);
+    // 3 × 0.05s stays inside even the shortest hop (duration is min 0.4s).
+    for (let i = 0; i < 3; i++) controller.step(0.05);
     // it really is mid-flight, not coincidentally at rest
     expect(
       Math.hypot(flying.x - flying.restX, flying.z - flying.restZ) > 0.01 ||
