@@ -100,6 +100,7 @@ export const FA = {
 
   offlineReady: 'بازی برای حالت آفلاین آماده است',
   offlineCaching: 'در حال ذخیره‌سازی برای حالت آفلاین…',
+  installApp: 'نصب بازی روی گوشی',
   updateAvailable: 'نسخه‌ی تازه آماده است',
   updateApply: 'به‌روزرسانی',
   updateLater: 'بعداً',

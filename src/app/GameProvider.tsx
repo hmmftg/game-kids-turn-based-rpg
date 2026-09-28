@@ -31,6 +31,7 @@ import {
   type SaveRepository,
 } from '../services/persistence/repository.ts';
 import { registerServiceWorker, type CacheStatus } from '../services/pwa/serviceWorker.ts';
+import { listenForInstallPrompt } from '../services/pwa/installPrompt.ts';
 import { pickProfileBadge } from '../ui/child/emoji.ts';
 import { GameContext, type GameShell } from './gameContext.ts';
 
@@ -73,6 +74,8 @@ export function GameProvider({
     import.meta.env.DEV ? 'unsupported' : 'caching',
   );
   const [updateReady, setUpdateReady] = useState(false);
+  const [installReady, setInstallReady] = useState(false);
+  const installPromptRef = useRef<(() => void) | null>(null);
   const [profiles, setProfiles] = useState<readonly ProfileMeta[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const repositoryRef = useRef<SaveRepository | null>(repository ?? null);
@@ -268,6 +271,12 @@ export function GameProvider({
     return handle.dispose;
   }, []);
 
+  useEffect(() => {
+    const handle = listenForInstallPrompt(setInstallReady);
+    installPromptRef.current = handle.prompt;
+    return handle.dispose;
+  }, []);
+
   const selectProfile = useCallback(
     (id: string) => {
       const repo = repositoryRef.current;
@@ -378,6 +387,8 @@ export function GameProvider({
       cacheStatus,
       updateReady,
       applyUpdate: () => updateRef.current(),
+      installReady,
+      installApp: () => installPromptRef.current?.(),
       resetProgress,
       playSfx,
       profiles,
@@ -392,6 +403,7 @@ export function GameProvider({
       state,
       cacheStatus,
       updateReady,
+      installReady,
       resetProgress,
       playSfx,
       profiles,

@@ -47,6 +47,8 @@ export function App() {
     cacheStatus,
     updateReady,
     applyUpdate,
+    installReady,
+    installApp,
     resetProgress,
     playSfx,
     profiles,
@@ -189,6 +191,8 @@ export function App() {
           onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
           updateReady={updateReady}
           onApplyUpdate={applyUpdate}
+          installReady={installReady}
+          onInstallApp={installApp}
         />
       );
 

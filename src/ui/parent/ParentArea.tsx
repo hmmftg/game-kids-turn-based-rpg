@@ -37,6 +37,8 @@ export function ParentArea({
   onQualityChange,
   updateReady,
   onApplyUpdate,
+  installReady,
+  onInstallApp,
 }: {
   readonly state: GameState;
   readonly cacheStatus: CacheStatus;
@@ -49,6 +51,8 @@ export function ParentArea({
   readonly onQualityChange: (tier: QualityTier) => void;
   readonly updateReady: boolean;
   readonly onApplyUpdate: () => void;
+  readonly installReady: boolean;
+  readonly onInstallApp: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [confirmingProfileId, setConfirmingProfileId] = useState<string | null>(null);
@@ -111,6 +115,16 @@ export function ParentArea({
         <section>
           <h3 className="subtitle">{FA.parentInstall}</h3>
           <p className="text text--soft">{FA.installBody}</p>
+          {installReady ? (
+            <button
+              type="button"
+              className="btn btn--accent"
+              onClick={onInstallApp}
+              data-testid="install-app"
+            >
+              {FA.installApp}
+            </button>
+          ) : null}
           {updateReady ? (
             <div className="row" data-testid="update-prompt">
               <span className="text">{FA.updateAvailable}</span>
