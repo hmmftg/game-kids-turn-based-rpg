@@ -186,11 +186,6 @@ button {
   pointer-events: none;
 }
 
-/* Landscape blocker: pure CSS so it works before React hydrates. */
-.orientation-blocker {
-  display: none;
-}
-
 /* Player picker: one big recognisable card per kid. */
 .profile-grid {
   gap: var(--space-4);
@@ -305,46 +300,4 @@ button {
   background: var(--color-surface);
   color: var(--color-ink);
   max-inline-size: 140px;
-}
-
-@media (orientation: portrait) {
-  .orientation-blocker {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    background: var(--color-sky);
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-4);
-    text-align: center;
-    padding: var(--space-5);
-  }
-}
-
-.rotate-icon {
-  width: 96px;
-  height: 96px;
-  border: 8px solid var(--color-ink);
-  border-radius: var(--radius-md);
-  animation: rotate-hint 2.4s ease-in-out infinite;
-}
-
-@keyframes rotate-hint {
-  0%,
-  40% {
-    transform: rotate(0deg);
-  }
-  60%,
-  100% {
-    transform: rotate(90deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rotate-icon {
-    animation: none;
-    transform: rotate(90deg);
-  }
 }

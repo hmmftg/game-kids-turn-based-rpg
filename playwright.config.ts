@@ -25,6 +25,15 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    {
+      name: 'portrait-mobile',
+      use: {
+        ...devices['Galaxy S9+'],
+        viewport: { width: 360, height: 800 },
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
   ],
   webServer: {
     command: 'npm run preview',

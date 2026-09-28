@@ -195,6 +195,59 @@
   }
 }
 
+/* Portrait phones: the quest journey becomes a compact horizontal strip under
+   the top chips, keeping the centre and the bottom free for world taps and
+   dialogue. Connector/RTL rules mirror the wide-landscape variant below. */
+@media (orientation: portrait) {
+  /* Narrow widths can't fit the objective chip beside pause + stickers, so
+     the top chrome stacks: pause row → objective chip → journey strip. */
+  .hud__objective {
+    inset-block-start: calc(var(--safe-top) + var(--touch-min) + var(--space-4));
+  }
+  .hud__side {
+    inset-block-start: calc(
+      var(--safe-top) + var(--touch-min) + var(--space-4) + 56px + var(--space-3)
+    );
+    inset-block-end: auto;
+    inset-inline-start: 50%;
+    inset-inline-end: auto;
+    transform: translateX(50%);
+    max-inline-size: 94vw;
+  }
+  .trail {
+    flex-direction: row;
+    max-block-size: none;
+    max-inline-size: 94vw;
+    overflow-y: hidden;
+    overflow-x: auto;
+  }
+  /* Icon rail (same collapse as short landscape): keeps the journey visible
+     without covering the world. */
+  .trail__title,
+  .trail__status,
+  .trail__here {
+    display: none;
+  }
+  .trail__item {
+    min-inline-size: var(--touch-min);
+    padding: var(--space-2);
+  }
+  .trail__step:not(.trail__step--first)::before {
+    inset-block-start: 50%;
+    inset-inline-start: calc(-1 * var(--space-2));
+    transform: translateY(-50%);
+    inline-size: var(--space-2);
+    block-size: 6px;
+  }
+  .trail__item {
+    margin-block-end: 0;
+    margin-inline-end: var(--space-2);
+  }
+  .trail__step:last-child .trail__item {
+    margin-inline-end: 0;
+  }
+}
+
 /* Tall, wide screens: horizontal journey strip along the top, RTL ordered. */
 @media (min-width: 900px) and (min-height: 560px) {
   .hud__side {

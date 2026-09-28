@@ -141,7 +141,7 @@ npx playwright test   # golden-path e2e (landscape-mobile project)
 
 # 5. Rendering / Lifecycle Rules
 
-- The R3F `<Canvas>` unmounts for parent area, pause, and the orientation blocker. Unmounting fires `webglcontextlost` via `forceContextLoss()` — this is teardown, not a GPU failure. Genuine-loss handling is guarded by the `CanvasLiveness` flag in `WorldCanvas.tsx`; keep that distinction intact.
+- The R3F `<Canvas>` unmounts for parent area and pause. Unmounting fires `webglcontextlost` via `forceContextLoss()` — this is teardown, not a GPU failure. Genuine-loss handling is guarded by the `CanvasLiveness` flag in `WorldCanvas.tsx`; keep that distinction intact.
 - The canvas is demand-rendered (`frameloop="demand"`). No persistent animation loops, `useFrame` timers that outlive their purpose, or duplicated scenes/listeners. Animation that eases toward state must invalidate only until settled.
 - Emoji are a primary communication channel; test-rendered tofu boxes on headless Linux indicate a missing emoji font, not an app bug.
 

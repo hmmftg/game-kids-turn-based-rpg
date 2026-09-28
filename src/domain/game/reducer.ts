@@ -95,17 +95,12 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
 
   switch (command.type) {
     case 'BOOT_LOADED': {
-      // A portrait rotation may interrupt boot; the result is still applied and
-      // surfaces as soon as the device is landscape again.
-      const booting = state.mode === 'boot' || state.interruptedMode === 'boot';
-      if (!booting) return state;
-      const blocked = state.mode === 'orientationBlocked';
+      if (state.mode !== 'boot') return state;
       const landing: ResumableMode = command.hasProfiles ? 'profileSelect' : 'title';
       const base: GameState = {
         ...state,
-        mode: blocked ? 'orientationBlocked' : landing,
+        mode: landing,
         resumeMode: landing,
-        interruptedMode: blocked ? landing : state.interruptedMode,
         saveHealth: command.health,
         corruptSaveDetected: command.health === 'recovered',
       };
@@ -113,30 +108,15 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
     }
 
     case 'BOOT_FAILED': {
-      const booting = state.mode === 'boot' || state.interruptedMode === 'boot';
-      if (!booting) return state;
-      if (state.mode === 'orientationBlocked') {
-        return { ...state, interruptedMode: 'fatalFallback', fatalReason: command.reason };
-      }
+      if (state.mode !== 'boot') return state;
       return { ...state, mode: 'fatalFallback', fatalReason: command.reason };
     }
 
     case 'ORIENTATION_CHANGED': {
+      // Device/session record only: both orientations are playable, so a
+      // rotation never changes the mode and must never autosave.
       if (state.orientation === command.orientation) return state;
-      if (command.orientation === 'portrait') {
-        return {
-          ...state,
-          orientation: 'portrait',
-          interruptedMode: state.mode === 'orientationBlocked' ? state.interruptedMode : state.mode,
-          mode: 'orientationBlocked',
-        };
-      }
-      return {
-        ...state,
-        orientation: 'landscape',
-        mode: state.interruptedMode ?? 'title',
-        interruptedMode: null,
-      };
+      return { ...state, orientation: command.orientation };
     }
 
     case 'WEBGL_AVAILABILITY_CHANGED':
@@ -157,7 +137,6 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
         ...state,
         mode: next,
         resumeMode: next,
-        interruptedMode: null,
         encounter: null,
         dialogue: null,
         saveHealth: command.health,

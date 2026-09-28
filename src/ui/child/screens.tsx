@@ -15,16 +15,6 @@ export function LoadingScreen() {
   );
 }
 
-export function OrientationScreen() {
-  return (
-    <div className="layer" data-testid="orientation-blocker">
-      <div className="rotate-icon" aria-hidden="true" />
-      <h1 className="title">{FA.rotateTitle}</h1>
-      <p className="text">{FA.rotateHint}</p>
-    </div>
-  );
-}
-
 /**
  * Non-covering notice shown in place of the hub hint when WebGL is missing.
  * It must not overlay the quest trail or other DOM controls — the DOM fallback
