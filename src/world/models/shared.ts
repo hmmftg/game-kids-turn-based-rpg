@@ -163,6 +163,8 @@ export const DETAIL_COLORS = {
   dome: '#7aa8c9',
   domeAccent: '#f2d98f',
   water: '#7cc4de',
+  beak: '#e8a400',
+  critterDark: '#33303a',
 } as const;
 
 export type DetailColor = keyof typeof DETAIL_COLORS;

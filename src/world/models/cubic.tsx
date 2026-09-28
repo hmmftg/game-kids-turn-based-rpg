@@ -1,5 +1,6 @@
 import type { HeadwearId } from '../../domain/game/types.ts';
 import type {
+  AnimalProps,
   DetailLevel,
   FigureProps,
   FigureVisualRole,
@@ -779,4 +780,185 @@ export function CubicProp({
       </Detail>
     </group>
   );
+}
+
+/**
+ * Ambient animals — toy silhouettes built from shared primitives only.
+ * Position/heading are applied by the parent group (useCritters drives it);
+ * `moving` is the only pose prop: wings spread vs folded, legs stretched vs
+ * tucked, tail raised vs curled. Mesh counts follow the tier budget:
+ * detailLevel 0 → a single silhouette mesh, 1 → 2–3 meshes, 2 → 3–4 meshes,
+ * keeping the whole animal cast under ~28 draw calls on high.
+ */
+
+interface SpeciesProps {
+  readonly tint: string | undefined;
+  readonly moving: boolean;
+  readonly level: DetailLevel;
+}
+
+function CatMesh({ tint, moving, level }: SpeciesProps) {
+  const fur = useMaterial(tint ?? '#d98a4a');
+  return (
+    <>
+      {/* body: squashed sphere; sits upright when idle, stretched forward when running */}
+      <mesh
+        geometry={SPHERE}
+        material={fur}
+        position={[0, moving ? 0.26 : 0.3, 0]}
+        rotation={[moving ? -0.25 : 0.35, 0, 0]}
+        scale={[0.42, moving ? 0.36 : 0.5, 0.55]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        <mesh
+          geometry={SPHERE}
+          material={fur}
+          position={[0, 0.58, 0.22]}
+          scale={[0.3, 0.28, 0.28]}
+          raycast={noRaycast}
+        />
+        {/* tail: raised when running, curled low when sitting */}
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[0, moving ? 0.5 : 0.3, -0.38]}
+          rotation={[moving ? -0.4 : 0.6, 0, 0]}
+          scale={[0.07, 0.5, 0.07]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={2}>
+        {/* ear strip across the top of the head */}
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[0, 0.8, 0.2]}
+          scale={[0.3, 0.12, 0.06]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
+function BirdMesh({ tint, moving, level }: SpeciesProps) {
+  const feathers = useMaterial(tint ?? '#5b8ab5');
+  const beak = useMaterial(DETAIL_COLORS.beak);
+  return (
+    <>
+      <mesh
+        geometry={SPHERE}
+        material={feathers}
+        position={[0, 0.22, 0]}
+        rotation={[0.3, 0, 0]}
+        scale={[0.26, 0.28, 0.34]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        <mesh
+          geometry={SPHERE}
+          material={feathers}
+          position={[0, 0.4, 0.16]}
+          scale={[0.2, 0.2, 0.2]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={2}>
+        <mesh
+          geometry={BOX}
+          material={beak}
+          position={[0, 0.4, 0.3]}
+          scale={[0.06, 0.05, 0.1]}
+          raycast={noRaycast}
+        />
+        {/* wing band: a wide flat slab — spread while flying, folded back when perched */}
+        <mesh
+          geometry={BOX}
+          material={feathers}
+          position={[0, moving ? 0.3 : 0.26, moving ? 0 : -0.1]}
+          rotation={[moving ? 0 : -0.5, 0, 0]}
+          scale={[moving ? 0.72 : 0.3, 0.03, moving ? 0.2 : 0.3]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
+function EagleMesh({ tint, moving, level }: SpeciesProps) {
+  const feathers = useMaterial(tint ?? DETAIL_COLORS.soil);
+  const head = useMaterial('#e8eef4');
+  return (
+    <>
+      <mesh
+        geometry={SPHERE}
+        material={feathers}
+        position={[0, 0.32, 0]}
+        rotation={[moving ? 0.6 : 0.25, 0, 0]}
+        scale={[0.4, 0.44, 0.55]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        <mesh
+          geometry={SPHERE}
+          material={head}
+          position={[0, 0.62, 0.24]}
+          scale={[0.28, 0.26, 0.26]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={2}>
+        {/* broad wing band — the soaring silhouette is the whole point up high */}
+        <mesh
+          geometry={BOX}
+          material={feathers}
+          position={[0, moving ? 0.42 : 0.34, 0]}
+          rotation={[0, 0, moving ? 0 : -0.2]}
+          scale={[moving ? 1.6 : 0.5, 0.04, moving ? 0.36 : 0.5]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
+function FishMesh({ tint, moving, level }: SpeciesProps) {
+  const scales = useMaterial(tint ?? '#e08a3c');
+  return (
+    <>
+      {/* half-emerged at the waterline; origin sits on the water surface */}
+      <mesh
+        geometry={SPHERE}
+        material={scales}
+        position={[0, 0.02, 0]}
+        scale={[0.16, 0.22, 0.4]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        {/* tail fin: kicks sideways while swimming */}
+        <mesh
+          geometry={BOX}
+          material={scales}
+          position={[0, 0.04, -0.3]}
+          rotation={[0, moving ? 0.5 : 0.15, 0]}
+          scale={[0.04, 0.16, 0.16]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
+export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: AnimalProps) {
+  switch (variant) {
+    case 'cat':
+      return <CatMesh tint={tint} moving={moving} level={detailLevel} />;
+    case 'bird':
+      return <BirdMesh tint={tint} moving={moving} level={detailLevel} />;
+    case 'eagle':
+      return <EagleMesh tint={tint} moving={moving} level={detailLevel} />;
+    case 'fish':
+      return <FishMesh tint={tint} moving={moving} level={detailLevel} />;
+  }
 }

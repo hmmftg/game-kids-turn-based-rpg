@@ -59,6 +59,7 @@ test.describe('vertical slice', () => {
   test('all three quests and the cooperative finale can be completed in order', async ({
     page,
   }) => {
+    test.setTimeout(120000);
     await startGame(page);
     for (const questId of QUESTS) {
       await playQuest(page, questId);

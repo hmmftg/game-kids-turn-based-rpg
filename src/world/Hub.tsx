@@ -26,6 +26,7 @@ import { BOX, CYLINDER, PLANE, sharedGroundMaterial, sharedLambert } from './mod
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
+import { useCritters } from './useCritters.ts';
 import { questEmoji } from '../ui/child/emoji.ts';
 import {
   AVATAR_PALETTES,
@@ -364,6 +365,9 @@ export function Hub({
 }: HubProps) {
   const models = useModels();
   const walker = useWalker('anchor-square', onArrive, interactive);
+  // Ambient critters: motion only while the world is interactive and motion
+  // is allowed; on low tier they render as static silhouettes.
+  const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel);
   const [walkTarget, setWalkTarget] = useState<AnchorId | null>(null);
   useImperativeHandle(
     handleRef,
@@ -557,6 +561,21 @@ export function Hub({
       </group>
 
       <KeepsakeTree completedCount={completedCount} detailLevel={detailLevel} />
+
+      {/* Ambient animals: transforms are ref-driven by useCritters — the group
+          has no position prop so React never overwrites animated placement. */}
+      <group dispose={null}>
+        {critters.map((critter) => (
+          <group key={critter.key} ref={critter.register} raycast={noRaycast}>
+            <models.Animal
+              variant={critter.kind}
+              tint={critter.tint}
+              moving={critter.moving}
+              detailLevel={detailLevel}
+            />
+          </group>
+        ))}
+      </group>
 
       <models.Figure
         position={walker.position}
