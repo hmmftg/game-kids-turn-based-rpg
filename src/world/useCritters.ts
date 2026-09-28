@@ -73,6 +73,7 @@ interface RuntimeCritter {
   soarAngle: number;
   soarDone: number;
   /** Last settled transform — where the critter returns when motion disables. */
+  restSpotId: string | undefined;
   restX: number;
   restY: number;
   restZ: number;
@@ -135,6 +136,7 @@ export function createCritterController(effects: ControllerEffects): Controller 
     spotId: p.spotId,
     soarAngle: 0,
     soarDone: 0,
+    restSpotId: p.spotId,
     restX: p.position[0],
     restY: p.position[1],
     restZ: p.position[2],
@@ -284,6 +286,7 @@ export function createCritterController(effects: ControllerEffects): Controller 
       effects.invalidate();
       return;
     }
+    rt.restSpotId = rt.spotId;
     rt.restX = rt.x;
     rt.restY = rt.y;
     rt.restZ = rt.z;
@@ -354,8 +357,9 @@ export function createCritterController(effects: ControllerEffects): Controller 
         if (rt.moving) {
           rt.mode = 'idle';
           if (rt.kind === 'fish') controller.fishMoving = false;
-          // Release the spot claimed for a move that never arrived.
-          rt.spotId = undefined;
+          // Drop the never-arrived target; restore the spot the critter is
+          // visually snapped back to so it stays logically reserved.
+          rt.spotId = rt.restSpotId;
           // Snap back to the last settled transform — never leave a critter
           // parked mid-air in a perched pose.
           rt.x = rt.restX;
