@@ -100,17 +100,16 @@ describe('critter controller lifecycle', () => {
     if (!flying) return;
     // Drive it partway along its move so it's genuinely off its rest spot.
     for (let i = 0; i < 20; i++) controller.step(0.05);
-    const offRest =
+    // it really is mid-flight, not coincidentally at rest
+    expect(
       Math.hypot(flying.x - flying.restX, flying.z - flying.restZ) > 0.01 ||
-      flying.y !== flying.restY;
+        flying.y !== flying.restY,
+    ).toBe(true);
     controller.setTimersEnabled(false);
     expect([flying.x, flying.y, flying.z]).toEqual([flying.restX, flying.restY, flying.restZ]);
     expect(flying.heading).toBe(flying.restHeading);
-    if (offRest) {
-      // it really was mid-flight, not coincidentally at rest
-      expect(offRest).toBe(true);
-    }
-    controller.setTimersEnabled(false);
+    expect(flying.spotId).toBe(flying.restSpotId);
+    expect(flying.node?.rotation.z).toBe(0);
   });
 
   it('re-enabling after a freeze restarts scheduling', () => {
