@@ -15,6 +15,7 @@ import { ModelContext, detailLevelFor } from './models/modelProvider.ts';
 import { skyDomeResources } from './models/shared.ts';
 import { noRaycast } from './models/raycast.ts';
 import { ANCHORS } from './navigation/graph.ts';
+import { CRITTER_BOUNDS } from './critters.ts';
 
 /**
  * Screen-space footprint of the whole hub. The camera looks along (1,1,1), so a
@@ -25,10 +26,19 @@ import { ANCHORS } from './navigation/graph.ts';
  * neighbourhood.
  */
 const FIT = (() => {
+  // The envelope covers the ground anchors AND the ambient airspace
+  // (CRITTER_BOUNDS) so a soaring eagle is never clipped by the frustum:
+  // horizontal reach widens the side term, maxY widens the vertical term
+  // (≈0.82 screen units per world height unit, per the comment above).
   const side =
-    Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x - anchor.z) / Math.SQRT2)) + 1.7;
+    Math.max(
+      Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x - anchor.z) / Math.SQRT2)),
+      CRITTER_BOUNDS.maxHorizontalRadius,
+    ) + 1.7;
   const depth =
-    Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x + anchor.z) / Math.sqrt(6))) + 2.9;
+    Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x + anchor.z) / Math.sqrt(6))) +
+    2.9 +
+    CRITTER_BOUNDS.maxY * 0.82;
   return { width: side * 2, height: depth * 2 };
 })();
 

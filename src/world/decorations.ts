@@ -124,3 +124,24 @@ export function isDecorationClear(x: number, z: number, radius = 0): boolean {
   }
   return true;
 }
+
+/**
+ * Swept-clearance check: samples `isDecorationClear` along the segment from
+ * `from` to `to`, so a moving thing (e.g. a critter) provably never crosses a
+ * hotspot, NPC, landmark footprint or path corridor. The zone/corridor data
+ * stays private to this module — callers only see the path predicate.
+ */
+export function isDecorationClearPath(
+  from: { readonly x: number; readonly z: number },
+  to: { readonly x: number; readonly z: number },
+  radius = 0,
+): boolean {
+  const length = Math.hypot(to.x - from.x, to.z - from.z);
+  const steps = Math.max(1, Math.ceil(length / 0.25));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    if (!isDecorationClear(from.x + (to.x - from.x) * t, from.z + (to.z - from.z) * t, radius))
+      return false;
+  }
+  return true;
+}

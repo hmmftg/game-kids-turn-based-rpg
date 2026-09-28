@@ -73,18 +73,34 @@ export interface PropProps {
   readonly variant?: PropVisualVariant | undefined;
 }
 
+export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish';
+
+export interface AnimalProps {
+  /** Species silhouette to draw. */
+  readonly variant: AnimalVisualVariant;
+  /** Optional body tint override (e.g. ginger vs grey cats). */
+  readonly tint?: string | undefined;
+  /** Pose switch: spread wings / running legs vs perched / sitting. */
+  readonly moving?: boolean;
+  readonly detailLevel?: DetailLevel;
+}
+
 /**
  * Model-provider boundary.
  *
- * Quest logic and the hub composition only know these three component slots, so
+ * Quest logic and the hub composition only know these component slots, so
  * cubic primitives can later be replaced by GLB models (a different `ModelSet`)
- * without touching gameplay code.
+ * without touching gameplay code. `Animal` is part of the contract: a GLB
+ * provider must supply all four slots. Animals are transformed by their
+ * parent group (position/heading are ref-driven, not props) — see
+ * `useCritters`.
  */
 export interface ModelSet {
   readonly kind: 'cubic-primitives' | 'gltf';
   readonly Figure: ComponentType<FigureProps>;
   readonly Landmark: ComponentType<LandmarkProps>;
   readonly Prop: ComponentType<PropProps>;
+  readonly Animal: ComponentType<AnimalProps>;
 }
 
 export const ModelContext = createContext<ModelSet | null>(null);
