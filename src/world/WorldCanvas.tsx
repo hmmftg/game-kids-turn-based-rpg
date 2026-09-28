@@ -12,6 +12,8 @@ import { maxPixelRatioFor } from '../services/device/capabilities.ts';
 import { Hub, type HubHandle } from './Hub.tsx';
 import { CUBIC_MODELS } from './models/cubicModels.ts';
 import { ModelContext, detailLevelFor } from './models/modelProvider.ts';
+import { skyDomeResources } from './models/shared.ts';
+import { noRaycast } from './models/raycast.ts';
 import { ANCHORS } from './navigation/graph.ts';
 
 /**
@@ -62,6 +64,20 @@ function CanvasLiveness({ flagRef }: { readonly flagRef: RefObject<boolean> }) {
     };
   }, [flagRef]);
   return null;
+}
+
+/** Vertex-colored sky backdrop; one shared geometry + basic material, ignores fog. */
+function SkyDome() {
+  const { geometry, material } = skyDomeResources();
+  return (
+    <mesh
+      geometry={geometry}
+      material={material}
+      raycast={noRaycast}
+      frustumCulled={false}
+      renderOrder={-1}
+    />
+  );
 }
 
 /** Redraws when React state that the scene depends on changes. */
@@ -146,6 +162,10 @@ export function WorldCanvas({
       >
         <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
+        {/* Atmosphere: distance haze toward the horizon + gradient sky dome.
+            Both are scene-level attachments so they must live at Canvas root. */}
+        <fog attach="fog" args={['#e3ede9', 26, 68]} />
+        <SkyDome />
         <InvalidateOnChange
           token={`${avatarId}:${headwear}:${completedCount}:${String(interactive)}:${zoom}:${qualityTier}`}
         />

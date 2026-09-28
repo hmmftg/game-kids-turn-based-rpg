@@ -22,7 +22,7 @@ import {
   PlantCluster,
   StoneCluster,
 } from './models/details.tsx';
-import { BOX, CYLINDER, PLANE, sharedLambert } from './models/shared.ts';
+import { BOX, CYLINDER, PLANE, sharedGroundMaterial, sharedLambert } from './models/shared.ts';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
@@ -99,7 +99,6 @@ function figureRole(id: NpcId | null): FigureVisualRole | undefined {
 }
 
 const GROUND = new THREE.PlaneGeometry(40, 40);
-const GROUND_MATERIAL = new THREE.MeshLambertMaterial({ color: '#efe0bd' });
 const PATH_MATERIAL = new THREE.MeshLambertMaterial({ color: '#dcc79a' });
 const HOTSPOT_MATERIAL = new THREE.MeshBasicMaterial({
   color: '#e08a3c',
@@ -400,13 +399,14 @@ export function Hub({
 
   return (
     <group>
-      <hemisphereLight args={['#ffffff', '#c8b78f', 1.1]} />
-      <directionalLight position={[6, 10, 4]} intensity={0.75} />
+      <hemisphereLight args={['#fdf6e8', '#c8b78f', 1.0]} />
+      <directionalLight color="#ffe3b8" position={[6, 10, 4]} intensity={0.9} />
+      <directionalLight color="#bcd8f0" position={[-5, 8, -6]} intensity={0.25} />
 
       {/* Ground doubles as the walk surface: taps resolve to the nearest anchor. */}
       <mesh
         geometry={GROUND}
-        material={GROUND_MATERIAL}
+        material={sharedGroundMaterial()}
         rotation={[-Math.PI / 2, 0, 0]}
         name="ground"
         onClick={(event: ThreeEvent<MouseEvent>) => {
@@ -562,6 +562,7 @@ export function Hub({
         position={walker.position}
         rotationY={walker.heading}
         bobbing={walker.bobbing}
+        moving={walker.moving}
         palette={AVATAR_PALETTES[avatarId]}
         headwear={headwear}
         label="avatar"

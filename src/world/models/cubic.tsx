@@ -18,8 +18,17 @@ import {
   SignDetail,
   StoneCluster,
   WindowDetail,
+  type Xyz,
 } from './details.tsx';
-import { BOX, CIRCLE, CYLINDER, DETAIL_COLORS, SHADOW_MATERIAL, sharedLambert } from './shared.ts';
+import {
+  BOX,
+  CIRCLE,
+  CYLINDER,
+  DETAIL_COLORS,
+  SHADOW_MATERIAL,
+  SPHERE,
+  sharedLambert,
+} from './shared.ts';
 
 // Materials come from the module-level registry so repeated details across the
 // whole scene share one MeshLambertMaterial instance per color.
@@ -365,6 +374,7 @@ export function CubicFigure({
   rotationY = 0,
   palette,
   bobbing = 0,
+  moving = false,
   label,
   headwear = 'none',
   detailLevel = 1,
@@ -374,6 +384,8 @@ export function CubicFigure({
   const head = useMaterial(palette.head);
   const limb = useMaterial(palette.limb);
   const lift = Math.sin(bobbing) * 0.05;
+  // Squash-and-stretch only while walking; settles rigid on arrival.
+  const squash = moving ? 1 + Math.sin(bobbing * 2) * 0.05 : 1;
 
   return (
     <group
@@ -381,6 +393,7 @@ export function CubicFigure({
       rotation={[0, rotationY, 0]}
       name={label ?? ''}
       dispose={null}
+      scale={[1, squash, 1]}
     >
       <BlobShadow radius={0.42} />
       <mesh
@@ -405,7 +418,7 @@ export function CubicFigure({
         raycast={noRaycast}
       />
       <mesh
-        geometry={BOX}
+        geometry={detailLevel >= 2 ? SPHERE : BOX}
         material={head}
         position={[0, 1.14 + lift, 0]}
         scale={[0.42, 0.38, 0.38]}
@@ -429,6 +442,41 @@ export const LANDMARK_DETAIL_CLEARANCE = 0.45;
 export const LANDMARK_MAX_DETAIL_Z = 1.2 - LANDMARK_DETAIL_CLEARANCE;
 const capDetailZ = (z: number) => Math.min(z, LANDMARK_MAX_DETAIL_Z);
 
+/** Flattened dome + finial — shared SPHERE, no new geometry. */
+function DomeRoof({ width, height }: { readonly width: number; readonly height: number }) {
+  return (
+    <>
+      <mesh
+        geometry={SPHERE}
+        material={sharedLambert(DETAIL_COLORS.dome)}
+        position={[0, height + 0.3, 0]}
+        scale={[width * 0.85, 0.55, width * 0.85]}
+        raycast={noRaycast}
+      />
+      <mesh
+        geometry={SPHERE}
+        material={sharedLambert(DETAIL_COLORS.domeAccent)}
+        position={[0, height + 0.62, 0]}
+        scale={[0.14, 0.18, 0.14]}
+        raycast={noRaycast}
+      />
+    </>
+  );
+}
+
+/** Rounded arch cap over a door — half of a squashed sphere. */
+function ArchCap({ position, width = 0.34 }: { readonly position: Xyz; readonly width?: number }) {
+  return (
+    <mesh
+      geometry={SPHERE}
+      material={sharedLambert(DETAIL_COLORS.door)}
+      position={position}
+      scale={[width, 0.16, 0.05]}
+      raycast={noRaycast}
+    />
+  );
+}
+
 /** home: door + windows + roof trim. */
 function HomeGateDetails({ width, height, level }: VariantDetailProps) {
   const faceZ = LANDMARK_FACE_Z(width);
@@ -436,7 +484,11 @@ function HomeGateDetails({ width, height, level }: VariantDetailProps) {
     <>
       <DoorDetail position={[0.15, 0, faceZ]} />
       <Detail level={level} min={1}>
+        <DomeRoof width={width} height={height} />
         <WindowDetail position={[-0.32, height * 0.55, faceZ]} />
+      </Detail>
+      <Detail level={level} min={2}>
+        <ArchCap position={[0.15, 0.62, faceZ + 0.01]} />
       </Detail>
       <Detail level={level} min={2}>
         <WindowDetail position={[0.4, height * 0.55, faceZ]} />
@@ -502,6 +554,7 @@ function SquareDetails({ width, height, level }: VariantDetailProps) {
     <>
       <DoorDetail position={[0, 0, faceZ]} width={0.5} height={0.8} />
       <Detail level={level} min={1}>
+        <DomeRoof width={width * 0.7} height={height} />
         {/* banner: two posts + cloth slab */}
         <mesh
           geometry={CYLINDER}
@@ -526,6 +579,7 @@ function SquareDetails({ width, height, level }: VariantDetailProps) {
         />
       </Detail>
       <Detail level={level} min={2}>
+        <ArchCap position={[0, 0.8, faceZ + 0.01]} width={0.5} />
         <RoofTrim width={width} y={height - 0.08} />
       </Detail>
     </>

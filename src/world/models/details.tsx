@@ -25,7 +25,7 @@ export function Detail({
   return <>{children}</>;
 }
 
-type Xyz = readonly [number, number, number];
+export type Xyz = readonly [number, number, number];
 
 /** A framed window on a façade: frame slab + slightly inset glass pane. */
 export function WindowDetail({
@@ -265,13 +265,18 @@ export function AwningDetail({
 }) {
   return (
     <group position={position} raycast={noRaycast}>
-      <mesh
-        geometry={BOX}
-        material={sharedLambert(DETAIL_COLORS.awning)}
-        rotation={[-0.35, 0, 0]}
-        scale={[width, 0.05, 0.5]}
-        raycast={noRaycast}
-      />
+      {/* alternating awning stripes; four thin slabs share two materials */}
+      {[0, 1, 2, 3].map((i) => (
+        <mesh
+          key={i}
+          geometry={BOX}
+          material={sharedLambert(i % 2 === 0 ? DETAIL_COLORS.awning : DETAIL_COLORS.frame)}
+          position={[(i - 1.5) * (width / 4), 0, 0]}
+          rotation={[-0.35, 0, 0]}
+          scale={[width / 4, 0.05, 0.5]}
+          raycast={noRaycast}
+        />
+      ))}
       <mesh
         geometry={BOX}
         material={sharedLambert(DETAIL_COLORS.frame)}
