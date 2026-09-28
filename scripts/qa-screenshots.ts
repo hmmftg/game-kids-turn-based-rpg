@@ -170,4 +170,25 @@ if (afterPortrait !== expected || afterParent !== expected || afterTierCycle !==
   console.log('lifecycle regression OK: shared resources survived all remounts');
 }
 
+// Reduced-motion capture: emulate `prefers-reduced-motion` and confirm the
+// scene still renders (ambient critters must stay perched — decoration off,
+// meaning intact). Reload so the non-reactive matchMedia read takes effect.
+await page.emulateMedia({ reducedMotion: 'reduce' });
+await page.reload();
+// A returning device lands on the profile picker, not straight into the hub.
+await page.locator('[data-testid^="profile-card-"]').first().click();
+await page.getByTestId('hud').waitFor({ timeout: 15000 });
+await page.getByTestId('world-canvas').waitFor();
+await page.waitForTimeout(2500); // past a fish/cat idle window — nothing moves
+await page.screenshot({ path: `${out}/hub-reduced-motion.png` });
+const reducedMotionObjects = await objectCount();
+console.log(`captured reduced-motion hub (${reducedMotionObjects} objects)`);
+if (reducedMotionObjects !== expected) {
+  console.error(
+    `REGRESSION: reduced-motion scene has ${reducedMotionObjects} objects, expected ${expected}`,
+  );
+  process.exitCode = 1;
+}
+await page.emulateMedia({ reducedMotion: null });
+
 await browser.close();
