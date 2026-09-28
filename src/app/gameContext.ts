@@ -9,6 +9,8 @@ export interface GameShell {
   readonly cacheStatus: CacheStatus;
   readonly updateReady: boolean;
   readonly applyUpdate: () => void;
+  readonly installReady: boolean;
+  readonly installApp: () => void;
   readonly resetProgress: () => void;
   readonly playSfx: (id: string) => void;
   /** Player profiles on this device, in creation order. */
