@@ -15,6 +15,15 @@
   touch-action: none;
 }
 
+/* Static vignette + warmth — zero GPU, never animated, safe for reduced motion. */
+.world::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 42%, transparent 58%, rgba(52, 42, 28, 0.14) 100%);
+}
+
 .hud__top,
 .hud__side,
 .hud__bottom {

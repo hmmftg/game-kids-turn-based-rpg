@@ -42,6 +42,8 @@ export interface FigureProps {
   readonly palette: Palette;
   /** Phase of the idle/walk bob, in radians. */
   readonly bobbing?: number;
+  /** Whether the figure is actively walking (drives squash-and-stretch). */
+  readonly moving?: boolean;
   readonly label?: string;
   /** Cosmetic headwear layer; omitted/'none' leaves the head uncovered. */
   readonly headwear?: HeadwearId;
