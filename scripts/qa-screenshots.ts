@@ -179,8 +179,56 @@ await page.reload();
 await page.locator('[data-testid^="profile-card-"]').first().click();
 await page.getByTestId('hud').waitFor({ timeout: 15000 });
 await page.getByTestId('world-canvas').waitFor();
-await page.waitForTimeout(2500); // past a fish/cat idle window — nothing moves
+// The hook registers when Hub mounts, which lands just after the canvas
+// element — wait for it rather than racing.
+await page
+  .waitForFunction(() => typeof window.__worldCritterTransforms === 'function', null, {
+    timeout: 15000,
+  })
+  .catch(() => null);
+// Critter immobility under reduced motion: transforms (x, y, z, heading per
+// critter, read via the dev-only __worldCritterTransforms hook) must not
+// change across a window longer than any ambient idle delay (fish ≤ 4s,
+// cat ≤ 6s — 7s covers both plus scheduling slack).
+const critterTransforms = () =>
+  page.evaluate(() => {
+    const w = window as unknown as {
+      __worldCritterTransforms?: () => readonly (readonly [
+        string,
+        number,
+        number,
+        number,
+        number,
+      ])[];
+    };
+    return w.__worldCritterTransforms?.() ?? null;
+  });
+const beforeMotion = await critterTransforms();
+await page.waitForTimeout(7000);
+const afterMotion = await critterTransforms();
 await page.screenshot({ path: `${out}/hub-reduced-motion.png` });
+if (!beforeMotion || !afterMotion) {
+  console.error('REGRESSION: __worldCritterTransforms hook unavailable under reduced motion');
+  process.exitCode = 1;
+} else {
+  const moved: string[] = [];
+  for (const [i, b] of beforeMotion.entries()) {
+    const a = afterMotion[i]!;
+    const drift = Math.max(
+      Math.abs(a[1]! - b[1]!),
+      Math.abs(a[2]! - b[2]!),
+      Math.abs(a[3]! - b[3]!),
+      Math.abs(a[4]! - b[4]!),
+    );
+    if (drift > 1e-9) moved.push(`${b[0]} drift=${drift}`);
+  }
+  if (moved.length > 0) {
+    console.error(`REGRESSION: critters moved under reduced motion: ${moved.join(', ')}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`reduced-motion immobility OK: ${beforeMotion.length} critters unchanged`);
+  }
+}
 const reducedMotionObjects = await objectCount();
 console.log(`captured reduced-motion hub (${reducedMotionObjects} objects)`);
 if (reducedMotionObjects !== expected) {

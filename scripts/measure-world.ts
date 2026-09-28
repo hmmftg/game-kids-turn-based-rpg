@@ -15,8 +15,14 @@ const urlArg = process.argv.indexOf('--url');
 const URL = urlArg >= 0 ? process.argv[urlArg + 1]! : 'http://localhost:5199';
 
 /**
- * Baseline (captured on the pre-detail scene, identical across tiers):
- *   calls 58 · triangles 1152 · geometries 16 · textures 0 · objects 81 · materials 25
+ * BUDGET = pass/fail ceilings (unchanged since the graphics pass).
+ *
+ * Current observed baseline (post #14/#15 ambient animals, 3-sample max):
+ *   low:    calls 75  · triangles 3248 · objects 116 · materials 27 · geometries 7
+ *   medium: calls 200 · triangles 6530 · objects 271 · materials 38 · geometries 8
+ *   high:   calls 293 · triangles 8966 · objects 385 · materials 42 · geometries 8
+ * These are sampled maxima, not mathematical upper bounds — ambient critter
+ * positions vary between samples and frustum culling follows them.
  *
  * Maximum acceptable overhead for the visual detail pass. The low tier keeps
  * the current scene almost untouched; medium/high may add cheap decorative
@@ -147,6 +153,11 @@ for (const tier of ['low', 'medium', 'high']) {
     }
     metrics = metrics === null ? sample : maxMetrics(metrics, sample);
     if (i + 1 < SAMPLES_PER_TIER) await page.waitForTimeout(1500);
+    if (sample !== null) {
+      console.log(
+        `    sample ${i + 1}: calls=${sample.calls} tri=${sample.triangles} geo=${sample.geometries} tex=${sample.textures} obj=${sample.objects} mat=${sample.materials}`,
+      );
+    }
   }
   console.log(JSON.stringify({ tier, ...metrics }));
   if (!metrics) {
