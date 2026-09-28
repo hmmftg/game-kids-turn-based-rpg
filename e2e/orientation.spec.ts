@@ -134,6 +134,52 @@ test.describe('orientation', () => {
     await expect(page.getByTestId('quest-trail')).toBeVisible();
   });
 
+  test('golden path: walk → rotate → arrive → quest → completion across rotations', async ({
+    page,
+  }) => {
+    await startGame(page);
+    await tagCanvas(page);
+
+    // Start the first quest; rotate mid-walk and confirm arrival opens dialogue.
+    await page.getByTestId('trail-quest-greeting').click();
+    await page.setViewportSize(PORTRAIT);
+    await expectSameCanvas(page);
+    await expect(page.getByTestId('npc-dialogue')).toBeVisible({ timeout: 15000 });
+
+    // Start the encounter and make the first correct choice in portrait.
+    const steps = getQuestDefinition('quest-greeting').steps;
+    await page.getByTestId('start-quest').click();
+    await page.getByTestId('advance-intro').click();
+    await page.getByTestId('advance-demonstrate').click();
+    await page.getByTestId(`choice-${steps[0]!.correctIconId}`).click();
+    await expect(page.getByTestId('advance-response')).toBeVisible();
+
+    // Rotate back to landscape mid-encounter; the phase must not reset.
+    await page.setViewportSize(LANDSCAPE);
+    await expectSameCanvas(page);
+    await page.getByTestId('advance-response').click();
+    await page.getByTestId('advance-reinforce').click();
+
+    // Finish remaining steps in landscape.
+    for (const step of steps.slice(1)) {
+      await page.getByTestId('advance-intro').click();
+      await page.getByTestId('advance-demonstrate').click();
+      await page.getByTestId(`choice-${step.correctIconId}`).click();
+      await page.getByTestId('advance-response').click();
+      await page.getByTestId('advance-reinforce').click();
+    }
+
+    const dismiss = page.getByTestId('celebration-continue');
+    if (await dismiss.isVisible().catch(() => false)) await dismiss.click();
+    await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
+
+    // Final rotation back to portrait: completion survives the whole cycle.
+    await page.setViewportSize(PORTRAIT);
+    await expectSameCanvas(page);
+    await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
+    await expectHudIntact(page);
+  });
+
   test('a completed quest stays completed after a rotation cycle', async ({ page }) => {
     await startGame(page);
     await page.getByTestId('trail-quest-greeting').click();
