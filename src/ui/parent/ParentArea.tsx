@@ -103,7 +103,7 @@ export function ParentArea({
             قلم Vazirmatn با پروانه‌ی SIL Open Font License؛ کد بازی با پروانه‌ی MIT. صداها:{' '}
             {AUDIO_MANIFEST.every((asset) => asset.url === null)
               ? 'همه‌ی صداها فعلاً خاموش و جای‌نگه‌دارند.'
-              : 'دارای مجوز.'}
+              : 'صداهای فعلی با ژنراتور داخلی بازی ساخته شده‌اند و جای‌نگه‌دارند.'}
           </p>
         </section>
 

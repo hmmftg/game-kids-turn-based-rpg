@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: false,
       includeAssets: ['icons/*.svg', 'offline.html'],
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest,json,mp3,ogg}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest,json,mp3,ogg,wav}'],
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/offline\.html$/],
         cleanupOutdatedCaches: true,
