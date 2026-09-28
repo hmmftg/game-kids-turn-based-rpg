@@ -30,6 +30,9 @@ const FIT = (() => {
   return { width: side * 2, height: depth * 2 };
 })();
 
+/** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
+let canvasInstanceCounter = 0;
+
 /** Pauses the render loop while the tab is hidden and redraws once on return. */
 function VisibilityPause() {
   const invalidate = useThree((state) => state.invalidate);
@@ -47,7 +50,7 @@ function VisibilityPause() {
  * Tracks whether the scene tree is alive. R3F calls renderer.forceContextLoss()
  * while unmounting <Canvas>, which fires the same 'webglcontextlost' event as a
  * genuine GPU loss; the flag lets that handler skip teardown-induced loss so
- * leaving for the parent area or the orientation blocker does not strand the
+ * pausing or leaving for the parent area does not strand the
  * hub on the DOM fallback. Child effects unmount before the renderer is
  * disposed, so the flag is already false by then.
  */
@@ -133,6 +136,7 @@ export function WorldCanvas({
             w.__worldRenderer = gl;
             w.__worldScene = scene;
             w.__worldCamera = camera;
+            w.__worldCanvasId = canvasInstanceCounter += 1;
           }
           gl.domElement.addEventListener('webglcontextlost', (event) => {
             event.preventDefault();

@@ -1,9 +1,10 @@
 // Dev-only: capture hub screenshots per quality tier + a lifecycle regression
-// pass (Hub → Parent Area → Hub → Portrait blocker → Landscape → tier change →
-// Hub) verifying the remounted canvas still renders and metrics stay stable —
-// this exercises the shared-resource disposal contract.
+// pass (Hub → Parent Area → Hub → Portrait → Landscape → tier change → Hub)
+// verifying the remounted canvas still renders, that orientation changes do
+// NOT remount the canvas, and metrics stay stable — this exercises the
+// shared-resource disposal contract.
 // Requires `npm run dev -- --port 5199` and chromium with SwiftShader.
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const base = 'http://localhost:5199';
@@ -49,6 +50,17 @@ async function objectCount() {
   });
 }
 
+/** Dev-only Canvas instance id (WorldCanvas.tsx) — proves no remount. */
+async function canvasId(): Promise<number | undefined> {
+  return page.evaluate(() => (window as unknown as { __worldCanvasId?: number }).__worldCanvasId);
+}
+
+/** Rotates between landscape and portrait; settles before measuring. */
+async function rotateTo(p: Page, viewport: { width: number; height: number }) {
+  await p.setViewportSize(viewport);
+  await p.waitForTimeout(400);
+}
+
 mkdirSync(out, { recursive: true });
 
 const counts: Record<string, number> = {};
@@ -65,23 +77,73 @@ await page.waitForTimeout(400);
 await page.screenshot({ path: `${out}/hub-high-narrow.png` });
 console.log('captured high at 640x360');
 
-// Lifecycle regression: portrait blocker → landscape → Hub → parent area →
-// Hub → tier change → Hub. The canvas remounts each time; object count must
-// not shrink (disposed shared resources would drop meshes).
-await page.setViewportSize({ width: 420, height: 800 });
-await page.getByTestId('orientation-blocker').waitFor({ timeout: 8000 });
-await page.setViewportSize({ width: 900, height: 500 });
-await page.getByTestId('world-canvas').waitFor();
+// Portrait viewport: the world must stay mounted and playable.
+const idBeforePortrait = await canvasId();
+await rotateTo(page, { width: 360, height: 800 });
+if ((await canvasId()) !== idBeforePortrait) {
+  console.error('REGRESSION: canvas remounted on landscape→portrait rotation');
+  process.exitCode = 1;
+}
+await page.screenshot({ path: `${out}/hub-portrait.png` });
+console.log('captured high at 360x800');
+
+// Portrait HUD surfaces.
+await page.getByTestId('trail-quest-greeting').click();
+await page.getByTestId('npc-dialogue').waitFor({ timeout: 15000 });
+await page.screenshot({ path: `${out}/dialogue-portrait.png` });
+await page.getByTestId('start-quest').click();
+await page.getByTestId('advance-intro').click();
+await page.getByTestId('advance-demonstrate').click();
+await page.screenshot({ path: `${out}/encounter-portrait.png` });
+await page.getByTestId('leave-encounter').click();
 await page.getByTestId('hud').waitFor();
-await page.waitForTimeout(400);
-const afterPortrait = await objectCount();
-console.log(`after portrait blocker: ${afterPortrait} objects`);
+
+await page.getByTestId('pause-button').click();
+await page.screenshot({ path: `${out}/pause-portrait.png` });
+await page.getByTestId('resume-button').click();
+await page.getByTestId('hud').waitFor();
 
 await page.getByTestId('pause-button').click();
 await page.getByTestId('parent-entry-pause').click();
-const hold = await page.getByTestId('parent-gate-hold').boundingBox();
-if (!hold) throw new Error('parent-gate-hold has no bounding box');
-await page.mouse.move(hold.x + hold.width / 2, hold.y + hold.height / 2);
+const holdBox = await page.getByTestId('parent-gate-hold').boundingBox();
+if (!holdBox) throw new Error('parent-gate-hold has no bounding box');
+await page.mouse.move(holdBox.x + holdBox.width / 2, holdBox.y + holdBox.height / 2);
+await page.mouse.down();
+await page.getByTestId('parent-area').waitFor({ timeout: 8000 });
+await page.mouse.up();
+await page.screenshot({ path: `${out}/parent-portrait.png` });
+await page.getByTestId('parent-close').click();
+await page.getByTestId('world-canvas').waitFor();
+await page.getByTestId('hud').waitFor();
+await page.waitForTimeout(400);
+
+// Landscape after portrait: same world, no remount.
+const idAfterPortrait = await canvasId();
+await rotateTo(page, { width: 900, height: 500 });
+if ((await canvasId()) !== idAfterPortrait) {
+  console.error('REGRESSION: canvas remounted on portrait→landscape rotation');
+  process.exitCode = 1;
+}
+await page.screenshot({ path: `${out}/hub-landscape-after-portrait.png` });
+const afterPortrait = await objectCount();
+console.log(`after portrait cycle: ${afterPortrait} objects`);
+
+// Repeated rotations must also keep the same canvas instance.
+await rotateTo(page, { width: 360, height: 800 });
+await rotateTo(page, { width: 900, height: 500 });
+await rotateTo(page, { width: 360, height: 800 });
+await rotateTo(page, { width: 900, height: 500 });
+if ((await canvasId()) !== idAfterPortrait) {
+  console.error('REGRESSION: canvas remounted during repeated rotations');
+  process.exitCode = 1;
+}
+
+// Parent-area remount regression (canvas unmounts there by design).
+await page.getByTestId('pause-button').click();
+await page.getByTestId('parent-entry-pause').click();
+const hold2 = await page.getByTestId('parent-gate-hold').boundingBox();
+if (!hold2) throw new Error('parent-gate-hold has no bounding box');
+await page.mouse.move(hold2.x + hold2.width / 2, hold2.y + hold2.height / 2);
 await page.mouse.down();
 await page.getByTestId('parent-area').waitFor({ timeout: 8000 });
 await page.mouse.up();

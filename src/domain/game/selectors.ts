@@ -52,5 +52,5 @@ export function selectIsOverlayOpen(state: GameState): boolean {
 
 /** World interaction is disabled while overlays or non-hub modes are active. */
 export function selectIsWorldInteractive(state: GameState): boolean {
-  return state.mode === 'hub' && state.webglAvailable && state.orientation === 'landscape';
+  return state.mode === 'hub' && state.webglAvailable;
 }

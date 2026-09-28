@@ -39,7 +39,6 @@ export function createInitialState(now = 0): GameState {
     encounter: null,
     dialogue: null,
     orientation: 'landscape',
-    interruptedMode: null,
     webglAvailable: true,
     saveHealth: 'fresh',
     corruptSaveDetected: false,

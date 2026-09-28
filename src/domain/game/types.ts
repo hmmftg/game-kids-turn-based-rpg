@@ -7,7 +7,6 @@
 
 export const MODES = [
   'boot',
-  'orientationBlocked',
   'profileSelect',
   'title',
   'avatarSelect',
@@ -137,9 +136,8 @@ export interface GameState extends PersistedState {
   readonly resumeMode: ResumableMode;
   readonly encounter: EncounterState | null;
   readonly dialogue: DialogueState | null;
+  /** Current device orientation: recorded session/device state, never persisted. */
   readonly orientation: 'landscape' | 'portrait';
-  /** Mode interrupted by a portrait rotation, restored when landscape returns. */
-  readonly interruptedMode: Mode | null;
   readonly webglAvailable: boolean;
   readonly saveHealth: SaveHealth;
   /** Non-blocking notice that an unreadable save was set aside for this session. */

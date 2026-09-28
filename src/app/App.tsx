@@ -20,7 +20,6 @@ import {
   AvatarSelectScreen,
   ErrorScreen,
   LoadingScreen,
-  OrientationScreen,
   TitleScreen,
   WebglFallbackScreen,
 } from '../ui/child/screens.tsx';
@@ -128,9 +127,6 @@ export function App() {
   switch (state.mode) {
     case 'boot':
       return <LoadingScreen />;
-
-    case 'orientationBlocked':
-      return <OrientationScreen />;
 
     case 'profileSelect':
       return (

@@ -31,9 +31,6 @@ export const FA = {
   parentProfiles: 'بازیکن‌ها',
   profileNameHint: 'نام (دلخواه)',
 
-  rotateTitle: 'گوشی را بچرخان',
-  rotateHint: 'بازی در حالت افقی انجام می‌شود',
-
   webglTitle: 'این دستگاه نمی‌تواند تصویر سه‌بعدی را نشان دهد',
   webglHint: 'می‌توانی با دکمه‌های بزرگ بازی کنی',
   webglAction: 'ادامه با دکمه‌ها',

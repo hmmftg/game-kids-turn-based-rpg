@@ -94,44 +94,27 @@ describe('gameReducer — boot and title', () => {
     expect(state.mode).toBe('hub');
   });
 
-  it('applies a boot that finishes while the portrait blocker is up', () => {
-    let state = gameReducer(
-      createInitialState(NOW),
-      { type: 'ORIENTATION_CHANGED', orientation: 'portrait' },
-      NOW,
-    );
-    expect(state.mode).toBe('orientationBlocked');
-    state = gameReducer(state, { type: 'BOOT_LOADED', persisted: null, health: 'fresh' }, NOW);
-    expect(state.mode).toBe('orientationBlocked');
-    expect(state.saveHealth).toBe('fresh');
-    state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW);
-    expect(state.mode).toBe('title');
+  it('boots to the same landing regardless of device orientation', () => {
+    for (const orientation of ['landscape', 'portrait'] as const) {
+      let state = gameReducer(
+        createInitialState(NOW),
+        { type: 'ORIENTATION_CHANGED', orientation },
+        NOW,
+      );
+      state = gameReducer(state, { type: 'BOOT_LOADED', persisted: null, health: 'fresh' }, NOW);
+      expect(state.mode).toBe('title');
+      expect(state.saveHealth).toBe('fresh');
+      expect(state.orientation).toBe(orientation);
+    }
   });
 
-  it('restores the saved avatar even when boot completes under the blocker', () => {
-    const persisted = { ...createFreshPersistedState(NOW), avatarId: 'avatar-arta' as const };
-    let state = gameReducer(
-      createInitialState(NOW),
-      { type: 'ORIENTATION_CHANGED', orientation: 'portrait' },
-      NOW,
-    );
-    state = gameReducer(state, { type: 'BOOT_LOADED', persisted, health: 'loaded' }, NOW);
-    expect(state.avatarId).toBe('avatar-arta');
-    state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW);
-    expect(state.mode).toBe('title');
-    state = gameReducer(state, { type: 'START_PRESSED' }, NOW);
-    expect(state.mode).toBe('hub');
-  });
-
-  it('keeps a failed boot fatal once the device is landscape again', () => {
+  it('keeps a failed boot fatal in either orientation', () => {
     let state = gameReducer(
       createInitialState(NOW),
       { type: 'ORIENTATION_CHANGED', orientation: 'portrait' },
       NOW,
     );
     state = gameReducer(state, { type: 'BOOT_FAILED', reason: 'idb' }, NOW);
-    expect(state.mode).toBe('orientationBlocked');
-    state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW);
     expect(state.mode).toBe('fatalFallback');
     expect(state.fatalReason).toBe('idb');
   });
@@ -278,27 +261,39 @@ describe('gameReducer — overlays, orientation and reset', () => {
     expect(gameReducer(paused, { type: 'RESUME' }, NOW).mode).toBe('hub');
   });
 
-  it('blocks portrait and restores the interrupted mode on landscape', () => {
+  it('records orientation without ever changing the mode', () => {
     const hub = atHub();
     const portrait = gameReducer(
       hub,
       { type: 'ORIENTATION_CHANGED', orientation: 'portrait' },
       NOW,
     );
-    expect(portrait.mode).toBe('orientationBlocked');
+    expect(portrait.mode).toBe('hub');
+    expect(portrait.orientation).toBe('portrait');
     const landscape = gameReducer(
       portrait,
       { type: 'ORIENTATION_CHANGED', orientation: 'landscape' },
       NOW,
     );
     expect(landscape.mode).toBe('hub');
+    expect(landscape.orientation).toBe('landscape');
   });
 
-  it('keeps the interrupted mode across repeated portrait events', () => {
-    const hub = atHub();
-    let state = gameReducer(hub, { type: 'ORIENTATION_CHANGED', orientation: 'portrait' }, NOW);
-    state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'portrait' }, NOW);
-    expect(state.interruptedMode).toBe('hub');
+  it('keeps mode and gameplay state across repeated rotation cycles', () => {
+    const encounter = gameReducer(atHub(), { type: 'START_QUEST', questId: 'quest-greeting' }, NOW);
+    let state = encounter;
+    for (let i = 0; i < 3; i += 1) {
+      state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'portrait' }, NOW);
+      state = gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW);
+    }
+    expect(state.mode).toBe('encounter');
+    expect(state.encounter).toBe(encounter.encounter);
+    // Rotation is a device event: it must never bump the autosave token.
+    expect(state.autosaveToken).toBe(encounter.autosaveToken);
+    // Same orientation twice is a no-op by reference.
+    expect(gameReducer(state, { type: 'ORIENTATION_CHANGED', orientation: 'landscape' }, NOW)).toBe(
+      state,
+    );
   });
 
   it('requires the parent gate before the parent area, and resets from there', () => {
@@ -315,7 +310,7 @@ describe('gameReducer — overlays, orientation and reset', () => {
   });
 
   it('exposes every documented mode as reachable or explicitly terminal', () => {
-    expect(MODES).toHaveLength(12);
+    expect(MODES).toHaveLength(11);
   });
 });
 
