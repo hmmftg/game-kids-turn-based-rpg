@@ -126,10 +126,12 @@ export function isDecorationClear(x: number, z: number, radius = 0): boolean {
 }
 
 /**
- * Swept-clearance check: samples `isDecorationClear` along the segment from
- * `from` to `to`, so a moving thing (e.g. a critter) provably never crosses a
- * hotspot, NPC, landmark footprint or path corridor. The zone/corridor data
- * stays private to this module — callers only see the path predicate.
+ * Swept-clearance check: samples `isDecorationClear` every ≤0.25 world units
+ * along the segment from `from` to `to` — bounded resolution, but the 0.25
+ * stride is well under the tightest clearance radius in this authored world,
+ * so a moving thing (e.g. a critter) cannot meaningfully cross a hotspot,
+ * NPC, landmark footprint or path corridor. The zone/corridor data stays
+ * private to this module — callers only see the path predicate.
  */
 export function isDecorationClearPath(
   from: { readonly x: number; readonly z: number },

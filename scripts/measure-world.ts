@@ -117,12 +117,37 @@ await page.getByTestId('badge-0').click();
 await page.getByTestId('hud').waitFor();
 await page.getByTestId('world-canvas').waitFor();
 
+function maxMetrics(a: WorldMetrics, b: WorldMetrics): WorldMetrics {
+  return {
+    calls: Math.max(a.calls, b.calls),
+    triangles: Math.max(a.triangles, b.triangles),
+    geometries: Math.max(a.geometries, b.geometries),
+    textures: Math.max(a.textures, b.textures),
+    objects: Math.max(a.objects, b.objects),
+    materials: Math.max(a.materials, b.materials),
+  };
+}
+
+const SAMPLES_PER_TIER = 3;
+
 let failed = false;
 for (const tier of ['low', 'medium', 'high']) {
   await setTier(page, tier);
   // let the remounted canvas settle and render
   await page.waitForTimeout(400);
-  const metrics = await measure(page);
+  // Multiple samples: ambient critters change position between them, and
+  // frustum culling makes calls/triangles position-dependent — the bound must
+  // hold for the worst observed frame, not a lucky one.
+  let metrics: WorldMetrics | null = null;
+  for (let i = 0; i < SAMPLES_PER_TIER; i++) {
+    const sample = await measure(page);
+    if (sample === null) {
+      metrics = null;
+      break;
+    }
+    metrics = metrics === null ? sample : maxMetrics(metrics, sample);
+    if (i + 1 < SAMPLES_PER_TIER) await page.waitForTimeout(1500);
+  }
   console.log(JSON.stringify({ tier, ...metrics }));
   if (!metrics) {
     failed = true;
