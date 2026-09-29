@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
@@ -115,6 +115,12 @@ function CaveEntranceRock({
   const reduced = prefersReducedMotion();
   const invalidate = useThree((state) => state.invalidate);
 
+  // frameloop="demand": waking `near` must invalidate explicitly, or the
+  // flare would only tick while the avatar happens to still be walking.
+  useEffect(() => {
+    if (near && !revealed && !shimmerDone.current) invalidate();
+  }, [near, revealed, invalidate]);
+
   // One-time ambient shimmer: the first time the child walks near the
   // undiscovered rock, the crack flares once and settles — attention without
   // a persistent pulsing beacon. Reduced motion keeps the wider crack only.
@@ -123,7 +129,7 @@ function CaveEntranceRock({
     invalidate();
     shimmerT.current = reduced ? 1 : Math.min(1, shimmerT.current + delta * 1.4);
     const flare = Math.sin(shimmerT.current * Math.PI);
-    crackRef.current.scale.set(0.1 + 0.14 * flare, 0.75 + 0.5 * flare, 0.05);
+    crackRef.current.scale.set(0.14 + 0.2 * flare, 0.9 + 0.55 * flare, 0.07);
     if (glowRef.current) glowRef.current.intensity = 1.6 * flare;
     if (shimmerT.current >= 1) shimmerDone.current = true;
   });
@@ -168,13 +174,24 @@ function CaveEntranceRock({
         </>
       ) : (
         <>
-          {/* the clue: a warm crack, wide enough to notice up close */}
+          {/* the clue: a warm crack on the camera-facing corner of the
+              rock (camera looks along (1,1,1)), rotated with the boulder so
+              it stays proud of the face — wide enough to notice up close */}
           <mesh
             ref={crackRef}
             geometry={BOX}
             material={sharedLambert('#ffd9a0')}
-            position={[-0.15, 0.5, 0.58]}
-            scale={[0.1, 0.75, 0.05]}
+            position={[0.24, 0.6, 0.55]}
+            rotation={[0, 0.4, 0]}
+            scale={[0.14, 0.9, 0.07]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={sharedLambert('#ffd9a0')}
+            position={[0.74, 0.55, 0.3]}
+            rotation={[0, 0.4, 0]}
+            scale={[0.07, 0.7, 0.14]}
             raycast={noRaycast}
           />
           {/* lit only during the one-time shimmer; sits idle at 0 otherwise */}
