@@ -83,6 +83,11 @@ spawnAnchorId}`. Every anchor — and therefore every NPC, landmark, hotspot and
 - **Quests as references**: `QuestDefinition` also declares `areaId`, `npcIds`, `dialogueIds`
   and `nextQuestIds`; `questChain()` walks the chain. Validation + `registry.test.ts` keep every
   reference resolvable and every node reachable.
+- **Area activities as quest data**: each expanded area gets its gameplay identity from a quest,
+  not code — park (return the fallen kite), river (spot a fish, collect a shell), market (carry
+  the loaf to the shop shelf), school (answer by tapping the right picture). Steps reuse the
+  existing `EncounterStep`/contextual-target model; adding an activity is content data
+  (quest def + copy + icon → scene element/held item/consequence mappings).
 
 ## Budgets
 

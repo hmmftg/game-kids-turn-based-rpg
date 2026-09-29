@@ -197,10 +197,40 @@ describe('contextual targets (ContextInteraction)', () => {
     expect(document.querySelectorAll('.scene-consequence')).toHaveLength(1);
   });
 
+  it('the new area quests offer concrete objects: kite, fish, shell, bread, cards', () => {
+    // Each expanded area's interaction speaks in the physical thing the child
+    // can see — never an abstract action icon.
+    expect(contextForStep('quest-park-kite', 0).objects.map((o) => o.element)).toEqual([
+      'kite',
+      'floor',
+      'path-back',
+    ]);
+    const giveKite = contextForStep('quest-park-kite', 1);
+    expect(giveKite.held).toBe('kite');
+    expect(giveKite.phase).toBe('choose-destination');
+    expect(giveKite.objects.map((o) => o.element)).toEqual(['person', 'floor', 'path-back']);
+
+    expect(contextForStep('quest-river-shell', 0).objects[0]!.element).toBe('fish');
+    expect(contextForStep('quest-river-shell', 1).objects[0]!.element).toBe('shell');
+    const giveShell = contextForStep('quest-river-shell', 2);
+    expect(giveShell.held).toBe('shell');
+    expect(giveShell.objects.map((o) => o.element)).toEqual(['basket', 'floor', 'path-back']);
+
+    const breadErrand = contextForStep('quest-bread-errand', 1);
+    expect(breadErrand.held).toBe('bread');
+    expect(breadErrand.objects[0]!.element).toBe('shelf');
+
+    expect(contextForStep('quest-school-answer', 0).objects.map((o) => o.element)).toEqual([
+      'book',
+      'ball',
+      'path-back',
+    ]);
+  });
+
   it('scene coverage is deterministic: held-item hints exist exactly for place-type steps', () => {
     for (const [iconId, item] of Object.entries(HELD_ITEM)) {
       expect(sceneElementFor(iconId as IconId)).not.toBeNull();
-      expect(['leaf', 'basket']).toContain(item);
+      expect(['leaf', 'basket', 'kite', 'shell', 'bread']).toContain(item);
     }
   });
 });

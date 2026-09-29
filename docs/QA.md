@@ -51,7 +51,10 @@ demonstrate, choice, and success captures.
 ## Scalable world QA
 
 `e2e/areas.spec.ts` covers the world-growth scenario: multiple areas/NPCs in the world data,
-multi-beat dialogue + a branch choice through the quest trail, and leave/return persistence.
+multi-beat dialogue + a branch choice through the quest trail, leave/return persistence, and
+the full area-activity chain — every expanded-area quest (park kite, river shell, market
+errand, school answer) played end to end through real taps on the physical targets, with
+progress verified after a reload.
 `world/registry.test.ts` covers the data invariants: unique ids, every anchor/NPC/decoration
 inside a real area, resolvable dialogue/quest references, the fisher schedule determinism, and
 the visible-area cap (≤8 NPC figures) that keeps inactive areas free.
