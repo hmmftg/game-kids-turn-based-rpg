@@ -17,10 +17,10 @@ const URL = urlArg >= 0 ? process.argv[urlArg + 1]! : 'http://localhost:5199';
 /**
  * BUDGET = pass/fail ceilings (unchanged since the graphics pass).
  *
- * Current observed baseline (post #14/#15 ambient animals, 3-sample max):
- *   low:    calls 75  · triangles 3248 · objects 116 · materials 27 · geometries 7
- *   medium: calls 200 · triangles 6530 · objects 271 · materials 38 · geometries 8
- *   high:   calls 293 · triangles 8966 · objects 385 · materials 42 · geometries 8
+ * Current observed baseline (post kid-first UX pass, 3-sample max):
+ *   low:    calls 76  · triangles 3260 · objects 118 · materials 28 · geometries 7
+ *   medium: calls 203 · triangles 6566 · objects 275 · materials 39 · geometries 8
+ *   high:   calls 296 · triangles 9002 · objects 389 · materials 43 · geometries 8
  * These are sampled maxima, not mathematical upper bounds — ambient critter
  * positions vary between samples and frustum culling follows them.
  *

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { FA } from '../../content/fa/strings.ts';
-import { HEADWEAR_IDS } from '../../domain/game/types.ts';
+import { AVATAR_IDS, HEADWEAR_IDS } from '../../domain/game/types.ts';
 import type { AvatarId, HeadwearId } from '../../domain/game/types.ts';
-import { AVATAR_EMOJI, BADGE_EMOJIS, HEADWEAR_LABEL } from './emoji.ts';
+import { AvatarPortrait } from './AvatarPortrait.tsx';
+import { AVATAR_LABEL, BADGE_EMOJIS, HEADWEAR_LABEL } from './emoji.ts';
 import { Pictogram } from './Pictogram.tsx';
 
 export function LoadingScreen() {
@@ -113,36 +114,22 @@ export function AvatarSelectScreen({
         <>
           <h1 className="subtitle">{FA.chooseAvatar}</h1>
           <div className="row">
-            <button
-              type="button"
-              className="btn btn--large avatar-choice avatar-choice--aban"
-              onClick={() => {
-                setAvatarId('avatar-aban');
-                setStep('headwear');
-              }}
-              data-testid="avatar-aban"
-            >
-              <span className="emoji avatar-choice__emoji" aria-hidden="true">
-                {AVATAR_EMOJI['avatar-aban']}
-              </span>
-              {FA.avatarAban}
-            </button>
-            <button
-              type="button"
-              className="btn btn--large avatar-choice avatar-choice--arta"
-              onClick={() => {
-                setAvatarId('avatar-arta');
-                setStep('headwear');
-              }}
-              data-testid="avatar-arta"
-            >
-              <span className="emoji avatar-choice__emoji" aria-hidden="true">
-                {AVATAR_EMOJI['avatar-arta']}
-              </span>
-              {FA.avatarArta}
-            </button>
+            {AVATAR_IDS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className="btn btn--large avatar-choice"
+                onClick={() => {
+                  setAvatarId(id);
+                  setStep('headwear');
+                }}
+                data-testid={id}
+              >
+                <AvatarPortrait avatarId={id} size={72} />
+                {AVATAR_LABEL[id]}
+              </button>
+            ))}
           </div>
-          <p className="text text--soft">{FA.avatarHint}</p>
         </>
       ) : null}
 
@@ -150,9 +137,7 @@ export function AvatarSelectScreen({
         <>
           <h1 className="subtitle">{FA.chooseHeadwear}</h1>
           <div className="headwear-preview" data-testid="headwear-preview" dir="rtl">
-            <span className="emoji headwear-preview__avatar" aria-hidden="true">
-              {AVATAR_EMOJI[avatarId]}
-            </span>
+            <AvatarPortrait avatarId={avatarId} size={72} />
             <Pictogram shape={`headwear-${headwear}`} size={72} />
           </div>
           <div className="row headwear-row" dir="rtl" data-testid="headwear-row">

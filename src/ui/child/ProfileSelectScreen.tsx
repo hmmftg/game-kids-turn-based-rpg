@@ -1,6 +1,6 @@
 import { FA } from '../../content/fa/strings.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
-import { AVATAR_EMOJI } from './emoji.ts';
+import { AvatarPortrait } from './AvatarPortrait.tsx';
 import { Pictogram } from './Pictogram.tsx';
 
 function persianDigits(value: number): string {
@@ -39,8 +39,8 @@ export function ProfileSelectScreen({
               <span className="emoji profile-card__badge" aria-hidden="true">
                 {profile.badge}
               </span>
-              <span className="emoji profile-card__avatar" aria-hidden="true">
-                {AVATAR_EMOJI[profile.avatarId]}
+              <span className="profile-card__avatar" aria-hidden="true">
+                <AvatarPortrait avatarId={profile.avatarId} size={44} />
               </span>
               {profile.headwear && profile.headwear !== 'none' ? (
                 <span className="profile-card__headwear" aria-hidden="true">

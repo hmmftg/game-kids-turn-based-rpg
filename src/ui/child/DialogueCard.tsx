@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { getIcon } from '../../content/fa/icons.ts';
 import type { IconId } from '../../domain/game/types.ts';
-import { Pictogram } from './Pictogram.tsx';
+import { ActionGlyph } from './ActionGlyph.tsx';
 
 export interface ChoiceOption {
   readonly iconId: IconId;
@@ -56,7 +56,7 @@ export function DialogueCard({
           {speakerFa}
         </p>
       ) : null}
-      {icon ? <Pictogram shape={icon.shape} size={64} color={icon.color} /> : null}
+      {icon ? <ActionGlyph iconId={iconId!} size={64} color={icon.color} /> : null}
       <p className="dialogue-card__text">{textFa}</p>
       {choices && choices.length > 0 ? (
         <div className="row" role="group" data-testid="choices">
@@ -72,7 +72,7 @@ export function DialogueCard({
                 aria-label={choiceIcon.labelFa}
                 data-testid={`choice-${choice.iconId}`}
               >
-                <Pictogram shape={choiceIcon.shape} color={choiceIcon.color} />
+                <ActionGlyph iconId={choice.iconId} color={choiceIcon.color} />
                 <span className="choice__label">{choiceIcon.labelFa}</span>
               </button>
             );

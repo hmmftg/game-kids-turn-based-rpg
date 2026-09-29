@@ -29,7 +29,7 @@ import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
 import { questEmoji } from '../ui/child/emoji.ts';
 import {
-  AVATAR_PALETTES,
+  AVATAR_VISUALS,
   LANDMARK_PALETTE,
   NPC_PALETTE,
   PROP_PALETTE,
@@ -582,8 +582,10 @@ export function Hub({
         rotationY={walker.heading}
         bobbing={walker.bobbing}
         moving={walker.moving}
-        palette={AVATAR_PALETTES[avatarId]}
+        palette={AVATAR_VISUALS[avatarId].palette}
         headwear={headwear}
+        hairStyle={AVATAR_VISUALS[avatarId].hairStyle}
+        hairColor={AVATAR_VISUALS[avatarId].hairColor}
         label="avatar"
         detailLevel={detailLevel}
         role="avatar"
