@@ -24,7 +24,7 @@ description: How to run and drive the Persian RTL kids turn-based RPG (mahalle-y
 
 ## Emulation
 
-- `prefers-reduced-motion` can be emulated via `chromium.connectOverCDP('http://localhost:29229')` + `Emulation.setEmulatedMedia`.
+- `prefers-reduced-motion` can be emulated via `chromium.connectOverCDP('http://localhost:29229')` + `Emulation.setEmulatedMedia`. It does NOT survive a reload — apply it to the live document and keep that CDP session attached for the whole scenario.
 
 ## Deterministic canvas driving (dev server only)
 
