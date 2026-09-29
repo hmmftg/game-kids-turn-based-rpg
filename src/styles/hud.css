@@ -661,7 +661,86 @@
   }
 }
 
+/* SceneChoice: the choice strip is a small diorama of tappable world
+   objects — the object itself is the button, no border, no label. One
+   arrival bounce per element on mount (event-driven, runs once); the
+   ring is the static 'tap me' affordance. */
+.scene-strip {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-block-end: var(--space-1);
+}
+
+.scene-target {
+  background: none;
+  border: none;
+  padding: var(--space-1);
+  cursor: pointer;
+  min-inline-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  border-radius: var(--radius-sm);
+}
+
+.scene-el {
+  display: block;
+  animation: scene-arrive 0.45s ease-out backwards;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+.scene-target:active .scene-el {
+  transform: translateY(-6px) scale(1.08);
+}
+
+.scene-target:focus-visible {
+  outline: 4px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.scene-held {
+  color: var(--color-ink);
+  align-self: center;
+  opacity: 0.9;
+}
+
+/* With a scene present the glyph buttons demote to the explicit fallback:
+   compact chips under the scene strip. */
+.choices--secondary {
+  gap: var(--space-1);
+}
+
+.choices--secondary .choice {
+  min-inline-size: 56px;
+  min-block-size: 56px;
+  padding: var(--space-1);
+  border-width: 2px;
+  border-radius: var(--radius-sm);
+  opacity: 0.8;
+}
+
+.choices--secondary .action-glyph {
+  inline-size: 36px;
+  block-size: 36px;
+}
+
+.choices--secondary .choice__label {
+  font-size: 11px;
+}
+
+@keyframes scene-arrive {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .scene-el,
   .demo,
   .action-glyph .glyph-object,
   .action-glyph .glyph-hand,

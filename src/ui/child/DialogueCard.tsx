@@ -19,6 +19,7 @@ export function DialogueCard({
   iconId,
   textFa,
   choices,
+  scene,
   children,
   testId,
   variant,
@@ -28,6 +29,9 @@ export function DialogueCard({
   readonly iconId?: IconId | null | undefined;
   readonly textFa: string;
   readonly choices?: readonly ChoiceOption[] | undefined;
+  /** Direct-manipulation strip: tappable world objects rendered above the
+   *  (then secondary) glyph buttons. */
+  readonly scene?: ReactNode;
   readonly children?: ReactNode;
   readonly testId?: string | undefined;
   /** 'retry' adds a gentle wobble + 👀 marker after a not-quite pick. */
@@ -58,8 +62,13 @@ export function DialogueCard({
       ) : null}
       {icon ? <ActionGlyph iconId={iconId!} size={64} color={icon.color} /> : null}
       <p className="dialogue-card__text">{textFa}</p>
+      {scene}
       {choices && choices.length > 0 ? (
-        <div className="row" role="group" data-testid="choices">
+        <div
+          className={`row${scene ? ' choices--secondary' : ''}`}
+          role="group"
+          data-testid="choices"
+        >
           {choices.slice(0, 3).map((choice) => {
             const choiceIcon = getIcon(choice.iconId);
             return (

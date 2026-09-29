@@ -58,6 +58,25 @@ async function canvasId(): Promise<number | undefined> {
   return page.evaluate(() => (window as unknown as { __worldCanvasId?: number }).__worldCanvasId);
 }
 
+/** One encounter step driven through the direct-manipulation target. */
+async function playSceneStep(sceneTestId: string) {
+  await page.getByTestId('advance-intro').click();
+  await page.getByTestId('advance-demonstrate').click();
+  await page.getByTestId(sceneTestId).click();
+  await page.getByTestId('advance-response').click();
+  await page.getByTestId('advance-reinforce').click();
+}
+
+/** The celebration overlay may appear on quest completion; dismiss if shown. */
+async function dismissCelebration() {
+  const dismiss = page.getByTestId('celebration-continue');
+  const shown = await dismiss.waitFor({ state: 'visible', timeout: 3000 }).then(
+    () => true,
+    () => false,
+  );
+  if (shown) await dismiss.click();
+}
+
 /** Rotates between landscape and portrait; settles before measuring. */
 async function rotateTo(p: Page, viewport: { width: number; height: number }) {
   await p.setViewportSize(viewport);
@@ -102,14 +121,62 @@ await page.getByTestId('advance-demonstrate').click();
 // Choice state: compound glyphs show object + actor + motion cue.
 await page.screenshot({ path: `${out}/encounter-choice.png` });
 await page.screenshot({ path: `${out}/encounter-portrait.png` });
-// Successful action: pick the correct choice and capture the response.
-await page.getByTestId('choice-icon-greet').click();
+// Successful action via the PRIMARY direct-manipulation target: the scene
+// strip object (neighbour), not the glyph button.
+await page.getByTestId('scene-icon-greet').click();
 await page.screenshot({ path: `${out}/encounter-success.png` });
 await page.getByTestId('advance-response').click();
 await page.getByTestId('advance-reinforce').click();
-// Step 2 opens at intro — leave-encounter is available again there.
+// greeting-2 → quest completion, still via scene targets.
+await page.getByTestId('advance-intro').click();
+await page.getByTestId('advance-demonstrate').click();
+await page.getByTestId('scene-icon-smile').click();
+await page.getByTestId('advance-response').click();
+await page.getByTestId('advance-reinforce').click();
+await dismissCelebration();
+await page.getByTestId('hud').waitFor();
+
+// quest-helping: help-carry step (tap the basket) then place step —
+// the held-basket state + shelf/floor targets.
+await page.getByTestId('trail-quest-helping').click();
+await page.getByTestId('start-quest').click();
+await playSceneStep('scene-icon-help-carry');
+await page.getByTestId('advance-intro').click();
+await page.getByTestId('advance-demonstrate').click();
+await page.waitForTimeout(700); // let the scene-arrive animation settle
+await page.screenshot({ path: `${out}/scene-place-held.png` });
+await page.getByTestId('scene-icon-place-basket').click();
+await page.getByTestId('advance-response').click();
+await page.getByTestId('advance-reinforce').click();
+await dismissCelebration();
+await page.getByTestId('hud').waitFor();
+
+// quest-tidying: pick step (leaf target; kick stays glyph-only) and the
+// place-in-bin step (held leaf + bin/floor targets).
+await page.getByTestId('trail-quest-tidying').click();
+await page.getByTestId('start-quest').click();
+await page.getByTestId('advance-intro').click();
+await page.getByTestId('advance-demonstrate').click();
+await page.waitForTimeout(700);
+await page.screenshot({ path: `${out}/scene-pick.png` });
+await page.getByTestId('scene-icon-pick-up').click();
+await page.getByTestId('advance-response').click();
+await page.getByTestId('advance-reinforce').click();
+await page.getByTestId('advance-intro').click();
+await page.getByTestId('advance-demonstrate').click();
+await page.waitForTimeout(700);
+await page.screenshot({ path: `${out}/scene-place-targets.png` });
+await page.getByTestId('scene-icon-basket-bin').click();
+await page.getByTestId('advance-response').click();
+await page.getByTestId('advance-reinforce').click();
+// Step 3 opens at intro — leave-encounter is available again there.
 await page.getByTestId('leave-encounter').click();
 await page.getByTestId('hud').waitFor();
+
+// Steady-state reference measured AFTER quest completion: completed quests
+// grow keepsake blossoms and unlock quest markers, so the earlier tier
+// counts are not a valid lifecycle baseline.
+const expected = await objectCount();
 
 await page.getByTestId('pause-button').click();
 await page.screenshot({ path: `${out}/pause-portrait.png` });
@@ -172,7 +239,6 @@ await setTier('high');
 const afterTierCycle = await objectCount();
 console.log(`after tier cycle: ${afterTierCycle} objects`);
 
-const expected = counts.high;
 if (afterPortrait !== expected || afterParent !== expected || afterTierCycle !== expected) {
   console.error(
     `REGRESSION: expected ${expected} objects at high tier after remounts ` +

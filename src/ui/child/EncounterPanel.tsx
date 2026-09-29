@@ -5,6 +5,7 @@ import { getQuestStep } from '../../domain/quests/definitions.ts';
 import type { EncounterState } from '../../domain/game/types.ts';
 import { ActionGlyph } from './ActionGlyph.tsx';
 import { DialogueCard } from './DialogueCard.tsx';
+import { HELD_ITEM, SceneChoice, sceneElementFor } from './SceneChoice.tsx';
 
 /**
  * Turn-based encounter surface.
@@ -71,11 +72,28 @@ export function EncounterPanel({
       );
     }
 
-    case 'playerChoice':
+    case 'playerChoice': {
+      // Direct manipulation first: every choice that maps to a distinct
+      // concrete thing/place becomes a tappable scene object. Choices without
+      // a distinct target (e.g. icon-kick shares the leaf) stay glyph-only,
+      // and the whole glyph row remains as the smaller secondary affordance.
+      const sceneItems = step.choiceIconIds.flatMap((iconId) => {
+        const element = sceneElementFor(iconId);
+        return element
+          ? [
+              {
+                iconId,
+                element,
+                onSelect: () => onChoose(iconId, iconId === step.correctIconId),
+              },
+            ]
+          : [];
+      });
       return (
         <DialogueCard
           textFa={stepCopy.promptFa}
           testId="encounter-choice"
+          scene={<SceneChoice items={sceneItems} held={HELD_ITEM[step.correctIconId]} />}
           choices={step.choiceIconIds.map((iconId) => ({
             iconId,
             onSelect: () => onChoose(iconId, iconId === step.correctIconId),
@@ -84,6 +102,7 @@ export function EncounterPanel({
           {leave}
         </DialogueCard>
       );
+    }
 
     case 'worldResponse': {
       const correct = encounter.lastChoiceCorrect === true;
