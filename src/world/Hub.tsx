@@ -97,14 +97,37 @@ const PATH_MATERIAL = new THREE.MeshLambertMaterial({ color: '#dcc79a' });
 function CaveEntranceRock({
   revealed,
   interactive,
+  near,
   onApproach,
 }: {
   readonly revealed: boolean;
   readonly interactive: boolean;
+  /** Avatar is close enough to notice the secret — fires one shimmer. */
+  readonly near: boolean;
   readonly onApproach: () => void;
 }) {
   const rock = sharedLambert('#7d7a82');
   const dark = sharedLambert('#241f2e');
+  const crackRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.PointLight>(null);
+  const shimmerT = useRef(0);
+  const shimmerDone = useRef(false);
+  const reduced = prefersReducedMotion();
+  const invalidate = useThree((state) => state.invalidate);
+
+  // One-time ambient shimmer: the first time the child walks near the
+  // undiscovered rock, the crack flares once and settles — attention without
+  // a persistent pulsing beacon. Reduced motion keeps the wider crack only.
+  useFrame((_, delta) => {
+    if (!near || revealed || shimmerDone.current || !crackRef.current) return;
+    invalidate();
+    shimmerT.current = reduced ? 1 : Math.min(1, shimmerT.current + delta * 1.4);
+    const flare = Math.sin(shimmerT.current * Math.PI);
+    crackRef.current.scale.set(0.1 + 0.14 * flare, 0.75 + 0.5 * flare, 0.05);
+    if (glowRef.current) glowRef.current.intensity = 1.6 * flare;
+    if (shimmerT.current >= 1) shimmerDone.current = true;
+  });
+
   const approach = (event: ThreeEvent<MouseEvent>) => {
     if (!interactive) return;
     event.stopPropagation();
@@ -144,14 +167,25 @@ function CaveEntranceRock({
           <pointLight color="#ffd9a0" intensity={0.8} distance={3.4} position={[-0.1, 0.7, 0.9]} />
         </>
       ) : (
-        /* the subtle clue: a thin warm crack, no text, no marker */
-        <mesh
-          geometry={BOX}
-          material={sharedLambert('#ffd9a0')}
-          position={[-0.15, 0.5, 0.58]}
-          scale={[0.05, 0.55, 0.04]}
-          raycast={noRaycast}
-        />
+        <>
+          {/* the clue: a warm crack, wide enough to notice up close */}
+          <mesh
+            ref={crackRef}
+            geometry={BOX}
+            material={sharedLambert('#ffd9a0')}
+            position={[-0.15, 0.5, 0.58]}
+            scale={[0.1, 0.75, 0.05]}
+            raycast={noRaycast}
+          />
+          {/* lit only during the one-time shimmer; sits idle at 0 otherwise */}
+          <pointLight
+            ref={glowRef}
+            color="#ffd9a0"
+            intensity={0}
+            distance={2.6}
+            position={[-0.15, 0.6, 0.9]}
+          />
+        </>
       )}
     </group>
   );
@@ -329,6 +363,12 @@ export function Hub({
     const areaId = areaAt(x, z);
     return areaId !== null && visibleAreas.includes(areaId);
   };
+  // Proximity cue for the secret: the rock shimmers once when the child
+  // wanders close — discoverable by exploration, not by a marker.
+  const playerAnchor = getAnchor(walker.at);
+  const entranceAnchor = getAnchor('anchor-cave-entrance');
+  const nearEntrance =
+    Math.hypot(playerAnchor.x - entranceAnchor.x, playerAnchor.z - entranceAnchor.z) < 4.5;
   useImperativeHandle(
     handleRef,
     () => ({
@@ -501,6 +541,7 @@ export function Hub({
       <CaveEntranceRock
         revealed={discoveries.includes('discovery-cave-entrance')}
         interactive={interactive}
+        near={nearEntrance}
         onApproach={() => walkHere('anchor-cave-entrance')}
       />
 
