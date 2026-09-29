@@ -27,7 +27,7 @@ async function playQuest(page: Page, questId: (typeof QUESTS)[number]) {
   for (const step of getQuestDefinition(questId).steps) {
     await page.getByTestId('advance-intro').click();
     await page.getByTestId('advance-demonstrate').click();
-    await page.getByTestId(`choice-${step.correctIconId}`).click();
+    await page.getByTestId(`scene-${step.correctIconId}`).click();
     await page.getByTestId('advance-response').click();
     await page.getByTestId('advance-reinforce').click();
   }
@@ -75,7 +75,7 @@ test.describe('vertical slice', () => {
     await page.getByTestId('advance-demonstrate').click();
     const step = getQuestDefinition('quest-greeting').steps[0]!;
     const wrong = step.choiceIconIds.find((icon) => icon !== step.correctIconId)!;
-    await page.getByTestId(`choice-${wrong}`).click();
+    await page.getByTestId(`scene-${wrong}`).click();
     await expect(page.getByTestId('retry-response')).toBeVisible();
     await page.getByTestId('retry-response').click();
     await expect(page.getByTestId('encounter-demonstrate')).toBeVisible();

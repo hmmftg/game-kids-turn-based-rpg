@@ -1,21 +1,23 @@
-import type { CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import type { IconId } from '../../domain/game/types.ts';
 import { getIcon } from '../../content/fa/icons.ts';
+import { prefersReducedMotion } from '../../services/device/capabilities.ts';
+import type { SceneObject } from './contextInteraction.ts';
 
 /**
- * SceneChoice — the direct-manipulation experiment.
+ * SceneChoice — the contextual target layer.
  *
- * Instead of asking the child to decode an action symbol, each choice is the
- * concrete *thing or place* the action acts on: the leaf on the ground, the
- * basket, the shelf, the neighbour. The child taps the object; the existing
- * CHOOSE(iconId) command fires unchanged underneath.
+ * The child's interaction language is *the thing*: the leaf on the ground,
+ * the bin, the neighbour. Exactly one object carries `primary` prominence
+ * (the correct target); wrong things stay tappable but visually weaker —
+ * their tap still fires CHOOSE(iconId) so the existing gentle-retry works.
  *
- * Only choices whose outcome maps to a distinct concrete target get a scene
- * element (`sceneElementFor`); ambiguous ones — e.g. `icon-kick`, which acts
- * on the same leaf as pick-up — fall back to the secondary ActionGlyph row.
+ * Truthful feedback ordering: a tap plays only a short press pulse, then
+ * CHOOSE decides. The real consequence (object flying to the hand, into the
+ * bin, …) renders on the *response* card via <ConsequenceScene> — never
+ * before the outcome is known. No success animation follows a wrong tap.
  *
- * Interaction states are classes (`st-available`, press via :active), all
- * motion is CSS and event-driven — nothing loops, nothing draws under
+ * All motion is CSS and event-driven — nothing loops, nothing draws under
  * frameloop="demand".
  */
 
@@ -40,40 +42,6 @@ export const HELD_ITEM: Partial<Record<IconId, 'leaf' | 'basket'>> = {
   'icon-basket-bin': 'leaf',
   'icon-leave-ground': 'leaf',
 };
-
-/** iconId → the concrete tappable target it represents, or null when the
- *  choice has no distinct object/place and must stay a glyph button. */
-export function sceneElementFor(iconId: IconId): SceneElement | null {
-  switch (iconId) {
-    case 'icon-greet':
-      return 'person';
-    case 'icon-smile':
-      return 'face';
-    case 'icon-wave-away':
-      return 'person-away';
-    case 'icon-turn-back':
-      return 'path-back';
-    case 'icon-help-carry':
-      return 'basket';
-    case 'icon-watch':
-      return 'person';
-    case 'icon-place-basket':
-      return 'shelf';
-    case 'icon-drop-basket':
-    case 'icon-leave-ground':
-      return 'floor';
-    case 'icon-pick-up':
-      return 'leaf';
-    case 'icon-basket-bin':
-      return 'bin';
-    case 'icon-wash-hands':
-      return 'water';
-    case 'icon-skip':
-      return 'path-forward';
-    default:
-      return null;
-  }
-}
 
 const stroke = {
   fill: 'none',
@@ -212,61 +180,182 @@ function HeldMarker({ item }: { readonly item: 'leaf' | 'basket' }) {
   );
 }
 
-export interface SceneChoiceItem {
-  readonly iconId: IconId;
-  readonly element: SceneElement;
+/** The truthful result of a correct choice, drawn after CHOOSE resolves:
+ *  the picked thing lands in the hand, the placed thing lands in/on its
+ *  destination, a person reacts. One-shot CSS motion; static under
+ *  reduced-motion. */
+export function ConsequenceScene({ iconId }: { readonly iconId: IconId }) {
+  const icon = getIcon(iconId);
+  return (
+    <svg
+      className="scene-consequence"
+      width="104"
+      height="104"
+      viewBox="0 0 48 48"
+      role="img"
+      aria-label={icon.labelFa}
+      style={{ color: icon.color }}
+    >
+      {consequenceScene(iconId)}
+    </svg>
+  );
+}
+
+function consequenceScene(iconId: IconId) {
+  switch (iconId) {
+    case 'icon-pick-up':
+    case 'icon-help-carry':
+      // the object lands in the hand
+      return (
+        <>
+          <path
+            d="M16 30a3 3 0 0 1 3-3v-3a3 3 0 0 1 6 0v-1a3 3 0 0 1 6 0v3a3 3 0 0 1 3 3v6a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7z"
+            {...stroke}
+          />
+          <g className="scene-exec-lift">
+            {iconId === 'icon-pick-up' ? (
+              <ellipse cx="33" cy="12" rx="5" ry="2.8" {...stroke} />
+            ) : (
+              <path d="M28 8h10l-1.5 8h-7z" {...stroke} />
+            )}
+          </g>
+        </>
+      );
+    case 'icon-place-basket':
+      // basket resting on the shelf
+      return (
+        <>
+          <path d="M12 30h24" {...stroke} strokeWidth={4.4} />
+          <path d="M16 30v10M32 30v10" {...stroke} />
+          <g className="scene-exec-drop">
+            <path d="M16 14h16l-2.5 13H18.5z" {...stroke} />
+            <path d="M20 14a4 4 0 0 1 8 0" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-basket-bin':
+      // leaf inside the bin
+      return (
+        <>
+          <path d="M16 26h16l-2 14H18z" {...stroke} />
+          <path d="M14 26h20" {...stroke} strokeWidth={4.4} />
+          <g className="scene-exec-drop">
+            <ellipse cx="24" cy="18" rx="5" ry="2.8" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-wash-hands':
+      return (
+        <>
+          <path d="M10 24q7-6 14-2t14 0" {...stroke} />
+          <path d="M18 14q2.5 4 0 7M28 14q2.5 4 0 7M23 8q2.5 4 0 7" {...stroke} />
+          <g className="scene-exec-pop">
+            <path d="M13 34l3-3m3 3l-3-3m10 3l3-3m3 3l-3-3" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-greet':
+    case 'icon-smile':
+    case 'icon-watch':
+    default:
+      // the person reacts — a wave and a happy face
+      return (
+        <>
+          {PERSON_SHAPE}
+          <g className="scene-exec-pop">
+            <path d="M33 20l5-7M35 25l7-5" {...stroke} />
+          </g>
+          {GROUND_LINE}
+        </>
+      );
+  }
+}
+
+/** InteractiveTarget — one physical thing/place the child can touch.
+ *  Press pulse is the only pre-CHOOSE feedback; the tap is buffered for a
+ *  beat so the pulse is visible, then onSelect fires the CHOOSE command. */
+function InteractiveTarget({
+  object,
+  index,
+  onSelect,
+}: {
+  readonly object: SceneObject;
+  readonly index: number;
   readonly onSelect: () => void;
+}) {
+  const icon = getIcon(object.iconId);
+  const [pressed, setPressed] = useState(false);
+  const pending = useRef(false);
+  const handleTap = () => {
+    if (pending.current) return;
+    pending.current = true;
+    if (prefersReducedMotion()) {
+      onSelect();
+      return;
+    }
+    setPressed(true);
+    // Pulse stays visible ~160ms before the choice is committed; the real
+    // consequence is only shown later, on the response card, if CHOOSE says
+    // this was the right target.
+    window.setTimeout(() => {
+      pending.current = false;
+      onSelect();
+    }, 160);
+  };
+  const classes = ['scene-target', `st-${object.prominence}`];
+  if (object.role === 'escape') classes.push('st-escape');
+  if (pressed) classes.push('st-pressed');
+  return (
+    <button
+      type="button"
+      className={classes.join(' ')}
+      style={{ borderColor: icon.color, color: icon.color }}
+      onClick={handleTap}
+      aria-label={icon.labelFa}
+      data-testid={`scene-${object.iconId}`}
+      data-element={object.element}
+      data-primary={object.isCorrect || undefined}
+    >
+      <svg
+        className="scene-el"
+        style={{ '--i': index } as CSSProperties}
+        width="76"
+        height="76"
+        viewBox="0 0 48 48"
+        aria-hidden="true"
+        focusable="false"
+        role="presentation"
+        data-icon={object.iconId}
+      >
+        <circle cx="24" cy="24" r="22" fill="currentColor" opacity={0.14} />
+        <circle className="scene-target__ring" cx="24" cy="24" r="21" {...stroke} opacity={0.55} />
+        {renderElement(object.element)}
+      </svg>
+    </button>
+  );
 }
 
 export function SceneChoice({
-  items,
+  objects,
   held,
+  onSelect,
 }: {
-  readonly items: readonly SceneChoiceItem[];
+  readonly objects: readonly SceneObject[];
   readonly held?: 'leaf' | 'basket' | undefined;
+  readonly onSelect: (iconId: IconId) => void;
 }) {
-  if (items.length === 0) return null;
+  if (objects.length === 0) return null;
   return (
     <div className="scene-strip" dir="rtl" data-testid="scene-choice">
       {held ? <HeldMarker item={held} /> : null}
-      {items.map((item, i) => {
-        const icon = getIcon(item.iconId);
-        return (
-          <button
-            key={item.iconId}
-            type="button"
-            className="scene-target st-available"
-            style={{ borderColor: icon.color, color: icon.color }}
-            onClick={item.onSelect}
-            aria-label={icon.labelFa}
-            data-testid={`scene-${item.iconId}`}
-            data-element={item.element}
-          >
-            <svg
-              className="scene-el"
-              style={{ '--i': i } as CSSProperties}
-              width="76"
-              height="76"
-              viewBox="0 0 48 48"
-              aria-hidden="true"
-              focusable="false"
-              role="presentation"
-              data-icon={item.iconId}
-            >
-              <circle cx="24" cy="24" r="22" fill="currentColor" opacity={0.14} />
-              <circle
-                className="scene-target__ring"
-                cx="24"
-                cy="24"
-                r="21"
-                {...stroke}
-                opacity={0.55}
-              />
-              {renderElement(item.element)}
-            </svg>
-          </button>
-        );
-      })}
+      {objects.map((object, i) => (
+        <InteractiveTarget
+          key={object.iconId}
+          object={object}
+          index={i}
+          onSelect={() => onSelect(object.iconId)}
+        />
+      ))}
     </div>
   );
 }

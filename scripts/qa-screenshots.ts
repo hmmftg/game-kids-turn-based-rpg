@@ -121,9 +121,11 @@ await page.getByTestId('advance-demonstrate').click();
 // Choice state: compound glyphs show object + actor + motion cue.
 await page.screenshot({ path: `${out}/encounter-choice.png` });
 await page.screenshot({ path: `${out}/encounter-portrait.png` });
-// Successful action via the PRIMARY direct-manipulation target: the scene
-// strip object (neighbour), not the glyph button.
+// Successful action via the PRIMARY contextual target: the scene-strip
+// neighbour, not a glyph. The press pulse delays the commit ~160ms, then the
+// response card shows the truthful consequence scene.
 await page.getByTestId('scene-icon-greet').click();
+await page.waitForTimeout(350);
 await page.screenshot({ path: `${out}/encounter-success.png` });
 await page.getByTestId('advance-response').click();
 await page.getByTestId('advance-reinforce').click();
@@ -160,6 +162,8 @@ await page.getByTestId('advance-demonstrate').click();
 await page.waitForTimeout(700);
 await page.screenshot({ path: `${out}/scene-pick.png` });
 await page.getByTestId('scene-icon-pick-up').click();
+await page.waitForTimeout(350);
+await page.screenshot({ path: `${out}/scene-consequence.png` });
 await page.getByTestId('advance-response').click();
 await page.getByTestId('advance-reinforce').click();
 await page.getByTestId('advance-intro').click();

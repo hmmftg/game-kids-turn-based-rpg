@@ -5,7 +5,8 @@ import { getQuestStep } from '../../domain/quests/definitions.ts';
 import type { EncounterState } from '../../domain/game/types.ts';
 import { ActionGlyph } from './ActionGlyph.tsx';
 import { DialogueCard } from './DialogueCard.tsx';
-import { HELD_ITEM, SceneChoice, sceneElementFor } from './SceneChoice.tsx';
+import { ConsequenceScene, SceneChoice } from './SceneChoice.tsx';
+import { contextForStep } from './contextInteraction.ts';
 
 /**
  * Turn-based encounter surface.
@@ -73,31 +74,23 @@ export function EncounterPanel({
     }
 
     case 'playerChoice': {
-      // Direct manipulation first: every choice that maps to a distinct
-      // concrete thing/place becomes a tappable scene object. Choices without
-      // a distinct target (e.g. icon-kick shares the leaf) stay glyph-only,
-      // and the whole glyph row remains as the smaller secondary affordance.
-      const sceneItems = step.choiceIconIds.flatMap((iconId) => {
-        const element = sceneElementFor(iconId);
-        return element
-          ? [
-              {
-                iconId,
-                element,
-                onSelect: () => onChoose(iconId, iconId === step.correctIconId),
-              },
-            ]
-          : [];
-      });
+      // The contextual target layer IS the child-facing UI here: no action
+      // vocabulary, no icon row. The ContextInteraction model says which
+      // physical things are present and which one is the obvious target;
+      // tapping any of them fires the existing CHOOSE(iconId). Choices with
+      // no distinct concrete target are simply not offered.
+      const context = contextForStep(encounter.questId, encounter.stepIndex);
       return (
         <DialogueCard
           textFa={stepCopy.promptFa}
           testId="encounter-choice"
-          scene={<SceneChoice items={sceneItems} held={HELD_ITEM[step.correctIconId]} />}
-          choices={step.choiceIconIds.map((iconId) => ({
-            iconId,
-            onSelect: () => onChoose(iconId, iconId === step.correctIconId),
-          }))}
+          scene={
+            <SceneChoice
+              objects={context.objects}
+              held={context.held ?? undefined}
+              onSelect={(iconId) => onChoose(iconId, iconId === step.correctIconId)}
+            />
+          }
         >
           {leave}
         </DialogueCard>
@@ -111,6 +104,11 @@ export function EncounterPanel({
           textFa={correct ? stepCopy.successFa : stepCopy.retryFa}
           testId="encounter-response"
           variant={correct ? undefined : 'retry'}
+          scene={
+            correct && encounter.lastChoiceIconId ? (
+              <ConsequenceScene iconId={encounter.lastChoiceIconId} />
+            ) : undefined
+          }
         >
           {next(correct ? FA.next : FA.watchAgain, correct ? 'advance-response' : 'retry-response')}
         </DialogueCard>

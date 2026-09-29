@@ -47,11 +47,11 @@ describe('App', () => {
     await user.click(screen.getByTestId('trail-quest-greeting'));
     await user.click(await screen.findByTestId('start-quest'));
 
-    // Step 1: pick the wrong icon first — the game re-demonstrates, never blocks.
+    // Step 1: tap the wrong thing first — the game re-demonstrates, never blocks.
     await user.click(await screen.findByTestId('advance-intro'));
     await user.click(await screen.findByTestId('advance-demonstrate'));
-    const choices = await screen.findByTestId('choices');
-    await user.click(choices.querySelectorAll('button')[1] as HTMLButtonElement);
+    const strip = await screen.findByTestId('scene-choice');
+    await user.click(strip.querySelector('.scene-target:not([data-primary])') as HTMLButtonElement);
     const response = await screen.findByTestId('encounter-response');
     expect(response).toBeInTheDocument();
 
