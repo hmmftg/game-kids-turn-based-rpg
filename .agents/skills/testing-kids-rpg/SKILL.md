@@ -33,6 +33,7 @@ description: How to run and drive the Persian RTL kids turn-based RPG (mahalle-y
 - World schedule check: each anchor arrival ticks the world clock; the fisher alternates `anchor-river` (even tick) ↔ `anchor-bakery` (odd tick). Verify by reading `npc-fisher`'s world position after each arrival — note his bakery spot coincides with `npc-baker`'s position, so the figures overlap visually.
 - Maps/probe (prod preview too): set `window.__WORLD_PROBE = true` before load (`page.addInitScript`) to enable `__worldToScreen(wx, wz)` on `npm run preview`, plus `__worldMapId`, `__worldAt` (avatar's current anchor) and `__worldDiscoveries` — deterministic waits instead of guessing walk durations. See `e2e/cave.spec.ts` `tapWorld`/`probe` helpers.
 - Cave flow: the hidden rock is at `anchor-cave-entrance` (-12.2, 3.4, park's far corner). First arrival discovers it (rock opens); second arrival transitions to `map-cave` at `anchor-cave-mouth`. In the cave, `anchor-cave-mouth` is the exit back to the entrance; the cave mouse at `anchor-cave-mouse` offers `quest-cave-crystal`. Portrait viewports can leave the rock outside the tappable canvas — drive landscape.
+- Progress seeding: to skip replaying the quest chain, write a profile slot directly in IndexedDB — db `mahalle-ye-mehrabani`, store `progress`, `profiles` index + `profile:<id>` record; set `questsCompleted`, and for map/discovery state the fields `discoveries`, `mapId`, `mapAnchorId`. Valid `avatarId`s: `avatar-aban`, `avatar-arta`, `avatar-nika`, `avatar-diyar`.
 
 ## Pitfalls
 
