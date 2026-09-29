@@ -47,6 +47,12 @@ export type NpcSimState = 'at-home' | 'walking' | 'working' | 'talking' | 'waiti
 export interface NpcScheduleSpot {
   readonly anchorId: AnchorId;
   readonly activity: NpcSimState;
+  /**
+   * Optional stand offset from the anchor's usual NPC standpoint, so a
+   * visitor never shares the exact spot of the anchor's resident NPC.
+   */
+  readonly offsetX?: number;
+  readonly offsetZ?: number;
 }
 
 export interface NpcSchedule {

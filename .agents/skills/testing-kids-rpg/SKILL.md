@@ -22,6 +22,12 @@ description: How to run and drive the Persian RTL kids turn-based RPG (mahalle-y
 
 - Profile/headwear state lives in IndexedDB: db `mahalle-ye-mehrabani`, store `progress`, key `profiles` — readable via `browser_console` for verifying persisted cosmetic choices.
 
+## Deterministic canvas driving (dev server only)
+
+- In dev builds the app exposes `window.__worldScene`, `window.__worldCamera`, `window.__worldRenderer` (see `WorldCanvas.tsx` `onCreated`). Named scene objects (`avatar`, `npc-*`, `hotspot-quest-*`, landmarks) can be traversed via CDP (`chromium.connectOverCDP`) to verify exactly which NPCs/landmarks are mounted and their world coords — much more reliable than inspecting isometric screenshots.
+- To click a specific anchor/figure: project the anchor's `(x, 0, z)` world point through `__worldCamera` (`vector.project(camera)` → NDC → page pixels), then convert page px to the computer tool's 1024x768 space (`sx*1024/innerWidth`, `sy*768/innerHeight`). Clicking the projected ground point of a walkable anchor walks the avatar along the full pathfinding chain — you can jump straight to distant anchors (park/river/school) in one tap.
+- World schedule check: each anchor arrival ticks the world clock; the fisher alternates `anchor-river` (even tick) ↔ `anchor-bakery` (odd tick, offset beside the baker). Verify by reading `npc-fisher`'s world position after each arrival.
+
 ## Emulation
 
 - `prefers-reduced-motion` can be emulated via `chromium.connectOverCDP('http://localhost:29229')` + `Emulation.setEmulatedMedia`.

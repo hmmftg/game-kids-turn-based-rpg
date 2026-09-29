@@ -3,6 +3,7 @@ import type {
   AreaId,
   Bounds,
   NpcDefinition,
+  NpcScheduleSpot,
   NpcSimState,
   WorldArea,
 } from '../domain/world/types.ts';
@@ -152,7 +153,8 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     schedule: {
       spots: [
         { anchorId: 'anchor-river', activity: 'working' },
-        { anchorId: 'anchor-bakery', activity: 'waiting' },
+        // Queues beside the baker, not inside him.
+        { anchorId: 'anchor-bakery', activity: 'waiting', offsetX: -0.7, offsetZ: 0.9 },
       ],
     },
     dialogueIds: ['fisher-intro'],
@@ -234,12 +236,20 @@ export function visibleAreaIds(activeAreaId: AreaId): readonly AreaId[] {
  * player's location and not of elapsed frames. Idle NPCs (no schedule)
  * always stand at their home anchor. Area activation decides only whether
  * the resolved spot is mounted, never which spot is current.
+ *
+ * `resolveNpcSpot` returns the full authored spot (incl. stand offset, so a
+ * visitor never shares a resident's exact position); `resolveNpcAnchor` is
+ * the anchor-only convenience.
  */
-export function resolveNpcAnchor(npc: NpcDefinition, worldTime: number): AnchorId {
+export function resolveNpcSpot(npc: NpcDefinition, worldTime: number): NpcScheduleSpot | null {
   const spots = npc.schedule?.spots;
-  if (!spots || spots.length === 0) return npc.anchorId;
+  if (!spots || spots.length === 0) return null;
   const tick = Math.max(0, Math.floor(worldTime));
-  return spots[tick % spots.length]?.anchorId ?? npc.anchorId;
+  return spots[tick % spots.length] ?? null;
+}
+
+export function resolveNpcAnchor(npc: NpcDefinition, worldTime: number): AnchorId {
+  return resolveNpcSpot(npc, worldTime)?.anchorId ?? npc.anchorId;
 }
 
 /** Stable activity label for an NPC's current spot (schedule-aware). */

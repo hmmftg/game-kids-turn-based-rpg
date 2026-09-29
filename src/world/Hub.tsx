@@ -18,7 +18,7 @@ import {
   NPC_DEFINITIONS,
   areaAt,
   areaForAnchor,
-  resolveNpcAnchor,
+  resolveNpcSpot,
   visibleAreaIds,
 } from './registry.ts';
 import { npcLook } from './npcLooks.ts';
@@ -501,10 +501,11 @@ export function Hub({
           deterministic function of world time, so idle NPCs cost
           nothing and `frameloop="demand"` is untouched. */}
       {NPC_DEFINITIONS.map((npc) => {
-        const anchor = getAnchor(resolveNpcAnchor(npc, worldTime));
+        const spot = resolveNpcSpot(npc, worldTime);
+        const anchor = getAnchor(spot?.anchorId ?? npc.anchorId);
         if (!visibleAreas.includes(anchor.areaId)) return null;
-        const npcX = anchor.x + 0.9;
-        const npcZ = anchor.z - 0.4;
+        const npcX = anchor.x + 0.9 + (spot?.offsetX ?? 0);
+        const npcZ = anchor.z - 0.4 + (spot?.offsetZ ?? 0);
         const dx = walker.position.x - npcX;
         const dz = walker.position.z - npcZ;
         // Neighbours turn to watch the player approach: attention is feedback.
