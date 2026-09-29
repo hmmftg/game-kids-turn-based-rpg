@@ -6,7 +6,7 @@ import { AUDIO_MANIFEST } from '../../services/audio/manifest.ts';
 import type { GameState, QualityTier } from '../../domain/game/types.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
 import type { CacheStatus } from '../../services/pwa/serviceWorker.ts';
-import { AVATAR_EMOJI } from '../child/emoji.ts';
+import { AvatarPortrait } from '../child/AvatarPortrait.tsx';
 
 const CACHE_LABEL: Record<CacheStatus, string> = {
   unsupported: '—',
@@ -146,9 +146,9 @@ export function ParentArea({
             <ul className="column">
               {profiles.map((profile, index) => (
                 <li key={profile.id} className="row parent-profile" dir="rtl">
-                  <span className="emoji" aria-hidden="true">
-                    {profile.badge}
-                    {AVATAR_EMOJI[profile.avatarId]}
+                  <span className="parent-profile__identity" aria-hidden="true">
+                    <span className="emoji">{profile.badge}</span>
+                    <AvatarPortrait avatarId={profile.avatarId} size={32} />
                   </span>
                   <input
                     className="parent-profile__name"

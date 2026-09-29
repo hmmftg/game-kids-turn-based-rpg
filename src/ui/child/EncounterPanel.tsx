@@ -3,8 +3,8 @@ import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { getQuestStep } from '../../domain/quests/definitions.ts';
 import type { EncounterState } from '../../domain/game/types.ts';
+import { ActionGlyph } from './ActionGlyph.tsx';
 import { DialogueCard } from './DialogueCard.tsx';
-import { Pictogram } from './Pictogram.tsx';
 
 /**
  * Turn-based encounter surface.
@@ -58,8 +58,12 @@ export function EncounterPanel({
       const cueIcon = getIcon(step.correctIconId);
       return (
         <DialogueCard textFa={stepCopy.demonstrateFa} testId="encounter-demonstrate">
-          <span className={`demo demo--${step.demonstrationCue}`} aria-hidden="true">
-            <Pictogram shape={cueIcon.shape} size={44} color={cueIcon.color} />
+          <span
+            className={`demo demo--${step.demonstrationCue}`}
+            aria-hidden="true"
+            data-cue={step.demonstrationCue}
+          >
+            <ActionGlyph iconId={step.correctIconId} size={56} color={cueIcon.color} animate />
           </span>
           {next(FA.next, 'advance-demonstrate')}
           {leave}

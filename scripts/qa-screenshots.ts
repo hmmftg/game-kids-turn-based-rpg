@@ -16,7 +16,10 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 900, height: 500 } });
 await page.goto(base);
 await page.getByTestId('start-button').click();
+// Kid-interaction states: human avatar picker + headwear preview.
+await page.screenshot({ path: `${out}/avatar-select.png` });
 await page.getByTestId('avatar-aban').click();
+await page.screenshot({ path: `${out}/headwear-select.png` });
 await page.getByTestId('headwear-next').click();
 await page.getByTestId('badge-0').click();
 await page.getByTestId('hud').waitFor();
@@ -93,8 +96,18 @@ await page.getByTestId('npc-dialogue').waitFor({ timeout: 15000 });
 await page.screenshot({ path: `${out}/dialogue-portrait.png` });
 await page.getByTestId('start-quest').click();
 await page.getByTestId('advance-intro').click();
+// Action preview (demonstrate): the glyph animates the outcome.
+await page.screenshot({ path: `${out}/encounter-demonstrate.png` });
 await page.getByTestId('advance-demonstrate').click();
+// Choice state: compound glyphs show object + actor + motion cue.
+await page.screenshot({ path: `${out}/encounter-choice.png` });
 await page.screenshot({ path: `${out}/encounter-portrait.png` });
+// Successful action: pick the correct choice and capture the response.
+await page.getByTestId('choice-icon-greet').click();
+await page.screenshot({ path: `${out}/encounter-success.png` });
+await page.getByTestId('advance-response').click();
+await page.getByTestId('advance-reinforce').click();
+// Step 2 opens at intro — leave-encounter is available again there.
 await page.getByTestId('leave-encounter').click();
 await page.getByTestId('hud').waitFor();
 
@@ -182,9 +195,13 @@ await page.getByTestId('world-canvas').waitFor();
 // The hook registers when Hub mounts, which lands just after the canvas
 // element — wait for it rather than racing.
 await page
-  .waitForFunction(() => typeof window.__worldCritterTransforms === 'function', null, {
-    timeout: 15000,
-  })
+  .waitForFunction(
+    () =>
+      typeof (window as unknown as { __worldCritterTransforms?: unknown })
+        .__worldCritterTransforms === 'function',
+    null,
+    { timeout: 15000 },
+  )
   .catch(() => null);
 // Critter immobility under reduced motion: transforms (x, y, z, heading per
 // critter, read via the dev-only __worldCritterTransforms hook) must not

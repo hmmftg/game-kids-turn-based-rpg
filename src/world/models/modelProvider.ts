@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { ComponentType } from 'react';
-import type { HeadwearId, QualityTier } from '../../domain/game/types.ts';
+import type { AvatarId, HeadwearId, QualityTier } from '../../domain/game/types.ts';
 
 export interface Palette {
   readonly body: string;
@@ -47,6 +47,9 @@ export interface FigureProps {
   readonly label?: string;
   /** Cosmetic headwear layer; omitted/'none' leaves the head uncovered. */
   readonly headwear?: HeadwearId;
+  /** Kid-avatar hair silhouette + color; omitted renders a bare head. */
+  readonly hairStyle?: AvatarHairStyle | undefined;
+  readonly hairColor?: string | undefined;
   /** Decorative density; omitted defaults to the medium look. */
   readonly detailLevel?: DetailLevel;
   /** Visual identity for accessories; omitted renders a plain villager. */
@@ -111,9 +114,41 @@ export function useModels(): ModelSet {
   return models;
 }
 
-export const AVATAR_PALETTES: Readonly<Record<'avatar-aban' | 'avatar-arta', Palette>> = {
-  'avatar-aban': { body: '#2f6f8f', head: '#f2d1b3', limb: '#33475a' },
-  'avatar-arta': { body: '#8a4fa0', head: '#f2d1b3', limb: '#4a3255' },
+/**
+ * Per-preset kid identity. The children pick by look, not by reading a name:
+ * every preset pairs a distinct human hair silhouette + hair color with a
+ * clearly different outfit palette. `hairStyle` is a coarse silhouette —
+ * the figure layer turns it into 2–4 shared-geometry meshes.
+ */
+export type AvatarHairStyle = 'pigtails' | 'short' | 'curly' | 'bun';
+
+export interface AvatarVisual {
+  readonly palette: Palette;
+  readonly hairStyle: AvatarHairStyle;
+  readonly hairColor: string;
+}
+
+export const AVATAR_VISUALS: Readonly<Record<AvatarId, AvatarVisual>> = {
+  'avatar-aban': {
+    palette: { body: '#2f6f8f', head: '#f2d1b3', limb: '#33475a' },
+    hairStyle: 'pigtails',
+    hairColor: '#5a3a22',
+  },
+  'avatar-arta': {
+    palette: { body: '#8a4fa0', head: '#f2d1b3', limb: '#4a3255' },
+    hairStyle: 'short',
+    hairColor: '#3a2a1c',
+  },
+  'avatar-nika': {
+    palette: { body: '#c96f4a', head: '#eab98f', limb: '#6f4530' },
+    hairStyle: 'curly',
+    hairColor: '#2e2018',
+  },
+  'avatar-diyar': {
+    palette: { body: '#3f8f5f', head: '#f7dcbc', limb: '#2f5c40' },
+    hairStyle: 'bun',
+    hairColor: '#8a5a33',
+  },
 };
 
 export const NPC_PALETTE: Palette = { body: '#4c7a4c', head: '#f0cfae', limb: '#3b5c3b' };

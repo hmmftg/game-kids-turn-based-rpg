@@ -22,9 +22,12 @@ export const QUEST_EMOJI: Readonly<Record<QuestId, string>> = {
   'quest-finale': '🎉',
 };
 
-export const AVATAR_EMOJI: Readonly<Record<AvatarId, string>> = {
-  'avatar-aban': '👧',
-  'avatar-arta': '🧒',
+/** Persian name per avatar preset; the SVG portrait carries the identity. */
+export const AVATAR_LABEL: Readonly<Record<AvatarId, string>> = {
+  'avatar-aban': FA.avatarAban,
+  'avatar-arta': FA.avatarArta,
+  'avatar-nika': FA.avatarNika,
+  'avatar-diyar': FA.avatarDiyar,
 };
 
 /** Persian label per headwear option; the SVG pictogram carries the meaning. */

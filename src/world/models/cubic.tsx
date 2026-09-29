@@ -1,6 +1,7 @@
 import type { HeadwearId } from '../../domain/game/types.ts';
 import type {
   AnimalProps,
+  AvatarHairStyle,
   DetailLevel,
   FigureProps,
   FigureVisualRole,
@@ -181,6 +182,122 @@ function BlobShadow({ radius = 0.5 }: { readonly radius?: number }) {
       scale={[radius, radius, 1]}
       raycast={noRaycast}
     />
+  );
+}
+
+/**
+ * Kid-avatar hair: a coarse silhouette in the avatar's own hair color so the
+ * four presets are distinguishable at hub camera scale. Shared BOX geometry
+ * only; medium+ tiers get the full silhouette, low keeps just the crown.
+ * Skipped when headwear covers the head.
+ */
+function Hair({
+  style,
+  color,
+  lift,
+  level,
+}: {
+  readonly style: AvatarHairStyle;
+  readonly color: string;
+  readonly lift: number;
+  readonly level: DetailLevel;
+}) {
+  const mat = useMaterial(color);
+  return (
+    <group name={`hair-${style}`}>
+      {/* crown cap — every style */}
+      <mesh
+        geometry={BOX}
+        material={mat}
+        position={[0, 1.36 + lift, -0.02]}
+        scale={[0.5, 0.14, 0.46]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        {style === 'pigtails' ? (
+          <>
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[-0.3, 1.22 + lift, -0.06]}
+              scale={[0.14, 0.3, 0.22]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[0.3, 1.22 + lift, -0.06]}
+              scale={[0.14, 0.3, 0.22]}
+              raycast={noRaycast}
+            />
+          </>
+        ) : null}
+        {style === 'short' ? (
+          <>
+            {/* fringe + back panel, face stays open */}
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[0, 1.3 + lift, 0.17]}
+              scale={[0.44, 0.08, 0.06]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[0, 1.18 + lift, -0.225]}
+              scale={[0.5, 0.3, 0.08]}
+              raycast={noRaycast}
+            />
+          </>
+        ) : null}
+        {style === 'curly' ? (
+          <>
+            {/* puffy cap + two side tufts */}
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[0, 1.45 + lift, -0.02]}
+              scale={[0.44, 0.1, 0.4]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[-0.26, 1.3 + lift, -0.04]}
+              scale={[0.12, 0.16, 0.3]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[0.26, 1.3 + lift, -0.04]}
+              scale={[0.12, 0.16, 0.3]}
+              raycast={noRaycast}
+            />
+          </>
+        ) : null}
+        {style === 'bun' ? (
+          <>
+            {/* gathered knot on top + back fall */}
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[0, 1.5 + lift, -0.1]}
+              scale={[0.2, 0.16, 0.2]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={mat}
+              position={[0, 1.16 + lift, -0.225]}
+              scale={[0.4, 0.34, 0.08]}
+              raycast={noRaycast}
+            />
+          </>
+        ) : null}
+      </Detail>
+    </group>
   );
 }
 
@@ -378,6 +495,8 @@ export function CubicFigure({
   moving = false,
   label,
   headwear = 'none',
+  hairStyle,
+  hairColor = '#3a2a1c',
   detailLevel = 1,
   role,
 }: FigureProps) {
@@ -427,6 +546,10 @@ export function CubicFigure({
       />
       {role !== undefined ? <RoleDetails role={role} lift={lift} level={detailLevel} /> : null}
       <Headwear id={headwear} lift={lift} />
+      {/* Covered heads skip hair entirely — headwear replaces the silhouette. */}
+      {role === 'avatar' && headwear === 'none' && hairStyle ? (
+        <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
+      ) : null}
     </group>
   );
 }

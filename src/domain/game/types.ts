@@ -32,7 +32,7 @@ export const RESUMABLE_MODES = [
 ] as const;
 export type ResumableMode = (typeof RESUMABLE_MODES)[number];
 
-export const AVATAR_IDS = ['avatar-aban', 'avatar-arta'] as const;
+export const AVATAR_IDS = ['avatar-aban', 'avatar-arta', 'avatar-nika', 'avatar-diyar'] as const;
 export type AvatarId = (typeof AVATAR_IDS)[number];
 
 /**
