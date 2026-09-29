@@ -36,9 +36,19 @@ async function reachHub(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByTestId('hud');
 }
 
+/** Taps a scene target: index 0 is the obvious (primary) target, index N>0
+ *  the Nth other tappable thing. The press pulse delays the commit ~160ms,
+ *  so the wait gives the CHOOSE dispatch time to land. */
 async function pickChoice(user: ReturnType<typeof userEvent.setup>, index: number) {
-  const choices = await screen.findByTestId('choices');
-  await user.click(choices.querySelectorAll('button')[index] as HTMLButtonElement);
+  const strip = await screen.findByTestId('scene-choice');
+  const target =
+    index === 0
+      ? (strip.querySelector('[data-primary]') as HTMLButtonElement)
+      : (strip.querySelectorAll('.scene-target:not([data-primary])')[
+          index - 1
+        ] as HTMLButtonElement);
+  await user.click(target);
+  await new Promise((r) => setTimeout(r, 250));
 }
 
 async function advanceIfPresent(
@@ -60,7 +70,7 @@ async function completeQuest(
   await user.click(await screen.findByTestId('start-quest'));
   await user.click(await screen.findByTestId('advance-intro'));
   for (let guard = 0; guard < 20; guard += 1) {
-    if (screen.queryByTestId('choices')) {
+    if (screen.queryByTestId('scene-choice')) {
       await pickChoice(user, 0);
       continue;
     }

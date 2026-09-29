@@ -704,28 +704,84 @@
   opacity: 0.9;
 }
 
-/* With a scene present the glyph buttons demote to the explicit fallback:
-   compact chips under the scene strip. */
-.choices--secondary {
-  gap: var(--space-1);
+/* One obvious target at a time: the correct object is strong, other
+   tappable things sit back, escape routes sit back most. Prominence is
+   opacity/scale only — never color alone, never below --touch-min. */
+.scene-target.st-primary .scene-el {
+  filter: saturate(1.15);
 }
 
-.choices--secondary .choice {
-  min-inline-size: 56px;
-  min-block-size: 56px;
-  padding: var(--space-1);
-  border-width: 2px;
-  border-radius: var(--radius-sm);
-  opacity: 0.8;
+.scene-target.st-secondary {
+  opacity: 0.6;
 }
 
-.choices--secondary .action-glyph {
-  inline-size: 36px;
-  block-size: 36px;
+.scene-target.st-secondary .scene-el {
+  transform: scale(0.85);
 }
 
-.choices--secondary .choice__label {
-  font-size: 11px;
+.scene-target.st-escape {
+  opacity: 0.38;
+}
+
+.scene-target.st-escape .scene-el {
+  transform: scale(0.8);
+}
+
+/* Press pulse: the only feedback before CHOOSE resolves — consequence
+   comes later, and only when the tap was right. */
+.scene-target.st-pressed .scene-el {
+  transform: translateY(-6px) scale(1.08);
+}
+
+/* Consequence scene on the response card: one-shot outcome motion. */
+.scene-consequence {
+  display: block;
+  margin-inline: auto;
+}
+
+.scene-exec-lift {
+  animation: scene-exec-lift 0.5s ease-out backwards;
+}
+
+.scene-exec-drop {
+  animation: scene-exec-drop 0.5s ease-out backwards;
+}
+
+.scene-exec-pop {
+  animation: scene-exec-pop 0.45s ease-out backwards;
+}
+
+@keyframes scene-exec-lift {
+  from {
+    transform: translateY(14px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scene-exec-drop {
+  from {
+    transform: translateY(-10px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scene-exec-pop {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes scene-arrive {
@@ -741,6 +797,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .scene-el,
+  .scene-exec-lift,
+  .scene-exec-drop,
+  .scene-exec-pop,
   .demo,
   .action-glyph .glyph-object,
   .action-glyph .glyph-hand,

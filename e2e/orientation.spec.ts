@@ -81,7 +81,7 @@ test.describe('orientation', () => {
     const step = getQuestDefinition('quest-greeting').steps[0]!;
     await page.setViewportSize(PORTRAIT);
     await expectSameCanvas(page);
-    await page.getByTestId(`choice-${step.correctIconId}`).click();
+    await page.getByTestId(`scene-${step.correctIconId}`).click();
     await expect(page.getByTestId('advance-response')).toBeVisible();
 
     await page.setViewportSize(LANDSCAPE);
@@ -151,7 +151,7 @@ test.describe('orientation', () => {
     await page.getByTestId('start-quest').click();
     await page.getByTestId('advance-intro').click();
     await page.getByTestId('advance-demonstrate').click();
-    await page.getByTestId(`choice-${steps[0]!.correctIconId}`).click();
+    await page.getByTestId(`scene-${steps[0]!.correctIconId}`).click();
     await expect(page.getByTestId('advance-response')).toBeVisible();
 
     // Rotate back to landscape mid-encounter; the phase must not reset.
@@ -164,7 +164,7 @@ test.describe('orientation', () => {
     for (const step of steps.slice(1)) {
       await page.getByTestId('advance-intro').click();
       await page.getByTestId('advance-demonstrate').click();
-      await page.getByTestId(`choice-${step.correctIconId}`).click();
+      await page.getByTestId(`scene-${step.correctIconId}`).click();
       await page.getByTestId('advance-response').click();
       await page.getByTestId('advance-reinforce').click();
     }
@@ -187,7 +187,7 @@ test.describe('orientation', () => {
     for (const step of getQuestDefinition('quest-greeting').steps) {
       await page.getByTestId('advance-intro').click();
       await page.getByTestId('advance-demonstrate').click();
-      await page.getByTestId(`choice-${step.correctIconId}`).click();
+      await page.getByTestId(`scene-${step.correctIconId}`).click();
       await page.getByTestId('advance-response').click();
       await page.getByTestId('advance-reinforce').click();
     }
