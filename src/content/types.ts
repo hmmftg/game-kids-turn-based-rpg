@@ -88,6 +88,8 @@ export interface QuestCopy {
   readonly steps: readonly QuestStepCopy[];
   readonly completionFa: string;
   readonly stickerLabelFa: string;
+  /** Optional parent-facing explanation — depth without child reading load. */
+  readonly parentNoteFa?: string;
   readonly sourceIds: readonly SourceRecord['id'][];
   readonly review: ReviewMetadata;
 }
@@ -101,6 +103,39 @@ export interface QuestStepCopy {
   readonly retryFa: string;
 }
 
+/** Coarse presentation cue — mapped to emoji/pose by the UI, never logic. */
+export type DialogueEmotion = 'happy' | 'calm' | 'thoughtful' | 'surprised';
+
+/**
+ * One line of dialogue: one short idea plus optional non-text narrative
+ * metadata (emotion/reaction/pose/sound) so more story does not mean more
+ * reading. `speakerId` may differ from the owning NPC (e.g. the child-friend
+ * chimes in); the UI renders the cue without the engine depending on UI code.
+ */
+export interface DialogueLine {
+  readonly speakerId: NpcId;
+  readonly textFa: string;
+  readonly emotion?: DialogueEmotion;
+  /** Body cue, e.g. 'wave' | 'clap' | 'point' — presentation decides the pose. */
+  readonly reaction?: string;
+  readonly pose?: string;
+  readonly soundCue?: string;
+}
+
+/** A stable-ID branch in a dialogue tree; target must resolve to a node. */
+export interface DialogueChoice {
+  readonly id: string;
+  readonly iconId: IconId;
+  readonly labelFa: string;
+  readonly nextNodeId: string;
+}
+
+/**
+ * A node in the data-driven dialogue graph. `textFa` is the node's own line;
+ * `lines` (when present) is a short multi-beat sequence the child steps
+ * through one idea at a time, and `choices`/`nextNodeId` describe the graph
+ * edges. Story content lives here in data, not in JSX conditionals.
+ */
 export interface DialogueNode {
   readonly id: string;
   readonly npcId: NpcId;
@@ -108,6 +143,12 @@ export interface DialogueNode {
   readonly iconId: IconId | null;
   /** Quest offered by this node, if any. */
   readonly offersQuestId: QuestId | null;
+  readonly lines?: readonly DialogueLine[];
+  readonly choices?: readonly DialogueChoice[];
+  /** Linear continuation when the node has no choices. */
+  readonly nextNodeId?: string;
+  /** Parent-facing depth kept off the child card — lore/meaning for adults. */
+  readonly parentNoteFa?: string;
   readonly review: ReviewMetadata;
 }
 

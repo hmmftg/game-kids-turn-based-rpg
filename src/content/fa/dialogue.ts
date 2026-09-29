@@ -9,7 +9,15 @@ const DRAFT_REVIEW: ReviewMetadata = {
   revisionNotes: 'پیش‌نویس داخلی؛ بدون ادعای دینی و بدون ارجاع.',
 };
 
-/** One short idea per node; the child can always leave without consequence. */
+/**
+ * The dialogue graph — story lives in data, not components.
+ *
+ * One short idea per line; the child steps through `lines` one beat at a time
+ * and can always leave without consequence. `choices` carry stable ids and
+ * resolve to other nodes (branching); `nextNodeId` is a linear continuation.
+ * `emotion`/`reaction`/`pose`/`soundCue` are non-text narrative cues the UI
+ * maps to presentation without the engine depending on UI code.
+ */
 export const DIALOGUE_NODES: readonly DialogueNode[] = [
   {
     id: 'neighbour-intro',
@@ -17,6 +25,31 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     textFa: 'همسایه از راه رسیده است.',
     iconId: 'icon-greet',
     offersQuestId: 'quest-greeting',
+    lines: [
+      { speakerId: 'npc-neighbour', textFa: 'همسایه از راه رسیده است.', emotion: 'calm' },
+      {
+        speakerId: 'npc-neighbour',
+        textFa: 'می‌خواهی بیشتر بدانی؟',
+        emotion: 'happy',
+        reaction: 'wave',
+      },
+    ],
+    choices: [
+      {
+        id: 'neighbour-choice-more',
+        iconId: 'icon-smile',
+        labelFa: 'بیشتر',
+        nextNodeId: 'neighbour-more',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'neighbour-more',
+    npcId: 'npc-neighbour',
+    textFa: 'همسایه همیشه خوش‌اخلاق است.',
+    iconId: 'icon-smile',
+    offersQuestId: null,
     review: DRAFT_REVIEW,
   },
   {
@@ -51,8 +84,174 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     offersQuestId: null,
     review: DRAFT_REVIEW,
   },
+  {
+    id: 'baker-intro',
+    npcId: 'npc-baker',
+    textFa: 'نان تازه از تنور رسید.',
+    iconId: 'icon-smile',
+    offersQuestId: null,
+    lines: [
+      { speakerId: 'npc-baker', textFa: 'نان تازه از تنور رسید.', emotion: 'happy' },
+      {
+        speakerId: 'npc-baker',
+        textFa: 'بوی خوبش همه‌جا را گرفته.',
+        emotion: 'happy',
+        reaction: 'point',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'teacher-intro',
+    npcId: 'npc-teacher',
+    textFa: 'معلم کلاس امروز چیز تازه دارد.',
+    iconId: 'icon-watch',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-teacher',
+        textFa: 'معلم کلاس امروز چیز تازه دارد.',
+        emotion: 'calm',
+      },
+      {
+        speakerId: 'npc-teacher',
+        textFa: 'می‌خواهی بازی کنی یا قصه بشنوی؟',
+        emotion: 'happy',
+        reaction: 'wave',
+      },
+    ],
+    choices: [
+      {
+        id: 'teacher-choice-play',
+        iconId: 'icon-play',
+        labelFa: 'بازی',
+        nextNodeId: 'teacher-play',
+      },
+      {
+        id: 'teacher-choice-story',
+        iconId: 'icon-watch',
+        labelFa: 'قصه',
+        nextNodeId: 'teacher-story',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'teacher-play',
+    npcId: 'npc-teacher',
+    textFa: 'معلم با بچه‌ها بازی دایره‌ای می‌کند.',
+    iconId: 'icon-play',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-teacher',
+        textFa: 'معلم با بچه‌ها بازی دایره‌ای می‌کند.',
+        emotion: 'happy',
+        reaction: 'clap',
+      },
+      {
+        speakerId: 'npc-child-ali',
+        textFa: 'علی هم وسط دایره ایستاده.',
+        emotion: 'surprised',
+        reaction: 'wave',
+      },
+    ],
+    parentNoteFa: 'بازی گروهی ساده؛ بدون رقابت و بازنده.',
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'teacher-story',
+    npcId: 'npc-teacher',
+    textFa: 'معلم قصه‌ی کوتاهی می‌گوید.',
+    iconId: 'icon-watch',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-teacher',
+        textFa: 'معلم قصه‌ی کوتاهی می‌گوید.',
+        emotion: 'calm',
+      },
+      {
+        speakerId: 'npc-teacher',
+        textFa: 'روزی یک جوجه‌ی کوچک به مادرش کمک کرد.',
+        emotion: 'calm',
+      },
+      {
+        speakerId: 'npc-teacher',
+        textFa: 'همه با هم لبخند زدند.',
+        emotion: 'happy',
+        reaction: 'clap',
+      },
+    ],
+    nextNodeId: 'teacher-story-end',
+    parentNoteFa: 'قصه‌ی کوتاه بدون پیام مستقیم؛ الگوی کمک‌کردن.',
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'teacher-story-end',
+    npcId: 'npc-teacher',
+    textFa: 'قصه تمام شد. معلم منتظر نوبت بعدی است.',
+    iconId: 'icon-smile',
+    offersQuestId: null,
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'ali-intro',
+    npcId: 'npc-child-ali',
+    textFa: 'علی در حیاط کلاس توپ بازی می‌کند.',
+    iconId: 'icon-play',
+    offersQuestId: null,
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'parkkeeper-intro',
+    npcId: 'npc-park-keeper',
+    textFa: 'نگهبان پارک گل‌ها را آب می‌دهد.',
+    iconId: 'icon-pick-up',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-park-keeper',
+        textFa: 'نگهبان پارک گل‌ها را آب می‌دهد.',
+        emotion: 'calm',
+      },
+      {
+        speakerId: 'npc-park-keeper',
+        textFa: 'گل‌ها خوب بزرگ می‌شوند.',
+        emotion: 'happy',
+        reaction: 'point',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'sara-intro',
+    npcId: 'npc-child-sara',
+    textFa: 'سارا روی تپه‌ی پارک بازی می‌کند.',
+    iconId: 'icon-play',
+    offersQuestId: null,
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'fisher-intro',
+    npcId: 'npc-fisher',
+    textFa: 'ماهیگیر کنار رودخانه نشسته.',
+    iconId: 'icon-watch',
+    offersQuestId: null,
+    lines: [
+      { speakerId: 'npc-fisher', textFa: 'ماهیگیر کنار رودخانه نشسته.', emotion: 'calm' },
+      {
+        speakerId: 'npc-fisher',
+        textFa: 'بعضی وقت‌ها پیش نانوا هم دیده می‌شود.',
+        emotion: 'thoughtful',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
 ];
 
+const BY_ID = new Map<string, DialogueNode>(DIALOGUE_NODES.map((node) => [node.id, node]));
+
 export function getDialogueNode(id: string): DialogueNode | null {
-  return DIALOGUE_NODES.find((node) => node.id === id) ?? null;
+  return BY_ID.get(id) ?? null;
 }

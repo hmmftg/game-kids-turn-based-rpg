@@ -7,13 +7,21 @@ import type {
   AvatarId,
   HeadwearId,
   LandmarkId,
-  NpcId,
   QuestId,
   QuestStatus,
 } from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
+import type { AreaId } from '../domain/world/types.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
 import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
+import {
+  NPC_DEFINITIONS,
+  areaAt,
+  areaForAnchor,
+  resolveNpcAnchor,
+  visibleAreaIds,
+} from './registry.ts';
+import { npcLook } from './npcLooks.ts';
 import { GROUND_DECORATIONS } from './decorations.ts';
 import {
   Detail,
@@ -31,11 +39,9 @@ import { questEmoji } from '../ui/child/emoji.ts';
 import {
   AVATAR_VISUALS,
   LANDMARK_PALETTE,
-  NPC_PALETTE,
   PROP_PALETTE,
   useModels,
   type DetailLevel,
-  type FigureVisualRole,
   type LandmarkVisualVariant,
 } from './models/modelProvider.ts';
 
@@ -71,29 +77,14 @@ function landmarkVariant(id: LandmarkId | null): LandmarkVisualVariant | undefin
     case 'landmark-home-gate':
       return 'home-gate';
     case 'landmark-shop':
+    case 'landmark-bakery':
       return 'shop';
     case 'landmark-garden':
+    case 'landmark-park':
       return 'garden';
     case 'landmark-fountain':
+    case 'landmark-river':
       return 'fountain';
-    default:
-      return undefined;
-  }
-}
-
-/** Map domain npc ids to visual roles (accessories only — no gameplay meaning). */
-function figureRole(id: NpcId | null): FigureVisualRole | undefined {
-  switch (id) {
-    case 'npc-elder':
-      return 'elder';
-    case 'npc-neighbour':
-      return 'neighbour';
-    case 'npc-shopkeeper':
-      return 'shopkeeper';
-    case 'npc-gardener':
-      return 'gardener';
-    case 'npc-child-friend':
-      return 'friend';
     default:
       return undefined;
   }
@@ -369,6 +360,17 @@ export function Hub({
   // is allowed; on low tier they render as static silhouettes.
   const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel);
   const [walkTarget, setWalkTarget] = useState<AnchorId | null>(null);
+
+  // Area-based activation: the area the avatar currently stands in plus the
+  // areas one waypoint-hop away are "visible". NPCs outside this set are data
+  // in memory only — no React subtree, no animation work — so the NPC count
+  // can grow without growing per-frame work.
+  const activeAreaId: AreaId = areaForAnchor(walker.at);
+  const visibleAreas = visibleAreaIds(activeAreaId);
+  const inVisibleArea = (x: number, z: number) => {
+    const areaId = areaAt(x, z);
+    return areaId !== null && visibleAreas.includes(areaId);
+  };
   useImperativeHandle(
     handleRef,
     () => ({
@@ -433,6 +435,20 @@ export function Hub({
         />
       ))}
 
+      {/* Landmarks come from anchor data — one row per landmark anchor,
+          visible only while its area participates in rendering. */}
+      {ANCHORS.filter(
+        (anchor) => anchor.landmarkId !== null && visibleAreas.includes(anchor.areaId),
+      ).map((anchor) => (
+        <models.Landmark
+          key={anchor.landmarkId}
+          position={{ x: anchor.x, z: anchor.z - 1.2 }}
+          palette={LANDMARK_PALETTE}
+          detailLevel={detailLevel}
+          variant={landmarkVariant(anchor.landmarkId)}
+        />
+      ))}
+
       {QUEST_DEFINITIONS.map((quest) => {
         const anchor = getAnchor(quest.anchorId as AnchorId);
         const status = questStatuses[quest.id];
@@ -440,12 +456,6 @@ export function Hub({
         const suggested = quest.id === suggestedQuestId && status !== 'locked';
         return (
           <group key={quest.id}>
-            <models.Landmark
-              position={{ x: anchor.x, z: anchor.z - 1.2 }}
-              palette={LANDMARK_PALETTE}
-              detailLevel={detailLevel}
-              variant={landmarkVariant(anchor.landmarkId)}
-            />
             <Hotspot
               x={anchor.x}
               z={anchor.z}
@@ -454,7 +464,7 @@ export function Hub({
               label={`hotspot-${quest.id}`}
               onSelect={() => walkHere(anchor.id)}
             />
-            {active ? (
+            {active && visibleAreas.includes(anchor.areaId) ? (
               <QuestMarker
                 x={anchor.x}
                 z={anchor.z}
@@ -470,31 +480,32 @@ export function Hub({
         <DestinationMarker x={getAnchor(walkTarget).x} z={getAnchor(walkTarget).z} />
       ) : null}
 
-      {/* The fountain is scenery at a non-walkable anchor: decorative only,
-          no hotspot, no quest marker, no movement target, no animation. */}
-      <models.Landmark
-        position={{ x: getAnchor('anchor-fountain').x, z: getAnchor('anchor-fountain').z }}
-        palette={LANDMARK_PALETTE}
-        detailLevel={detailLevel}
-        variant="fountain"
-      />
-
-      {ANCHORS.filter((anchor) => anchor.npcId !== null).map((anchor) => {
+      {/* NPCs are data-driven: one row in NPC_DEFINITIONS + one row in
+          NPC_LOOKS is a whole character. Only NPCs currently standing in a
+          visible area mount a figure — schedules resolve standpoints as a
+          deterministic function of the active area, so idle NPCs cost
+          nothing and `frameloop="demand"` is untouched. */}
+      {NPC_DEFINITIONS.map((npc) => {
+        const anchor = getAnchor(resolveNpcAnchor(npc, activeAreaId));
+        if (!visibleAreas.includes(anchor.areaId)) return null;
         const npcX = anchor.x + 0.9;
         const npcZ = anchor.z - 0.4;
         const dx = walker.position.x - npcX;
         const dz = walker.position.z - npcZ;
         // Neighbours turn to watch the player approach: attention is feedback.
         const facing = Math.hypot(dx, dz) < 6 ? Math.atan2(dx, dz) : 0;
+        const look = npcLook(npc.id);
         return (
           <models.Figure
-            key={anchor.npcId}
+            key={npc.id}
             position={{ x: npcX, z: npcZ }}
             rotationY={facing}
-            palette={NPC_PALETTE}
-            label={anchor.npcId ?? ''}
+            palette={look.palette}
+            hairStyle={look.hairStyle}
+            hairColor={look.hairColor}
+            label={npc.id}
             detailLevel={detailLevel}
-            role={figureRole(anchor.npcId)}
+            role={look.role}
           />
         );
       })}
@@ -538,7 +549,7 @@ export function Hub({
         {/* Fixed authored ground decoration (decorations.ts validates every slot
           against anchors, NPCs, landmarks, props and path corridors). */}
         {GROUND_DECORATIONS.map((slot, i) =>
-          detailLevel >= slot.minDetail ? (
+          detailLevel >= slot.minDetail && inVisibleArea(slot.x, slot.z) ? (
             slot.kind === 'flower' ? (
               <FlowerPatch key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
             ) : slot.kind === 'stone' ? (

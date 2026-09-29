@@ -1,4 +1,5 @@
 import type { IconId, LandmarkId, NpcId, QuestId, StickerId } from '../game/types.ts';
+import type { AreaId } from '../world/types.ts';
 
 /**
  * Mechanical quest structure. Child-facing copy lives in `src/content/fa`;
@@ -23,6 +24,14 @@ export interface QuestDefinition {
   readonly anchorId: string;
   readonly stickerId: StickerId;
   readonly steps: readonly EncounterStep[];
+  /** The world area the quest lives in — quests reference areas, not coordinates. */
+  readonly areaId: AreaId;
+  /** NPCs this quest's story touches (reusable references, not UI wiring). */
+  readonly npcIds: readonly NpcId[];
+  /** Dialogue nodes associated with the quest (offer node first). */
+  readonly dialogueIds: readonly string[];
+  /** Chain links: quests that naturally follow this one. */
+  readonly nextQuestIds: readonly QuestId[];
 }
 
 export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
@@ -32,6 +41,10 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     requires: [],
     landmarkId: 'landmark-home-gate',
     anchorId: 'anchor-home-gate',
+    areaId: 'area-home',
+    npcIds: ['npc-neighbour'],
+    dialogueIds: ['neighbour-intro'],
+    nextQuestIds: ['quest-helping'],
     stickerId: 'sticker-greeting',
     steps: [
       {
@@ -56,6 +69,10 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     requires: ['quest-greeting'],
     landmarkId: 'landmark-shop',
     anchorId: 'anchor-shop',
+    areaId: 'area-market',
+    npcIds: ['npc-shopkeeper'],
+    dialogueIds: ['shopkeeper-intro'],
+    nextQuestIds: ['quest-tidying'],
     stickerId: 'sticker-helping',
     steps: [
       {
@@ -80,6 +97,10 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     requires: ['quest-helping'],
     landmarkId: 'landmark-garden',
     anchorId: 'anchor-garden',
+    areaId: 'area-garden',
+    npcIds: ['npc-gardener'],
+    dialogueIds: ['gardener-intro'],
+    nextQuestIds: ['quest-finale'],
     stickerId: 'sticker-tidying',
     steps: [
       {
@@ -111,6 +132,10 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     requires: ['quest-greeting', 'quest-helping', 'quest-tidying'],
     landmarkId: 'landmark-square',
     anchorId: 'anchor-square',
+    areaId: 'area-town',
+    npcIds: ['npc-elder', 'npc-child-friend', 'npc-gardener'],
+    dialogueIds: ['elder-intro'],
+    nextQuestIds: [],
     stickerId: 'sticker-finale',
     steps: [
       {
@@ -148,4 +173,25 @@ export function getQuestDefinition(questId: QuestId): QuestDefinition {
 
 export function getQuestStep(questId: QuestId, stepIndex: number): EncounterStep | null {
   return getQuestDefinition(questId).steps[stepIndex] ?? null;
+}
+
+/**
+ * The chain a quest belongs to: follow `nextQuestIds` forward and `requires`
+ * backward. Longer quest chains are data — adding a quest to a chain never
+ * touches UI components.
+ */
+export function questChain(questId: QuestId): readonly QuestId[] {
+  let root = getQuestDefinition(questId);
+  while (root.requires.length > 0) {
+    root = getQuestDefinition(root.requires[0]!);
+  }
+  const chain: QuestId[] = [];
+  let current: QuestDefinition | undefined = root;
+  const seen = new Set<QuestId>();
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    chain.push(current.id);
+    current = current.nextQuestIds[0] ? BY_ID.get(current.nextQuestIds[0]) : undefined;
+  }
+  return chain;
 }

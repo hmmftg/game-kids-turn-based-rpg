@@ -23,9 +23,9 @@ export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: 3.6, z: 3.8, kind: 'stone', minDetail: 1 },
   { x: 1.8, z: -5.2, kind: 'plant', minDetail: 1 },
   { x: -4.2, z: 3.4, kind: 'flower', minDetail: 1 },
-  { x: -4.6, z: -2.4, kind: 'stone', minDetail: 1 },
+  { x: -4.8, z: -3.0, kind: 'stone', minDetail: 1 },
   { x: -3.8, z: -3.4, kind: 'patch', minDetail: 1, scale: 2.4 },
-  { x: 3, z: -5.4, kind: 'patch', minDetail: 1, scale: 2.4 },
+  { x: 3.2, z: -4.6, kind: 'patch', minDetail: 1, scale: 2.4 },
   { x: -3, z: 4.6, kind: 'patch', minDetail: 1, scale: 2.4 },
   { x: 2.4, z: 4.6, kind: 'flower', minDetail: 2 },
   { x: -3, z: 3.6, kind: 'stone', minDetail: 2 },
@@ -34,6 +34,14 @@ export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: 4.8, z: 4.8, kind: 'plant', minDetail: 2 },
   { x: -5.4, z: 3, kind: 'flower', minDetail: 2 },
   { x: 5.6, z: -3.4, kind: 'stone', minDetail: 2 },
+  // new areas — each slot belongs to an area via its position
+  { x: -11, z: 3.5, kind: 'flower', minDetail: 1 },
+  { x: -9.7, z: -4.2, kind: 'plant', minDetail: 1 },
+  { x: -12.6, z: 1.8, kind: 'stone', minDetail: 2 },
+  { x: 9, z: 7.6, kind: 'plant', minDetail: 1 },
+  { x: 12.8, z: 6.8, kind: 'flower', minDetail: 2 },
+  { x: 8.2, z: -9.6, kind: 'stone', minDetail: 1 },
+  { x: 10, z: -5.6, kind: 'flower', minDetail: 2 },
 ];
 
 /**

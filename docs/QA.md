@@ -8,7 +8,7 @@
 | Full check          | `npm run verify`                                                           | format → lint → typecheck → tests → build (content validation + bundle budgets)       |
 | Renderer budgets    | `node --experimental-strip-types scripts/measure-world.ts --url <dev-url>` | calls/tri/obj/geo per tier ×3 samples, pass/fail ceilings                             |
 | Visual/lifecycle QA | `node --experimental-strip-types scripts/qa-screenshots.ts <outdir>`       | deterministic screenshots, remount lifecycle regression, reduced-motion immobility    |
-| E2E                 | `npx playwright test`                                                      | 32 tests, golden paths, orientation, offline, multi-profile, WebGL fallback           |
+| E2E                 | `npx playwright test`                                                      | 38 tests, golden paths, orientation, areas/dialogue branching, offline, multi-profile |
 
 Always run `verify`, `measure-world`, `qa-screenshots`, and Playwright before a PR.
 
@@ -47,6 +47,14 @@ Deterministic states in `qa-screenshots.ts`: `scene-pick` (leaf primary + faint 
 `scene-place-held` (held basket + destinations), `scene-place-targets`,
 `scene-consequence` (truthful outcome on the response card), plus the original portrait,
 demonstrate, choice, and success captures.
+
+## Scalable world QA
+
+`e2e/areas.spec.ts` covers the world-growth scenario: multiple areas/NPCs in the world data,
+multi-beat dialogue + a branch choice through the quest trail, and leave/return persistence.
+`world/registry.test.ts` covers the data invariants: unique ids, every anchor/NPC/decoration
+inside a real area, resolvable dialogue/quest references, the fisher schedule determinism, and
+the visible-area cap (≤8 NPC figures) that keeps inactive areas free.
 
 ## Kid-testing protocol (manual)
 

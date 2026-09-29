@@ -1,4 +1,7 @@
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../domain/quests/definitions.ts';
+import type { AreaId } from '../domain/world/types.ts';
+import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from '../world/registry.ts';
+import { ANCHORS, getAnchorOrNull } from '../world/navigation/graph.ts';
 import { DIALOGUE_NODES } from './fa/dialogue.ts';
 import { hasIcon } from './fa/icons.ts';
 import { NPCS, QUEST_COPY } from './fa/quests.ts';
@@ -190,12 +193,193 @@ function validateSource(
   }
 }
 
+function checkText(where: string, text: string, issues: ValidationIssue[]): void {
+  for (const term of FORBIDDEN_CHILD_TERMS) {
+    if (text.includes(term)) {
+      issues.push({
+        severity: 'error',
+        code: 'forbidden-term',
+        where,
+        message: `Child-facing copy contains forbidden term "${term}".`,
+      });
+    }
+  }
+  for (const marker of QUOTATION_MARKERS) {
+    if (text.includes(marker)) {
+      issues.push({
+        severity: 'error',
+        code: 'child-quotation',
+        where,
+        message: `Child-facing copy looks like a quotation or attribution ("${marker.trim()}").`,
+      });
+    }
+  }
+}
+
+/**
+ * World-structure validation: the registries that make content scale must
+ * stay internally consistent — unique ids, resolvable references, and world
+ * content that always belongs to a real area.
+ */
+function validateWorld(issues: ValidationIssue[]): void {
+  const areaIds = new Set<AreaId>();
+  for (const area of WORLD_AREAS) {
+    if (areaIds.has(area.id)) {
+      issues.push({
+        severity: 'error',
+        code: 'duplicate-area',
+        where: area.id,
+        message: 'Duplicate area id.',
+      });
+    }
+    areaIds.add(area.id);
+    if (area.bounds.minX >= area.bounds.maxX || area.bounds.minZ >= area.bounds.maxZ) {
+      issues.push({
+        severity: 'error',
+        code: 'bad-bounds',
+        where: area.id,
+        message: 'Area bounds are contradictory (min must be below max).',
+      });
+    }
+    const spawn = getAnchorOrNull(area.spawnAnchorId);
+    if (!spawn) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-anchor',
+        where: area.id,
+        message: `Spawn anchor ${area.spawnAnchorId} does not exist.`,
+      });
+    }
+  }
+
+  const dialogueIds = new Set(DIALOGUE_NODES.map((node) => node.id));
+
+  for (const anchor of ANCHORS) {
+    if (!areaIds.has(anchor.areaId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-area',
+        where: anchor.id,
+        message: `Anchor references unknown area ${anchor.areaId}.`,
+      });
+      continue;
+    }
+    const bounds = WORLD_AREAS.find((area) => area.id === anchor.areaId)!.bounds;
+    if (!insideBounds(bounds, anchor.x, anchor.z)) {
+      issues.push({
+        severity: 'error',
+        code: 'anchor-outside-area',
+        where: anchor.id,
+        message: `Anchor (${anchor.x}, ${anchor.z}) lies outside ${anchor.areaId} bounds.`,
+      });
+    }
+    if (anchor.npcId !== null && !NPC_DEFINITIONS.some((npc) => npc.id === anchor.npcId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-npc',
+        where: anchor.id,
+        message: `Anchor references NPC ${anchor.npcId} with no definition.`,
+      });
+    }
+  }
+
+  const npcIds = new Set<string>();
+  for (const npc of NPC_DEFINITIONS) {
+    if (npcIds.has(npc.id)) {
+      issues.push({
+        severity: 'error',
+        code: 'duplicate-npc',
+        where: npc.id,
+        message: 'Duplicate NPC id.',
+      });
+    }
+    npcIds.add(npc.id);
+    if (!areaIds.has(npc.homeAreaId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-area',
+        where: npc.id,
+        message: `NPC home area ${npc.homeAreaId} does not exist.`,
+      });
+    }
+    const home = getAnchorOrNull(npc.anchorId);
+    if (!home) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-anchor',
+        where: npc.id,
+        message: `NPC home anchor ${npc.anchorId} does not exist.`,
+      });
+    } else if (home.areaId !== npc.homeAreaId) {
+      issues.push({
+        severity: 'error',
+        code: 'npc-area-mismatch',
+        where: npc.id,
+        message: `NPC home area ${npc.homeAreaId} does not match anchor area ${home.areaId}.`,
+      });
+    }
+    for (const spot of npc.schedule?.spots ?? []) {
+      if (!getAnchorOrNull(spot.anchorId)) {
+        issues.push({
+          severity: 'error',
+          code: 'unknown-anchor',
+          where: npc.id,
+          message: `Schedule spot ${spot.anchorId} does not exist.`,
+        });
+      }
+    }
+    if (npc.dialogueIds.length === 0) {
+      issues.push({
+        severity: 'error',
+        code: 'no-dialogue',
+        where: npc.id,
+        message: 'NPC must reference at least one dialogue entry node.',
+      });
+    }
+    for (const id of npc.dialogueIds) {
+      if (!dialogueIds.has(id)) {
+        issues.push({
+          severity: 'error',
+          code: 'unknown-dialogue',
+          where: npc.id,
+          message: `NPC references unknown dialogue node ${id}.`,
+        });
+      }
+    }
+  }
+}
+
 export function validateContent(
   options: ValidationOptions = { requireApproved: false },
 ): ValidationReport {
   const issues: ValidationIssue[] = [];
   const sourceIds = new Set(SOURCE_RECORDS.map((record) => record.id));
   const npcIds = new Set(NPCS.map((npc) => npc.npcId));
+
+  validateWorld(issues);
+
+  // World NPCs must have copy rows; copy rows must describe real NPCs.
+  for (const npc of NPC_DEFINITIONS) {
+    if (!npcIds.has(npc.id)) {
+      issues.push({
+        severity: 'error',
+        code: 'missing-npc-copy',
+        where: npc.id,
+        message: 'NPC definition has no Persian copy row.',
+      });
+    }
+  }
+  const definedNpcIds = new Set(NPC_DEFINITIONS.map((npc) => npc.id));
+  for (const copy of NPCS) {
+    if (!definedNpcIds.has(copy.npcId)) {
+      issues.push({
+        severity: 'error',
+        code: 'orphan-npc-copy',
+        where: copy.npcId,
+        message: 'NPC copy exists without an NPC definition.',
+      });
+    }
+  }
 
   for (const definition of QUEST_DEFINITIONS) {
     const copy = QUEST_COPY.find((entry) => entry.questId === definition.id);
@@ -281,25 +465,52 @@ export function validateContent(
     }
 
     for (const { where, text } of childTextsOf(copy)) {
-      for (const term of FORBIDDEN_CHILD_TERMS) {
-        if (text.includes(term)) {
-          issues.push({
-            severity: 'error',
-            code: 'forbidden-term',
-            where,
-            message: `Child-facing copy contains forbidden term "${term}".`,
-          });
-        }
+      checkText(where, text, issues);
+    }
+    if (copy.parentNoteFa !== undefined) {
+      checkText(`${copy.questId}.parentNoteFa`, copy.parentNoteFa, issues);
+    }
+
+    // Reusable references — quests point at areas/NPCs/dialogue, not UI.
+    if (!WORLD_AREAS.some((area) => area.id === definition.areaId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-area',
+        where: definition.id,
+        message: `Quest references unknown area ${definition.areaId}.`,
+      });
+    }
+    for (const npcId of definition.npcIds) {
+      if (!npcIds.has(npcId)) {
+        issues.push({
+          severity: 'error',
+          code: 'unknown-npc',
+          where: definition.id,
+          message: `Quest references unknown NPC ${npcId}.`,
+        });
       }
-      for (const marker of QUOTATION_MARKERS) {
-        if (text.includes(marker)) {
-          issues.push({
-            severity: 'error',
-            code: 'child-quotation',
-            where,
-            message: `Child-facing copy looks like a quotation or attribution ("${marker.trim()}").`,
-          });
-        }
+    }
+    const dialogueIdSet = new Set(DIALOGUE_NODES.map((node) => node.id));
+    for (const id of definition.dialogueIds) {
+      if (!dialogueIdSet.has(id)) {
+        issues.push({
+          severity: 'error',
+          code: 'unknown-dialogue',
+          where: definition.id,
+          message: `Quest references unknown dialogue node ${id}.`,
+        });
+      }
+    }
+    for (const nextId of definition.nextQuestIds) {
+      try {
+        getQuestDefinition(nextId);
+      } catch {
+        issues.push({
+          severity: 'error',
+          code: 'unknown-quest',
+          where: definition.id,
+          message: `Quest chain links to unknown quest ${nextId}.`,
+        });
       }
     }
 
@@ -320,6 +531,23 @@ export function validateContent(
     }
   }
 
+  // The dialogue graph: unique ids, resolvable branches, no orphans.
+  const nodeIds = new Set<string>();
+  for (const node of DIALOGUE_NODES) {
+    if (nodeIds.has(node.id)) {
+      issues.push({
+        severity: 'error',
+        code: 'duplicate-dialogue',
+        where: node.id,
+        message: 'Duplicate dialogue node id.',
+      });
+    }
+    nodeIds.add(node.id);
+  }
+  const reachable = new Set<string>([
+    ...NPC_DEFINITIONS.flatMap((npc) => [...npc.dialogueIds]),
+    ...QUEST_DEFINITIONS.flatMap((quest) => [...quest.dialogueIds]),
+  ]);
   for (const node of DIALOGUE_NODES) {
     if (!npcIds.has(node.npcId)) {
       issues.push({
@@ -328,6 +556,64 @@ export function validateContent(
         where: node.id,
         message: `Dialogue references unknown NPC ${node.npcId}.`,
       });
+    }
+    checkText(`${node.id}.textFa`, node.textFa, issues);
+    for (const [index, line] of (node.lines ?? []).entries()) {
+      if (!npcIds.has(line.speakerId)) {
+        issues.push({
+          severity: 'error',
+          code: 'unknown-npc',
+          where: `${node.id}.lines[${index}]`,
+          message: `Dialogue line has unknown speaker ${line.speakerId}.`,
+        });
+      }
+      checkText(`${node.id}.lines[${index}]`, line.textFa, issues);
+    }
+    const choiceIds = new Set<string>();
+    for (const choice of node.choices ?? []) {
+      if (choiceIds.has(choice.id)) {
+        issues.push({
+          severity: 'error',
+          code: 'duplicate-choice',
+          where: node.id,
+          message: `Duplicate choice id ${choice.id}.`,
+        });
+      }
+      choiceIds.add(choice.id);
+      if (!hasIcon(choice.iconId)) {
+        issues.push({
+          severity: 'error',
+          code: 'unknown-icon',
+          where: `${node.id}.${choice.id}`,
+          message: `Choice references unknown icon ${choice.iconId}.`,
+        });
+      }
+      checkText(`${node.id}.${choice.id}`, choice.labelFa, issues);
+      if (!nodeIds.has(choice.nextNodeId)) {
+        issues.push({
+          severity: 'error',
+          code: 'broken-dialogue-branch',
+          where: `${node.id}.${choice.id}`,
+          message: `Choice targets unknown node ${choice.nextNodeId}.`,
+        });
+      } else {
+        reachable.add(choice.nextNodeId);
+      }
+    }
+    if (node.nextNodeId !== undefined) {
+      if (!nodeIds.has(node.nextNodeId)) {
+        issues.push({
+          severity: 'error',
+          code: 'broken-dialogue-branch',
+          where: node.id,
+          message: `Node continues to unknown node ${node.nextNodeId}.`,
+        });
+      } else {
+        reachable.add(node.nextNodeId);
+      }
+    }
+    if (node.parentNoteFa !== undefined) {
+      checkText(`${node.id}.parentNoteFa`, node.parentNoteFa, issues);
     }
     if (node.iconId !== null && !hasIcon(node.iconId)) {
       issues.push({
@@ -362,6 +648,18 @@ export function validateContent(
         code: 'incomplete-review',
         where: node.id,
         message: 'Approved dialogue must name its reviewers and review date.',
+      });
+    }
+  }
+
+  // Orphans: every node must be reachable from an NPC entry point or another node.
+  for (const node of DIALOGUE_NODES) {
+    if (!reachable.has(node.id)) {
+      issues.push({
+        severity: 'error',
+        code: 'orphan-dialogue',
+        where: node.id,
+        message: 'Dialogue node is not reachable from any NPC or branch.',
       });
     }
   }

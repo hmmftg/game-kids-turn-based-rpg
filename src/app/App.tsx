@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
+import { getNpcOrNull } from '../world/registry.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
@@ -8,7 +9,7 @@ import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definiti
 import { canStartQuest, nextSuggestedQuest } from '../domain/quests/prerequisites.ts';
 import { QuestCelebration } from '../ui/child/Celebration.tsx';
 import { DialogueCard } from '../ui/child/DialogueCard.tsx';
-import { npcEmoji } from '../ui/child/emoji.ts';
+import { emotionEmoji, npcEmoji } from '../ui/child/emoji.ts';
 import { EncounterPanel } from '../ui/child/EncounterPanel.tsx';
 import { InteractionHint } from '../ui/child/InteractionHint.tsx';
 import { ObjectiveChip } from '../ui/child/ObjectiveChip.tsx';
@@ -37,7 +38,13 @@ function nodeForQuest(questId: QuestId): string | null {
 function nodeForAnchor(anchor: AnchorId): string | null {
   const npcId = getAnchorOrNull(anchor)?.npcId ?? null;
   if (npcId === null) return null;
-  return DIALOGUE_NODES.find((node) => node.npcId === npcId)?.id ?? null;
+  // The NPC definition declares its entry nodes (quest offer first); fall
+  // back to the first authored node for the NPC for older anchors.
+  return (
+    getNpcOrNull(npcId)?.dialogueIds[0] ??
+    DIALOGUE_NODES.find((node) => node.npcId === npcId)?.id ??
+    null
+  );
 }
 
 export function App() {
@@ -60,6 +67,15 @@ export function App() {
     renameProfile,
   } = useGame();
   const hubRef = useRef<HubHandle>(null);
+  // Which beat of a multi-line dialogue node is showing — transient UI state.
+  // Keyed by node so a node change (branch jumps included) restarts at 0
+  // without an effect.
+  const [dialogueLine, setDialogueLine] = useState<{ nodeId: string | null; index: number }>({
+    nodeId: null,
+    index: 0,
+  });
+  const openNodeId = state.dialogue?.nodeId ?? null;
+  const dialogueLineIndex = dialogueLine.nodeId === openNodeId ? dialogueLine.index : 0;
   const statuses = selectQuestStatuses(state);
   const completed = selectCompletedQuestCount(state);
   const suggestedQuestId = nextSuggestedQuest(state);
@@ -215,6 +231,18 @@ export function App() {
 
   const dialogueNode = state.dialogue ? getDialogueNode(state.dialogue.nodeId) : null;
   const offeredQuest = dialogueNode?.offersQuestId ?? null;
+  // One idea per beat: nodes may carry a short line sequence; single-beat
+  // nodes fall back to `textFa`. Lines stay in data, never in JSX branches.
+  const dialogueLines = dialogueNode
+    ? (dialogueNode.lines ?? [{ speakerId: dialogueNode.npcId, textFa: dialogueNode.textFa }])
+    : [];
+  const lineIndex = Math.min(dialogueLineIndex, Math.max(0, dialogueLines.length - 1));
+  const currentLine = dialogueLines[lineIndex] ?? null;
+  const isLastLine = lineIndex >= dialogueLines.length - 1;
+  const lineEmotion =
+    dialogueNode?.lines?.[lineIndex]?.emotion !== undefined
+      ? emotionEmoji(dialogueNode.lines[lineIndex].emotion)
+      : null;
   // First unfinished chapter — the big fallback button continues progress
   // instead of always reopening the greeting quest.
   const continueQuestId =
@@ -267,14 +295,68 @@ export function App() {
       </div>
 
       <div className="hud__bottom">
-        {state.mode === 'dialogue' && dialogueNode ? (
+        {state.mode === 'dialogue' && dialogueNode && currentLine ? (
           <DialogueCard
-            speakerFa={getNpcCopy(dialogueNode.npcId)?.nameFa}
-            speakerEmoji={npcEmoji(dialogueNode.npcId)}
+            speakerFa={
+              lineEmotion !== null
+                ? `${getNpcCopy(currentLine.speakerId)?.nameFa ?? ''} ${lineEmotion}`
+                : getNpcCopy(currentLine.speakerId)?.nameFa
+            }
+            speakerEmoji={npcEmoji(currentLine.speakerId)}
             iconId={dialogueNode.iconId}
-            textFa={dialogueNode.textFa}
+            textFa={currentLine.textFa}
             testId="npc-dialogue"
           >
+            {!isLastLine ? (
+              <button
+                type="button"
+                className="btn btn--large"
+                onClick={() => {
+                  playSfx('sfx-choice');
+                  setDialogueLine({ nodeId: openNodeId, index: dialogueLineIndex + 1 });
+                }}
+                data-testid="dialogue-next"
+              >
+                {FA.next}
+              </button>
+            ) : null}
+            {isLastLine
+              ? (dialogueNode.choices ?? []).map((choice) => (
+                  <button
+                    key={choice.id}
+                    type="button"
+                    className="btn btn--large"
+                    onClick={() => {
+                      playSfx('sfx-choice');
+                      dispatch({
+                        type: 'OPEN_DIALOGUE',
+                        npcId: dialogueNode.npcId,
+                        nodeId: choice.nextNodeId,
+                      });
+                    }}
+                    data-testid={`dialogue-choice-${choice.id}`}
+                  >
+                    {choice.labelFa}
+                  </button>
+                ))
+              : null}
+            {isLastLine && dialogueNode.nextNodeId !== undefined ? (
+              <button
+                type="button"
+                className="btn btn--large"
+                onClick={() => {
+                  playSfx('sfx-choice');
+                  dispatch({
+                    type: 'OPEN_DIALOGUE',
+                    npcId: dialogueNode.npcId,
+                    nodeId: dialogueNode.nextNodeId!,
+                  });
+                }}
+                data-testid="dialogue-next-node"
+              >
+                {FA.next}
+              </button>
+            ) : null}
             {offeredQuest && canStartQuest(state, offeredQuest) ? (
               <button
                 type="button"
