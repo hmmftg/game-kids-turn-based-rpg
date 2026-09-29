@@ -173,6 +173,11 @@ await page.getByTestId('advance-reinforce').click();
 await page.getByTestId('leave-encounter').click();
 await page.getByTestId('hud').waitFor();
 
+// Steady-state reference measured AFTER quest completion: completed quests
+// grow keepsake blossoms and unlock quest markers, so the earlier tier
+// counts are not a valid lifecycle baseline.
+const expected = await objectCount();
+
 await page.getByTestId('pause-button').click();
 await page.screenshot({ path: `${out}/pause-portrait.png` });
 await page.getByTestId('resume-button').click();
@@ -234,10 +239,6 @@ await setTier('high');
 const afterTierCycle = await objectCount();
 console.log(`after tier cycle: ${afterTierCycle} objects`);
 
-// Steady-state reference measured AFTER quest completion: completed quests
-// grow keepsake blossoms and unlock quest markers, so the earlier tier
-// counts are not a valid lifecycle baseline.
-const expected = await objectCount();
 if (afterPortrait !== expected || afterParent !== expected || afterTierCycle !== expected) {
   console.error(
     `REGRESSION: expected ${expected} objects at high tier after remounts ` +
