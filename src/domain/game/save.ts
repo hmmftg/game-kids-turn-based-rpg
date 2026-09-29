@@ -1,9 +1,12 @@
 import { createFreshPersistedState, DEFAULT_AUDIO, SAVE_SCHEMA_VERSION } from './initialState.ts';
 import { AVATAR_IDS, QUEST_IDS } from './types.ts';
 import type {
+  AnchorId,
   AudioSettings,
   AvatarId,
   Checkpoint,
+  DiscoveryId,
+  MapId,
   PersistedState,
   QualityTier,
   QuestId,
@@ -110,6 +113,18 @@ function migrateV1(raw: UnknownRecord, now: number): PersistedState {
   };
 }
 
+// Additive fields introduced after v2 parse tolerantly: an old save simply
+// has no discoveries/map record and falls back to the town square.
+function parseMapId(value: unknown): MapId {
+  return typeof value === 'string' && value.startsWith('map-') ? (value as MapId) : 'map-town';
+}
+
+function parseAnchorId(value: unknown): AnchorId {
+  return typeof value === 'string' && value.startsWith('anchor-')
+    ? (value as AnchorId)
+    : 'anchor-square';
+}
+
 function parseV2(raw: UnknownRecord, now: number): PersistedState {
   return {
     schemaVersion: SAVE_SCHEMA_VERSION,
@@ -120,6 +135,9 @@ function parseV2(raw: UnknownRecord, now: number): PersistedState {
     audio: parseAudio(raw['audio']),
     qualityTier: parseQualityTier(raw['qualityTier']),
     lastPlayedAt: typeof raw['lastPlayedAt'] === 'number' ? raw['lastPlayedAt'] : now,
+    discoveries: asStringArray(raw['discoveries']) as DiscoveryId[],
+    mapId: parseMapId(raw['mapId']),
+    mapAnchorId: parseAnchorId(raw['mapAnchorId']),
   };
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
-import type { QuestId, QuestStatus, StickerId } from '../../domain/game/types.ts';
+import type { MapId, QuestId, QuestStatus, StickerId } from '../../domain/game/types.ts';
 import { questEmoji } from './emoji.ts';
 
 const STATUS_LABEL: Record<QuestStatus, string> = {
@@ -33,10 +33,13 @@ const STATUS_GLYPH: Record<QuestStatus, string> = {
 export function QuestTrail({
   statuses,
   currentId,
+  mapId,
   onGo,
 }: {
   readonly statuses: Record<QuestId, QuestStatus>;
   readonly currentId: QuestId | null;
+  /** The mounted map — quests living elsewhere are shown but not go-able. */
+  readonly mapId: MapId;
   readonly onGo: (questId: QuestId) => void;
 }) {
   const currentRef = useRef<HTMLButtonElement>(null);
@@ -50,7 +53,9 @@ export function QuestTrail({
       {QUEST_DEFINITIONS.map((quest, index) => {
         const status = statuses[quest.id];
         const copy = getQuestCopy(quest.id);
-        const locked = status === 'locked';
+        // A quest on another map is shown but cannot be walked to from here.
+        const offMap = (quest.mapId ?? 'map-town') !== mapId;
+        const locked = status === 'locked' || offMap;
         const current = quest.id === currentId && status !== 'completed';
         const label = `${copy.titleFa} — ${STATUS_LABEL[status]}`;
         return (

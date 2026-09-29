@@ -75,6 +75,9 @@ function applyPersisted(state: GameState, persisted: PersistedState): GameState 
     audio: persisted.audio,
     qualityTier: persisted.qualityTier,
     lastPlayedAt: persisted.lastPlayedAt,
+    discoveries: persisted.discoveries,
+    mapId: persisted.mapId,
+    mapAnchorId: persisted.mapAnchorId,
   };
 }
 
@@ -198,6 +201,33 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
     case 'SET_HEADWEAR':
       if (state.headwear === command.headwear) return state;
       return { ...state, headwear: command.headwear };
+
+    case 'DISCOVER': {
+      // A world fact found by reaching its place (e.g. the hidden rock).
+      // Idempotent — arriving again must not duplicate or re-save.
+      if (state.mode !== 'hub' && state.mode !== 'dialogue') return state;
+      if (state.discoveries.includes(command.discoveryId)) return state;
+      return stable(state, { discoveries: [...state.discoveries, command.discoveryId] }, now);
+    }
+
+    case 'CHANGE_MAP': {
+      // Deterministic map transition: the caller resolves the spawn from
+      // MAP_TRANSITIONS data; the reducer just records where the child now
+      // is so a reload restores the same map + safe local spawn.
+      if (state.mode !== 'hub' && state.mode !== 'dialogue') return state;
+      return stable(
+        state,
+        {
+          mapId: command.mapId,
+          mapAnchorId: command.anchorId,
+          mode: 'hub',
+          resumeMode: 'hub',
+          dialogue: null,
+          encounter: null,
+        },
+        now,
+      );
+    }
 
     case 'ENTER_HUB': {
       if (state.mode === 'hub') return state;

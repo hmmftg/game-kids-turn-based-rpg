@@ -35,9 +35,9 @@ export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: -5.4, z: 3, kind: 'flower', minDetail: 2 },
   { x: 5.6, z: -3.4, kind: 'stone', minDetail: 2 },
   // new areas — each slot belongs to an area via its position
-  { x: -11, z: 3.5, kind: 'flower', minDetail: 1 },
+  { x: -10.5, z: 4.3, kind: 'flower', minDetail: 1 },
   { x: -9.7, z: -4.2, kind: 'plant', minDetail: 1 },
-  { x: -12.6, z: 1.8, kind: 'stone', minDetail: 2 },
+  { x: -9.2, z: 4.2, kind: 'stone', minDetail: 2 },
   { x: 9, z: 7.6, kind: 'plant', minDetail: 1 },
   { x: 12.8, z: 6.8, kind: 'flower', minDetail: 2 },
   { x: 8.2, z: -9.6, kind: 'stone', minDetail: 1 },
@@ -75,18 +75,19 @@ interface ExclusionZone {
  * checks against the live avatar position.
  */
 const POINT_ZONES: readonly ExclusionZone[] = [
-  // anchors (hotspot rings + destination marker live here)
-  ...ANCHORS.map((a) => ({ x: a.x, z: a.z, radius: 1.1 })),
+  // anchors (hotspot rings + destination marker live here) — town only:
+  // other maps own their own coordinate space and clearance rules.
+  ...ANCHORS.filter((a) => a.mapId === 'map-town').map((a) => ({ x: a.x, z: a.z, radius: 1.1 })),
   // NPC standpoints (anchor.x + 0.9, anchor.z - 0.4 in Hub)
-  ...ANCHORS.filter((a) => a.npcId !== null).map((a) => ({
+  ...ANCHORS.filter((a) => a.npcId !== null && a.mapId === 'map-town').map((a) => ({
     x: a.x + 0.9,
     z: a.z - 0.4,
     radius: 0.9,
   })),
   // quest landmark footprints (anchor.x, anchor.z - 1.2, ~1.4 wide + details)
-  ...ANCHORS.filter((a) => a.landmarkId !== null && a.landmarkId !== 'landmark-fountain').map(
-    (a) => ({ x: a.x, z: a.z - 1.2, radius: 1.5 }),
-  ),
+  ...ANCHORS.filter(
+    (a) => a.landmarkId !== null && a.landmarkId !== 'landmark-fountain' && a.mapId === 'map-town',
+  ).map((a) => ({ x: a.x, z: a.z - 1.2, radius: 1.5 })),
   // fountain basin
   { x: getAnchor('anchor-fountain').x, z: getAnchor('anchor-fountain').z, radius: 1.9 },
   // keepsake tree
@@ -126,6 +127,7 @@ export function isDecorationClear(x: number, z: number, radius = 0): boolean {
   }
   for (const edge of EDGES) {
     const from = getAnchor(edge.from);
+    if (from.mapId !== 'map-town') continue;
     const to = getAnchor(edge.to);
     if (distToSegment(x, z, from.x, from.z, to.x, to.z) < CORRIDOR_HALF_WIDTH + radius)
       return false;

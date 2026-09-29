@@ -59,6 +59,19 @@ progress verified after a reload.
 inside a real area, resolvable dialogue/quest references, the fisher schedule determinism, and
 the visible-area cap (≤8 NPC figures) that keeps inactive areas free.
 
+## Secondary-map (cave) QA
+
+`e2e/cave.spec.ts` drives the secret-entrance flow with real canvas taps (world-probe
+`__worldToScreen` + `__worldMapId`/`__worldAt`/`__worldDiscoveries`, enabled via the
+`__WORLD_PROBE` init flag): walk to the hidden rock → discovery persists → tap the doorway →
+cave map mounts → exit lands on the exact outdoor entrance → re-enter skips discovery →
+reload restores the cave map and spawn. The quest test plays the full town chain, then the
+cave-crystal quest inside the cave. `world/maps.test.ts` + `domain/game/reducer.test.ts`
+cover unique map ids, spawn/bounds validity, both-way transition refs, no cross-map edges,
+map ownership of cave content, `DISCOVER`/`CHANGE_MAP` reducer semantics, and save
+round-trips (old saves default to town). Canvas-tap tests are landscape-only — a portrait
+viewport can leave the rock outside the tappable canvas, which `tapWorld` skips cleanly.
+
 ## Kid-testing protocol (manual)
 
 The automated suites prove technical correctness, not comprehension. When validating UX changes

@@ -1,10 +1,10 @@
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type {
   AnchorId,
   AvatarId,
+  DiscoveryId,
   HeadwearId,
   LandmarkId,
   QuestId,
@@ -31,6 +31,7 @@ import {
   StoneCluster,
 } from './models/details.tsx';
 import { BOX, CYLINDER, PLANE, sharedGroundMaterial, sharedLambert } from './models/shared.ts';
+import { DestinationMarker, Hotspot, QuestMarker, type WorldSceneHandle } from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
@@ -45,15 +46,7 @@ import {
   type LandmarkVisualVariant,
 } from './models/modelProvider.ts';
 
-export interface HubHandle {
-  /**
-   * Walk to an anchor from a DOM action button (the accessible alternative to
-   * tapping). Returns false when walking is not possible right now. `onArrive`,
-   * when given, runs once the avatar reaches the anchor.
-   */
-  readonly goTo: (anchor: AnchorId, onArrive?: () => void) => boolean;
-  readonly cancel: () => void;
-}
+export type HubHandle = WorldSceneHandle;
 
 export interface HubProps {
   readonly avatarId: AvatarId;
@@ -65,6 +58,10 @@ export interface HubProps {
   readonly detailLevel: DetailLevel;
   /** The quest the objective chip currently points at, if any. */
   readonly suggestedQuestId: QuestId | null;
+  /** Anchor the avatar starts from on this map (spawn/restored position). */
+  readonly startAnchorId: AnchorId;
+  /** Persistent world facts — the revealed secret entrance swaps its look. */
+  readonly discoveries: readonly DiscoveryId[];
   readonly onArrive: (anchor: AnchorId) => void;
   readonly handleRef: Ref<HubHandle> | undefined;
 }
@@ -92,123 +89,71 @@ function landmarkVariant(id: LandmarkId | null): LandmarkVisualVariant | undefin
 
 const GROUND = new THREE.PlaneGeometry(40, 40);
 const PATH_MATERIAL = new THREE.MeshLambertMaterial({ color: '#dcc79a' });
-const HOTSPOT_MATERIAL = new THREE.MeshBasicMaterial({
-  color: '#e08a3c',
-  transparent: true,
-  opacity: 0.55,
-});
-const DESTINATION_MATERIAL = new THREE.MeshBasicMaterial({
-  color: '#2f6f4f',
-  transparent: true,
-  opacity: 0.6,
-});
-const SUGGESTED_MATERIAL = new THREE.MeshBasicMaterial({
-  color: '#e8a400',
-  transparent: true,
-  opacity: 0.75,
-});
-
-/** Pulsing ring that marks an interactive anchor; also the only clickable geometry. */
-function Hotspot({
-  x,
-  z,
-  active,
-  suggested,
-  onSelect,
-  label,
+/**
+ * The hidden cave entrance: an ordinary-looking park rock with a hairline
+ * crack of warm light. Once discovered it stands open — a dark archway the
+ * child can walk into. Tapping the rock itself counts as approaching it.
+ */
+function CaveEntranceRock({
+  revealed,
+  interactive,
+  onApproach,
 }: {
-  readonly x: number;
-  readonly z: number;
-  readonly active: boolean;
-  /** Strongest affordance: this hotspot is where the current objective lives. */
-  readonly suggested: boolean;
-  readonly onSelect: () => void;
-  readonly label: string;
+  readonly revealed: boolean;
+  readonly interactive: boolean;
+  readonly onApproach: () => void;
 }) {
-  const ref = useRef<THREE.Mesh>(null);
-  const reduced = prefersReducedMotion();
-
-  useFrame((frameState) => {
-    if (!ref.current || !active || reduced) return;
-    const amplitude = suggested ? 0.16 : 0.1;
-    const pulse = 1 + Math.sin(frameState.clock.elapsedTime * 2.4) * amplitude;
-    ref.current.scale.set(pulse, pulse, pulse);
-  });
-
+  const rock = sharedLambert('#7d7a82');
+  const dark = sharedLambert('#241f2e');
+  const approach = (event: ThreeEvent<MouseEvent>) => {
+    if (!interactive) return;
+    event.stopPropagation();
+    onApproach();
+  };
   return (
-    <mesh
-      ref={ref}
-      name={label}
-      position={[x, 0.03, z]}
-      rotation={[-Math.PI / 2, 0, 0]}
-      material={suggested ? SUGGESTED_MATERIAL : HOTSPOT_MATERIAL}
-      visible={active}
-      onClick={(event: ThreeEvent<MouseEvent>) => {
-        event.stopPropagation();
-        if (active) onSelect();
-      }}
-    >
-      <ringGeometry args={[0.5, suggested ? 0.9 : 0.78, 20]} />
-    </mesh>
-  );
-}
-
-/** Destination marker shown at the walk target until the avatar arrives. */
-function DestinationMarker({ x, z }: { readonly x: number; readonly z: number }) {
-  const ref = useRef<THREE.Mesh>(null);
-  const reduced = prefersReducedMotion();
-
-  useFrame((frameState) => {
-    if (!ref.current) return;
-    if (reduced) {
-      ref.current.scale.set(1, 1, 1);
-      return;
-    }
-    const pulse = 0.9 + Math.sin(frameState.clock.elapsedTime * 4) * 0.1;
-    ref.current.scale.set(pulse, pulse, pulse);
-  });
-
-  return (
-    <mesh
-      ref={ref}
-      name="walk-destination"
-      position={[x, 0.04, z]}
-      rotation={[-Math.PI / 2, 0, 0]}
-      material={DESTINATION_MATERIAL}
-      raycast={noRaycast}
-    >
-      <ringGeometry args={[0.3, 0.5, 20]} />
-    </mesh>
-  );
-}
-
-/** Floating emoji above an interactable anchor — «I can tap this» cue. */
-function QuestMarker({
-  x,
-  z,
-  emoji,
-  suggested,
-}: {
-  readonly x: number;
-  readonly z: number;
-  readonly emoji: string;
-  readonly suggested: boolean;
-}) {
-  return (
-    <Html
-      position={[x, 1.9, z]}
-      center
-      distanceFactor={suggested ? 9 : 11}
-      style={{ pointerEvents: 'none' }}
-      zIndexRange={[5, 0]}
-    >
-      <div
-        className={`world-marker${suggested ? ' world-marker--current' : ''}`}
-        aria-hidden="true"
-      >
-        {emoji}
-      </div>
-    </Html>
+    <group position={[-12.2, 0, 4.6]} name="cave-entrance" dispose={null}>
+      {/* the rock itself — slightly apart from the walkable anchor in front */}
+      <mesh
+        geometry={BOX}
+        material={rock}
+        position={[0, 0.9, 0]}
+        scale={[1.5, 1.8, 1.1]}
+        rotation={[0, 0.4, 0.06]}
+        onClick={approach}
+      />
+      <mesh
+        geometry={BOX}
+        material={sharedLambert('#6f6c76')}
+        position={[0.9, 0.55, 0.25]}
+        scale={[0.8, 1.1, 0.8]}
+        rotation={[0.1, -0.3, 0]}
+        raycast={noRaycast}
+      />
+      {revealed ? (
+        <>
+          {/* open mouth: a dark doorway where the crack was */}
+          <mesh
+            geometry={BOX}
+            material={dark}
+            position={[-0.15, 0.62, 0.58]}
+            scale={[0.62, 1.15, 0.12]}
+            raycast={noRaycast}
+            onClick={approach}
+          />
+          {/* warm shimmer inside — the cave glows softly, not quest-bright */}
+          <pointLight color="#ffd9a0" intensity={0.8} distance={3.4} position={[-0.1, 0.7, 0.9]} />
+        </>
+      ) : (
+        /* the subtle clue: a thin warm crack, no text, no marker */
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#ffd9a0')}
+          position={[-0.15, 0.5, 0.58]}
+          scale={[0.05, 0.55, 0.04]}
+          raycast={noRaycast}
+        />
+      )}
+    </group>
   );
 }
 
@@ -351,11 +296,13 @@ export function Hub({
   interactive,
   detailLevel,
   suggestedQuestId,
+  startAnchorId,
+  discoveries,
   onArrive,
   handleRef,
 }: HubProps) {
   const models = useModels();
-  const walker = useWalker('anchor-square', onArrive, interactive);
+  const walker = useWalker(startAnchorId, onArrive, interactive);
   // Ambient critters: motion only while the world is interactive and motion
   // is allowed; on low tier they render as static silhouettes.
   const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel);
@@ -429,12 +376,12 @@ export function Hub({
         onClick={(event: ThreeEvent<MouseEvent>) => {
           if (!interactive) return;
           event.stopPropagation();
-          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 2.5);
+          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 2.5, 'map-town');
           if (anchor) walkHere(anchor);
         }}
       />
 
-      {ANCHORS.filter((anchor) => anchor.walkable).map((anchor) => (
+      {ANCHORS.filter((anchor) => anchor.walkable && anchor.mapId === 'map-town').map((anchor) => (
         <mesh
           key={`path-${anchor.id}`}
           geometry={GROUND}
@@ -464,6 +411,7 @@ export function Hub({
           visible areas nothing mounts — no Hotspot subtree, no useFrame pulse —
           so interaction cost scales with visible content, not quest count. */}
       {QUEST_DEFINITIONS.map((quest) => {
+        if ((quest.mapId ?? 'map-town') !== 'map-town') return null;
         const anchor = getAnchor(quest.anchorId as AnchorId);
         if (!visibleAreas.includes(anchor.areaId)) return null;
         const status = questStatuses[quest.id];
@@ -504,6 +452,7 @@ export function Hub({
         const spot = resolveNpcSpot(npc, worldTime);
         const anchor = getAnchor(spot?.anchorId ?? npc.anchorId);
         if (!visibleAreas.includes(anchor.areaId)) return null;
+        if (anchor.mapId !== 'map-town') return null;
         const npcX = anchor.x + 0.9 + (spot?.offsetX ?? 0);
         const npcZ = anchor.z - 0.4 + (spot?.offsetZ ?? 0);
         const dx = walker.position.x - npcX;
@@ -546,13 +495,22 @@ export function Hub({
         detailLevel={detailLevel}
       />
 
+      {/* The park's secret: an ordinary rock with a thin warm crack. Once the
+          child has reached it the crack becomes a lit doorway — a persisted
+          discovery, never a labelled "enter" button. */}
+      <CaveEntranceRock
+        revealed={discoveries.includes('discovery-cave-entrance')}
+        interactive={interactive}
+        onApproach={() => walkHere('anchor-cave-entrance')}
+      />
+
       {/* Visual path decoration derived from EDGES — read-only, never alters
           anchors, pathfinding, or movement. dispose={null}: this block and
           the authored GROUND_DECORATIONS below consume only module-level
           shared resources, so canvas remounts must not dispose them. */}
       <group dispose={null}>
         <Detail level={detailLevel} min={1}>
-          {EDGES.map((edge) => (
+          {EDGES.filter((edge) => getAnchor(edge.from).mapId === 'map-town').map((edge) => (
             <PathEdgeStones
               key={`${edge.from}-${edge.to}`}
               from={getAnchor(edge.from)}

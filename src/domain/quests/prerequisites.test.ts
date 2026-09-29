@@ -73,6 +73,19 @@ describe('quest prerequisites', () => {
       'quest-bread-errand',
       'quest-school-answer',
     );
-    expect(nextSuggestedQuest(all)).toBeNull();
+    // The cave opens after school — the hidden discovery continues the story.
+    expect(nextSuggestedQuest(all)).toBe('quest-cave-crystal');
+    const everything = withCompleted(
+      'quest-greeting',
+      'quest-helping',
+      'quest-tidying',
+      'quest-finale',
+      'quest-park-kite',
+      'quest-river-shell',
+      'quest-bread-errand',
+      'quest-school-answer',
+      'quest-cave-crystal',
+    );
+    expect(nextSuggestedQuest(everything)).toBeNull();
   });
 });

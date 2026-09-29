@@ -1,5 +1,5 @@
 import type { IconId, LandmarkId, NpcId, QuestId, StickerId } from '../game/types.ts';
-import type { AreaId } from '../world/types.ts';
+import type { AreaId, MapId } from '../world/types.ts';
 
 /**
  * Mechanical quest structure. Child-facing copy lives in `src/content/fa`;
@@ -26,6 +26,12 @@ export interface QuestDefinition {
   readonly steps: readonly EncounterStep[];
   /** The world area the quest lives in — quests reference areas, not coordinates. */
   readonly areaId: AreaId;
+  /**
+   * The map the quest lives on — anchors carry their own mapId, but quests
+   * declare it explicitly so UI can dim/lock off-map objectives without a
+   * coordinate lookup. Defaults to the town when omitted.
+   */
+  readonly mapId?: MapId;
   /** NPCs this quest's story touches (reusable references, not UI wiring). */
   readonly npcIds: readonly NpcId[];
   /** Dialogue nodes associated with the quest (offer node first). */
@@ -261,7 +267,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     areaId: 'area-school',
     npcIds: ['npc-teacher', 'npc-child-ali'],
     dialogueIds: ['teacher-intro'],
-    nextQuestIds: [],
+    nextQuestIds: ['quest-cave-crystal'],
     stickerId: 'sticker-school',
     steps: [
       {
@@ -277,6 +283,35 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
         choiceIconIds: ['icon-tap-book', 'icon-tap-ball', 'icon-turn-back'],
         correctIconId: 'icon-tap-ball',
         demonstrationCue: 'point-card',
+      },
+    ],
+  },
+  {
+    id: 'quest-cave-crystal',
+    order: 9,
+    requires: ['quest-school-answer'],
+    landmarkId: 'landmark-crystal',
+    anchorId: 'anchor-cave-mouse',
+    areaId: 'area-cave',
+    mapId: 'map-cave',
+    npcIds: ['npc-cave-mouse'],
+    dialogueIds: ['cavemouse-intro'],
+    nextQuestIds: [],
+    stickerId: 'sticker-cave',
+    steps: [
+      {
+        id: 'cave-crystal-1',
+        npcId: 'npc-cave-mouse',
+        choiceIconIds: ['icon-find-crystal', 'icon-tap-ball', 'icon-turn-back'],
+        correctIconId: 'icon-find-crystal',
+        demonstrationCue: 'point-crystal',
+      },
+      {
+        id: 'cave-crystal-2',
+        npcId: 'npc-cave-mouse',
+        choiceIconIds: ['icon-give-crystal', 'icon-drop-basket', 'icon-turn-back'],
+        correctIconId: 'icon-give-crystal',
+        demonstrationCue: 'point-mouse',
       },
     ],
   },

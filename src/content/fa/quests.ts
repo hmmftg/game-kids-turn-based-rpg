@@ -30,6 +30,7 @@ export const NPCS: readonly NpcCopy[] = [
   { npcId: 'npc-park-keeper', nameFa: 'نگهبان پارک', roleFa: 'پارک محله' },
   { npcId: 'npc-child-sara', nameFa: 'سارا', roleFa: 'هم‌بازی پارک' },
   { npcId: 'npc-fisher', nameFa: 'ماهیگیر', roleFa: 'کنار رودخانه' },
+  { npcId: 'npc-cave-mouse', nameFa: 'موش غار', roleFa: 'ته غار' },
 ];
 
 export const QUEST_COPY: readonly QuestCopy[] = [
@@ -280,6 +281,34 @@ export const QUEST_COPY: readonly QuestCopy[] = [
     completionFa: 'برچسب کلاس را گرفتی.',
     stickerLabelFa: 'برچسب کلاس',
     sourceIds: ['source-school-answer-draft'],
+    review: DRAFT_REVIEW,
+  },
+  {
+    questId: 'quest-cave-crystal',
+    titleFa: 'غار و گوهر',
+    childSummaryFa: 'توی غار یک گوهر پیدا می‌کنیم و به موش غار می‌دهیم.',
+    objectiveFa: 'برو ته غار',
+    steps: [
+      {
+        stepId: 'cave-crystal-1',
+        introFa: 'ته غار یک گوهر می‌درخشد.',
+        demonstrateFa: 'نگاه کن: گوهر را برمی‌داریم.',
+        promptFa: 'گوهر کجاست؟',
+        successFa: 'گوهر را پیدا کردی.',
+        retryFa: 'اشکالی ندارد. دوباره نگاه کن.',
+      },
+      {
+        stepId: 'cave-crystal-2',
+        introFa: 'موش غار گوهر را دوست دارد.',
+        demonstrateFa: 'نگاه کن: گوهر را به موش می‌دهیم.',
+        promptFa: 'گوهر را به که بدهی؟',
+        successFa: 'موش غار خوشحال شد.',
+        retryFa: 'باشد، یک بار دیگر.',
+      },
+    ],
+    completionFa: 'برچسب غار را گرفتی.',
+    stickerLabelFa: 'برچسب غار',
+    sourceIds: ['source-cave-crystal-draft'],
     review: DRAFT_REVIEW,
   },
 ];

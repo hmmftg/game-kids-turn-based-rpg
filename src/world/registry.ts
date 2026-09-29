@@ -70,6 +70,14 @@ export const WORLD_AREAS: readonly WorldArea[] = [
     bounds: { minX: 4.2, maxX: 11, minZ: -10, maxZ: -4.6 },
     spawnAnchorId: 'anchor-path-north-east',
   },
+  // The cave's only area — its anchors live on map-cave, so it is never a
+  // visible/adjacent area of the outdoor world and stays fully inactive there.
+  {
+    id: 'area-cave',
+    labelFa: 'غار',
+    bounds: { minX: -4, maxX: 4, minZ: -3.5, maxZ: 4.5 },
+    spawnAnchorId: 'anchor-cave-mouth',
+  },
 ];
 
 export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
@@ -158,6 +166,13 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
       ],
     },
     dialogueIds: ['fisher-intro'],
+  },
+  {
+    id: 'npc-cave-mouse',
+    archetype: 'critter',
+    anchorId: 'anchor-cave-mouse',
+    homeAreaId: 'area-cave',
+    dialogueIds: ['cavemouse-intro'],
   },
 ];
 

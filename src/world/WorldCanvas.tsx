@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type Ref, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 import type {
   AnchorId,
   AvatarId,
+  DiscoveryId,
   HeadwearId,
+  MapId,
   QualityTier,
   QuestId,
   QuestStatus,
@@ -16,6 +19,8 @@ import { skyDomeResources } from './models/shared.ts';
 import { noRaycast } from './models/raycast.ts';
 import { ANCHORS } from './navigation/graph.ts';
 import { CRITTER_BOUNDS } from './critters.ts';
+import { getMap } from './maps.ts';
+import { CaveWorld } from './CaveWorld.tsx';
 
 /**
  * Screen-space footprint of the whole hub. The camera looks along (1,1,1), so a
@@ -25,22 +30,20 @@ import { CRITTER_BOUNDS } from './critters.ts';
  * this, landscape phones (wide but short) cropped the top and bottom of the
  * neighbourhood.
  */
-const FIT = (() => {
-  // The envelope covers the ground anchors AND the ambient airspace
-  // (CRITTER_BOUNDS) so a soaring eagle is never clipped by the frustum:
-  // horizontal reach widens the side term, maxY widens the vertical term
-  // (≈0.82 screen units per world height unit, per the comment above).
+/** Camera fit for one map: its anchors' projected envelope (+ town airspace). */
+function fitForMap(mapId: MapId): { width: number; height: number } {
+  const anchors = ANCHORS.filter((anchor) => anchor.mapId === mapId);
   const side =
     Math.max(
-      Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x - anchor.z) / Math.SQRT2)),
-      CRITTER_BOUNDS.maxHorizontalRadius,
+      Math.max(...anchors.map((anchor) => Math.abs(anchor.x - anchor.z) / Math.SQRT2)),
+      mapId === 'map-town' ? CRITTER_BOUNDS.maxHorizontalRadius : 0,
     ) + 1.7;
   const depth =
-    Math.max(...ANCHORS.map((anchor) => Math.abs(anchor.x + anchor.z) / Math.sqrt(6))) +
+    Math.max(...anchors.map((anchor) => Math.abs(anchor.x + anchor.z) / Math.sqrt(6))) +
     2.9 +
-    CRITTER_BOUNDS.maxY * 0.82;
+    (mapId === 'map-town' ? CRITTER_BOUNDS.maxY * 0.82 : 2.5);
   return { width: side * 2, height: depth * 2 };
-})();
+}
 
 /** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
 let canvasInstanceCounter = 0;
@@ -90,6 +93,17 @@ function SkyDome() {
   );
 }
 
+/** Applies the map's clear colour (mount + map change) and repaints. */
+function EnvironmentClear({ color }: { readonly color: string }) {
+  const gl = useThree((state) => state.gl);
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    gl.setClearColor(color);
+    invalidate();
+  }, [gl, color, invalidate]);
+  return null;
+}
+
 /** Redraws when React state that the scene depends on changes. */
 function InvalidateOnChange({ token }: { readonly token: unknown }) {
   const invalidate = useThree((state) => state.invalidate);
@@ -105,6 +119,11 @@ export interface WorldCanvasProps {
   readonly interactive: boolean;
   readonly qualityTier: QualityTier;
   readonly suggestedQuestId: QuestId | null;
+  /** The map currently mounted — the other map's scene does not exist. */
+  readonly mapId: MapId;
+  /** Anchor the avatar stands at on this map (spawn/restored position). */
+  readonly startAnchorId: AnchorId;
+  readonly discoveries: readonly DiscoveryId[];
   readonly onArrive: (anchor: AnchorId) => void;
   readonly onContextLost: () => void;
   readonly handleRef?: Ref<HubHandle>;
@@ -118,6 +137,9 @@ export function WorldCanvas({
   interactive,
   qualityTier,
   suggestedQuestId,
+  mapId,
+  startAnchorId,
+  discoveries,
   onArrive,
   onContextLost,
   handleRef,
@@ -128,21 +150,31 @@ export function WorldCanvas({
   // The quality tier is the only quality system; the world only derives how
   // much decoration it draws from it, never a different render pipeline.
   const detailLevel = detailLevelFor(qualityTier);
+  const map = getMap(mapId);
+  const env = map.environment;
+
+  // E2E/QA probe: which map is mounted (same Canvas — map switches don't
+  // remount it, only the scene subtree does).
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    if (import.meta.env.DEV || w['__WORLD_PROBE']) w['__worldMapId'] = mapId;
+  }, [mapId]);
 
   // Locked isometric framing: no orbit controls, no camera input of any kind.
-  // Zoom fits the whole neighbourhood, limited by the tighter viewport axis.
+  // Zoom fits the current map's bounds, limited by the tighter viewport axis.
   useEffect(() => {
+    const fit = fitForMap(mapId);
     const onResize = () =>
       setZoom(
         Math.min(
           96,
-          Math.max(20, Math.min(window.innerWidth / FIT.width, window.innerHeight / FIT.height)),
+          Math.max(20, Math.min(window.innerWidth / fit.width, window.innerHeight / fit.height)),
         ),
       );
     onResize();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [mapId]);
 
   return (
     <div className="world" ref={containerRef} data-testid="world-canvas">
@@ -154,15 +186,25 @@ export function WorldCanvas({
         camera={{ position: [10, 10, 10], zoom, near: -100, far: 200 }}
         gl={{ antialias: qualityTier !== 'low', powerPreference: 'low-power', alpha: false }}
         onCreated={({ gl, camera, scene }) => {
-          gl.setClearColor('#cfe8ff');
+          gl.setClearColor(env.clearColor);
           camera.lookAt(0, 0, 0);
-          if (import.meta.env.DEV) {
-            // Perf-gate hook for scripts/measure-world.mjs; dev server only.
+          const probeFlag = (window as unknown as Record<string, unknown>)['__WORLD_PROBE'];
+          if (import.meta.env.DEV || probeFlag) {
+            // Perf/QA hooks for scripts/measure-world.mjs and e2e: enabled in
+            // dev, and in e2e when the page sets __WORLD_PROBE before load.
             const w = window as unknown as Record<string, unknown>;
             w.__worldRenderer = gl;
             w.__worldScene = scene;
             w.__worldCamera = camera;
             w.__worldCanvasId = canvasInstanceCounter += 1;
+            w.__worldToScreen = (wx: number, wz: number) => {
+              const rect = gl.domElement.getBoundingClientRect();
+              const point = new THREE.Vector3(wx, 0, wz).project(camera);
+              return {
+                x: rect.left + ((point.x + 1) / 2) * rect.width,
+                y: rect.top + ((1 - point.y) / 2) * rect.height,
+              };
+            };
           }
           gl.domElement.addEventListener('webglcontextlost', (event) => {
             event.preventDefault();
@@ -172,25 +214,48 @@ export function WorldCanvas({
       >
         <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
-        {/* Atmosphere: distance haze toward the horizon + gradient sky dome.
-            Both are scene-level attachments so they must live at Canvas root. */}
-        <fog attach="fog" args={['#e3ede9', 26, 68]} />
-        <SkyDome />
+        {/* Atmosphere comes from the map's EnvironmentDefinition — a cave
+            swaps the sky+haze for a closed dark look without new code. */}
+        {env.fog ? <fog attach="fog" args={[env.fog.color, env.fog.near, env.fog.far]} /> : null}
+        {env.skyDome ? <SkyDome /> : null}
+        <EnvironmentClear color={env.clearColor} />
         <InvalidateOnChange
-          token={`${avatarId}:${headwear}:${completedCount}:${String(interactive)}:${zoom}:${qualityTier}`}
+          token={`${avatarId}:${headwear}:${completedCount}:${String(interactive)}:${zoom}:${qualityTier}:${mapId}`}
         />
         <ModelContext.Provider value={CUBIC_MODELS}>
-          <Hub
-            avatarId={avatarId}
-            headwear={headwear}
-            questStatuses={questStatuses}
-            completedCount={completedCount}
-            interactive={interactive}
-            detailLevel={detailLevel}
-            onArrive={onArrive}
-            handleRef={handleRef}
-            suggestedQuestId={suggestedQuestId}
-          />
+          {/* Only the current map's scene mounts — the other side carries
+              zero mounted content and zero callbacks. `key` remounts the
+              scene so the walker restarts at the map's spawn anchor. */}
+          {mapId === 'map-cave' ? (
+            <CaveWorld
+              key="map-cave"
+              avatarId={avatarId}
+              headwear={headwear}
+              questStatuses={questStatuses}
+              interactive={interactive}
+              detailLevel={detailLevel}
+              suggestedQuestId={suggestedQuestId}
+              startAnchorId={startAnchorId}
+              environment={env}
+              onArrive={onArrive}
+              handleRef={handleRef}
+            />
+          ) : (
+            <Hub
+              key="map-town"
+              avatarId={avatarId}
+              headwear={headwear}
+              questStatuses={questStatuses}
+              completedCount={completedCount}
+              interactive={interactive}
+              detailLevel={detailLevel}
+              suggestedQuestId={suggestedQuestId}
+              startAnchorId={startAnchorId}
+              discoveries={discoveries}
+              onArrive={onArrive}
+              handleRef={handleRef}
+            />
+          )}
         </ModelContext.Provider>
       </Canvas>
     </div>

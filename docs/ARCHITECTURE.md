@@ -88,6 +88,20 @@ spawnAnchorId}`. Every anchor — and therefore every NPC, landmark, hotspot and
   the loaf to the shop shelf), school (answer by tapping the right picture). Steps reuse the
   existing `EncounterStep`/contextual-target model; adding an activity is content data
   (quest def + copy + icon → scene element/held item/consequence mappings).
+- **Maps** (`world/maps.ts`): `WorldMapDefinition {id, bounds, spawnAnchorId, environment}` —
+  the outdoor town (`map-town`) plus secondary scenes with a local coordinate system and their
+  own environment (`map-cave`). Only the current map's scene mounts (`WorldCanvas` keys
+  `Hub`/`CaveWorld` by map). Every anchor carries `mapId`; navigation edges never cross maps
+  (validated), so `findPath` can't wander across scenes. Travel between maps is **data**: an
+  anchor's `transitionId` → a `MapTransition {fromMap, fromAnchor, toMap, toAnchor,
+  discoveryId?}` row that `App.onArrive` resolves into `DISCOVER` (once — a persisted world
+  fact in `state.discoveries`) then `CHANGE_MAP`. Quests declare `mapId` so a secondary-map
+  quest never mounts or trails on the wrong map. Adding another interior is a data task:
+  map row + anchors + transition rows + optional scene component.
+- **Persistence — maps/discoveries**: `PersistedState` gained additive, tolerant fields
+  (`discoveries`, `mapId`, `mapAnchorId`) — no schema bump; old saves parse to town defaults.
+  `mapAnchorId` is the *spawn* on the active map (set only by `CHANGE_MAP`, not by walking),
+  so a reload replays the same map and a safe local spot.
 
 ## Budgets
 

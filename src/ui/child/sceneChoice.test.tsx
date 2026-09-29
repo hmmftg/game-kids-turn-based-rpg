@@ -230,7 +230,7 @@ describe('contextual targets (ContextInteraction)', () => {
   it('scene coverage is deterministic: held-item hints exist exactly for place-type steps', () => {
     for (const [iconId, item] of Object.entries(HELD_ITEM)) {
       expect(sceneElementFor(iconId as IconId)).not.toBeNull();
-      expect(['leaf', 'basket', 'kite', 'shell', 'bread']).toContain(item);
+      expect(['leaf', 'basket', 'kite', 'shell', 'bread', 'crystal']).toContain(item);
     }
   });
 });

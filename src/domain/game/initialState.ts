@@ -28,6 +28,9 @@ export function createFreshPersistedState(now = 0): PersistedState {
     audio: DEFAULT_AUDIO,
     qualityTier: 'medium',
     lastPlayedAt: now,
+    discoveries: [],
+    mapId: 'map-town',
+    mapAnchorId: 'anchor-square',
   };
 }
 
@@ -59,5 +62,8 @@ export function toPersistedState(state: GameState): PersistedState {
     audio: state.audio,
     qualityTier: state.qualityTier,
     lastPlayedAt: state.lastPlayedAt,
+    discoveries: state.discoveries,
+    mapId: state.mapId,
+    mapAnchorId: state.mapAnchorId,
   };
 }
