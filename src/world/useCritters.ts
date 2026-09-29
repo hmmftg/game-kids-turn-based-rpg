@@ -416,6 +416,26 @@ export function useCritters(enabled: boolean, detailLevel: DetailLevel): Critter
     return () => controller.setTimersEnabled(false);
   }, [enabled, detailLevel, getController]);
 
+  // Dev-only QA hook: lets measure/QA scripts read critter transforms without
+  // a production test hook or animation loop. Stripped from builds entirely.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as {
+      __worldCritterTransforms?: () => readonly (readonly [
+        string,
+        number,
+        number,
+        number,
+        number,
+      ])[];
+    };
+    w.__worldCritterTransforms = () =>
+      getController().critters.map((c) => [c.key, c.x, c.y, c.z, c.heading]);
+    return () => {
+      delete w.__worldCritterTransforms;
+    };
+  }, [getController]);
+
   // Views are built from module-level placements + the React-side moving
   // snapshot — no ref access during render.
   const views = useMemo<CritterView[]>(

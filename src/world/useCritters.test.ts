@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextSeed } from './critters.ts';
 import { createCritterController, type Controller } from './useCritters.ts';
 
 /**
@@ -133,6 +134,94 @@ describe('critter controller lifecycle', () => {
       const fishMoving = controller.critters.filter((c) => c.kind === 'fish' && c.moving);
       expect(fishMoving.length).toBeLessThanOrEqual(1);
       moveStepUntilIdle(controller);
+    }
+    controller.setTimersEnabled(false);
+  });
+
+  it('birds reject a ground perch another species is occupying', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const cat = controller.critters.find((c) => c.key === 'cat-0')!;
+    // cat-0's settled spot is ground-ne (2.0, -1.6) — park it there forever.
+    expect(cat.x).toBeCloseTo(2.0);
+    expect(cat.z).toBeCloseTo(-1.6);
+    const birds = controller.critters.filter((c) => c.kind === 'bird');
+    // Sweep seeds deterministically: for every possible pick a bird could
+    // make from this state, it must never target the cat's ground spot.
+    for (const bird of birds) {
+      for (let seed = 1; seed < 400; seed = nextSeed(seed)) {
+        bird.seed = seed;
+        controller.beginMove(bird);
+        expect(bird.spotId).not.toBe('ground-ne');
+        // A valid alternative must exist (the perch pool is large).
+        expect(bird.moving).toBe(true);
+        // Snap back deterministically for the next seed sweep.
+        bird.moving = false;
+        bird.x = bird.restX;
+        bird.y = bird.restY;
+        bird.z = bird.restZ;
+        bird.spotId = bird.restSpotId;
+      }
+    }
+    controller.setTimersEnabled(false);
+  });
+
+  it('two birds can never claim the same elevated perch', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const birds = controller.critters.filter((c) => c.kind === 'bird');
+    for (let seed = 1; seed < 400; seed = nextSeed(seed)) {
+      for (const bird of birds) {
+        bird.seed = seed;
+        controller.beginMove(bird);
+      }
+      const claims = birds.filter((b) => b.moving).map((b) => b.spotId);
+      // Settled spotIds + in-flight targets must all be distinct.
+      const allClaims = birds.map((b) => b.spotId);
+      expect(new Set(allClaims).size).toBe(allClaims.length);
+      const elevated = claims.filter((id) => id !== undefined && !id!.startsWith('ground'));
+      expect(new Set(elevated).size).toBe(elevated.length);
+      for (const bird of birds) {
+        bird.moving = false;
+        bird.x = bird.restX;
+        bird.y = bird.restY;
+        bird.z = bird.restZ;
+        bird.spotId = bird.restSpotId;
+      }
+    }
+    controller.setTimersEnabled(false);
+  });
+
+  it('a bird disabled mid-flight keeps its settled perch reserved', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    vi.advanceTimersByTime(60_000);
+    const bird = controller.critters.find((c) => c.kind === 'bird' && c.moving) ?? null;
+    expect(bird).not.toBeNull();
+    if (!bird) return;
+    for (let i = 0; i < 3; i++) controller.step(0.05);
+    const settledSpot = bird.restSpotId;
+    expect(settledSpot).toBeDefined();
+    controller.setTimersEnabled(false);
+    // The reservation the snap-back restored is what other critters see.
+    expect(bird.spotId).toBe(settledSpot);
+    // Re-enable and sweep seeds: no other bird may target that perch.
+    controller.setTimersEnabled(true);
+    const others = controller.critters.filter((c) => c.kind === 'bird' && c !== bird);
+    for (const other of others) {
+      for (let seed = 1; seed < 400; seed = nextSeed(seed)) {
+        other.seed = seed;
+        controller.beginMove(other);
+        expect(other.spotId).not.toBe(settledSpot);
+        other.moving = false;
+        other.x = other.restX;
+        other.y = other.restY;
+        other.z = other.restZ;
+        other.spotId = other.restSpotId;
+      }
     }
     controller.setTimersEnabled(false);
   });
