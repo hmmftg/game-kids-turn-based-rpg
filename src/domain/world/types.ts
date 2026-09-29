@@ -51,10 +51,11 @@ export interface NpcScheduleSpot {
 
 export interface NpcSchedule {
   /**
-   * Ordered standpoints the NPC cycles through. Resolution is *area
-   * activation*, not a clock: when the child enters the area a spot belongs
-   * to, the NPC is found there — a deterministic event-driven transition,
-   * never a per-frame simulation.
+   * Ordered standpoints the NPC cycles through as world time passes. The
+   * current spot is a pure function of `worldTime` (a coarse world clock —
+   * e.g. the count of area visits), never of where the player happens to
+   * be, and never a per-frame simulation: `resolveNpcAnchor(npc, worldTime)`
+   * returns `spots[worldTime % spots.length]`.
    */
   readonly spots: readonly NpcScheduleSpot[];
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { NpcId } from '../domain/game/types.ts';
+import type { AnchorId, NpcId } from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS, questChain } from '../domain/quests/definitions.ts';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
@@ -89,12 +89,12 @@ describe('NPC registry', () => {
     }));
     const visible = visibleAreaIds('area-town');
     const rendered = synthetic.filter((npc) =>
-      visible.includes(areaForAnchor(resolveNpcAnchor(npc, 'area-town'))),
+      visible.includes(areaForAnchor(resolveNpcAnchor(npc, 0))),
     );
     expect(rendered).toHaveLength(0);
     // The real cast renders the town + adjacent subset only.
     const real = NPC_DEFINITIONS.filter((npc) =>
-      visible.includes(areaForAnchor(resolveNpcAnchor(npc, 'area-town'))),
+      visible.includes(areaForAnchor(resolveNpcAnchor(npc, 0))),
     );
     expect(real.length).toBeGreaterThan(0);
     expect(real.length).toBeLessThan(NPC_DEFINITIONS.length);
@@ -109,20 +109,40 @@ describe('area activation and schedules', () => {
     expect(visibleAreaIds('area-park')).toEqual(['area-park', 'area-fountain']);
   });
 
-  it('the scheduled fisher moves between two locations deterministically', () => {
+  it('the scheduled fisher follows world time, not the player location', () => {
     const fisher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-fisher')!;
-    // In the market the fisher queues at the bakery; elsewhere he is home.
-    expect(resolveNpcAnchor(fisher, 'area-market')).toBe('anchor-bakery');
-    expect(resolveNpcAnchor(fisher, 'area-river')).toBe('anchor-river');
-    expect(resolveNpcAnchor(fisher, 'area-town')).toBe('anchor-bakery');
-    expect(resolveNpcAnchor(fisher, 'area-park')).toBe('anchor-river');
+    // The spot index is spots[worldTime % 2]: river → bakery → river …,
+    // identical regardless of which area the player stands in.
+    expect(resolveNpcAnchor(fisher, 0)).toBe('anchor-river');
+    expect(resolveNpcAnchor(fisher, 1)).toBe('anchor-bakery');
+    expect(resolveNpcAnchor(fisher, 2)).toBe('anchor-river');
+    expect(resolveNpcAnchor(fisher, 3)).toBe('anchor-bakery');
+    expect(resolveNpcAnchor(fisher, 42)).toBe('anchor-river');
   });
 
   it('idle NPCs never move — their standpoint is data, not simulation', () => {
     const teacher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-teacher')!;
-    for (const area of areaIds) {
-      expect(resolveNpcAnchor(teacher, area)).toBe('anchor-school');
+    for (const tick of [0, 1, 7, 100]) {
+      expect(resolveNpcAnchor(teacher, tick)).toBe('anchor-school');
     }
+  });
+
+  it('quest hotspots only exist inside the visible area set', () => {
+    // Interaction cost must scale with visible content: a quest whose anchor
+    // sits outside active + adjacent areas mounts no Hotspot at all. From the
+    // park, no quest anchor is visible — zero hotspots mounted.
+    const farVisible = visibleAreaIds('area-park');
+    const mountedFar = QUEST_DEFINITIONS.filter((quest) =>
+      farVisible.includes(getAnchor(quest.anchorId as AnchorId).areaId),
+    );
+    expect(mountedFar).toHaveLength(0);
+    // Around the town every quest hotspot is reachable — the visible set
+    // still covers home, market and garden.
+    const townVisible = visibleAreaIds('area-town');
+    const mountedTown = QUEST_DEFINITIONS.filter((quest) =>
+      townVisible.includes(getAnchor(quest.anchorId as AnchorId).areaId),
+    );
+    expect(mountedTown.length).toBe(QUEST_DEFINITIONS.length);
   });
 });
 
@@ -219,10 +239,12 @@ describe('render budget shape', () => {
     // One-hop visibility bounds the active NPC set regardless of total count.
     for (const area of areaIds) {
       const visible = visibleAreaIds(area);
-      const active = NPC_DEFINITIONS.filter((npc) =>
-        visible.includes(areaForAnchor(resolveNpcAnchor(npc, area))),
-      );
-      expect(active.length).toBeLessThanOrEqual(8);
+      for (const tick of [0, 1, 2, 3]) {
+        const active = NPC_DEFINITIONS.filter((npc) =>
+          visible.includes(areaForAnchor(resolveNpcAnchor(npc, tick))),
+        );
+        expect(active.length).toBeLessThanOrEqual(8);
+      }
     }
   });
 });

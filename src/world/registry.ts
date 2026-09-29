@@ -148,7 +148,7 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     anchorId: 'anchor-river',
     homeAreaId: 'area-river',
     // The fisher splits the day between the river and the bakery queue —
-    // a deterministic two-spot schedule resolved by area activation.
+    // a deterministic two-spot schedule driven by world time.
     schedule: {
       spots: [
         { anchorId: 'anchor-river', activity: 'working' },
@@ -229,25 +229,22 @@ export function visibleAreaIds(activeAreaId: AreaId): readonly AreaId[] {
 }
 
 /**
- * Where a scheduled NPC currently stands — a deterministic function of the
- * active area, not of elapsed frames. The NPC is found at the spot inside the
- * active area, else the first spot in a visible area, else home. Idle NPCs
- * (no schedule) always stand at their home anchor.
+ * Where a scheduled NPC stands at `worldTime` — a pure function of a coarse
+ * world clock (the caller's tick, e.g. area-visit count), not of the
+ * player's location and not of elapsed frames. Idle NPCs (no schedule)
+ * always stand at their home anchor. Area activation decides only whether
+ * the resolved spot is mounted, never which spot is current.
  */
-export function resolveNpcAnchor(npc: NpcDefinition, activeAreaId: AreaId): AnchorId {
-  if (!npc.schedule) return npc.anchorId;
-  const visible = visibleAreaIds(activeAreaId);
-  const inActive = npc.schedule.spots.find((spot) => areaForAnchor(spot.anchorId) === activeAreaId);
-  if (inActive) return inActive.anchorId;
-  const inVisible = npc.schedule.spots.find((spot) =>
-    visible.includes(areaForAnchor(spot.anchorId)),
-  );
-  return inVisible?.anchorId ?? npc.anchorId;
+export function resolveNpcAnchor(npc: NpcDefinition, worldTime: number): AnchorId {
+  const spots = npc.schedule?.spots;
+  if (!spots || spots.length === 0) return npc.anchorId;
+  const tick = Math.max(0, Math.floor(worldTime));
+  return spots[tick % spots.length]?.anchorId ?? npc.anchorId;
 }
 
 /** Stable activity label for an NPC's current spot (schedule-aware). */
-export function resolveNpcActivity(npc: NpcDefinition, activeAreaId: AreaId): NpcSimState {
-  const anchorId = resolveNpcAnchor(npc, activeAreaId);
+export function resolveNpcActivity(npc: NpcDefinition, worldTime: number): NpcSimState {
+  const anchorId = resolveNpcAnchor(npc, worldTime);
   const spot = npc.schedule?.spots.find((entry) => entry.anchorId === anchorId);
   return spot?.activity ?? 'at-home';
 }

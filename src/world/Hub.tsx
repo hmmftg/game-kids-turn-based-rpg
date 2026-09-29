@@ -367,6 +367,17 @@ export function Hub({
   // can grow without growing per-frame work.
   const activeAreaId: AreaId = areaForAnchor(walker.at);
   const visibleAreas = visibleAreaIds(activeAreaId);
+  // Coarse world clock: each arrival ticks once, so scheduled NPCs advance
+  // through their spots as the world is travelled — event-driven, never a
+  // per-frame clock, and never a function of where the player stands.
+  const [worldClock, setWorldClock] = useState<{ at: AnchorId; tick: number }>({
+    at: walker.at,
+    tick: 0,
+  });
+  if (worldClock.at !== walker.at) {
+    setWorldClock({ at: walker.at, tick: worldClock.tick + 1 });
+  }
+  const worldTime = worldClock.tick;
   const inVisibleArea = (x: number, z: number) => {
     const areaId = areaAt(x, z);
     return areaId !== null && visibleAreas.includes(areaId);
@@ -449,8 +460,12 @@ export function Hub({
         />
       ))}
 
+      {/* Quest hotspots follow the same activation rule as NPCs: outside the
+          visible areas nothing mounts — no Hotspot subtree, no useFrame pulse —
+          so interaction cost scales with visible content, not quest count. */}
       {QUEST_DEFINITIONS.map((quest) => {
         const anchor = getAnchor(quest.anchorId as AnchorId);
+        if (!visibleAreas.includes(anchor.areaId)) return null;
         const status = questStatuses[quest.id];
         const active = interactive && status !== 'locked';
         const suggested = quest.id === suggestedQuestId && status !== 'locked';
@@ -464,7 +479,7 @@ export function Hub({
               label={`hotspot-${quest.id}`}
               onSelect={() => walkHere(anchor.id)}
             />
-            {active && visibleAreas.includes(anchor.areaId) ? (
+            {active ? (
               <QuestMarker
                 x={anchor.x}
                 z={anchor.z}
@@ -483,10 +498,10 @@ export function Hub({
       {/* NPCs are data-driven: one row in NPC_DEFINITIONS + one row in
           NPC_LOOKS is a whole character. Only NPCs currently standing in a
           visible area mount a figure — schedules resolve standpoints as a
-          deterministic function of the active area, so idle NPCs cost
+          deterministic function of world time, so idle NPCs cost
           nothing and `frameloop="demand"` is untouched. */}
       {NPC_DEFINITIONS.map((npc) => {
-        const anchor = getAnchor(resolveNpcAnchor(npc, activeAreaId));
+        const anchor = getAnchor(resolveNpcAnchor(npc, worldTime));
         if (!visibleAreas.includes(anchor.areaId)) return null;
         const npcX = anchor.x + 0.9;
         const npcZ = anchor.z - 0.4;

@@ -193,6 +193,18 @@ function validateSource(
   }
 }
 
+/**
+ * Reading-budget ceilings for pre-readers: more story must never mean more
+ * reading burden. One short idea per line, and choice labels short enough to
+ * glance-and-tap. `parentNoteFa` is exempt — it is parent-facing copy.
+ */
+const MAX_DIALOGUE_LINE_WORDS = 9;
+const MAX_CHOICE_LABEL_WORDS = 5;
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 function checkText(where: string, text: string, issues: ValidationIssue[]): void {
   for (const term of FORBIDDEN_CHILD_TERMS) {
     if (text.includes(term)) {
@@ -213,6 +225,23 @@ function checkText(where: string, text: string, issues: ValidationIssue[]): void
         message: `Child-facing copy looks like a quotation or attribution ("${marker.trim()}").`,
       });
     }
+  }
+}
+
+function checkLength(
+  where: string,
+  text: string,
+  maxWords: number,
+  issues: ValidationIssue[],
+): void {
+  const words = wordCount(text);
+  if (words > maxWords) {
+    issues.push({
+      severity: 'error',
+      code: 'copy-too-long',
+      where,
+      message: `Line is ${words} words; child-facing beats must stay ≤${maxWords} words.`,
+    });
   }
 }
 
@@ -558,6 +587,7 @@ export function validateContent(
       });
     }
     checkText(`${node.id}.textFa`, node.textFa, issues);
+    checkLength(`${node.id}.textFa`, node.textFa, MAX_DIALOGUE_LINE_WORDS, issues);
     for (const [index, line] of (node.lines ?? []).entries()) {
       if (!npcIds.has(line.speakerId)) {
         issues.push({
@@ -568,6 +598,7 @@ export function validateContent(
         });
       }
       checkText(`${node.id}.lines[${index}]`, line.textFa, issues);
+      checkLength(`${node.id}.lines[${index}]`, line.textFa, MAX_DIALOGUE_LINE_WORDS, issues);
     }
     const choiceIds = new Set<string>();
     for (const choice of node.choices ?? []) {
@@ -589,6 +620,7 @@ export function validateContent(
         });
       }
       checkText(`${node.id}.${choice.id}`, choice.labelFa, issues);
+      checkLength(`${node.id}.${choice.id}`, choice.labelFa, MAX_CHOICE_LABEL_WORDS, issues);
       if (!nodeIds.has(choice.nextNodeId)) {
         issues.push({
           severity: 'error',
