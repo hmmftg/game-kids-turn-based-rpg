@@ -55,7 +55,24 @@ describe('quest prerequisites', () => {
   it('suggests the next quest in order and nothing once finished', () => {
     expect(nextSuggestedQuest(withCompleted())).toBe('quest-greeting');
     expect(nextSuggestedQuest(withCompleted('quest-greeting'))).toBe('quest-helping');
-    const all = withCompleted('quest-greeting', 'quest-helping', 'quest-tidying', 'quest-finale');
+    const firstArc = withCompleted(
+      'quest-greeting',
+      'quest-helping',
+      'quest-tidying',
+      'quest-finale',
+    );
+    // The expanded world opens after the finale: park first.
+    expect(nextSuggestedQuest(firstArc)).toBe('quest-park-kite');
+    const all = withCompleted(
+      'quest-greeting',
+      'quest-helping',
+      'quest-tidying',
+      'quest-finale',
+      'quest-park-kite',
+      'quest-river-shell',
+      'quest-bread-errand',
+      'quest-school-answer',
+    );
     expect(nextSuggestedQuest(all)).toBeNull();
   });
 });

@@ -224,6 +224,63 @@ describe('gameReducer — quests, checkpoints and autosave', () => {
     expect(state.quests['quest-finale'].status).toBe('completed');
   });
 
+  it('keeps the area quests locked until the finale is done, then completes all four', () => {
+    let state = atHub();
+    for (const questId of [
+      'quest-park-kite',
+      'quest-river-shell',
+      'quest-bread-errand',
+      'quest-school-answer',
+    ] as const) {
+      // Nothing in the expanded world is startable before the story reaches it.
+      expect(gameReducer(state, { type: 'START_QUEST', questId }, NOW)).toBe(state);
+    }
+    for (const questId of [
+      'quest-greeting',
+      'quest-helping',
+      'quest-tidying',
+      'quest-finale',
+    ] as const) {
+      state = playQuest(state, questId);
+    }
+    // Each new area now offers its concrete interaction to completion.
+    for (const [questId, sticker] of [
+      ['quest-park-kite', 'sticker-kite'],
+      ['quest-river-shell', 'sticker-shell'],
+      ['quest-bread-errand', 'sticker-bread'],
+      ['quest-school-answer', 'sticker-school'],
+    ] as const) {
+      state = playQuest(state, questId);
+      expect(state.quests[questId].status).toBe('completed');
+      expect(state.stickers).toContain(sticker);
+    }
+    expect(state.stickers).toHaveLength(8);
+  });
+
+  it('a wrong tap on a new area quest re-demonstrates, never fails', () => {
+    let state = atHub();
+    for (const questId of [
+      'quest-greeting',
+      'quest-helping',
+      'quest-tidying',
+      'quest-finale',
+    ] as const) {
+      state = playQuest(state, questId);
+    }
+    state = gameReducer(state, { type: 'START_QUEST', questId: 'quest-park-kite' }, NOW);
+    state = gameReducer(state, { type: 'ADVANCE_PHASE' }, NOW);
+    state = gameReducer(state, { type: 'ADVANCE_PHASE' }, NOW);
+    state = gameReducer(
+      state,
+      { type: 'CHOOSE', iconId: 'icon-leave-ground', correct: false },
+      NOW,
+    );
+    expect(state.encounter?.phase).toBe('worldResponse');
+    state = gameReducer(state, { type: 'ADVANCE_PHASE' }, NOW);
+    expect(state.encounter?.phase).toBe('demonstrate');
+    expect(state.mode).toBe('encounter');
+  });
+
   it('never autosaves mid-encounter', () => {
     const hub = atHub();
     const started = gameReducer(hub, { type: 'START_QUEST', questId: 'quest-greeting' }, NOW);

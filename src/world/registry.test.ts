@@ -135,14 +135,21 @@ describe('area activation and schedules', () => {
     const mountedFar = QUEST_DEFINITIONS.filter((quest) =>
       farVisible.includes(getAnchor(quest.anchorId as AnchorId).areaId),
     );
-    expect(mountedFar).toHaveLength(0);
-    // Around the town every quest hotspot is reachable — the visible set
-    // still covers home, market and garden.
+    // Only the park quest itself is mounted there.
+    expect(mountedFar.map((quest) => quest.id)).toEqual(['quest-park-kite']);
+    // Around the town only quests anchored in town + adjacent areas mount —
+    // the river and school quests stay data-only until the child walks over.
     const townVisible = visibleAreaIds('area-town');
     const mountedTown = QUEST_DEFINITIONS.filter((quest) =>
       townVisible.includes(getAnchor(quest.anchorId as AnchorId).areaId),
     );
-    expect(mountedTown.length).toBe(QUEST_DEFINITIONS.length);
+    expect(mountedTown.map((quest) => quest.id)).toEqual([
+      'quest-greeting',
+      'quest-helping',
+      'quest-tidying',
+      'quest-finale',
+      'quest-bread-errand',
+    ]);
   });
 });
 
@@ -229,7 +236,24 @@ describe('quest references and chains', () => {
       'quest-helping',
       'quest-tidying',
       'quest-finale',
+      'quest-park-kite',
+      'quest-river-shell',
+      'quest-bread-errand',
+      'quest-school-answer',
     ]);
+  });
+
+  it('every area with a major identity has a playable quest anchored in it', () => {
+    // The expanded areas are explorable through content, not decoration.
+    const byId = new Map(QUEST_DEFINITIONS.map((quest) => [quest.id, quest]));
+    expect(byId.get('quest-park-kite')?.areaId).toBe('area-park');
+    expect(byId.get('quest-river-shell')?.areaId).toBe('area-river');
+    expect(byId.get('quest-bread-errand')?.areaId).toBe('area-market');
+    expect(byId.get('quest-school-answer')?.areaId).toBe('area-school');
+    for (const quest of QUEST_DEFINITIONS) {
+      const anchor = getAnchor(quest.anchorId as AnchorId);
+      expect(anchor.areaId, quest.id).toBe(quest.areaId);
+    }
   });
 });
 

@@ -51,6 +51,10 @@ export const QUEST_IDS = [
   'quest-helping',
   'quest-tidying',
   'quest-finale',
+  'quest-park-kite',
+  'quest-river-shell',
+  'quest-bread-errand',
+  'quest-school-answer',
 ] as const;
 export type QuestId = (typeof QUEST_IDS)[number];
 

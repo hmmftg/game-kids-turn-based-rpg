@@ -26,6 +26,10 @@ export const QUEST_EMOJI: Readonly<Record<QuestId, string>> = {
   'quest-helping': '🧺',
   'quest-tidying': '🧹',
   'quest-finale': '🎉',
+  'quest-park-kite': '🪁',
+  'quest-river-shell': '🐚',
+  'quest-bread-errand': '🍞',
+  'quest-school-answer': '📚',
 };
 
 /** Persian name per avatar preset; the SVG portrait carries the identity. */

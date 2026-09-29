@@ -88,8 +88,8 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     id: 'baker-intro',
     npcId: 'npc-baker',
     textFa: 'نان تازه از تنور رسید.',
-    iconId: 'icon-smile',
-    offersQuestId: null,
+    iconId: 'icon-take-bread',
+    offersQuestId: 'quest-bread-errand',
     lines: [
       { speakerId: 'npc-baker', textFa: 'نان تازه از تنور رسید.', emotion: 'happy' },
       {
@@ -106,7 +106,7 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     npcId: 'npc-teacher',
     textFa: 'معلم کلاس امروز چیز تازه دارد.',
     iconId: 'icon-watch',
-    offersQuestId: null,
+    offersQuestId: 'quest-school-answer',
     lines: [
       {
         speakerId: 'npc-teacher',
@@ -207,8 +207,8 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     id: 'parkkeeper-intro',
     npcId: 'npc-park-keeper',
     textFa: 'نگهبان پارک گل‌ها را آب می‌دهد.',
-    iconId: 'icon-pick-up',
-    offersQuestId: null,
+    iconId: 'icon-pick-kite',
+    offersQuestId: 'quest-park-kite',
     lines: [
       {
         speakerId: 'npc-park-keeper',
@@ -236,8 +236,8 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     id: 'fisher-intro',
     npcId: 'npc-fisher',
     textFa: 'ماهیگیر کنار رودخانه نشسته.',
-    iconId: 'icon-watch',
-    offersQuestId: null,
+    iconId: 'icon-spot-fish',
+    offersQuestId: 'quest-river-shell',
     lines: [
       { speakerId: 'npc-fisher', textFa: 'ماهیگیر کنار رودخانه نشسته.', emotion: 'calm' },
       {

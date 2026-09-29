@@ -32,15 +32,26 @@ export type SceneElement =
   | 'floor'
   | 'leaf'
   | 'bin'
-  | 'water';
+  | 'water'
+  | 'kite'
+  | 'fish'
+  | 'shell'
+  | 'bread'
+  | 'book'
+  | 'ball';
 
-/** The object a step implies the child is already holding (displayed at the
+/** The thing a step implies the child is already holding (displayed at the
  *  hand marker on the strip's start edge). Keyed by the *correct* icon. */
-export const HELD_ITEM: Partial<Record<IconId, 'leaf' | 'basket'>> = {
+export type HeldItem = 'leaf' | 'basket' | 'kite' | 'shell' | 'bread';
+
+export const HELD_ITEM: Partial<Record<IconId, HeldItem>> = {
   'icon-place-basket': 'basket',
   'icon-drop-basket': 'basket',
   'icon-basket-bin': 'leaf',
   'icon-leave-ground': 'leaf',
+  'icon-give-kite': 'kite',
+  'icon-give-shell': 'shell',
+  'icon-place-bread': 'bread',
 };
 
 const stroke = {
@@ -159,10 +170,79 @@ function renderElement(element: SceneElement) {
           {GROUND_LINE}
         </>
       );
+    case 'kite':
+      // a fallen kite — diamond body, little tail
+      return (
+        <>
+          <path d="M24 12l9 10-9 12-9-12z" {...stroke} />
+          <path d="M24 34q2 4 0 8m0-8q-3 2-5 5" {...stroke} />
+          {GROUND_LINE}
+        </>
+      );
+    case 'fish':
+      // a little fish in the water
+      return (
+        <>
+          <path d="M12 26q6-7 13-7t11 7q-5 7-11 7t-13-7z" {...stroke} />
+          <circle cx="18" cy="25" r="1.4" fill="currentColor" />
+          <path d="M36 26l5-4v8z" {...stroke} />
+          <path d="M10 40q7-4 14-1t14 0" {...stroke} opacity={0.5} />
+        </>
+      );
+    case 'shell':
+      // a scallop shell on the bank
+      return (
+        <>
+          <path d="M14 38a10 10 0 0 1 20 0z" {...stroke} />
+          <path d="M18 38l2-8M24 38v-9M30 38l-2-8" {...stroke} />
+          {GROUND_LINE}
+        </>
+      );
+    case 'bread':
+      // a warm loaf
+      return (
+        <>
+          <ellipse cx="24" cy="30" rx="11" ry="6" {...stroke} />
+          <path d="M18 27q2-2 4 0M24 26q2-2 4 0" {...stroke} />
+          {GROUND_LINE}
+        </>
+      );
+    case 'book':
+      // an open picture card
+      return (
+        <>
+          <path d="M10 16q7-3 14 0v20q-7-3-14 0z" {...stroke} />
+          <path d="M38 16q-7-3-14 0v20q7-3 14 0z" {...stroke} />
+        </>
+      );
+    case 'ball':
+      return (
+        <>
+          <circle cx="24" cy="30" r="10" {...stroke} />
+          <path d="M14 30h20M24 20v20" {...stroke} opacity={0.6} />
+          {GROUND_LINE}
+        </>
+      );
   }
 }
 
-function HeldMarker({ item }: { readonly item: 'leaf' | 'basket' }) {
+/** Small glyph carried in the hand marker — mirrors the scene element. */
+function heldShape(item: HeldItem) {
+  switch (item) {
+    case 'leaf':
+      return <ellipse cx="33" cy="12" rx="5" ry="2.8" {...stroke} />;
+    case 'basket':
+      return <path d="M28 8h10l-1.5 8h-7z" {...stroke} />;
+    case 'kite':
+      return <path d="M33 5l5 5-5 7-5-7z" {...stroke} />;
+    case 'shell':
+      return <path d="M28 15a5 5 0 0 1 10 0z" {...stroke} />;
+    case 'bread':
+      return <ellipse cx="33" cy="12" rx="6" ry="3.4" {...stroke} />;
+  }
+}
+
+function HeldMarker({ item }: { readonly item: HeldItem }) {
   return (
     <span className="scene-held" aria-hidden="true" data-held={item}>
       <svg width="44" height="44" viewBox="0 0 48 48" focusable="false" role="presentation">
@@ -170,11 +250,7 @@ function HeldMarker({ item }: { readonly item: 'leaf' | 'basket' }) {
           d="M16 30a3 3 0 0 1 3-3v-3a3 3 0 0 1 6 0v-1a3 3 0 0 1 6 0v3a3 3 0 0 1 3 3v6a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7z"
           {...stroke}
         />
-        {item === 'leaf' ? (
-          <ellipse cx="33" cy="12" rx="5" ry="2.8" {...stroke} />
-        ) : (
-          <path d="M28 8h10l-1.5 8h-7z" {...stroke} />
-        )}
+        {heldShape(item)}
       </svg>
     </span>
   );
@@ -205,6 +281,9 @@ function consequenceScene(iconId: IconId) {
   switch (iconId) {
     case 'icon-pick-up':
     case 'icon-help-carry':
+    case 'icon-pick-kite':
+    case 'icon-collect-shell':
+    case 'icon-take-bread':
       // the object lands in the hand
       return (
         <>
@@ -215,9 +294,71 @@ function consequenceScene(iconId: IconId) {
           <g className="scene-exec-lift">
             {iconId === 'icon-pick-up' ? (
               <ellipse cx="33" cy="12" rx="5" ry="2.8" {...stroke} />
+            ) : iconId === 'icon-pick-kite' ? (
+              <path d="M33 5l5 5-5 7-5-7z" {...stroke} />
+            ) : iconId === 'icon-collect-shell' ? (
+              <path d="M28 15a5 5 0 0 1 10 0z" {...stroke} />
+            ) : iconId === 'icon-take-bread' ? (
+              <ellipse cx="33" cy="12" rx="6" ry="3.4" {...stroke} />
             ) : (
               <path d="M28 8h10l-1.5 8h-7z" {...stroke} />
             )}
+          </g>
+        </>
+      );
+    case 'icon-spot-fish':
+      // the fish leaps from the river
+      return (
+        <>
+          <path d="M8 38q8-5 16-1t16 0" {...stroke} opacity={0.5} />
+          <g className="scene-exec-pop">
+            <path d="M14 22q5-6 11-6t9 6q-4 6-9 6t-11-6z" {...stroke} />
+            <circle cx="19" cy="21" r="1.2" fill="currentColor" />
+            <path d="M34 22l4-3v6z" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-give-shell':
+      // the shell lands in the fisher's basket
+      return (
+        <>
+          <path d="M16 26h16l-2 14H18z" {...stroke} />
+          <path d="M14 26h20" {...stroke} strokeWidth={4.4} />
+          <g className="scene-exec-drop">
+            <path d="M19 20a5 5 0 0 1 10 0z" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-place-bread':
+      // the loaf rests on the shop shelf
+      return (
+        <>
+          <path d="M12 30h24" {...stroke} strokeWidth={4.4} />
+          <path d="M16 30v10M32 30v10" {...stroke} />
+          <g className="scene-exec-drop">
+            <ellipse cx="24" cy="20" rx="9" ry="4.6" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-tap-book':
+      // the picture card glows — the right answer
+      return (
+        <>
+          <path d="M12 16q6-2 12 0v18q-6-2-12 0z" {...stroke} />
+          <path d="M36 16q-6-2-12 0v18q6-2 12 0z" {...stroke} />
+          <g className="scene-exec-pop">
+            <path d="M40 8l2-3M42 12l4-1M8 8l-2-3M6 12l-4-1" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-tap-ball':
+      // the ball pops — the right answer
+      return (
+        <>
+          <circle cx="24" cy="26" r="11" {...stroke} />
+          <path d="M13 26h22M24 15v22" {...stroke} opacity={0.6} />
+          <g className="scene-exec-pop">
+            <path d="M38 12l2-3M10 12l-2-3" {...stroke} />
           </g>
         </>
       );
@@ -341,7 +482,7 @@ export function SceneChoice({
   onSelect,
 }: {
   readonly objects: readonly SceneObject[];
-  readonly held?: 'leaf' | 'basket' | undefined;
+  readonly held?: HeldItem | undefined;
   readonly onSelect: (iconId: IconId) => void;
 }) {
   if (objects.length === 0) return null;

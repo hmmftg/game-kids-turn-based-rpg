@@ -1,6 +1,6 @@
 import type { IconId, QuestId } from '../../domain/game/types.ts';
 import { getQuestStep } from '../../domain/quests/definitions.ts';
-import { HELD_ITEM, type SceneElement } from './SceneChoice.tsx';
+import { HELD_ITEM, type HeldItem, type SceneElement } from './SceneChoice.tsx';
 
 /**
  * ContextInteraction — the pure interaction model behind the scene layer.
@@ -42,7 +42,7 @@ export interface SceneObject {
 export interface ContextInteraction {
   readonly phase: ScenePhase;
   /** What the child visibly holds on place-type steps. */
-  readonly held: 'leaf' | 'basket' | null;
+  readonly held: HeldItem | null;
   readonly objects: readonly SceneObject[];
 }
 
@@ -76,6 +76,24 @@ export function sceneElementFor(iconId: IconId): SceneElement | null {
       return 'water';
     case 'icon-skip':
       return 'path-forward';
+    case 'icon-pick-kite':
+      return 'kite';
+    case 'icon-give-kite':
+      return 'person';
+    case 'icon-spot-fish':
+      return 'fish';
+    case 'icon-collect-shell':
+      return 'shell';
+    case 'icon-give-shell':
+      return 'basket';
+    case 'icon-take-bread':
+      return 'bread';
+    case 'icon-place-bread':
+      return 'shelf';
+    case 'icon-tap-book':
+      return 'book';
+    case 'icon-tap-ball':
+      return 'ball';
     default:
       return null;
   }
@@ -87,10 +105,13 @@ function sceneRoleFor(iconId: IconId): SceneRole {
     case 'icon-drop-basket':
     case 'icon-basket-bin':
     case 'icon-leave-ground':
+    case 'icon-give-shell':
+    case 'icon-place-bread':
       return 'destination';
     case 'icon-greet':
     case 'icon-smile':
     case 'icon-watch':
+    case 'icon-give-kite':
       return 'actor';
     case 'icon-wave-away':
     case 'icon-turn-back':

@@ -168,6 +168,103 @@ function renderGlyph(iconId: IconId) {
           <path className="glyph-cue" d="M24 12v10m-4-4l4 4 4-4" {...stroke} />
         </>
       );
+    case 'icon-pick-kite':
+      // hand lifts the fallen kite
+      return (
+        <>
+          <g className="glyph-hand">
+            <g transform="translate(2 -6)">{HAND}</g>
+          </g>
+          <path className="glyph-object" d="M30 24l6 6-6 8-6-8z" {...stroke} />
+          {GROUND}
+          {ARROW_UP}
+        </>
+      );
+    case 'icon-give-kite':
+      // the kite goes to the friend
+      return (
+        <>
+          {FACE}
+          <g className="glyph-object">
+            <path d="M10 34l5 5-5 6-5-6z" {...stroke} />
+          </g>
+          <path className="glyph-cue" d="M14 26q10-2 18 6" {...stroke} strokeDasharray="3 3" />
+        </>
+      );
+    case 'icon-spot-fish':
+      // eye watching the fish in the river
+      return (
+        <>
+          <path d="M8 18s6-8 16-8 16 8 16 8-6 8-16 8-16-8-16-8z" {...stroke} />
+          <circle cx="24" cy="18" r="4" {...stroke} />
+          <path className="glyph-object" d="M16 36q4-4 9-4t8 4q-3.5 4-8 4t-9-4z" {...stroke} />
+        </>
+      );
+    case 'icon-collect-shell':
+      // hand picks the shell off the bank
+      return (
+        <>
+          <g className="glyph-hand">
+            <g transform="translate(2 -6)">{HAND}</g>
+          </g>
+          <path className="glyph-object" d="M25 36a5 5 0 0 1 10 0z" {...stroke} />
+          {GROUND}
+          {ARROW_UP}
+        </>
+      );
+    case 'icon-give-shell':
+      // the shell lands in the basket
+      return (
+        <>
+          {BASKET}
+          <g className="glyph-object">
+            <path d="M19 16a5 5 0 0 1 10 0z" {...stroke} />
+          </g>
+          {ARROW_DOWN}
+        </>
+      );
+    case 'icon-take-bread':
+      // hand lifts the warm loaf
+      return (
+        <>
+          <g className="glyph-hand">
+            <g transform="translate(2 -6)">{HAND}</g>
+          </g>
+          <ellipse className="glyph-object" cx="30" cy="34" rx="7" ry="4" {...stroke} />
+          {GROUND}
+          {ARROW_UP}
+        </>
+      );
+    case 'icon-place-bread':
+      // the loaf goes down onto the shelf
+      return (
+        <>
+          <path d="M12 34h24" {...stroke} strokeWidth={4.4} />
+          <path d="M16 34v7M32 34v7" {...stroke} />
+          <g className="glyph-object">
+            <ellipse cx="24" cy="24" rx="7" ry="4" {...stroke} />
+          </g>
+          {ARROW_DOWN}
+        </>
+      );
+    case 'icon-tap-book':
+      // the finger taps the picture card
+      return (
+        <>
+          <path d="M12 14q6-2 12 0v18q-6-2-12 0z" {...stroke} />
+          <path d="M36 14q-6-2-12 0v18q6-2 12 0z" {...stroke} />
+          <path className="glyph-cue" d="M38 30l6-5-1 8" {...stroke} />
+        </>
+      );
+    case 'icon-tap-ball':
+      // the finger taps the ball
+      return (
+        <>
+          <circle cx="22" cy="26" r="10" {...stroke} />
+          <path d="M12 26h20M22 16v20" {...stroke} opacity={0.6} />
+          <path className="glyph-cue" d="M38 20l6-4-1 8" {...stroke} />
+        </>
+      );
     case 'icon-greet':
       // face with a raised waving hand
       return (
