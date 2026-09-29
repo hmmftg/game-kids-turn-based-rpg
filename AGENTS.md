@@ -169,3 +169,27 @@ npx playwright test   # golden-path e2e (landscape-mobile project)
 - `*.tsbuildinfo` is gitignored but historically tracked — do not commit changes to it (`git checkout origin/main -- <file>` if a build dirties the diff). Prefer `git rm --cached` cleanup over repeated churn.
 - E2e selectors use `data-testid`; keep them stable and add them for new child-facing controls.
 - Keep PRs scoped: acceptance-style work changes only what evidence shows is broken.
+
+---
+
+# 9. Contextual Interaction Rules (PR #19 contract)
+
+The child's interaction language is **the physical thing**, never an action icon. Full contract:
+`docs/INTERACTION-MODEL.md`. Agent-facing rules:
+
+- **Truthful feedback.** Never animate an accepted outcome before `CHOOSE` resolves. Pre-commit feedback is the ~160 ms press pulse only; `ConsequenceScene` may appear **only** on a correct response — a wrong tap gets gentle retry, never a success animation.
+- **One obvious target.** `prominence` derives from `iconId === correctIconId`, not from role. Exactly one `primary` object per step; wrong objects stay tappable but `secondary`, escape routes faintest. Enforced by test.
+- **No action vocabulary on the child surface.** Do not reintroduce a glyph/icon row into `playerChoice`. Choices without a distinct physical target (`sceneElementFor → null`) are absent, not degraded to icons. `ActionGlyph` is for the demonstrate phase and parent/debug surfaces only.
+- **Model boundary.** Interaction context is computed by `contextForStep()` (pure). UI components must not re-derive correctness or invent interaction rules — and gameplay rules never move into UI components.
+- **Double-tap guard** on `InteractiveTarget` must stay: the buffered commit window makes it required.
+
+---
+
+# 10. Documentation Map
+
+- `README.md` — setup, scripts, content governance.
+- `AGENTS.md` — rules every agent must follow (this file).
+- `docs/ARCHITECTURE.md` — module map, invariants, budgets.
+- `docs/INTERACTION-MODEL.md` — contextual-target interaction contract.
+- `docs/QA.md` — suites, perf baselines, lifecycle/reduced-motion QA, kid-test protocol.
+- `.agents/skills/testing-kids-rpg/` — how to drive the app for UI-driven testing.
