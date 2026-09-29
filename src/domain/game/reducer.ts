@@ -206,7 +206,10 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
     }
 
     case 'OPEN_DIALOGUE': {
-      if (state.mode !== 'hub') return state;
+      // Dialogue-mode dispatch retargets the open node — that is how
+      // data-driven branches (`choices`/`nextNodeId`) jump without leaving
+      // the dialogue card.
+      if (state.mode !== 'hub' && state.mode !== 'dialogue') return state;
       return {
         ...state,
         mode: 'dialogue',

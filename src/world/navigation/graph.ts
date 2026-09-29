@@ -1,4 +1,5 @@
 import type { AnchorId, LandmarkId, NpcId } from '../../domain/game/types.ts';
+import type { AreaId } from '../../domain/world/types.ts';
 
 export interface Anchor {
   readonly id: AnchorId;
@@ -6,6 +7,8 @@ export interface Anchor {
   readonly x: number;
   readonly z: number;
   readonly walkable: boolean;
+  /** The world area this anchor belongs to — world content owns an area. */
+  readonly areaId: AreaId;
   /** Interaction the anchor stands in front of, if any. */
   readonly npcId: NpcId | null;
   readonly landmarkId: LandmarkId | null;
@@ -19,7 +22,10 @@ export interface Edge {
 
 /**
  * Data-defined waypoint graph. Movement is restricted to these anchors, so the
- * child can never walk into geometry and no physics engine is needed.
+ * child can never walk into geometry and no physics engine is needed. Every
+ * anchor declares its `areaId`: the world is one coordinate system with area
+ * metadata layered on top, and edges crossing an area boundary are how areas
+ * connect (portals).
  */
 export const ANCHORS: readonly Anchor[] = [
   {
@@ -27,6 +33,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: 0,
     z: 0,
     walkable: true,
+    areaId: 'area-town',
     npcId: 'npc-elder',
     landmarkId: 'landmark-square',
     labelFa: 'میدان محله',
@@ -36,6 +43,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: 0,
     z: -3,
     walkable: true,
+    areaId: 'area-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی شمالی',
@@ -45,6 +53,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: 0,
     z: 3,
     walkable: true,
+    areaId: 'area-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی جنوبی',
@@ -54,6 +63,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: 3,
     z: 0,
     walkable: true,
+    areaId: 'area-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی شرقی',
@@ -63,6 +73,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: 0,
     z: -6,
     walkable: true,
+    areaId: 'area-home',
     npcId: 'npc-neighbour',
     landmarkId: 'landmark-home-gate',
     labelFa: 'در خانه',
@@ -72,6 +83,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: 6,
     z: 0,
     walkable: true,
+    areaId: 'area-market',
     npcId: 'npc-shopkeeper',
     landmarkId: 'landmark-shop',
     labelFa: 'مغازه',
@@ -81,6 +93,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: 0,
     z: 6,
     walkable: true,
+    areaId: 'area-garden',
     npcId: 'npc-gardener',
     landmarkId: 'landmark-garden',
     labelFa: 'باغچه',
@@ -90,6 +103,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: -3,
     z: 2,
     walkable: true,
+    areaId: 'area-town',
     npcId: 'npc-child-friend',
     landmarkId: null,
     labelFa: 'دوست',
@@ -99,6 +113,7 @@ export const ANCHORS: readonly Anchor[] = [
     x: -3,
     z: 0,
     walkable: true,
+    areaId: 'area-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی غربی',
@@ -108,9 +123,110 @@ export const ANCHORS: readonly Anchor[] = [
     x: -6,
     z: 0,
     walkable: false,
+    areaId: 'area-fountain',
     npcId: null,
     landmarkId: 'landmark-fountain',
     labelFa: 'حوض',
+  },
+  {
+    id: 'anchor-path-west-far',
+    x: -8.2,
+    z: -2.8,
+    walkable: true,
+    areaId: 'area-fountain',
+    npcId: null,
+    landmarkId: null,
+    labelFa: 'انتهای کوچه‌ی غربی',
+  },
+  {
+    id: 'anchor-park',
+    x: -10,
+    z: 0.5,
+    walkable: true,
+    areaId: 'area-park',
+    npcId: 'npc-park-keeper',
+    landmarkId: 'landmark-park',
+    labelFa: 'پارک',
+  },
+  {
+    id: 'anchor-park-hill',
+    x: -12,
+    z: -2,
+    walkable: true,
+    areaId: 'area-park',
+    npcId: 'npc-child-sara',
+    landmarkId: null,
+    labelFa: 'تپه‌ی پارک',
+  },
+  {
+    id: 'anchor-bakery',
+    x: 8.4,
+    z: -2.4,
+    walkable: true,
+    areaId: 'area-market',
+    npcId: 'npc-baker',
+    landmarkId: 'landmark-bakery',
+    labelFa: 'نانوایی',
+  },
+  {
+    id: 'anchor-river-path',
+    x: 8.5,
+    z: 4.2,
+    walkable: true,
+    areaId: 'area-river',
+    npcId: null,
+    landmarkId: null,
+    labelFa: 'راه رودخانه',
+  },
+  {
+    id: 'anchor-river',
+    x: 10.5,
+    z: 6.5,
+    walkable: true,
+    areaId: 'area-river',
+    npcId: 'npc-fisher',
+    landmarkId: 'landmark-river',
+    labelFa: 'رودخانه',
+  },
+  {
+    id: 'anchor-river-bank',
+    x: 12.6,
+    z: 4.8,
+    walkable: true,
+    areaId: 'area-river',
+    npcId: null,
+    landmarkId: null,
+    labelFa: 'کنار رودخانه',
+  },
+  {
+    id: 'anchor-path-north-east',
+    x: 4.8,
+    z: -8.5,
+    walkable: true,
+    areaId: 'area-school',
+    npcId: null,
+    landmarkId: null,
+    labelFa: 'راه مدرسه',
+  },
+  {
+    id: 'anchor-school',
+    x: 7,
+    z: -6.5,
+    walkable: true,
+    areaId: 'area-school',
+    npcId: 'npc-teacher',
+    landmarkId: 'landmark-school',
+    labelFa: 'کلاس',
+  },
+  {
+    id: 'anchor-school-yard',
+    x: 9.5,
+    z: -8.2,
+    walkable: true,
+    areaId: 'area-school',
+    npcId: 'npc-child-ali',
+    landmarkId: null,
+    labelFa: 'حیاط کلاس',
   },
 ];
 
@@ -124,6 +240,16 @@ export const EDGES: readonly Edge[] = [
   { from: 'anchor-path-south', to: 'anchor-garden' },
   { from: 'anchor-path-west', to: 'anchor-friend' },
   { from: 'anchor-path-west', to: 'anchor-fountain' },
+  { from: 'anchor-path-west', to: 'anchor-path-west-far' },
+  { from: 'anchor-path-west-far', to: 'anchor-park' },
+  { from: 'anchor-park', to: 'anchor-park-hill' },
+  { from: 'anchor-shop', to: 'anchor-bakery' },
+  { from: 'anchor-shop', to: 'anchor-river-path' },
+  { from: 'anchor-river-path', to: 'anchor-river' },
+  { from: 'anchor-river', to: 'anchor-river-bank' },
+  { from: 'anchor-home-gate', to: 'anchor-path-north-east' },
+  { from: 'anchor-path-north-east', to: 'anchor-school' },
+  { from: 'anchor-school', to: 'anchor-school-yard' },
 ];
 
 const BY_ID = new Map<AnchorId, Anchor>(ANCHORS.map((anchor) => [anchor.id, anchor]));

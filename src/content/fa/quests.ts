@@ -24,6 +24,12 @@ export const NPCS: readonly NpcCopy[] = [
   { npcId: 'npc-gardener', nameFa: 'باغبان', roleFa: 'باغچه‌ی محله' },
   { npcId: 'npc-elder', nameFa: 'مادربزرگ', roleFa: 'بزرگ‌تر محله' },
   { npcId: 'npc-child-friend', nameFa: 'دوست', roleFa: 'هم‌بازی' },
+  { npcId: 'npc-baker', nameFa: 'نانوا', roleFa: 'نانوایی محله' },
+  { npcId: 'npc-teacher', nameFa: 'معلم', roleFa: 'کلاس محله' },
+  { npcId: 'npc-child-ali', nameFa: 'علی', roleFa: 'هم‌بازی کلاس' },
+  { npcId: 'npc-park-keeper', nameFa: 'نگهبان پارک', roleFa: 'پارک محله' },
+  { npcId: 'npc-child-sara', nameFa: 'سارا', roleFa: 'هم‌بازی پارک' },
+  { npcId: 'npc-fisher', nameFa: 'ماهیگیر', roleFa: 'کنار رودخانه' },
 ];
 
 export const QUEST_COPY: readonly QuestCopy[] = [
@@ -152,6 +158,7 @@ export const QUEST_COPY: readonly QuestCopy[] = [
     ],
     completionFa: 'جشن محله برپا شد. برچسب جشن را گرفتی.',
     stickerLabelFa: 'برچسب جشن',
+    parentNoteFa: 'پایان زنجیره‌ی فصل‌ها: سلام، کمک و پاکیزگی در یک جشن جمع می‌شوند.',
     sourceIds: ['source-finale-draft'],
     review: DRAFT_REVIEW,
   },

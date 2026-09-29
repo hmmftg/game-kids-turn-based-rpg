@@ -13,6 +13,12 @@ export const NPC_EMOJI: Readonly<Record<string, string>> = {
   'npc-gardener': '👨‍🌾',
   'npc-elder': '👵',
   'npc-child-friend': '🧒',
+  'npc-baker': '🧑‍🍳',
+  'npc-teacher': '👩‍🏫',
+  'npc-child-ali': '🧒',
+  'npc-park-keeper': '🧑‍🌾',
+  'npc-child-sara': '👧',
+  'npc-fisher': '🎣',
 };
 
 export const QUEST_EMOJI: Readonly<Record<QuestId, string>> = {
@@ -51,6 +57,22 @@ export function pickProfileBadge(existing: readonly ProfileMeta[]): string {
 
 export function npcEmoji(npcId: string): string {
   return NPC_EMOJI[npcId] ?? '💬';
+}
+
+/** Presentation cue for a dialogue line's `emotion` metadata. */
+export function emotionEmoji(emotion: string | undefined): string | null {
+  switch (emotion) {
+    case 'happy':
+      return '😊';
+    case 'calm':
+      return '🙂';
+    case 'thoughtful':
+      return '🤔';
+    case 'surprised':
+      return '😮';
+    default:
+      return null;
+  }
 }
 
 export function questEmoji(questId: QuestId): string {

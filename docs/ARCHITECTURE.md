@@ -60,8 +60,33 @@ Details and invariants: [INTERACTION-MODEL.md](INTERACTION-MODEL.md).
   critters freeze instantly and snap back to their last settled transform.
 - ModelSet boundary (`world/models/modelProvider.ts`) keeps cubic art swappable for GLB.
 
+## World content model (data-driven)
+
+Growing the world means adding **data**, not components:
+
+- **Areas** (`domain/world/types.ts` + `world/registry.ts`): `WorldArea {id, labelFa, bounds,
+spawnAnchorId}`. Every anchor — and therefore every NPC, landmark, hotspot and decoration —
+  belongs to exactly one area (`anchor.areaId`, `npc.homeAreaId`). Shared world coordinates;
+  areas are joined by authored nav edges that cross bounds.
+- **NPCs**: `NpcDefinition {id, archetype, anchorId, homeAreaId, schedule?, dialogueIds}` — adding
+  one is a registry row + a copy row + a look row (`world/npcLooks.ts` maps definition → palette/
+  hair/role of the shared cubic archetype). `NpcSchedule.spots` moves an NPC between authored
+  anchors deterministically (`resolveNpcAnchor`), event-driven, no per-frame work.
+- **Activation**: the hub derives `activeAreaId` from `walker.at`; only NPCs standing in
+  `visibleAreaIds(active)` (active + adjacent) mount figures, markers or landmarks. More
+  definitions never means more per-frame work; `frameloop="demand"` unchanged.
+- **Dialogue graph** (`content/fa/dialogue.ts`): `DialogueNode` carries optional `lines[]`
+  (one beat at a time), `choices[]` (stable ids → `nextNodeId` branch) and `nextNodeId`
+  (linear continuation), plus non-text cues (`emotion`/`reaction`/`pose`/`soundCue`,
+  `parentNoteFa`). `OPEN_DIALOGUE` retargets the open node in `dialogue` mode — branches need
+  zero reducer changes beyond that.
+- **Quests as references**: `QuestDefinition` also declares `areaId`, `npcIds`, `dialogueIds`
+  and `nextQuestIds`; `questChain()` walks the chain. Validation + `registry.test.ts` keep every
+  reference resolvable and every node reachable.
+
 ## Budgets
 
 - Renderer calls per tier (observed sampled maxima, not bounds): low 76 / medium 203 / high 296.
 - Ceilings live in `scripts/measure-world.ts`; gzip budgets in `scripts/check-budgets.mjs`.
+- Activation: at most 8 NPC figures per visible-area set — enforced by `world/registry.test.ts`.
 - QA and lifecycle/perf tooling: [QA.md](QA.md).
