@@ -60,10 +60,12 @@ test.describe('vertical slice', () => {
     await playQuest(page, 'quest-greeting');
   });
 
-  test('all three quests and the cooperative finale can be completed in order', async ({
+  test('all town quests and the cooperative finale can be completed in order', async ({
     page,
   }) => {
-    test.setTimeout(120000);
+    // The chain grew from 3 to 8 quests after the area activities — each one
+    // still plays through every encounter phase in order.
+    test.setTimeout(180000);
     await startGame(page);
     for (const questId of QUESTS) {
       await playQuest(page, questId);
