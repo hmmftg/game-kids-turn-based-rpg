@@ -74,20 +74,26 @@ test.describe('orientation', () => {
     await startGame(page);
     await openQuestDialogue(page, 'quest-greeting');
     await page.getByTestId('start-quest').click();
-    await page.getByTestId('advance-intro').click();
-    await page.getByTestId('advance-demonstrate').click();
     await tagCanvas(page);
 
     const step = getQuestDefinition('quest-greeting').steps[0]!;
+    await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
     await page.setViewportSize(PORTRAIT);
     await expectSameCanvas(page);
     await page.getByTestId(`scene-${step.correctIconId}`).click();
-    await expect(page.getByTestId('advance-response')).toBeVisible();
+    // The tap resolved: the choice card advances on its own.
+    await expect(page.getByTestId('encounter-choice')).toBeHidden({ timeout: 10000 });
 
     await page.setViewportSize(LANDSCAPE);
     await expectSameCanvas(page);
-    await page.getByTestId('advance-response').click();
-    await expect(page.getByTestId('advance-reinforce')).toBeVisible();
+    // The correct tap keeps moving the phase machine after rotation —
+    // reinforce, the next step's intro, or the celebration must appear.
+    await expect(
+      page
+        .getByTestId('encounter-reinforce')
+        .or(page.getByTestId('encounter-intro'))
+        .or(page.getByTestId('celebration-continue')),
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test('pause and resume still work in portrait', async ({ page }) => {
@@ -161,28 +167,30 @@ test.describe('orientation', () => {
     // Start the encounter and make the first correct choice in portrait.
     const steps = getQuestDefinition('quest-greeting').steps;
     await page.getByTestId('start-quest').click();
-    await page.getByTestId('advance-intro').click();
-    await page.getByTestId('advance-demonstrate').click();
+    await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
     await page.getByTestId(`scene-${steps[0]!.correctIconId}`).click();
-    await expect(page.getByTestId('advance-response')).toBeVisible();
+    await expect(page.getByTestId('encounter-choice')).toBeHidden({ timeout: 10000 });
 
     // Rotate back to landscape mid-encounter; the phase must not reset.
     await page.setViewportSize(LANDSCAPE);
     await expectSameCanvas(page);
-    await page.getByTestId('advance-response').click();
-    await page.getByTestId('advance-reinforce').click();
 
-    // Finish remaining steps in landscape.
+    // Finish remaining steps in landscape — passive beats auto-play.
     for (const step of steps.slice(1)) {
-      await page.getByTestId('advance-intro').click();
-      await page.getByTestId('advance-demonstrate').click();
+      await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
       await page.getByTestId(`scene-${step.correctIconId}`).click();
-      await page.getByTestId('advance-response').click();
-      await page.getByTestId('advance-reinforce').click();
+      await expect(page.getByTestId('encounter-choice')).toBeHidden({ timeout: 10000 });
     }
 
     const dismiss = page.getByTestId('celebration-continue');
-    if (await dismiss.isVisible().catch(() => false)) await dismiss.click();
+    if (
+      await dismiss.waitFor({ state: 'visible', timeout: 8000 }).then(
+        () => true,
+        () => false,
+      )
+    ) {
+      await dismiss.click();
+    }
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
 
     // Final rotation back to portrait: completion survives the whole cycle.
@@ -197,14 +205,19 @@ test.describe('orientation', () => {
     await openQuestDialogue(page, 'quest-greeting');
     await page.getByTestId('start-quest').click();
     for (const step of getQuestDefinition('quest-greeting').steps) {
-      await page.getByTestId('advance-intro').click();
-      await page.getByTestId('advance-demonstrate').click();
+      await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
       await page.getByTestId(`scene-${step.correctIconId}`).click();
-      await page.getByTestId('advance-response').click();
-      await page.getByTestId('advance-reinforce').click();
+      await expect(page.getByTestId('encounter-choice')).toBeHidden({ timeout: 10000 });
     }
     const dismiss = page.getByTestId('celebration-continue');
-    if (await dismiss.isVisible().catch(() => false)) await dismiss.click();
+    if (
+      await dismiss.waitFor({ state: 'visible', timeout: 8000 }).then(
+        () => true,
+        () => false,
+      )
+    ) {
+      await dismiss.click();
+    }
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
 
     await tagCanvas(page);

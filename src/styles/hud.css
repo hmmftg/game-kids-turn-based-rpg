@@ -675,6 +675,26 @@
    objects — the object itself is the button, no border, no label. One
    arrival bounce per element on mount (event-driven, runs once); the
    ring is the static 'tap me' affordance. */
+/* Mode-B question card: the asked thing in a ❓ frame above the objects —
+   what is asked and what to tap stay visually distinct (no answer glow). */
+.scene-question {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline: auto;
+  border: 3px dashed var(--color-accent, #e08843);
+  border-radius: var(--radius-lg, 18px);
+  padding: var(--space-1) var(--space-3);
+}
+
+.scene-question__mark {
+  position: absolute;
+  inset-inline-end: -0.6em;
+  inset-block-start: -0.7em;
+  font-size: 1.6rem;
+}
+
 .scene-strip {
   display: flex;
   align-items: flex-end;

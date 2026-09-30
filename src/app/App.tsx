@@ -111,6 +111,11 @@ export function App() {
   const suggestedQuestId = nextSuggestedQuest(state);
   // Session-only UI affordances: never persisted, never part of game state.
   const [worldHintSeen, setWorldHintSeen] = useState(false);
+  // Mode-B kid test (?kidtest=nocopy): the encounter plays with no rendered
+  // copy — questions are pictures. Read once; never persisted.
+  const [noCopyTest] = useState(
+    () => new URLSearchParams(window.location.search).get('kidtest') === 'nocopy',
+  );
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
   // Who noticed the child arriving — the figure gives a brief non-verbal
@@ -476,6 +481,7 @@ export function App() {
             iconId={dialogueNode.iconId}
             textFa={currentLine.textFa}
             testId="npc-dialogue"
+            hideText={noCopyTest}
           >
             {!isLastLine ? (
               <button
@@ -556,8 +562,11 @@ export function App() {
         {state.mode === 'encounter' && state.encounter ? (
           <EncounterPanel
             encounter={state.encounter}
+            hideCopy={noCopyTest}
             onAdvance={() => {
-              playSfx(state.encounter?.phase === 'reinforce' ? 'sfx-sticker' : 'sfx-success');
+              // Only the step-completion beat chimes — passive beats auto-play
+              // and a jingle per beat would read as noise.
+              if (state.encounter?.phase === 'reinforce') playSfx('sfx-sticker');
               dispatch({ type: 'ADVANCE_PHASE' });
             }}
             onChoose={(iconId: IconId, correct: boolean) => {

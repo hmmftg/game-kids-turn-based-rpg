@@ -47,15 +47,18 @@ describe('App', () => {
     await user.click(await screen.findByTestId('start-quest'));
 
     // Step 1: tap the wrong thing first — the game re-demonstrates, never blocks.
-    await user.click(await screen.findByTestId('advance-intro'));
-    await user.click(await screen.findByTestId('advance-demonstrate'));
-    const strip = await screen.findByTestId('scene-choice');
+    // Passive beats auto-play; we wait for the choice strip, not «بعد».
+    const strip = await screen.findByTestId('scene-choice', undefined, { timeout: 8000 });
     await user.click(strip.querySelector('.scene-target:not([data-primary])') as HTMLButtonElement);
-    const response = await screen.findByTestId('encounter-response');
+    const response = await screen.findByTestId('encounter-response', undefined, {
+      timeout: 4000,
+    });
     expect(response).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /دوباره|ادامه/ }));
-    expect(await screen.findByTestId('encounter-demonstrate')).toBeInTheDocument();
+    // Watch-again re-demonstrates on its own — no continue tap.
+    expect(
+      await screen.findByTestId('encounter-demonstrate', undefined, { timeout: 8000 }),
+    ).toBeInTheDocument();
   });
 
   it('keeps the parent area behind a press-and-hold gate', async () => {

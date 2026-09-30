@@ -529,6 +529,33 @@ function InteractiveTarget({
   );
 }
 
+/** One scene element drawn at a given size — used by the Mode-B question
+ *  card to show *what is being asked* without words. */
+export function SceneGlyph({
+  element,
+  size = 76,
+  color,
+}: {
+  readonly element: SceneElement;
+  readonly size?: number;
+  readonly color?: string | undefined;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      style={{ color }}
+      aria-hidden="true"
+      focusable="false"
+      role="presentation"
+      data-element={element}
+    >
+      {renderElement(element)}
+    </svg>
+  );
+}
+
 export function SceneChoice({
   objects,
   held,
