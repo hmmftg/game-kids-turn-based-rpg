@@ -211,31 +211,16 @@ button {
   background: var(--color-accent-soft);
 }
 
-.profile-card__badge {
-  font-size: 48px;
-}
-
+/* The portrait is the card's identity — same kid the player picked, big and
+   centred where the badge emoji used to sit. */
 .profile-card__avatar {
-  font-size: 24px;
-  position: absolute;
-  inset-inline-end: var(--space-2);
-  inset-block-end: var(--space-2);
+  display: block;
 }
 
 .profile-card__reset {
   font-size: var(--font-size-sm);
   padding: var(--space-1) var(--space-3);
   min-block-size: 0;
-}
-
-.badge-row {
-  max-inline-size: 80vw;
-}
-
-.badge-choice {
-  background: var(--color-surface);
-  min-inline-size: var(--touch-large);
-  min-block-size: var(--touch-large);
 }
 
 /* Headwear picker: each option is one big pictogram + short label; the chosen

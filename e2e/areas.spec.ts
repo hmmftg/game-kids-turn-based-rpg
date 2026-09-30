@@ -18,7 +18,6 @@ async function startGame(page: Page) {
   await page.getByTestId('start-button').click();
   await page.getByTestId('avatar-aban').click();
   await page.getByTestId('headwear-next').click();
-  await page.getByTestId('badge-0').click();
   await expect(page.getByTestId('hud')).toBeVisible();
 }
 

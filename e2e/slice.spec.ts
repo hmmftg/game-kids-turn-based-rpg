@@ -14,7 +14,6 @@ async function startGame(page: Page, avatar: 'avatar-aban' | 'avatar-arta' = 'av
   await page.getByTestId('start-button').click();
   await page.getByTestId(avatar).click();
   await page.getByTestId('headwear-next').click();
-  await page.getByTestId('badge-0').click();
   await expect(page.getByTestId('hud')).toBeVisible();
 }
 
@@ -124,7 +123,6 @@ test.describe('vertical slice', () => {
     await page.getByTestId('profile-new').click();
     await page.getByTestId('avatar-arta').click();
     await page.getByTestId('headwear-next').click();
-    await page.getByTestId('badge-1').click();
     await expect(page.getByTestId('hud')).toBeVisible();
     await expect(page.getByTestId('trail-quest-greeting')).not.toContainText('انجام شد');
 

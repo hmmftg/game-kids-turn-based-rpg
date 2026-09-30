@@ -311,9 +311,9 @@ export function App() {
     case 'avatarSelect':
       return (
         <AvatarSelectScreen
-          onSelect={(avatarId, badge, headwear) => {
+          onSelect={(avatarId, headwear) => {
             playSfx('sfx-choice');
-            chooseAvatar(avatarId, badge, headwear);
+            chooseAvatar(avatarId, headwear);
           }}
         />
       );
