@@ -75,9 +75,33 @@ One-shot CSS (`scene-exec-*` keyframes), frozen under `prefers-reduced-motion`.
 
 ## Fallbacks and surfaces
 
-- `ActionGlyph` remains **only** for the demonstrate-phase preview and future parent/debug
-  surfaces. Do not reintroduce a glyph/icon row into `playerChoice`.
+- `ActionGlyph` is deleted (PR D). The demonstrate phase shows the physical target via
+  `SceneGlyph`; dialogue choices and navigation chips are object chips. Do not reintroduce
+  an icon row anywhere.
 - Instructional text stays minimal (step text ≤9 words, prompts ≤6 — enforced by kidUx tests).
+
+## Interaction budget (hard validator)
+
+`src/domain/quests/interactionSteps.ts` counts **mandatory child actions** on the interaction
+graph — not dialogue structure or copy length:
+
+| surface                           | mandatory actions |
+| --------------------------------- | ----------------- |
+| passive beat (any phase ≠ choice) | 0                 |
+| object choice (`playerChoice`)    | 1                 |
+| entering an interaction           | 1 (arrival tap)   |
+| outside-tap dismissal             | 0 — always free   |
+| optional dialogue tap (lines)     | 0 — never forced  |
+
+Limits (`INTERACTION_LIMITS`), enforced as `interaction-budget` errors by
+`validate:content` and by `interactionSteps.test.ts`:
+
+- standard step: ≤ 2 (every step today: 1)
+- routine dialogue: ≤ 1 on the heaviest required-choice path
+- dialogue with no required choice: 0 to exit
+
+One meaningful child action produces one meaningful game consequence — the validator is the
+ratchet that keeps it true.
 
 ## Test invariants (`sceneChoice.test.tsx`)
 
