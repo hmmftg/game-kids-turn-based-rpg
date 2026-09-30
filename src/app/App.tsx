@@ -35,7 +35,7 @@ import { ParentArea } from '../ui/parent/ParentArea.tsx';
 import { ParentGate } from '../ui/parent/ParentGate.tsx';
 import { WorldCanvas } from '../world/WorldCanvas.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
-import { anchorForNpc, getAnchorOrNull } from '../world/navigation/graph.ts';
+import { getAnchorOrNull } from '../world/navigation/graph.ts';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { useGame } from './gameContext.ts';
 
@@ -239,14 +239,18 @@ export function App() {
   const goToQuest = useCallback(
     (questId: QuestId) => {
       const definition = getQuestDefinition(questId);
-      const anchor = anchorForNpc(definition.steps[0]?.npcId ?? 'npc-elder');
+      const npc = getNpcOrNull(definition.steps[0]?.npcId ?? 'npc-elder');
+      // Walk to where the NPC actually stands now (their routine spot), not
+      // their home anchor — the camera lands on them, not an empty spot.
+      const spot = npc ? resolveNpcSpot(npc, worldTimeRef.current) : null;
+      const anchorId = (spot?.anchorId ?? npc?.anchorId ?? null) as AnchorId | null;
       const open = () => openNpc(nodeForQuest(questId));
       // Quests on another map can't be walked to — the trail button for them
       // is disabled; the DOM fallback (no WebGL) still opens the dialogue.
       if (state.webglAvailable && (definition.mapId ?? 'map-town') !== state.mapId) return;
-      // The avatar walks to the landmark first and the dialogue opens on
+      // The avatar walks to the NPC's current spot and the dialogue opens on
       // arrival; without a walker (no WebGL) the dialogue opens directly.
-      if (!anchor || !hubRef.current?.goTo(anchor.id, open)) open();
+      if (!anchorId || !hubRef.current?.goTo(anchorId, open)) open();
     },
     [openNpc, state.mapId, state.webglAvailable],
   );
