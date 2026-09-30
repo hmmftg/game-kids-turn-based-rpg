@@ -1,7 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../src/domain/quests/definitions.ts';
 
-const QUESTS = QUEST_DEFINITIONS.map((quest) => quest.id);
+// The trail plays quests that live on the mounted map; secondary maps (the
+// cave) are reached through the world, not the trail — covered by cave.spec.
+const QUESTS = QUEST_DEFINITIONS.filter(
+  (quest) => (quest.mapId ?? 'map-town') === 'map-town',
+).map((quest) => quest.id);
 
 async function startGame(page: Page, avatar: 'avatar-aban' | 'avatar-arta' = 'avatar-aban') {
   await page.goto('/');

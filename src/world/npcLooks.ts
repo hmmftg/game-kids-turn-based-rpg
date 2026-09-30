@@ -81,6 +81,13 @@ export const NPC_LOOKS: Readonly<Record<string, NpcLook>> = {
     hairStyle: 'short',
     hairColor: '#8a8a8a',
   },
+  // The cave resident renders via the animal slot (a grey mouse), not the
+  // humanoid Figure — the look row still documents its palette for providers.
+  'npc-cave-mouse': {
+    palette: { body: '#8d8391', head: '#a89ead', limb: '#6b6372' },
+    hairStyle: 'short',
+    hairColor: '#5a5260',
+  },
 };
 
 export function npcLook(npcId: NpcId): NpcLook {

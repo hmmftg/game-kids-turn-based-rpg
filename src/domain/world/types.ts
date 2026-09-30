@@ -8,11 +8,75 @@ import type { AnchorId, NpcId } from '../game/types.ts';
 
 export type AreaId = `area-${string}`;
 
+/**
+ * A playable map/scene with its own local coordinate system, bounds, anchors
+ * and environment. The outdoor neighbourhood is `map-town`; secondary maps
+ * (interiors, hidden places) are their own entries — never another area on
+ * the town plane.
+ */
+export type MapId = `map-${string}`;
+
+/** A persistent world fact the child can find — e.g. a hidden entrance. */
+export type DiscoveryId = `discovery-${string}`;
+
 export interface Bounds {
   readonly minX: number;
   readonly maxX: number;
   readonly minZ: number;
   readonly maxZ: number;
+}
+
+/** Data-driven environment for one map — presentation data, no components. */
+export interface EnvironmentDefinition {
+  /** Renderer clear colour (skydome maps still need a base). */
+  readonly clearColor: string;
+  /** Distance fog; null = no fog. */
+  readonly fog: { readonly color: string; readonly near: number; readonly far: number } | null;
+  /** Whether the sky dome backdrop mounts (interiors use a closed look). */
+  readonly skyDome: boolean;
+  readonly hemisphere: {
+    readonly sky: string;
+    readonly ground: string;
+    readonly intensity: number;
+  };
+  readonly directionals: readonly {
+    readonly color: string;
+    readonly position: readonly [number, number, number];
+    readonly intensity: number;
+  }[];
+}
+
+/**
+ * One map: local bounds, its spawn anchor and how it looks. Adding a map is
+ * data — the renderer reads the environment generically.
+ */
+export interface WorldMapDefinition {
+  readonly id: MapId;
+  readonly labelFa: string;
+  readonly bounds: Bounds;
+  /** Anchor the avatar appears at when entering without a specific spawn. */
+  readonly spawnAnchorId: AnchorId;
+  readonly environment: EnvironmentDefinition;
+}
+
+/**
+ * A deterministic door between two maps. `fromAnchor` is where the player
+ * triggers it (walk-to + tap), `toAnchor` is where they appear on the other
+ * side — an exit always returns to the exact outdoor entrance, never to a
+ * generic spawn.
+ */
+export interface MapTransition {
+  readonly id: `transition-${string}`;
+  readonly fromMap: MapId;
+  readonly fromAnchor: AnchorId;
+  readonly toMap: MapId;
+  readonly toAnchor: AnchorId;
+  /**
+   * World fact gating this transition: the first arrival at `fromAnchor`
+   * reveals the entrance (records the discovery); later arrivals travel.
+   * Transitions without one are always passable.
+   */
+  readonly discoveryId?: DiscoveryId | undefined;
 }
 
 /**
@@ -39,6 +103,7 @@ export type NpcArchetype =
   | 'teacher'
   | 'fisher'
   | 'parkkeeper'
+  | 'critter'
   | 'child';
 
 /** Coarse schedule states — enough for routines, cheap enough for many NPCs. */

@@ -19,6 +19,7 @@ export const NPC_EMOJI: Readonly<Record<string, string>> = {
   'npc-park-keeper': '🧑‍🌾',
   'npc-child-sara': '👧',
   'npc-fisher': '🎣',
+  'npc-cave-mouse': '🐭',
 };
 
 export const QUEST_EMOJI: Readonly<Record<QuestId, string>> = {
@@ -30,6 +31,7 @@ export const QUEST_EMOJI: Readonly<Record<QuestId, string>> = {
   'quest-river-shell': '🐚',
   'quest-bread-errand': '🍞',
   'quest-school-answer': '📚',
+  'quest-cave-crystal': '💎',
 };
 
 /** Persian name per avatar preset; the SVG portrait carries the identity. */

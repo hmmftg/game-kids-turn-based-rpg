@@ -94,6 +94,10 @@ export function sceneElementFor(iconId: IconId): SceneElement | null {
       return 'book';
     case 'icon-tap-ball':
       return 'ball';
+    case 'icon-find-crystal':
+      return 'crystal';
+    case 'icon-give-crystal':
+      return 'mouse';
     default:
       return null;
   }
@@ -112,6 +116,7 @@ function sceneRoleFor(iconId: IconId): SceneRole {
     case 'icon-smile':
     case 'icon-watch':
     case 'icon-give-kite':
+    case 'icon-give-crystal':
       return 'actor';
     case 'icon-wave-away':
     case 'icon-turn-back':

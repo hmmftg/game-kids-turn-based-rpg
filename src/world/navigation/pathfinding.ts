@@ -1,4 +1,5 @@
 import type { AnchorId } from '../../domain/game/types.ts';
+import type { MapId } from '../../domain/world/types.ts';
 import { ANCHORS, distanceBetween, getAnchor, neighboursOf } from './graph.ts';
 
 /** Nearest *walkable* anchor to a ground-plane point, within an optional radius. */
@@ -6,11 +7,13 @@ export function nearestWalkableAnchor(
   x: number,
   z: number,
   maxDistance = Infinity,
+  mapId?: MapId,
 ): AnchorId | null {
   let best: AnchorId | null = null;
   let bestDistance = maxDistance;
   for (const anchor of ANCHORS) {
     if (!anchor.walkable) continue;
+    if (mapId !== undefined && anchor.mapId !== mapId) continue;
     const distance = Math.hypot(anchor.x - x, anchor.z - z);
     if (distance <= bestDistance) {
       bestDistance = distance;

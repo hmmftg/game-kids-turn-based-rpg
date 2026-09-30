@@ -1,7 +1,8 @@
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../domain/quests/definitions.ts';
 import type { AreaId } from '../domain/world/types.ts';
 import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from '../world/registry.ts';
-import { ANCHORS, getAnchorOrNull } from '../world/navigation/graph.ts';
+import { ANCHORS, EDGES, getAnchorOrNull } from '../world/navigation/graph.ts';
+import { MAP_TRANSITIONS, WORLD_MAPS } from '../world/maps.ts';
 import { DIALOGUE_NODES } from './fa/dialogue.ts';
 import { hasIcon } from './fa/icons.ts';
 import { NPCS, QUEST_COPY } from './fa/quests.ts';
@@ -252,6 +253,7 @@ function checkLength(
  */
 function validateWorld(issues: ValidationIssue[]): void {
   const areaIds = new Set<AreaId>();
+  const MAP_IDS = new Set(WORLD_MAPS.map((map) => map.id));
   for (const area of WORLD_AREAS) {
     if (areaIds.has(area.id)) {
       issues.push({
@@ -308,6 +310,78 @@ function validateWorld(issues: ValidationIssue[]): void {
         code: 'unknown-npc',
         where: anchor.id,
         message: `Anchor references NPC ${anchor.npcId} with no definition.`,
+      });
+    }
+    if (!MAP_IDS.has(anchor.mapId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-map',
+        where: anchor.id,
+        message: `Anchor references unknown map ${anchor.mapId}.`,
+      });
+    }
+  }
+
+  // Maps and the transitions between them — the multi-map contract.
+  const transitionIds = new Set<string>();
+  for (const map of WORLD_MAPS) {
+    if (map.bounds.minX >= map.bounds.maxX || map.bounds.minZ >= map.bounds.maxZ) {
+      issues.push({
+        severity: 'error',
+        code: 'bad-bounds',
+        where: map.id,
+        message: 'Map bounds are contradictory (min must be below max).',
+      });
+    }
+    const spawn = getAnchorOrNull(map.spawnAnchorId);
+    if (!spawn || spawn.mapId !== map.id || !spawn.walkable) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-anchor',
+        where: map.id,
+        message: `Map spawn ${map.spawnAnchorId} must be a walkable anchor on the map.`,
+      });
+    }
+  }
+  for (const transition of MAP_TRANSITIONS) {
+    if (transitionIds.has(transition.id)) {
+      issues.push({
+        severity: 'error',
+        code: 'duplicate-transition',
+        where: transition.id,
+        message: 'Duplicate transition id.',
+      });
+    }
+    transitionIds.add(transition.id);
+    const from = getAnchorOrNull(transition.fromAnchor);
+    const to = getAnchorOrNull(transition.toAnchor);
+    if (!from || from.mapId !== transition.fromMap || from.transitionId !== transition.id) {
+      issues.push({
+        severity: 'error',
+        code: 'bad-transition',
+        where: transition.id,
+        message: 'Transition fromAnchor must be an anchor on fromMap carrying this transitionId.',
+      });
+    }
+    if (!to || to.mapId !== transition.toMap || !to.walkable) {
+      issues.push({
+        severity: 'error',
+        code: 'bad-transition',
+        where: transition.id,
+        message: 'Transition toAnchor must be a walkable anchor on toMap.',
+      });
+    }
+  }
+  // Edges must never cross maps — cross-map travel is transitions only.
+  for (const edge of EDGES) {
+    const a = getAnchorOrNull(edge.from);
+    const b = getAnchorOrNull(edge.to);
+    if (a && b && a.mapId !== b.mapId) {
+      issues.push({
+        severity: 'error',
+        code: 'cross-map-edge',
+        where: `${edge.from}->${edge.to}`,
+        message: 'Walk edge crosses maps; use a MapTransition instead.',
       });
     }
   }

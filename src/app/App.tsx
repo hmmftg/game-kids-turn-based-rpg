@@ -29,6 +29,7 @@ import { ParentGate } from '../ui/parent/ParentGate.tsx';
 import { WorldCanvas } from '../world/WorldCanvas.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
 import { anchorForNpc, getAnchorOrNull } from '../world/navigation/graph.ts';
+import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { useGame } from './gameContext.ts';
 
 function nodeForQuest(questId: QuestId): string | null {
@@ -121,13 +122,36 @@ export function App() {
     [dispatch],
   );
 
+  const discoveries = state.discoveries;
+
+  // E2E/QA probe: the authoritative map + found facts. Lets tests wait for
+  // discoveries/transitions instead of guessing walk durations.
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    if (import.meta.env.DEV || w['__WORLD_PROBE']) {
+      w['__worldMapId'] = state.mapId;
+      w['__worldDiscoveries'] = state.discoveries;
+    }
+  }, [state.mapId, state.discoveries]);
   const onArrive = useCallback(
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
       playSfx('sfx-arrive');
+      // Map transitions are resolved from data: an anchor carrying a
+      // transitionId either reveals itself once (a found secret persists)
+      // or ferries the child to the matching anchor on the other map.
+      const transition = transitionForAnchor(anchor);
+      if (transition) {
+        if (transition.discoveryId && !discoveries.includes(transition.discoveryId)) {
+          dispatch({ type: 'DISCOVER', discoveryId: transition.discoveryId });
+          return;
+        }
+        dispatch({ type: 'CHANGE_MAP', mapId: transition.toMap, anchorId: transition.toAnchor });
+        return;
+      }
       openNpc(nodeForAnchor(anchor));
     },
-    [openNpc, playSfx],
+    [openNpc, playSfx, discoveries, dispatch],
   );
 
   const goToQuest = useCallback(
@@ -135,11 +159,14 @@ export function App() {
       const definition = getQuestDefinition(questId);
       const anchor = anchorForNpc(definition.steps[0]?.npcId ?? 'npc-elder');
       const open = () => openNpc(nodeForQuest(questId));
+      // Quests on another map can't be walked to — the trail button for them
+      // is disabled; the DOM fallback (no WebGL) still opens the dialogue.
+      if (state.webglAvailable && (definition.mapId ?? 'map-town') !== state.mapId) return;
       // The avatar walks to the landmark first and the dialogue opens on
       // arrival; without a walker (no WebGL) the dialogue opens directly.
       if (!anchor || !hubRef.current?.goTo(anchor.id, open)) open();
     },
-    [openNpc],
+    [openNpc, state.mapId, state.webglAvailable],
   );
 
   switch (state.mode) {
@@ -251,6 +278,14 @@ export function App() {
       return status === 'available' || status === 'active';
     })?.id ?? 'quest-greeting';
 
+  // Where the child stands on the mounted map: the persisted spot when it
+  // belongs to this map (reload replays it), otherwise the map's own spawn.
+  const persistedAnchor = getAnchorOrNull(state.mapAnchorId);
+  const spawnAnchor =
+    persistedAnchor && persistedAnchor.mapId === state.mapId
+      ? persistedAnchor.id
+      : getMap(state.mapId).spawnAnchorId;
+
   return (
     <div className="hud" data-testid="hud">
       {state.webglAvailable ? (
@@ -265,6 +300,9 @@ export function App() {
           onContextLost={() => dispatch({ type: 'WEBGL_AVAILABILITY_CHANGED', available: false })}
           handleRef={hubRef}
           suggestedQuestId={suggestedQuestId}
+          mapId={state.mapId}
+          startAnchorId={spawnAnchor}
+          discoveries={state.discoveries}
         />
       ) : null}
 
@@ -291,7 +329,12 @@ export function App() {
       ) : null}
 
       <div className="hud__side">
-        <QuestTrail statuses={statuses} currentId={suggestedQuestId} onGo={goToQuest} />
+        <QuestTrail
+          statuses={statuses}
+          currentId={suggestedQuestId}
+          mapId={state.mapId}
+          onGo={goToQuest}
+        />
       </div>
 
       <div className="hud__bottom">

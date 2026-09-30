@@ -240,6 +240,7 @@ describe('quest references and chains', () => {
       'quest-river-shell',
       'quest-bread-errand',
       'quest-school-answer',
+      'quest-cave-crystal',
     ]);
   });
 

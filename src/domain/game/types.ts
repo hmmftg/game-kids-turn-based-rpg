@@ -5,6 +5,8 @@
  * or storage APIs. Everything here is serialisable or derived from serialisable data.
  */
 
+import type { DiscoveryId, MapId } from '../world/types.ts';
+
 export const MODES = [
   'boot',
   'profileSelect',
@@ -55,6 +57,7 @@ export const QUEST_IDS = [
   'quest-river-shell',
   'quest-bread-errand',
   'quest-school-answer',
+  'quest-cave-crystal',
 ] as const;
 export type QuestId = (typeof QUEST_IDS)[number];
 
@@ -75,6 +78,7 @@ export type IconId = `icon-${string}`;
 export type NpcId = `npc-${string}`;
 export type LandmarkId = `landmark-${string}`;
 export type AnchorId = `anchor-${string}`;
+export type { DiscoveryId, MapId };
 
 export interface QuestProgress {
   readonly status: QuestStatus;
@@ -132,6 +136,15 @@ export interface PersistedState {
   readonly audio: AudioSettings;
   readonly qualityTier: QualityTier;
   readonly lastPlayedAt: number;
+  /**
+   * Persistent world facts the child has found (hidden entrances, secret
+   * places). Additive and tolerant: old saves simply default to [].
+   */
+  readonly discoveries: readonly DiscoveryId[];
+  /** Map the child was last on — restoring it replays a safe local spawn. */
+  readonly mapId: MapId;
+  /** Spawn anchor on `mapId` — set by each map change, not by walking. */
+  readonly mapAnchorId: AnchorId;
 }
 
 export interface GameState extends PersistedState {
@@ -178,6 +191,8 @@ export type Command =
   | { readonly type: 'START_PRESSED' }
   | { readonly type: 'SELECT_AVATAR'; readonly avatarId: AvatarId }
   | { readonly type: 'SET_HEADWEAR'; readonly headwear: HeadwearId }
+  | { readonly type: 'DISCOVER'; readonly discoveryId: DiscoveryId }
+  | { readonly type: 'CHANGE_MAP'; readonly mapId: MapId; readonly anchorId: AnchorId }
   | { readonly type: 'ENTER_HUB' }
   | { readonly type: 'OPEN_DIALOGUE'; readonly npcId: NpcId; readonly nodeId: string }
   | { readonly type: 'CLOSE_DIALOGUE' }

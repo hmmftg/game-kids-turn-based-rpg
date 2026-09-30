@@ -1,5 +1,5 @@
 import type { AnchorId, LandmarkId, NpcId } from '../../domain/game/types.ts';
-import type { AreaId } from '../../domain/world/types.ts';
+import type { AreaId, MapId } from '../../domain/world/types.ts';
 
 export interface Anchor {
   readonly id: AnchorId;
@@ -9,9 +9,13 @@ export interface Anchor {
   readonly walkable: boolean;
   /** The world area this anchor belongs to — world content owns an area. */
   readonly areaId: AreaId;
+  /** The map this anchor lives on; cross-map travel uses transitions, not edges. */
+  readonly mapId: MapId;
   /** Interaction the anchor stands in front of, if any. */
   readonly npcId: NpcId | null;
   readonly landmarkId: LandmarkId | null;
+  /** Map transition triggered by arriving here (doors, hidden entrances). */
+  readonly transitionId?: `transition-${string}` | undefined;
   readonly labelFa: string;
 }
 
@@ -34,6 +38,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 0,
     walkable: true,
     areaId: 'area-town',
+    mapId: 'map-town',
     npcId: 'npc-elder',
     landmarkId: 'landmark-square',
     labelFa: 'میدان محله',
@@ -44,6 +49,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: -3,
     walkable: true,
     areaId: 'area-town',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی شمالی',
@@ -54,6 +60,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 3,
     walkable: true,
     areaId: 'area-town',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی جنوبی',
@@ -64,6 +71,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 0,
     walkable: true,
     areaId: 'area-town',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی شرقی',
@@ -74,6 +82,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: -6,
     walkable: true,
     areaId: 'area-home',
+    mapId: 'map-town',
     npcId: 'npc-neighbour',
     landmarkId: 'landmark-home-gate',
     labelFa: 'در خانه',
@@ -84,6 +93,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 0,
     walkable: true,
     areaId: 'area-market',
+    mapId: 'map-town',
     npcId: 'npc-shopkeeper',
     landmarkId: 'landmark-shop',
     labelFa: 'مغازه',
@@ -94,6 +104,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 6,
     walkable: true,
     areaId: 'area-garden',
+    mapId: 'map-town',
     npcId: 'npc-gardener',
     landmarkId: 'landmark-garden',
     labelFa: 'باغچه',
@@ -104,6 +115,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 2,
     walkable: true,
     areaId: 'area-town',
+    mapId: 'map-town',
     npcId: 'npc-child-friend',
     landmarkId: null,
     labelFa: 'دوست',
@@ -114,6 +126,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 0,
     walkable: true,
     areaId: 'area-town',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کوچه‌ی غربی',
@@ -124,6 +137,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 0,
     walkable: false,
     areaId: 'area-fountain',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: 'landmark-fountain',
     labelFa: 'حوض',
@@ -134,6 +148,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: -2.8,
     walkable: true,
     areaId: 'area-fountain',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'انتهای کوچه‌ی غربی',
@@ -144,6 +159,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 0.5,
     walkable: true,
     areaId: 'area-park',
+    mapId: 'map-town',
     npcId: 'npc-park-keeper',
     landmarkId: 'landmark-park',
     labelFa: 'پارک',
@@ -154,6 +170,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: -2,
     walkable: true,
     areaId: 'area-park',
+    mapId: 'map-town',
     npcId: 'npc-child-sara',
     landmarkId: null,
     labelFa: 'تپه‌ی پارک',
@@ -164,6 +181,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: -2.4,
     walkable: true,
     areaId: 'area-market',
+    mapId: 'map-town',
     npcId: 'npc-baker',
     landmarkId: 'landmark-bakery',
     labelFa: 'نانوایی',
@@ -174,6 +192,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 4.2,
     walkable: true,
     areaId: 'area-river',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'راه رودخانه',
@@ -184,6 +203,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 6.5,
     walkable: true,
     areaId: 'area-river',
+    mapId: 'map-town',
     npcId: 'npc-fisher',
     landmarkId: 'landmark-river',
     labelFa: 'رودخانه',
@@ -194,6 +214,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: 4.8,
     walkable: true,
     areaId: 'area-river',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'کنار رودخانه',
@@ -204,6 +225,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: -8.5,
     walkable: true,
     areaId: 'area-school',
+    mapId: 'map-town',
     npcId: null,
     landmarkId: null,
     labelFa: 'راه مدرسه',
@@ -214,6 +236,7 @@ export const ANCHORS: readonly Anchor[] = [
     z: -6.5,
     walkable: true,
     areaId: 'area-school',
+    mapId: 'map-town',
     npcId: 'npc-teacher',
     landmarkId: 'landmark-school',
     labelFa: 'کلاس',
@@ -224,9 +247,70 @@ export const ANCHORS: readonly Anchor[] = [
     z: -8.2,
     walkable: true,
     areaId: 'area-school',
+    mapId: 'map-town',
     npcId: 'npc-child-ali',
     landmarkId: null,
     labelFa: 'حیاط کلاس',
+  },
+  // The hidden rock in the park: walkable so the child can approach it;
+  // `transitionId` makes arriving here reveal then enter the cave.
+  {
+    id: 'anchor-cave-entrance',
+    x: -12.2,
+    z: 3.4,
+    walkable: true,
+    areaId: 'area-park',
+    mapId: 'map-town',
+    npcId: null,
+    landmarkId: null,
+    transitionId: 'transition-cave-entrance',
+    labelFa: 'سنگ بزرگ',
+  },
+  // ── map-cave: own local coordinate system, no edges to the outdoor graph ──
+  {
+    id: 'anchor-cave-mouth',
+    x: 0,
+    z: 3.2,
+    walkable: true,
+    areaId: 'area-cave',
+    mapId: 'map-cave',
+    npcId: null,
+    landmarkId: null,
+    transitionId: 'transition-cave-exit',
+    labelFa: 'دهانه‌ی غار',
+  },
+  {
+    id: 'anchor-cave-pool',
+    x: -2.2,
+    z: -0.8,
+    walkable: true,
+    areaId: 'area-cave',
+    mapId: 'map-cave',
+    npcId: null,
+    landmarkId: 'landmark-pool',
+    labelFa: 'حوضچه',
+  },
+  {
+    id: 'anchor-cave-crystal',
+    x: 2.2,
+    z: -1.6,
+    walkable: true,
+    areaId: 'area-cave',
+    mapId: 'map-cave',
+    npcId: null,
+    landmarkId: 'landmark-crystal',
+    labelFa: 'گوهری',
+  },
+  {
+    id: 'anchor-cave-mouse',
+    x: 0.6,
+    z: 0.6,
+    walkable: true,
+    areaId: 'area-cave',
+    mapId: 'map-cave',
+    npcId: 'npc-cave-mouse',
+    landmarkId: null,
+    labelFa: 'موش غار',
   },
 ];
 
@@ -250,6 +334,13 @@ export const EDGES: readonly Edge[] = [
   { from: 'anchor-home-gate', to: 'anchor-path-north-east' },
   { from: 'anchor-path-north-east', to: 'anchor-school' },
   { from: 'anchor-school', to: 'anchor-school-yard' },
+  { from: 'anchor-park', to: 'anchor-cave-entrance' },
+  { from: 'anchor-park-hill', to: 'anchor-cave-entrance' },
+  // Cave-internal paths: the mouth is the hub of the little cavern.
+  { from: 'anchor-cave-mouth', to: 'anchor-cave-pool' },
+  { from: 'anchor-cave-mouth', to: 'anchor-cave-crystal' },
+  { from: 'anchor-cave-mouth', to: 'anchor-cave-mouse' },
+  { from: 'anchor-cave-mouse', to: 'anchor-cave-crystal' },
 ];
 
 const BY_ID = new Map<AnchorId, Anchor>(ANCHORS.map((anchor) => [anchor.id, anchor]));

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { getQuestStep } from '../quests/definitions.ts';
 import { gameReducer } from './reducer.ts';
-import { createFreshPersistedState, createInitialState } from './initialState.ts';
+import { createFreshPersistedState, createInitialState, toPersistedState } from './initialState.ts';
+import { parseSave } from './save.ts';
 import { shouldAutosave } from './selectors.ts';
 import { MODES } from './types.ts';
 import type { Command, GameState, QuestId } from './types.ts';
@@ -450,5 +451,80 @@ describe('gameReducer — player profiles', () => {
     ).toBe(title);
     expect(gameReducer(hub, { type: 'START_NEW_PLAYER' }, NOW)).toBe(hub);
     expect(gameReducer(title, { type: 'SWITCH_PLAYER' }, NOW)).toBe(title);
+  });
+});
+
+describe('gameReducer — maps and discoveries', () => {
+  it('DISCOVER records a world fact once and autosaves', () => {
+    const hub = atHub();
+    const found = gameReducer(
+      hub,
+      { type: 'DISCOVER', discoveryId: 'discovery-cave-entrance' },
+      NOW,
+    );
+    expect(found.discoveries).toEqual(['discovery-cave-entrance']);
+    expect(shouldAutosave(hub, found)).toBe(true);
+    // Idempotent by reference — arriving again never duplicates or re-saves.
+    expect(
+      gameReducer(found, { type: 'DISCOVER', discoveryId: 'discovery-cave-entrance' }, NOW),
+    ).toBe(found);
+  });
+
+  it('CHANGE_MAP swaps the map, keeps progress and never resets to the square', () => {
+    let state = atHub();
+    state = playQuest(state, 'quest-greeting');
+    const cave = gameReducer(
+      state,
+      { type: 'CHANGE_MAP', mapId: 'map-cave', anchorId: 'anchor-cave-mouth' },
+      NOW,
+    );
+    expect(cave.mapId).toBe('map-cave');
+    expect(cave.mapAnchorId).toBe('anchor-cave-mouth');
+    expect(cave.mode).toBe('hub');
+    expect(cave.quests).toBe(state.quests);
+    expect(cave.stickers).toBe(state.stickers);
+    // The exit lands exactly on the outdoor entrance anchor.
+    const back = gameReducer(
+      cave,
+      { type: 'CHANGE_MAP', mapId: 'map-town', anchorId: 'anchor-cave-entrance' },
+      NOW,
+    );
+    expect(back.mapId).toBe('map-town');
+    expect(back.mapAnchorId).toBe('anchor-cave-entrance');
+  });
+
+  it('a reload restores the map, spawn and discoveries exactly', () => {
+    let state = atHub();
+    state = gameReducer(state, { type: 'DISCOVER', discoveryId: 'discovery-cave-entrance' }, NOW);
+    state = gameReducer(
+      state,
+      { type: 'CHANGE_MAP', mapId: 'map-cave', anchorId: 'anchor-cave-mouth' },
+      NOW,
+    );
+    const persisted = toPersistedState(state);
+    const parsed = parseSave(JSON.parse(JSON.stringify(persisted)), NOW);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const restored = gameReducer(
+      createInitialState(NOW),
+      { type: 'BOOT_LOADED', persisted: parsed.state, health: 'loaded' },
+      NOW,
+    );
+    expect(restored.discoveries).toEqual(['discovery-cave-entrance']);
+    expect(restored.mapId).toBe('map-cave');
+    expect(restored.mapAnchorId).toBe('anchor-cave-mouth');
+  });
+
+  it('an older save without map fields loads safely in town', () => {
+    const persisted = toPersistedState(atHub()) as unknown as Record<string, unknown>;
+    delete persisted['discoveries'];
+    delete persisted['mapId'];
+    delete persisted['mapAnchorId'];
+    const parsed = parseSave(JSON.parse(JSON.stringify(persisted)), NOW);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.state.discoveries).toEqual([]);
+    expect(parsed.state.mapId).toBe('map-town');
+    expect(parsed.state.mapAnchorId).toBe('anchor-square');
   });
 });

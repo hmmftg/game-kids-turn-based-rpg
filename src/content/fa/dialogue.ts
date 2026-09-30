@@ -248,6 +248,27 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     ],
     review: DRAFT_REVIEW,
   },
+  {
+    id: 'cavemouse-intro',
+    npcId: 'npc-cave-mouse',
+    textFa: 'موش کوچک غار کنار گوهر ایستاده.',
+    iconId: 'icon-find-crystal',
+    offersQuestId: 'quest-cave-crystal',
+    lines: [
+      {
+        speakerId: 'npc-cave-mouse',
+        textFa: 'موش کوچک غار کنار گوهر ایستاده.',
+        emotion: 'calm',
+      },
+      {
+        speakerId: 'npc-cave-mouse',
+        textFa: 'گوهر ته غار می‌درخشد.',
+        emotion: 'happy',
+        reaction: 'point',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
 ];
 
 const BY_ID = new Map<string, DialogueNode>(DIALOGUE_NODES.map((node) => [node.id, node]));

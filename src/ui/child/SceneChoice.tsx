@@ -38,11 +38,13 @@ export type SceneElement =
   | 'shell'
   | 'bread'
   | 'book'
-  | 'ball';
+  | 'ball'
+  | 'crystal'
+  | 'mouse';
 
 /** The thing a step implies the child is already holding (displayed at the
  *  hand marker on the strip's start edge). Keyed by the *correct* icon. */
-export type HeldItem = 'leaf' | 'basket' | 'kite' | 'shell' | 'bread';
+export type HeldItem = 'leaf' | 'basket' | 'kite' | 'shell' | 'bread' | 'crystal';
 
 export const HELD_ITEM: Partial<Record<IconId, HeldItem>> = {
   'icon-place-basket': 'basket',
@@ -52,6 +54,7 @@ export const HELD_ITEM: Partial<Record<IconId, HeldItem>> = {
   'icon-give-kite': 'kite',
   'icon-give-shell': 'shell',
   'icon-place-bread': 'bread',
+  'icon-give-crystal': 'crystal',
 };
 
 const stroke = {
@@ -223,6 +226,27 @@ function renderElement(element: SceneElement) {
           {GROUND_LINE}
         </>
       );
+    case 'crystal':
+      // a small glowing crystal cluster
+      return (
+        <>
+          <path d="M20 38l-3-16 5-8 4 8zM28 38l1-12 5-6 2 8z" {...stroke} />
+          <path d="M14 38h20" {...stroke} opacity={0.35} />
+        </>
+      );
+    case 'mouse':
+      // the little cave mouse — round ears, pointy nose, tail
+      return (
+        <>
+          <circle cx="18" cy="14" r="5" {...stroke} />
+          <circle cx="30" cy="14" r="5" {...stroke} />
+          <ellipse cx="24" cy="28" rx="9" ry="8" {...stroke} />
+          <circle cx="21" cy="26" r="1.2" fill="currentColor" />
+          <circle cx="27" cy="26" r="1.2" fill="currentColor" />
+          <path d="M24 29l-2 3h4z" {...stroke} />
+          <path d="M33 32q8 2 6 8" {...stroke} />
+        </>
+      );
   }
 }
 
@@ -239,6 +263,8 @@ function heldShape(item: HeldItem) {
       return <path d="M28 15a5 5 0 0 1 10 0z" {...stroke} />;
     case 'bread':
       return <ellipse cx="33" cy="12" rx="6" ry="3.4" {...stroke} />;
+    case 'crystal':
+      return <path d="M30 18l-2-9 3-4 2 4zM34 18l1-7 3-3 1 4z" {...stroke} />;
   }
 }
 
@@ -359,6 +385,33 @@ function consequenceScene(iconId: IconId) {
           <path d="M13 26h22M24 15v22" {...stroke} opacity={0.6} />
           <g className="scene-exec-pop">
             <path d="M38 12l2-3M10 12l-2-3" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-find-crystal':
+      // the crystal lands in the hand
+      return (
+        <>
+          <path
+            d="M16 30a3 3 0 0 1 3-3v-3a3 3 0 0 1 6 0v-1a3 3 0 0 1 6 0v3a3 3 0 0 1 3 3v6a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7z"
+            {...stroke}
+          />
+          <g className="scene-exec-lift">
+            <path d="M30 18l-2-9 3-4 2 4zM34 18l1-7 3-3 1 4z" {...stroke} />
+          </g>
+        </>
+      );
+    case 'icon-give-crystal':
+      // the mouse holds the crystal
+      return (
+        <>
+          <circle cx="18" cy="14" r="5" {...stroke} />
+          <circle cx="30" cy="14" r="5" {...stroke} />
+          <ellipse cx="24" cy="30" rx="9" ry="8" {...stroke} />
+          <circle cx="21" cy="28" r="1.2" fill="currentColor" />
+          <circle cx="27" cy="28" r="1.2" fill="currentColor" />
+          <g className="scene-exec-pop">
+            <path d="M22 22l-1-5 2-3 1 3zM25 22l1-4 2-2 1 2z" {...stroke} />
           </g>
         </>
       );

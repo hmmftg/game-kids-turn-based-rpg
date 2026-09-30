@@ -265,6 +265,30 @@ function renderGlyph(iconId: IconId) {
           <path className="glyph-cue" d="M38 20l6-4-1 8" {...stroke} />
         </>
       );
+    case 'icon-find-crystal':
+      // hand picks the glowing crystal
+      return (
+        <>
+          <g className="glyph-hand">
+            <g transform="translate(2 -6)">{HAND}</g>
+          </g>
+          <path className="glyph-object" d="M27 36l-2-10 3-5 2 5zM33 36l1-7 3-3 1 4z" {...stroke} />
+          {GROUND}
+          {ARROW_UP}
+        </>
+      );
+    case 'icon-give-crystal':
+      // the crystal goes to the little mouse
+      return (
+        <>
+          <g className="glyph-object">
+            <path d="M8 34l-1-7 2-3 1 3zM12 34l1-5 2-2 1 3z" {...stroke} />
+          </g>
+          <path d="M28 22a4 4 0 1 1 8 0M38 22a4 4 0 1 0-8 0" {...stroke} />
+          <ellipse cx="34" cy="30" rx="6" ry="5" {...stroke} />
+          <path className="glyph-cue" d="M16 30q8-3 12 0" {...stroke} strokeDasharray="3 3" />
+        </>
+      );
     case 'icon-greet':
       // face with a raised waving hand
       return (

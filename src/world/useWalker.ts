@@ -41,6 +41,13 @@ export function useWalker(
   const [moving, setMoving] = useState(false);
   const pendingArrival = useRef<(() => void) | null>(null);
 
+  // E2E/QA probe: the anchor the avatar currently stands at. Lets scripts
+  // observe arrivals without guessing walk durations.
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    if (import.meta.env.DEV || w['__WORLD_PROBE']) w['__worldAt'] = at;
+  }, [at]);
+
   const finishWalk = useCallback(
     (anchor: AnchorId) => {
       const pending = pendingArrival.current;
