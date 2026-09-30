@@ -8,7 +8,14 @@ import type { AreaId, EnvironmentDefinition } from '../domain/world/types.ts';
 import { ANCHORS, getAnchor } from './navigation/graph.ts';
 import { areaForAnchor, visibleAreaIds } from './registry.ts';
 import { CIRCLE, BOX, CYLINDER, SPHERE, sharedLambert } from './models/shared.ts';
-import { DestinationMarker, Hotspot, QuestMarker, type WorldSceneHandle } from './sceneBits.tsx';
+import {
+  AttentionPulse,
+  DestinationMarker,
+  Hotspot,
+  QuestMarker,
+  type NpcAttention,
+  type WorldSceneHandle,
+} from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
@@ -27,6 +34,10 @@ export interface CaveWorldProps {
   readonly startAnchorId: AnchorId;
   readonly environment: EnvironmentDefinition;
   readonly onArrive: (anchor: AnchorId) => void;
+  /** Tap the resident → talk, same ownership rule as the town. */
+  readonly onNpcTap?: ((npcId: string) => void) | undefined;
+  /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
+  readonly attention?: NpcAttention | null | undefined;
   readonly handleRef: Ref<CaveHandle> | undefined;
 }
 
@@ -271,6 +282,8 @@ export function CaveWorld({
   startAnchorId,
   environment,
   onArrive,
+  onNpcTap,
+  attention,
   handleRef,
 }: CaveWorldProps) {
   const models = useModels();
@@ -404,8 +417,25 @@ export function CaveWorld({
       {/* The cave mouse — the map's one resident. Rendered by the shared
           animal slot so a GLB model set supplies it too; grey tint reads
           "mouse", not "cat". */}
-      <group position={[mouseAnchor.x + 0.8, 0, mouseAnchor.z]} rotation={[0, mouseFacing, 0]}>
-        <models.Animal variant="cat" tint="#8d8391" detailLevel={detailLevel} />
+      <group position={[mouseAnchor.x + 0.8, 0, mouseAnchor.z]}>
+        {/* The mouse is a person too: a tap on the figure talks to it, and
+            reaching its spot earns the same one-shot attention cue. */}
+        <mesh
+          position={[0, 0.6, 0]}
+          onClick={(event: ThreeEvent<MouseEvent>) => {
+            if (!interactive || event.delta > 6) return;
+            event.stopPropagation();
+            onNpcTap?.('npc-cave-mouse');
+          }}
+        >
+          <cylinderGeometry args={[0.7, 0.7, 1.4, 8]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+        <AttentionPulse nonce={attention?.npcId === 'npc-cave-mouse' ? attention.nonce : 0}>
+          <group rotation={[0, mouseFacing, 0]}>
+            <models.Animal variant="cat" tint="#8d8391" detailLevel={detailLevel} />
+          </group>
+        </AttentionPulse>
       </group>
 
       {/* Avatar — same model and walk feel as outside. */}

@@ -18,6 +18,7 @@ import {
   NPC_DEFINITIONS,
   areaAt,
   areaForAnchor,
+  npcFigureJitter,
   resolveNpcSpot,
   visibleAreaIds,
 } from './registry.ts';
@@ -32,7 +33,14 @@ import {
   StoneCluster,
 } from './models/details.tsx';
 import { BOX, CYLINDER, PLANE, sharedGroundMaterial, sharedLambert } from './models/shared.ts';
-import { DestinationMarker, Hotspot, QuestMarker, type WorldSceneHandle } from './sceneBits.tsx';
+import {
+  AttentionPulse,
+  DestinationMarker,
+  Hotspot,
+  QuestMarker,
+  type NpcAttention,
+  type WorldSceneHandle,
+} from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
@@ -69,6 +77,8 @@ export interface HubProps {
   readonly onNpcTap?: ((npcId: string) => void) | undefined;
   /** Coarse world clock driving NPC routines (ticks once per arrival). */
   readonly worldTime?: number | undefined;
+  /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
+  readonly attention?: NpcAttention | null | undefined;
   readonly handleRef: Ref<HubHandle> | undefined;
 }
 
@@ -358,6 +368,7 @@ export function Hub({
   onArrive,
   onNpcTap,
   worldTime = 0,
+  attention,
   handleRef,
 }: HubProps) {
   const models = useModels();
@@ -517,8 +528,9 @@ export function Hub({
         const anchor = getAnchor(spot?.anchorId ?? npc.anchorId);
         if (!visibleAreas.includes(anchor.areaId)) return null;
         if (anchor.mapId !== 'map-town') return null;
-        const npcX = anchor.x + 0.9 + (spot?.offsetX ?? 0);
-        const npcZ = anchor.z - 0.4 + (spot?.offsetZ ?? 0);
+        const jitter = npcFigureJitter(npc.id);
+        const npcX = anchor.x + 0.9 + (spot?.offsetX ?? 0) + jitter.x;
+        const npcZ = anchor.z - 0.4 + (spot?.offsetZ ?? 0) + jitter.z;
         const dx = walker.position.x - npcX;
         const dz = walker.position.z - npcZ;
         // Neighbours turn to watch the player approach: attention is feedback.
@@ -541,16 +553,22 @@ export function Hub({
               <cylinderGeometry args={[0.9, 0.9, 2.2, 8]} />
               <meshBasicMaterial visible={false} />
             </mesh>
-            <models.Figure
-              position={{ x: npcX, z: npcZ }}
-              rotationY={facing}
-              palette={look.palette}
-              hairStyle={look.hairStyle}
-              hairColor={look.hairColor}
-              label={npc.id}
-              detailLevel={detailLevel}
-              role={look.role}
-            />
+            {/* Reaching an NPC earns a one-shot attention bounce (never a
+                dialogue) — the child decides whether to tap and talk. */}
+            <group position={[npcX, 0, npcZ]}>
+              <AttentionPulse nonce={attention?.npcId === npc.id ? attention.nonce : 0}>
+                <models.Figure
+                  position={{ x: 0, z: 0 }}
+                  rotationY={facing}
+                  palette={look.palette}
+                  hairStyle={look.hairStyle}
+                  hairColor={look.hairColor}
+                  label={npc.id}
+                  detailLevel={detailLevel}
+                  role={look.role}
+                />
+              </AttentionPulse>
+            </group>
             {spot?.prop ? (
               <models.Prop
                 position={{

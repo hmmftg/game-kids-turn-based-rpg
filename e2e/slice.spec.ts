@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../src/domain/quests/definitions.ts';
+import { enableWorldProbe, openQuestDialogue } from './npcTap.ts';
 
 // The trail plays quests that live on the mounted map; secondary maps (the
 // cave) are reached through the world, not the trail — covered by cave.spec.
@@ -8,6 +9,7 @@ const QUESTS = QUEST_DEFINITIONS.filter((quest) => (quest.mapId ?? 'map-town') =
 );
 
 async function startGame(page: Page, avatar: 'avatar-aban' | 'avatar-arta' = 'avatar-aban') {
+  await enableWorldProbe(page);
   await page.goto('/');
   await page.getByTestId('start-button').click();
   await page.getByTestId(avatar).click();
@@ -25,7 +27,8 @@ async function resumeFromPicker(page: Page) {
 
 /** Plays one quest through every encounter step, always choosing correctly. */
 async function playQuest(page: Page, questId: (typeof QUESTS)[number]) {
-  await page.getByTestId(`trail-${questId}`).click();
+  // The chip is navigation only — the child taps the NPC to talk.
+  await openQuestDialogue(page, questId);
   await page.getByTestId('start-quest').click();
 
   for (const step of getQuestDefinition(questId).steps) {
@@ -73,7 +76,7 @@ test.describe('vertical slice', () => {
 
   test('a wrong choice re-demonstrates instead of failing the child', async ({ page }) => {
     await startGame(page);
-    await page.getByTestId('trail-quest-greeting').click();
+    await openQuestDialogue(page, 'quest-greeting');
     await page.getByTestId('start-quest').click();
     await page.getByTestId('advance-intro').click();
     await page.getByTestId('advance-demonstrate').click();

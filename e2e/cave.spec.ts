@@ -3,6 +3,7 @@ import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
 import type { QuestId } from '../src/domain/game/types.ts';
 import { getAnchor } from '../src/world/navigation/graph.ts';
 import type { AnchorId } from '../src/domain/game/types.ts';
+import { openQuestDialogue } from './npcTap.ts';
 
 // The cave is reached by tapping the world, not by a button — these specs tap
 // real canvas pixels via the world probe (enabled by __WORLD_PROBE before load).
@@ -104,8 +105,9 @@ async function waitForAnchor(page: Page, anchorId: string) {
 
 /** Plays one quest through every encounter step, always choosing correctly. */
 async function playQuest(page: Page, questId: QuestId) {
-  await page.getByTestId(`trail-${questId}`).click();
-  await expect(page.getByTestId('npc-dialogue')).toBeVisible({ timeout: 60000 });
+  // The chip walks to the quest's anchor; tapping the resident opens the
+  // offer — same ownership rule underground as in town.
+  await openQuestDialogue(page, questId);
   await page.getByTestId('start-quest').click();
   for (const step of getQuestDefinition(questId).steps) {
     await page.getByTestId('advance-intro').click();

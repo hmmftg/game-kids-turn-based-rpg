@@ -21,6 +21,7 @@ import { getMap } from './maps.ts';
 import { CaveWorld } from './CaveWorld.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { zoomForMap } from './camera.ts';
+import type { NpcAttention } from './sceneBits.tsx';
 
 /** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
 let canvasInstanceCounter = 0;
@@ -106,6 +107,8 @@ export interface WorldCanvasProps {
   readonly onNpcTap?: (npcId: string) => void;
   /** Coarse world clock driving NPC routines (ticks once per arrival). */
   readonly worldTime?: number;
+  /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
+  readonly attention?: NpcAttention | null;
   readonly onContextLost: () => void;
   readonly handleRef?: Ref<HubHandle>;
 }
@@ -124,6 +127,7 @@ export function WorldCanvas({
   onArrive,
   onNpcTap,
   worldTime,
+  attention,
   onContextLost,
   handleRef,
 }: WorldCanvasProps) {
@@ -209,6 +213,8 @@ export function WorldCanvas({
               startAnchorId={startAnchorId}
               environment={env}
               onArrive={onArrive}
+              onNpcTap={onNpcTap}
+              attention={attention}
               handleRef={handleRef}
             />
           ) : (
@@ -226,6 +232,7 @@ export function WorldCanvas({
               onArrive={onArrive}
               onNpcTap={onNpcTap}
               worldTime={worldTime}
+              attention={attention}
               handleRef={handleRef}
             />
           )}

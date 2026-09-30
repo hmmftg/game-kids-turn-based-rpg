@@ -4,6 +4,7 @@ import type { NpcDefinition } from '../domain/world/types.ts';
 import {
   getNpcOrNull,
   NPC_DEFINITIONS,
+  npcFigureJitter,
   npcStandingAt,
   resolveNpcActivity,
   resolveNpcSpot,
@@ -34,6 +35,7 @@ import {
 import { ParentArea } from '../ui/parent/ParentArea.tsx';
 import { ParentGate } from '../ui/parent/ParentGate.tsx';
 import { WorldCanvas } from '../world/WorldCanvas.tsx';
+import type { NpcAttention } from '../world/sceneBits.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
 import { getAnchorOrNull } from '../world/navigation/graph.ts';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
@@ -74,16 +76,6 @@ function nodeForNpc(
   );
 }
 
-function nodeForAnchor(
-  anchor: AnchorId,
-  worldTime: number,
-  quests: Record<QuestId, QuestStatus>,
-): string | null {
-  const npc = npcStandingAt(anchor, worldTime);
-  if (npc === null) return null;
-  return nodeForNpc(npc, worldTime, quests);
-}
-
 export function App() {
   const {
     state,
@@ -121,6 +113,10 @@ export function App() {
   const [worldHintSeen, setWorldHintSeen] = useState(false);
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
+  // Who noticed the child arriving — the figure gives a brief non-verbal
+  // attention cue. `nonce` replays the cue on repeat arrivals.
+  const [attention, setAttention] = useState<NpcAttention | null>(null);
+  const attentionNonceRef = useRef(0);
   const previousCompletedRef = useRef<number | null>(null);
   // Highest checkpoint timestamp observed this session. Persisted checkpoints
   // carry the earlier session's completion time and re-hydrated ones repeat a
@@ -164,6 +160,10 @@ export function App() {
   // state so arrival-time resolution reads the post-tick value immediately.
   const [worldTime, setWorldTime] = useState(0);
   const worldTimeRef = useRef(0);
+  // A walk started by tapping a person must not tick the routine clock —
+  // otherwise the arrival relocates the very NPC the child is walking to
+  // (an endless chase). Exploration ticks; conversation does not.
+  const skipArrivalTick = useRef(false);
 
   const discoveries = state.discoveries;
 
@@ -176,6 +176,8 @@ export function App() {
       w['__worldDiscoveries'] = state.discoveries;
       // Where every NPC stands this tick — lets e2e observe routines without
       // raycasting the scene graph.
+      w['__worldAttention'] = attention;
+      w['__worldDialogueNpc'] = state.dialogue?.npcId ?? null;
       w['__worldNpcs'] = Object.fromEntries(
         NPC_DEFINITIONS.map((npc) => {
           const spot = resolveNpcSpot(npc, worldTime);
@@ -186,14 +188,14 @@ export function App() {
               anchorId: spot?.anchorId ?? npc.anchorId,
               activity: resolveNpcActivity(npc, worldTime),
               dialogueId: spot?.dialogueId ?? npc.dialogueIds[0] ?? null,
-              x: (anchor?.x ?? 0) + 0.9 + (spot?.offsetX ?? 0),
-              z: (anchor?.z ?? 0) - 0.4 + (spot?.offsetZ ?? 0),
+              x: (anchor?.x ?? 0) + 0.9 + (spot?.offsetX ?? 0) + npcFigureJitter(npc.id).x,
+              z: (anchor?.z ?? 0) - 0.4 + (spot?.offsetZ ?? 0) + npcFigureJitter(npc.id).z,
             },
           ];
         }),
       );
     }
-  }, [state.mapId, state.discoveries, worldTime]);
+  }, [state.mapId, state.discoveries, state.dialogue, worldTime, attention]);
   const onArrive = useCallback(
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
@@ -210,11 +212,22 @@ export function App() {
         dispatch({ type: 'CHANGE_MAP', mapId: transition.toMap, anchorId: transition.toAnchor });
         return;
       }
-      worldTimeRef.current += 1;
-      setWorldTime(worldTimeRef.current);
-      openNpc(nodeForAnchor(anchor, worldTimeRef.current, statuses));
+      const skipTick = skipArrivalTick.current;
+      skipArrivalTick.current = false;
+      if (!skipTick) {
+        worldTimeRef.current += 1;
+        setWorldTime(worldTimeRef.current);
+      }
+      // Arriving never opens dialogue — walking and talking are separate
+      // actions. Whoever stands at the anchor just notices the child: a
+      // brief non-verbal cue (turn/bounce), no card.
+      const present = npcStandingAt(anchor, worldTimeRef.current);
+      if (present !== null) {
+        attentionNonceRef.current += 1;
+        setAttention({ npcId: present.id, nonce: attentionNonceRef.current });
+      }
     },
-    [openNpc, playSfx, discoveries, dispatch, statuses],
+    [playSfx, discoveries, dispatch],
   );
 
   // Tapping a person (not just a place) talks to them where they stand:
@@ -230,7 +243,11 @@ export function App() {
       // Capture the right entry now (quest offer outranks routine flavour)
       // so the walk itself cannot change which line the child hears.
       const node = nodeForNpc(npc, worldTimeRef.current, statuses);
-      const open = () => openNpc(node);
+      const open = () => {
+        skipArrivalTick.current = false;
+        openNpc(node);
+      };
+      skipArrivalTick.current = true;
       if (!hubRef.current?.goTo(anchor, open)) open();
     },
     [openNpc, statuses],
@@ -239,18 +256,21 @@ export function App() {
   const goToQuest = useCallback(
     (questId: QuestId) => {
       const definition = getQuestDefinition(questId);
+      // Without a world to walk in (no WebGL) the trail still reaches the
+      // quest — the DOM fallback opens the dialogue directly.
+      if (!state.webglAvailable) {
+        openNpc(nodeForQuest(questId));
+        return;
+      }
+      if ((definition.mapId ?? 'map-town') !== state.mapId) return;
       const npc = getNpcOrNull(definition.steps[0]?.npcId ?? 'npc-elder');
       // Walk to where the NPC actually stands now (their routine spot), not
       // their home anchor — the camera lands on them, not an empty spot.
       const spot = npc ? resolveNpcSpot(npc, worldTimeRef.current) : null;
       const anchorId = (spot?.anchorId ?? npc?.anchorId ?? null) as AnchorId | null;
-      const open = () => openNpc(nodeForQuest(questId));
-      // Quests on another map can't be walked to — the trail button for them
-      // is disabled; the DOM fallback (no WebGL) still opens the dialogue.
-      if (state.webglAvailable && (definition.mapId ?? 'map-town') !== state.mapId) return;
-      // The avatar walks to the NPC's current spot and the dialogue opens on
-      // arrival; without a walker (no WebGL) the dialogue opens directly.
-      if (!anchorId || !hubRef.current?.goTo(anchorId, open)) open();
+      // A quest chip is navigation, not conversation: walk there and stop.
+      // Talking stays the child's choice — a tap on the person opens it.
+      if (anchorId) hubRef.current?.goTo(anchorId);
     },
     [openNpc, state.mapId, state.webglAvailable],
   );
@@ -392,6 +412,7 @@ export function App() {
           mapId={state.mapId}
           startAnchorId={spawnAnchor}
           discoveries={state.discoveries}
+          attention={attention}
         />
       ) : null}
 
@@ -425,6 +446,23 @@ export function App() {
           onGo={goToQuest}
         />
       </div>
+
+      {/* Every child modal obeys one rule: a tap outside the card leaves it
+          and never reaches the world beneath — no confirmation, no lost
+          progress. The backdrop sits below the HUD strips so the trail and
+          pause stay reachable. */}
+      {state.mode === 'dialogue' || state.mode === 'encounter' ? (
+        <div
+          className="hud__backdrop"
+          data-testid="modal-backdrop"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            dispatch({
+              type: state.mode === 'dialogue' ? 'CLOSE_DIALOGUE' : 'ABANDON_ENCOUNTER',
+            });
+          }}
+        />
+      ) : null}
 
       <div className="hud__bottom">
         {state.mode === 'dialogue' && dialogueNode && currentLine ? (

@@ -2,8 +2,18 @@ import { expect, test, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
 import type { QuestId } from '../src/domain/game/types.ts';
 import { NPC_DEFINITIONS, WORLD_AREAS } from '../src/world/registry.ts';
+import {
+  attentionProbe,
+  enableWorldProbe,
+  openQuestDialogue,
+  playerAt,
+  tapNpcFigure,
+  waitForProbe,
+  waitForWalkerIdle,
+} from './npcTap.ts';
 
 async function startGame(page: Page) {
+  await enableWorldProbe(page);
   await page.goto('/');
   await page.getByTestId('start-button').click();
   await page.getByTestId('avatar-aban').click();
@@ -37,8 +47,7 @@ test.describe('scalable world', () => {
     page,
   }) => {
     await startGame(page);
-    await page.getByTestId('trail-quest-greeting').click();
-    await expect(page.getByTestId('npc-dialogue')).toBeVisible();
+    await openQuestDialogue(page, 'quest-greeting');
 
     // The quest offer stays visible on every beat — one tap, like before.
     await expect(page.getByTestId('start-quest')).toBeVisible();
@@ -56,10 +65,50 @@ test.describe('scalable world', () => {
   // Leaving to the picker and returning (and a reload) keeps progress and
   // brings the same world back — NPCs in inactive areas cost nothing while
   // away because the world is the same data, not per-NPC code.
+  // The interaction contract a child asked for: walking near a person never
+  // starts a conversation, and tapping outside a card always leaves it —
+  // without the tap leaking through to the world.
+  test('walking to an NPC only navigates; a tap outside the dialogue closes it', async ({
+    page,
+  }) => {
+    await startGame(page);
+    await waitForProbe(page);
+    await page.getByTestId('trail-quest-greeting').click();
+    await waitForWalkerIdle(page);
+
+    // Arrival earns attention, not a card: no dialogue opened by itself.
+    await expect(page.getByTestId('npc-dialogue')).toHaveCount(0);
+    await expect
+      .poll(async () => (await attentionProbe(page))?.npcId ?? null, { timeout: 15000 })
+      .toBe('npc-neighbour');
+
+    // Talking is the child's explicit choice — tap the figure.
+    await tapNpcFigure(page, 'npc-neighbour');
+    await expect(page.getByTestId('npc-dialogue')).toBeVisible();
+
+    // A tap anywhere outside the card leaves the conversation and does not
+    // move the child — the backdrop swallows the world tap beneath it.
+    const standing = await playerAt(page);
+    const gap = await page.evaluate(() => {
+      const backdrop = document.querySelector('[data-testid="modal-backdrop"]');
+      if (!backdrop) return null;
+      const box = backdrop.getBoundingClientRect();
+      for (let y = box.top + 8; y < box.bottom; y += 24) {
+        for (let x = box.left + 8; x < box.right; x += 24) {
+          if (document.elementFromPoint(x, y) === backdrop) return { x, y };
+        }
+      }
+      return null;
+    });
+    expect(gap).not.toBeNull();
+    await page.mouse.click(gap!.x, gap!.y);
+    await expect(page.getByTestId('npc-dialogue')).toHaveCount(0);
+    expect(await playerAt(page)).toBe(standing);
+  });
+
   test('leaving and returning preserves progress across a reload', async ({ page }) => {
     await startGame(page);
-    await page.getByTestId('trail-quest-greeting').click();
-    await expect(page.getByTestId('npc-dialogue')).toBeVisible();
+    await openQuestDialogue(page, 'quest-greeting');
     await page.getByTestId('close-dialogue').click();
 
     await page.reload();
@@ -70,9 +119,8 @@ test.describe('scalable world', () => {
 
   /** Plays one quest through every encounter step, always choosing correctly. */
   async function playQuest(page: Page, questId: QuestId) {
-    await page.getByTestId(`trail-${questId}`).click();
-    // The avatar walks to the NPC's anchor first — far areas take a while.
-    await expect(page.getByTestId('npc-dialogue')).toBeVisible({ timeout: 60000 });
+    // The chip walks there; tapping the person opens the quest offer.
+    await openQuestDialogue(page, questId);
     await page.getByTestId('start-quest').click();
     for (const step of getQuestDefinition(questId).steps) {
       await page.getByTestId('advance-intro').click();
@@ -96,7 +144,7 @@ test.describe('scalable world', () => {
   // trail reaches a real NPC + offer, and every step is completed by tapping
   // the physical target — kite, fish, shell, bread, picture cards.
   test('each expanded area offers a concrete completable activity', async ({ page }) => {
-    test.setTimeout(180000);
+    test.setTimeout(300000);
     await startGame(page);
 
     // The new area quests stay locked until the story reaches them.
