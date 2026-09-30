@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Ref, type RefObject } from 'react';
+import { useEffect, useRef, type Ref, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
@@ -17,33 +17,10 @@ import { CUBIC_MODELS } from './models/cubicModels.ts';
 import { ModelContext, detailLevelFor } from './models/modelProvider.ts';
 import { skyDomeResources } from './models/shared.ts';
 import { noRaycast } from './models/raycast.ts';
-import { ANCHORS } from './navigation/graph.ts';
-import { CRITTER_BOUNDS } from './critters.ts';
 import { getMap } from './maps.ts';
 import { CaveWorld } from './CaveWorld.tsx';
-
-/**
- * Screen-space footprint of the whole hub. The camera looks along (1,1,1), so a
- * ground anchor projects to |x−z|/√2 horizontally and (x+z)/√6 vertically, plus
- * ~0.82 per unit of model height. The margins cover hotspot rings and the
- * NPC/landmark offsets so every landmark stays inside the viewport — without
- * this, landscape phones (wide but short) cropped the top and bottom of the
- * neighbourhood.
- */
-/** Camera fit for one map: its anchors' projected envelope (+ town airspace). */
-function fitForMap(mapId: MapId): { width: number; height: number } {
-  const anchors = ANCHORS.filter((anchor) => anchor.mapId === mapId);
-  const side =
-    Math.max(
-      Math.max(...anchors.map((anchor) => Math.abs(anchor.x - anchor.z) / Math.SQRT2)),
-      mapId === 'map-town' ? CRITTER_BOUNDS.maxHorizontalRadius : 0,
-    ) + 1.7;
-  const depth =
-    Math.max(...anchors.map((anchor) => Math.abs(anchor.x + anchor.z) / Math.sqrt(6))) +
-    2.9 +
-    (mapId === 'map-town' ? CRITTER_BOUNDS.maxY * 0.82 : 2.5);
-  return { width: side * 2, height: depth * 2 };
-}
+import { CameraRig } from './CameraRig.tsx';
+import { zoomForMap } from './camera.ts';
 
 /** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
 let canvasInstanceCounter = 0;
@@ -146,7 +123,7 @@ export function WorldCanvas({
 }: WorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneAlive = useRef(false);
-  const [zoom, setZoom] = useState(70);
+  const zoom = zoomForMap(mapId);
   // The quality tier is the only quality system; the world only derives how
   // much decoration it draws from it, never a different render pipeline.
   const detailLevel = detailLevelFor(qualityTier);
@@ -158,22 +135,6 @@ export function WorldCanvas({
   useEffect(() => {
     const w = window as unknown as Record<string, unknown>;
     if (import.meta.env.DEV || w['__WORLD_PROBE']) w['__worldMapId'] = mapId;
-  }, [mapId]);
-
-  // Locked isometric framing: no orbit controls, no camera input of any kind.
-  // Zoom fits the current map's bounds, limited by the tighter viewport axis.
-  useEffect(() => {
-    const fit = fitForMap(mapId);
-    const onResize = () =>
-      setZoom(
-        Math.min(
-          96,
-          Math.max(20, Math.min(window.innerWidth / fit.width, window.innerHeight / fit.height)),
-        ),
-      );
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
   }, [mapId]);
 
   return (
@@ -214,6 +175,10 @@ export function WorldCanvas({
       >
         <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
+        {/* Follow-camera: tracks the avatar, clamped to this map's bounds.
+            `key` remounts it per map so a transition snaps to the new
+            spawn instead of easing from stale cross-map coordinates. */}
+        <CameraRig key={mapId} mapId={mapId} />
         {/* Atmosphere comes from the map's EnvironmentDefinition — a cave
             swaps the sky+haze for a closed dark look without new code. */}
         {env.fog ? <fog attach="fog" args={[env.fog.color, env.fog.near, env.fog.far]} /> : null}

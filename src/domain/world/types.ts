@@ -57,6 +57,13 @@ export interface WorldMapDefinition {
   /** Anchor the avatar appears at when entering without a specific spawn. */
   readonly spawnAnchorId: AnchorId;
   readonly environment: EnvironmentDefinition;
+  /**
+   * Optional presentation tweaks for the shared follow-camera: a tighter
+   * default zoom (e.g. an intimate interior) or wider clamp padding. The
+   * camera logic itself is never per-map.
+   */
+  readonly cameraZoom?: number;
+  readonly cameraPadding?: number;
 }
 
 /**

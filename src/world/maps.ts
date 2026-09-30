@@ -37,6 +37,8 @@ export const WORLD_MAPS: readonly WorldMapDefinition[] = [
     labelFa: 'غار',
     bounds: { minX: -4.5, maxX: 4.5, minZ: -4, maxZ: 5 },
     spawnAnchorId: 'anchor-cave-mouth',
+    // Small interior: a tighter default zoom than the open neighbourhood.
+    cameraZoom: 72,
     environment: {
       clearColor: '#241f2e',
       fog: { color: '#241f2e', near: 10, far: 30 },
