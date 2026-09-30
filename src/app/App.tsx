@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
+import type { NpcDefinition } from '../domain/world/types.ts';
 import {
   getNpcOrNull,
   NPC_DEFINITIONS,
@@ -10,7 +11,7 @@ import {
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
-import type { AnchorId, IconId, QuestId } from '../domain/game/types.ts';
+import type { AnchorId, IconId, QuestId, QuestStatus } from '../domain/game/types.ts';
 import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { canStartQuest, nextSuggestedQuest } from '../domain/quests/prerequisites.ts';
 import { QuestCelebration } from '../ui/child/Celebration.tsx';
@@ -48,9 +49,23 @@ function nodeForQuest(questId: QuestId): string | null {
  * their default entry node (quest offer first). An empty spot stays quiet —
  * nobody answers where nobody stands.
  */
-function nodeForAnchor(anchor: AnchorId, worldTime: number): string | null {
-  const npc = npcStandingAt(anchor, worldTime);
-  if (npc === null) return null;
+function nodeForNpc(
+  npc: NpcDefinition,
+  worldTime: number,
+  quests: Record<QuestId, QuestStatus>,
+): string | null {
+  // A quest the child can still do always outranks the routine's flavour
+  // line — the greeting must never hide the start-quest button.
+  const questNode = npc.dialogueIds
+    .map((id) => DIALOGUE_NODES.find((node) => node.id === id))
+    .find(
+      (node) =>
+        node?.offersQuestId !== null &&
+        node?.offersQuestId !== undefined &&
+        (quests[node.offersQuestId] === 'available' ||
+          quests[node.offersQuestId] === 'active'),
+    );
+  if (questNode) return questNode.id;
   const spot = resolveNpcSpot(npc, worldTime);
   return (
     spot?.dialogueId ??
@@ -58,6 +73,16 @@ function nodeForAnchor(anchor: AnchorId, worldTime: number): string | null {
     DIALOGUE_NODES.find((node) => node.npcId === npc.id)?.id ??
     null
   );
+}
+
+function nodeForAnchor(
+  anchor: AnchorId,
+  worldTime: number,
+  quests: Record<QuestId, QuestStatus>,
+): string | null {
+  const npc = npcStandingAt(anchor, worldTime);
+  if (npc === null) return null;
+  return nodeForNpc(npc, worldTime, quests);
 }
 
 export function App() {
@@ -188,9 +213,9 @@ export function App() {
       }
       worldTimeRef.current += 1;
       setWorldTime(worldTimeRef.current);
-      openNpc(nodeForAnchor(anchor, worldTimeRef.current));
+      openNpc(nodeForAnchor(anchor, worldTimeRef.current, statuses));
     },
-    [openNpc, playSfx, discoveries, dispatch],
+    [openNpc, playSfx, discoveries, dispatch, statuses],
   );
 
   // Tapping a person (not just a place) talks to them where they stand:
@@ -203,11 +228,13 @@ export function App() {
       if (!npc) return;
       const spot = resolveNpcSpot(npc, worldTimeRef.current);
       const anchor = (spot?.anchorId ?? npc.anchorId) as AnchorId;
-      const node = spot?.dialogueId ?? npc.dialogueIds[0] ?? null;
+      // Capture the right entry now (quest offer outranks routine flavour)
+      // so the walk itself cannot change which line the child hears.
+      const node = nodeForNpc(npc, worldTimeRef.current, statuses);
       const open = () => openNpc(node);
       if (!hubRef.current?.goTo(anchor, open)) open();
     },
-    [openNpc],
+    [openNpc, statuses],
   );
 
   const goToQuest = useCallback(
