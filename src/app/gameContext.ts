@@ -18,10 +18,10 @@ export interface GameShell {
   readonly activeProfileId: string | null;
   /** Loads a profile slot and lands on its checkpoint. */
   readonly selectProfile: (id: string) => void;
-  /** Clears the in-memory player and opens avatar + headwear + badge select. */
+  /** Clears the in-memory player and opens avatar + headwear select. */
   readonly startNewPlayer: () => void;
-  /** Creates (or updates) the profile tied to this avatar + headwear + badge pick. */
-  readonly chooseAvatar: (avatarId: AvatarId, badge: string, headwear: HeadwearId) => void;
+  /** Creates (or updates) the profile tied to this avatar + headwear pick. */
+  readonly chooseAvatar: (avatarId: AvatarId, headwear: HeadwearId) => void;
   /** Wipes one profile's progress; its card stays on the picker. */
   readonly resetProfile: (id: string) => void;
   readonly renameProfile: (id: string, nameFa: string) => void;

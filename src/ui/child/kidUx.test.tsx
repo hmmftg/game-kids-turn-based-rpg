@@ -48,19 +48,18 @@ describe('human avatar presets', () => {
     expect(keys.size).toBe(AVATAR_IDS.length);
   });
 
-  it('avatar selection still flows pick → headwear → badge → select', async () => {
+  it('avatar selection flows pick → headwear → play (portrait is the identity)', async () => {
     const user = userEvent.setup();
     let picked: string | null = null;
     render(
       <AvatarSelectScreen
-        onSelect={(id, _badge, _headwear) => {
+        onSelect={(id) => {
           picked = id;
         }}
       />,
     );
     await user.click(screen.getByTestId('avatar-nika'));
     await user.click(screen.getByTestId('headwear-next'));
-    await user.click(screen.getByTestId('badge-0'));
     expect(picked).toBe('avatar-nika');
   });
 });

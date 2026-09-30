@@ -8,10 +8,10 @@ function persianDigits(value: number): string {
 }
 
 /**
- * «Who is playing?» picker. Pre-readers find their card by badge + avatar, so
- * each card is one giant recognisable picture plus a sticker count. Destructive
- * resets are deliberately absent from this child-facing flow: they live behind
- * the press-and-hold parent gate.
+ * «Who is playing?» picker. Pre-readers find their card by portrait — the same
+ * kid they picked — so each card is one giant recognisable picture plus a
+ * sticker count. Destructive resets are deliberately absent from this
+ * child-facing flow: they live behind the press-and-hold parent gate.
  */
 export function ProfileSelectScreen({
   profiles,
@@ -36,11 +36,8 @@ export function ProfileSelectScreen({
               onClick={() => onSelect(profile.id)}
               data-testid={`profile-card-${profile.id}`}
             >
-              <span className="emoji profile-card__badge" aria-hidden="true">
-                {profile.badge}
-              </span>
               <span className="profile-card__avatar" aria-hidden="true">
-                <AvatarPortrait avatarId={profile.avatarId} size={44} />
+                <AvatarPortrait avatarId={profile.avatarId} size={64} />
               </span>
               {profile.headwear && profile.headwear !== 'none' ? (
                 <span className="profile-card__headwear" aria-hidden="true">
@@ -60,7 +57,7 @@ export function ProfileSelectScreen({
           onClick={onNew}
           data-testid="profile-new"
         >
-          <span className="emoji profile-card__badge" aria-hidden="true">
+          <span className="emoji" style={{ fontSize: 48 }} aria-hidden="true">
             ➕
           </span>
           <span className="trail__title">{FA.newPlayer}</span>

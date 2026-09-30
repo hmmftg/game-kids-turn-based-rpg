@@ -14,7 +14,6 @@ export const FA = {
   avatarArta: 'آرتا',
   avatarNika: 'نیکا',
   avatarDiyar: 'دیار',
-  chooseBadge: 'یک نشان برای خودت انتخاب کن',
   chooseHeadwear: 'روی سرت چه می‌پوشی؟',
   headwearNone: 'فقط مو',
   headwearScarf: 'روسری',

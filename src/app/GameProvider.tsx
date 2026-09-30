@@ -323,16 +323,22 @@ export function GameProvider({
   }, [setActiveProfile]);
 
   const chooseAvatar = useCallback(
-    (avatarId: AvatarId, badge: string, headwear: HeadwearId) => {
+    (avatarId: AvatarId, headwear: HeadwearId) => {
       const existingId = activeProfileIdRef.current;
       if (existingId === null) {
-        const meta = makeProfile(avatarId, badge, headwear, 0, Date.now());
+        const meta = makeProfile(
+          avatarId,
+          pickProfileBadge(profilesRef.current),
+          headwear,
+          0,
+          Date.now(),
+        );
         setActiveProfile(meta.id);
         writeProfileList([...profilesRef.current, meta]);
       } else {
         writeProfileList(
           profilesRef.current.map((entry) =>
-            entry.id === existingId ? { ...entry, avatarId, badge, headwear } : entry,
+            entry.id === existingId ? { ...entry, avatarId, headwear } : entry,
           ),
         );
       }

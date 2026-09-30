@@ -27,7 +27,6 @@ async function reachHub(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByTestId('start-button'));
   await user.click(await screen.findByTestId('avatar-aban'));
   await user.click(await screen.findByTestId('headwear-next'));
-  await user.click(await screen.findByTestId('badge-0'));
   await screen.findByTestId('hud');
 }
 
@@ -104,7 +103,6 @@ describe('App', () => {
     await user.click(await screen.findByTestId('start-button'));
     await user.click(await screen.findByTestId('avatar-aban'));
     await user.click(await screen.findByTestId('headwear-next'));
-    await user.click(await screen.findByTestId('badge-0'));
     await screen.findByTestId('hud');
 
     expect(repository.peek()).toEqual(corrupt);

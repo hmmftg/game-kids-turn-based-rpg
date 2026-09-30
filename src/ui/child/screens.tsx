@@ -3,7 +3,7 @@ import { FA } from '../../content/fa/strings.ts';
 import { AVATAR_IDS, HEADWEAR_IDS } from '../../domain/game/types.ts';
 import type { AvatarId, HeadwearId } from '../../domain/game/types.ts';
 import { AvatarPortrait } from './AvatarPortrait.tsx';
-import { AVATAR_LABEL, BADGE_EMOJIS, HEADWEAR_LABEL } from './emoji.ts';
+import { AVATAR_LABEL, HEADWEAR_LABEL } from './emoji.ts';
 import { Pictogram } from './Pictogram.tsx';
 
 export function LoadingScreen() {
@@ -95,17 +95,17 @@ export function TitleScreen({
 }
 
 /**
- * New-player flow: pick avatar → pick headwear → pick badge. Headwear is a
- * cosmetic category open to every avatar (no girl/boy routing); the preview
- * updates on the same tap that selects, and the choice lands on the profile
- * card next to the badge.
+ * New-player flow: pick avatar → pick headwear → done. The portrait IS the
+ * identity, so there is no third badge pick — the profile's badge is assigned
+ * automatically. Headwear is a cosmetic category open to every avatar (no
+ * girl/boy routing); the preview updates on the same tap that selects.
  */
 export function AvatarSelectScreen({
   onSelect,
 }: {
-  readonly onSelect: (id: AvatarId, badge: string, headwear: HeadwearId) => void;
+  readonly onSelect: (id: AvatarId, headwear: HeadwearId) => void;
 }) {
-  const [step, setStep] = useState<'avatar' | 'headwear' | 'badge'>('avatar');
+  const [step, setStep] = useState<'avatar' | 'headwear'>('avatar');
   const [avatarId, setAvatarId] = useState<AvatarId | null>(null);
   const [headwear, setHeadwear] = useState<HeadwearId>('none');
   return (
@@ -167,42 +167,12 @@ export function AvatarSelectScreen({
             <button
               type="button"
               className="btn btn--large"
-              onClick={() => setStep('badge')}
+              onClick={() => onSelect(avatarId, headwear)}
               data-testid="headwear-next"
             >
-              {FA.next}
+              {FA.play}
             </button>
           </div>
-        </>
-      ) : null}
-
-      {step === 'badge' && avatarId !== null ? (
-        <>
-          <h1 className="subtitle">{FA.chooseBadge}</h1>
-          <div className="row badge-row" data-testid="badge-row">
-            {BADGE_EMOJIS.map((badge, index) => (
-              <button
-                key={badge}
-                type="button"
-                className="btn btn--icon badge-choice"
-                onClick={() => onSelect(avatarId, badge, headwear)}
-                data-testid={`badge-${index}`}
-                aria-label={badge}
-              >
-                <span className="emoji avatar-choice__emoji" aria-hidden="true">
-                  {badge}
-                </span>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="btn btn--secondary"
-            onClick={() => setStep('headwear')}
-            data-testid="badge-back"
-          >
-            {FA.back}
-          </button>
         </>
       ) : null}
     </div>

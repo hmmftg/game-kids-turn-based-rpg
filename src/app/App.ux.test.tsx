@@ -32,7 +32,6 @@ async function reachHub(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByTestId('start-button'));
   await user.click(await screen.findByTestId('avatar-aban'));
   await user.click(await screen.findByTestId('headwear-next'));
-  await user.click(await screen.findByTestId('badge-0'));
   await screen.findByTestId('hud');
 }
 
@@ -97,7 +96,6 @@ async function switchToNewPlayer(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByTestId('profile-new'));
   await user.click(await screen.findByTestId('avatar-arta'));
   await user.click(await screen.findByTestId('headwear-next'));
-  await user.click(await screen.findByTestId('badge-1'));
   await screen.findByTestId('hud');
 }
 
@@ -119,7 +117,6 @@ describe('UX pass', () => {
 
     await user.click(await screen.findByTestId('avatar-aban'));
     await user.click(await screen.findByTestId('headwear-next'));
-    await user.click(await screen.findByTestId('badge-0'));
     await screen.findByTestId('hud');
 
     const chip = screen.getByTestId('objective-chip');
@@ -348,7 +345,6 @@ describe('UX pass', () => {
     expect(screen.getByTestId('headwear-preview').querySelector('svg')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('headwear-next'));
-    await user.click(await screen.findByTestId('badge-0'));
     await screen.findByTestId('hud');
   });
 
@@ -359,7 +355,6 @@ describe('UX pass', () => {
     await user.click(await screen.findByTestId('avatar-aban'));
     await user.click(await screen.findByTestId('headwear-option-scarf'));
     await user.click(await screen.findByTestId('headwear-next'));
-    await user.click(await screen.findByTestId('badge-0'));
     await screen.findByTestId('hud');
 
     // The choice lives on the index card, never inside PersistedState.
