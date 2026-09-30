@@ -47,8 +47,22 @@ describe('clampCameraTarget', () => {
 
   it('clamps north and south edges too', () => {
     const hz = inset(LANDSCAPE.w, LANDSCAPE.h, 64);
-    const south = clampCameraTarget({ x: 0, z: TOWN.maxZ }, TOWN, LANDSCAPE.w, LANDSCAPE.h, 64, PAD);
-    const north = clampCameraTarget({ x: 0, z: TOWN.minZ }, TOWN, LANDSCAPE.w, LANDSCAPE.h, 64, PAD);
+    const south = clampCameraTarget(
+      { x: 0, z: TOWN.maxZ },
+      TOWN,
+      LANDSCAPE.w,
+      LANDSCAPE.h,
+      64,
+      PAD,
+    );
+    const north = clampCameraTarget(
+      { x: 0, z: TOWN.minZ },
+      TOWN,
+      LANDSCAPE.w,
+      LANDSCAPE.h,
+      64,
+      PAD,
+    );
     expect(south.z).toBeCloseTo(TOWN.maxZ - PAD - hz, 5);
     expect(north.z).toBeCloseTo(TOWN.minZ + PAD + hz, 5);
   });

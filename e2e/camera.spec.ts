@@ -99,12 +99,7 @@ async function screenPoints(page: Page, anchorId: AnchorId) {
       const points: Array<{ x: number; y: number }> = [];
       for (const [ox, oz] of offsets) {
         const pt = toScreen(ax + ox, az + oz);
-        if (
-          pt.x < 0 ||
-          pt.y < 0 ||
-          pt.x > window.innerWidth ||
-          pt.y > window.innerHeight
-        ) {
+        if (pt.x < 0 || pt.y < 0 || pt.x > window.innerWidth || pt.y > window.innerHeight) {
           continue;
         }
         const el = document.elementFromPoint(pt.x, pt.y);
@@ -131,12 +126,7 @@ async function groundPointsBetween(
       const out: Array<{ x: number; y: number }> = [];
       for (const t of [0.5, 0.75]) {
         const pt = toScreen(mx + (tx - mx) * t, mz + (tz - mz) * t);
-        if (
-          pt.x < 0 ||
-          pt.y < 0 ||
-          pt.x > window.innerWidth ||
-          pt.y > window.innerHeight
-        ) {
+        if (pt.x < 0 || pt.y < 0 || pt.x > window.innerWidth || pt.y > window.innerHeight) {
           continue;
         }
         const el = document.elementFromPoint(pt.x, pt.y);
@@ -182,18 +172,14 @@ async function dismissDialogue(page: Page) {
     if (!(await dialogue.isVisible().catch(() => false))) return;
     const close = page.getByTestId('close-dialogue');
     if (await close.isVisible().catch(() => false)) await close.click();
-    await dialogue
-      .waitFor({ state: 'hidden', timeout: 3000 })
-      .catch(() => {});
+    await dialogue.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
   }
 }
 
 async function tapWorld(page: Page, anchorId: AnchorId) {
   await waitForProbe(page);
   await dismissDialogue(page);
-  const startMapId = await page.evaluate(
-    () => (window as unknown as WorldProbe).__worldMapId,
-  );
+  const startMapId = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
   const tried = new Set<AnchorId>();
   for (let attempt = 0; attempt < 14; attempt += 1) {
     await dismissDialogue(page);
@@ -203,12 +189,9 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     // Arrival dialogue opens a beat after the walker stops — dismiss it
     // after settling so world taps are interactive again.
     await dismissDialogue(page);
-    const at = (await page.evaluate(
-      () => (window as unknown as WorldProbe).__worldAt,
-    )) as AnchorId | undefined;
-    const nowMap = await page.evaluate(
-      () => (window as unknown as WorldProbe).__worldMapId,
-    );
+    const at = (await page.evaluate(() => (window as unknown as WorldProbe).__worldAt)) as
+      AnchorId | undefined;
+    const nowMap = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
     if (startMapId !== undefined && nowMap !== startMapId) return;
     // Tap each candidate pixel until one actually moves the walker — props
     // can swallow the anchor's own projection while ground beside it walks.
@@ -218,25 +201,12 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     // then the ring of offsets around the anchor.
     const goalAnchor = getAnchor(anchorId);
     const atPos = at ? getAnchor(at) : undefined;
-    const midPts = atPos
-      ? await groundPointsBetween(page, atPos, goalAnchor)
-      : [];
+    const midPts = atPos ? await groundPointsBetween(page, atPos, goalAnchor) : [];
     const pts = [...midPts, ...(await screenPoints(page, anchorId))];
-    console.log(
-      'attempt',
-      attempt,
-      'at',
-      at,
-      'candidates',
-      pts.length,
-      'dlg',
-      await page.getByTestId('npc-dialogue').isVisible().catch(() => false),
-    );
     for (const point of pts) {
       await dismissDialogue(page);
       await page.mouse.click(point.x, point.y);
       const result = await waitForArrival(page, at, anchorId, startMapId);
-      console.log('  click', point.x | 0, point.y | 0, '->', result);
       if (result === 'arrived') {
         await dismissDialogue(page);
         return;
@@ -251,26 +221,21 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     // on the authored route toward the target.
     const goal = getAnchor(anchorId);
     const path = at ? findPath(at, anchorId) : [];
-    const nextHop = path.length > 1 ? getAnchor(path[1]) : null;
+    const nextHopId = path.length > 1 ? path[1] : undefined;
+    const nextHop = nextHopId ? getAnchor(nextHopId) : null;
     if (!nextHop) break;
     let hopped = false;
     const hopPts = await screenPoints(page, nextHop.id);
     // Midpoints along the path segment first — the ground between anchors
     // resolves to the nearer one, which is exactly the child's stride.
-    const stride = atPos
-      ? await groundPointsBetween(page, atPos, nextHop)
-      : [];
+    const stride = atPos ? await groundPointsBetween(page, atPos, nextHop) : [];
     for (const pt of [...stride, ...hopPts]) {
       await dismissDialogue(page);
       await page.mouse.click(pt.x, pt.y);
       hopped = await expect
-        .poll(
-          () =>
-            page.evaluate(
-              () => (window as unknown as WorldProbe).__worldAt,
-            ),
-          { timeout: 12000 },
-        )
+        .poll(() => page.evaluate(() => (window as unknown as WorldProbe).__worldAt), {
+          timeout: 12000,
+        })
         .not.toBe(at)
         .then(() => true)
         .catch(() => false);
@@ -280,9 +245,7 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     if (hopped) continue;
     // Greedy fallback: the authored route may detour around a corner — tap
     // the visible walkable anchor nearest the goal and re-evaluate there.
-    const mapId = await page.evaluate(
-      () => (window as unknown as WorldProbe).__worldMapId,
-    );
+    const mapId = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
     const visible: Array<{ a: (typeof ANCHORS)[number]; d: number }> = [];
     for (const candidate of ANCHORS) {
       if (!candidate.walkable) continue;
@@ -299,15 +262,13 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
       const pts2 = await screenPoints(page, a.id);
       if (pts2.length === 0) continue;
       await dismissDialogue(page);
-      await page.mouse.click(pts2[0].x, pts2[0].y);
+      const pt2 = pts2[0];
+      if (!pt2) continue;
+      await page.mouse.click(pt2.x, pt2.y);
       explored = await expect
-        .poll(
-          () =>
-            page.evaluate(
-              () => (window as unknown as WorldProbe).__worldAt,
-            ),
-          { timeout: 12000 },
-        )
+        .poll(() => page.evaluate(() => (window as unknown as WorldProbe).__worldAt), {
+          timeout: 12000,
+        })
         .not.toBe(at)
         .then(() => true)
         .catch(() => false);
@@ -316,38 +277,27 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     }
     if (!explored) break;
   }
-  const last = await page.evaluate(
-    () => (window as unknown as WorldProbe).__worldAt,
-  );
-  console.log('tapWorld gave up', anchorId, 'at', last);
   test.skip(true, `${anchorId} is outside the tappable canvas in this layout`);
 }
 
 async function waitForMap(page: Page, mapId: string) {
   await expect
-    .poll(
-      () =>
-        page.evaluate(
-          () => (window as unknown as WorldProbe).__worldMapId,
-        ),
-      { timeout: 30000 },
-    )
+    .poll(() => page.evaluate(() => (window as unknown as WorldProbe).__worldMapId), {
+      timeout: 30000,
+    })
     .toBe(mapId);
 }
 
 async function waitForAnchor(page: Page, anchorId: string) {
   await expect
-    .poll(
-      () => page.evaluate(() => (window as unknown as WorldProbe).__worldAt),
-      { timeout: 60000 },
-    )
+    .poll(() => page.evaluate(() => (window as unknown as WorldProbe).__worldAt), {
+      timeout: 60000,
+    })
     .toBe(anchorId);
 }
 
 test.describe('follow camera', () => {
-  test('centers on spawn, follows the walker, and never leaves the map', async ({
-    page,
-  }) => {
+  test('centers on spawn, follows the walker, and never leaves the map', async ({ page }) => {
     test.setTimeout(180000);
     await startGame(page);
     await waitForMap(page, 'map-town');

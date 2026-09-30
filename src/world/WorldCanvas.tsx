@@ -22,7 +22,6 @@ import { CaveWorld } from './CaveWorld.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { zoomForMap } from './camera.ts';
 
-
 /** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
 let canvasInstanceCounter = 0;
 
@@ -137,7 +136,6 @@ export function WorldCanvas({
     const w = window as unknown as Record<string, unknown>;
     if (import.meta.env.DEV || w['__WORLD_PROBE']) w['__worldMapId'] = mapId;
   }, [mapId]);
-
 
   return (
     <div className="world" ref={containerRef} data-testid="world-canvas">
