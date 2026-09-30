@@ -62,8 +62,7 @@ function nodeForNpc(
       (node) =>
         node?.offersQuestId !== null &&
         node?.offersQuestId !== undefined &&
-        (quests[node.offersQuestId] === 'available' ||
-          quests[node.offersQuestId] === 'active'),
+        (quests[node.offersQuestId] === 'available' || quests[node.offersQuestId] === 'active'),
     );
   if (questNode) return questNode.id;
   const spot = resolveNpcSpot(npc, worldTime);

@@ -331,9 +331,9 @@ export function CaveWorld({
         name="ground"
         position={[0, 0, 0.4]}
         onClick={(event: ThreeEvent<MouseEvent>) => {
-          if (!interactive) return;
+          if (!interactive || event.delta > 6) return;
           event.stopPropagation();
-          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 2.2, MAP_ID);
+          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 4, MAP_ID);
           if (anchor) walkHere(anchor);
         }}
       />

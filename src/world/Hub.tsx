@@ -27,6 +27,7 @@ import {
   Detail,
   FlowerPatch,
   PathEdgeStones,
+  StoneRoads,
   PlantCluster,
   StoneCluster,
 } from './models/details.tsx';
@@ -140,7 +141,7 @@ function CaveEntranceRock({
   });
 
   const approach = (event: ThreeEvent<MouseEvent>) => {
-    if (!interactive) return;
+    if (!interactive || event.delta > 6) return;
     event.stopPropagation();
     onApproach();
   };
@@ -437,9 +438,9 @@ export function Hub({
         rotation={[-Math.PI / 2, 0, 0]}
         name="ground"
         onClick={(event: ThreeEvent<MouseEvent>) => {
-          if (!interactive) return;
+          if (!interactive || event.delta > 6) return;
           event.stopPropagation();
-          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 2.5, 'map-town');
+          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 4, 'map-town');
           if (anchor) walkHere(anchor);
         }}
       />
@@ -527,16 +528,17 @@ export function Hub({
         return (
           <group key={npc.id}>
             {/* Invisible-but-tappable hit cylinder: a tap on the person
-                talks to them where they stand. */}
+                talks to them where they stand. Generous radius — small
+                fingers, and the figure itself reads as the target. */}
             <mesh
               position={[npcX, 0.75, npcZ]}
               onClick={(event: ThreeEvent<MouseEvent>) => {
-                if (!interactive) return;
+                if (!interactive || event.delta > 6) return;
                 event.stopPropagation();
                 onNpcTap?.(npc.id);
               }}
             >
-              <cylinderGeometry args={[0.55, 0.55, 1.6, 8]} />
+              <cylinderGeometry args={[0.9, 0.9, 2.2, 8]} />
               <meshBasicMaterial visible={false} />
             </mesh>
             <models.Figure
@@ -595,10 +597,18 @@ export function Hub({
       />
 
       {/* Visual path decoration derived from EDGES — read-only, never alters
-          anchors, pathfinding, or movement. dispose={null}: this block and
-          the authored GROUND_DECORATIONS below consume only module-level
+          anchors, pathfinding, or movement. The cobbled road is meaning (it
+          marks where the child can walk), so it is never detail-gated; the
+          curb stones beside it stay decorative. dispose={null}: this block
+          and the authored GROUND_DECORATIONS below consume only module-level
           shared resources, so canvas remounts must not dispose them. */}
       <group dispose={null}>
+        <StoneRoads
+          edges={EDGES.filter((edge) => getAnchor(edge.from).mapId === 'map-town').map((edge) => ({
+            from: getAnchor(edge.from),
+            to: getAnchor(edge.to),
+          }))}
+        />
         <Detail level={detailLevel} min={1}>
           {EDGES.filter((edge) => getAnchor(edge.from).mapId === 'map-town').map((edge) => (
             <PathEdgeStones

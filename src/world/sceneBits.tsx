@@ -75,6 +75,7 @@ export function Hotspot({
       material={suggested ? SUGGESTED_MATERIAL : HOTSPOT_MATERIAL}
       visible={active}
       onClick={(event: ThreeEvent<MouseEvent>) => {
+        if (event.delta > 6) return;
         event.stopPropagation();
         if (active) onSelect();
       }}
