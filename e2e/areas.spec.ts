@@ -121,17 +121,18 @@ test.describe('scalable world', () => {
     // The chip walks there; tapping the person opens the quest offer.
     await openQuestDialogue(page, questId);
     await page.getByTestId('start-quest').click();
+    // Passive beats auto-play — the child waits or taps the object; the only
+    // mandatory action per step is the scene tap.
     for (const step of getQuestDefinition(questId).steps) {
-      await page.getByTestId('advance-intro').click();
-      await page.getByTestId('advance-demonstrate').click();
+      await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
       await page.getByTestId(`scene-${step.correctIconId}`).click();
-      await page.getByTestId('advance-response').click();
-      await page.getByTestId('advance-reinforce').click();
+      // Let this step's card leave before reading the next step's choice.
+      await expect(page.getByTestId('encounter-choice')).toBeHidden({ timeout: 10000 });
     }
     // The last reinforce closes the quest; the celebration overlay must be
     // dismissed before tapping onward.
     const dismiss = page.getByTestId('celebration-continue');
-    const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 2000 }).then(
+    const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 8000 }).then(
       () => true,
       () => false,
     );
@@ -143,7 +144,8 @@ test.describe('scalable world', () => {
   // trail reaches a real NPC + offer, and every step is completed by tapping
   // the physical target — kite, fish, shell, bread, picture cards.
   test('each expanded area offers a concrete completable activity', async ({ page }) => {
-    test.setTimeout(300000);
+    // 8 quests × passive beats (~4 s/step on top of walking) needs headroom.
+    test.setTimeout(420000);
     await startGame(page);
 
     // The new area quests stay locked until the story reaches them.

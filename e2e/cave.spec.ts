@@ -1,9 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
 import type { QuestId } from '../src/domain/game/types.ts';
-import { getAnchor } from '../src/world/navigation/graph.ts';
-import type { AnchorId } from '../src/domain/game/types.ts';
-import { openQuestDialogue } from './npcTap.ts';
+import { openQuestDialogue, tapWorldAnchor } from './npcTap.ts';
 
 // The cave is reached by tapping the world, not by a button — these specs tap
 // real canvas pixels via the world probe (enabled by __WORLD_PROBE before load).
@@ -49,50 +47,6 @@ function probe(page: Page) {
   };
 }
 
-/** Taps the world point (wx, wz) — resolves through the canvas like a finger. */
-async function tapWorld(page: Page, anchorId: AnchorId) {
-  // The probe hooks attach when the canvas is created — wait for them first.
-  await page.waitForFunction(
-    () => (window as unknown as WorldProbe).__worldToScreen !== undefined,
-    undefined,
-    { timeout: 30000 },
-  );
-  const anchor = getAnchor(anchorId);
-  // HUD overlays (quest trail, dialogs) can sit over the canvas at the anchor's
-  // projected pixel. Nudge around nearby world points until the hit lands on
-  // the canvas itself — a real child's tap only ever reaches the canvas.
-  const point = await page.evaluate(
-    ({ ax, az }: { ax: number; az: number }) => {
-      const toScreen = (window as unknown as WorldProbe).__worldToScreen!;
-      const canvas = document.querySelector<HTMLCanvasElement>(
-        '#world-canvas canvas, .world canvas',
-      );
-      if (!canvas) return null;
-      const offsets: Array<[number, number]> = [
-        [0, 0],
-        [0, -0.8],
-        [0.8, -0.4],
-        [-0.8, -0.4],
-        [0.6, 0.6],
-        [-0.6, 0.6],
-        [0, 1.2],
-      ];
-      for (const [ox, oz] of offsets) {
-        const pt = toScreen(ax + ox, az + oz);
-        const el = document.elementFromPoint(pt.x, pt.y);
-        if (el === canvas || canvas.contains(el)) return pt;
-      }
-      return null;
-    },
-    { ax: anchor.x, az: anchor.z },
-  );
-  test.skip(
-    point === null,
-    `${anchorId} is outside the tappable canvas in this layout — cave traversal is covered in landscape`,
-  );
-  await page.mouse.click(point!.x, point!.y);
-}
-
 async function waitForMap(page: Page, mapId: string) {
   await expect.poll(() => probe(page).mapId(), { timeout: 30000 }).toBe(mapId);
 }
@@ -108,15 +62,14 @@ async function playQuest(page: Page, questId: QuestId) {
   // offer — same ownership rule underground as in town.
   await openQuestDialogue(page, questId);
   await page.getByTestId('start-quest').click();
+  // Passive beats auto-play — the only mandatory action is the scene tap.
   for (const step of getQuestDefinition(questId).steps) {
-    await page.getByTestId('advance-intro').click();
-    await page.getByTestId('advance-demonstrate').click();
+    await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
     await page.getByTestId(`scene-${step.correctIconId}`).click();
-    await page.getByTestId('advance-response').click();
-    await page.getByTestId('advance-reinforce').click();
+    await expect(page.getByTestId('encounter-choice')).toBeHidden({ timeout: 10000 });
   }
   const dismiss = page.getByTestId('celebration-continue');
-  const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 2000 }).then(
+  const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 8000 }).then(
     () => true,
     () => false,
   );
@@ -132,24 +85,24 @@ test.describe('the hidden cave', () => {
 
     // First arrival at the rock reveals the entrance — the child stays outside
     // while the doorway appears (a discovered fact, not a door that teleports).
-    await tapWorld(page, 'anchor-cave-entrance');
+    await tapWorldAnchor(page, 'anchor-cave-entrance');
     await waitForAnchor(page, 'anchor-cave-entrance');
     await expect.poll(() => probe(page).discoveries()).toEqual(['discovery-cave-entrance']);
     expect(await probe(page).mapId()).toBe('map-town');
 
     // Tapping the now-open entrance walks in: the cave map mounts instead.
-    await tapWorld(page, 'anchor-cave-entrance');
+    await tapWorldAnchor(page, 'anchor-cave-entrance');
     await waitForMap(page, 'map-cave');
     await expect(page.getByTestId('hud')).toBeVisible();
 
     // Inside, the way out is the bright arch at the mouth — back to the exact
     // outdoor entrance, never reset to the town square.
-    await tapWorld(page, 'anchor-cave-mouth');
+    await tapWorldAnchor(page, 'anchor-cave-mouth');
     await waitForMap(page, 'map-town');
     await waitForAnchor(page, 'anchor-cave-entrance');
 
     // Re-entering skips the discovery beat — the entrance is already known.
-    await tapWorld(page, 'anchor-cave-entrance');
+    await tapWorldAnchor(page, 'anchor-cave-entrance');
     await waitForMap(page, 'map-cave');
 
     // A reload restores the cave exactly: same map, same local spawn.
@@ -159,7 +112,8 @@ test.describe('the hidden cave', () => {
   });
 
   test('the cave quest completes inside the cave', async ({ page }) => {
-    test.setTimeout(300000);
+    // Full unlock chain (8 quests) + cave traversal + passive beats.
+    test.setTimeout(480000);
     await startGame(page);
 
     // The cave quest unlocks after the school answer — play the story there.
@@ -179,10 +133,10 @@ test.describe('the hidden cave', () => {
     // In town the cave quest is off-map (locked on the trail); the child
     // enters through the discovered entrance instead.
     await expect(page.getByTestId('trail-quest-cave-crystal')).toBeDisabled();
-    await tapWorld(page, 'anchor-cave-entrance'); // walk to the rock
+    await tapWorldAnchor(page, 'anchor-cave-entrance'); // walk to the rock
     await waitForAnchor(page, 'anchor-cave-entrance');
     await expect.poll(() => probe(page).discoveries()).toEqual(['discovery-cave-entrance']);
-    await tapWorld(page, 'anchor-cave-entrance'); // step through the doorway
+    await tapWorldAnchor(page, 'anchor-cave-entrance'); // step through the doorway
     await waitForMap(page, 'map-cave');
 
     // Now the trail target works: it walks to the cave mouse and plays the
@@ -191,7 +145,7 @@ test.describe('the hidden cave', () => {
     expect(await probe(page).mapId()).toBe('map-cave');
 
     // Leaving returns to the park entrance with the quest still done.
-    await tapWorld(page, 'anchor-cave-mouth');
+    await tapWorldAnchor(page, 'anchor-cave-mouth');
     await waitForMap(page, 'map-town');
     await page.reload();
     await resumeFromPicker(page);

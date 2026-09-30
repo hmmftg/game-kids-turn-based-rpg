@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { getIcon } from '../../content/fa/icons.ts';
 import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
@@ -5,22 +6,29 @@ import { getQuestStep } from '../../domain/quests/definitions.ts';
 import type { EncounterState } from '../../domain/game/types.ts';
 import { ActionGlyph } from './ActionGlyph.tsx';
 import { DialogueCard } from './DialogueCard.tsx';
-import { ConsequenceScene, SceneChoice } from './SceneChoice.tsx';
-import { contextForStep } from './contextInteraction.ts';
+import { ConsequenceScene, SceneChoice, SceneGlyph } from './SceneChoice.tsx';
+import { contextForStep, sceneElementFor } from './contextInteraction.ts';
+import { usePacedAdvance } from './usePacedAdvance.ts';
 
 /**
  * Turn-based encounter surface.
  *
- * Phases alternate world turn → child turn. A wrong pick is answered with a
- * gentle re-demonstration: no failure, no shame, no blocked progress.
+ * Phases alternate world turn → child turn. Passive beats play themselves —
+ * the child never taps to continue; the only mandatory action is the object
+ * choice. Tapping a passive card skips ahead for a child who is ready; a
+ * wrong pick is answered with a gentle re-demonstration automatically: no
+ * failure, no shame, no blocked progress.
  */
 export function EncounterPanel({
   encounter,
+  hideCopy,
   onAdvance,
   onChoose,
   onLeave,
 }: {
   readonly encounter: EncounterState;
+  /** Mode-B kid test: no rendered copy; the question is a picture. */
+  readonly hideCopy?: boolean | undefined;
   readonly onAdvance: () => void;
   readonly onChoose: (iconId: `icon-${string}`, correct: boolean) => void;
   readonly onLeave: () => void;
@@ -28,30 +36,40 @@ export function EncounterPanel({
   const step = getQuestStep(encounter.questId, encounter.stepIndex);
   const copy = getQuestCopy(encounter.questId);
   const stepCopy = copy.steps[encounter.stepIndex];
+  // Pacing decides WHEN to ask for the next state; the reducer stays the
+  // source of truth. Fires only on passive phases — never during choice.
+  const copyLength = (
+    (stepCopy?.introFa ?? '') +
+    (stepCopy?.demonstrateFa ?? '') +
+    (stepCopy?.promptFa ?? '') +
+    (stepCopy?.successFa ?? '')
+  ).length;
+  usePacedAdvance(encounter.phase, copyLength, onAdvance);
   if (!step || !stepCopy) return null;
 
   const leave = (
     <button
       type="button"
       className="btn btn--secondary"
-      onClick={onLeave}
+      onClick={(event: MouseEvent) => {
+        event.stopPropagation();
+        onLeave();
+      }}
       data-testid="leave-encounter"
     >
       {FA.backToHood}
     </button>
   );
 
-  const next = (label: string, testId: string) => (
-    <button type="button" className="btn" onClick={onAdvance} data-testid={testId}>
-      {label}
-    </button>
-  );
-
   switch (encounter.phase) {
     case 'intro':
       return (
-        <DialogueCard textFa={stepCopy.introFa} testId="encounter-intro">
-          {next(FA.next, 'advance-intro')}
+        <DialogueCard
+          textFa={stepCopy.introFa}
+          testId="encounter-intro"
+          onTap={onAdvance}
+          hideText={hideCopy}
+        >
           {leave}
         </DialogueCard>
       );
@@ -59,7 +77,12 @@ export function EncounterPanel({
     case 'demonstrate': {
       const cueIcon = getIcon(step.correctIconId);
       return (
-        <DialogueCard textFa={stepCopy.demonstrateFa} testId="encounter-demonstrate">
+        <DialogueCard
+          textFa={stepCopy.demonstrateFa}
+          testId="encounter-demonstrate"
+          onTap={onAdvance}
+          hideText={hideCopy}
+        >
           <span
             className={`demo demo--${step.demonstrationCue}`}
             aria-hidden="true"
@@ -67,7 +90,6 @@ export function EncounterPanel({
           >
             <ActionGlyph iconId={step.correctIconId} size={56} color={cueIcon.color} animate />
           </span>
-          {next(FA.next, 'advance-demonstrate')}
           {leave}
         </DialogueCard>
       );
@@ -80,16 +102,38 @@ export function EncounterPanel({
       // tapping any of them fires the existing CHOOSE(iconId). Choices with
       // no distinct concrete target are simply not offered.
       const context = contextForStep(encounter.questId, encounter.stepIndex);
+      // Mode B: the question is a picture — the asked thing in a ❓ frame.
+      const askedElement = sceneElementFor(step.correctIconId);
+      // Mode B: objects never pre-highlighted — the ❓ card is the only
+      // question signal, so "what is asked" can't collapse into "what glows".
+      const choiceObjects = hideCopy
+        ? context.objects.map((object) =>
+            object.role === 'escape' ? object : { ...object, prominence: 'secondary' as const },
+          )
+        : context.objects;
       return (
         <DialogueCard
           textFa={stepCopy.promptFa}
           testId="encounter-choice"
+          hideText={hideCopy}
           scene={
-            <SceneChoice
-              objects={context.objects}
-              held={context.held ?? undefined}
-              onSelect={(iconId) => onChoose(iconId, iconId === step.correctIconId)}
-            />
+            <>
+              {hideCopy && askedElement !== null ? (
+                <span className="scene-question" data-testid="scene-question" aria-hidden="true">
+                  <SceneGlyph
+                    element={askedElement}
+                    size={76}
+                    color={getIcon(step.correctIconId).color}
+                  />
+                  <span className="emoji scene-question__mark">❓</span>
+                </span>
+              ) : null}
+              <SceneChoice
+                objects={choiceObjects}
+                held={context.held ?? undefined}
+                onSelect={(iconId) => onChoose(iconId, iconId === step.correctIconId)}
+              />
+            </>
           }
         >
           {leave}
@@ -104,29 +148,35 @@ export function EncounterPanel({
           textFa={correct ? stepCopy.successFa : stepCopy.retryFa}
           testId="encounter-response"
           variant={correct ? undefined : 'retry'}
+          hideText={hideCopy}
+          onTap={onAdvance}
           scene={
             correct && encounter.lastChoiceIconId ? (
               <ConsequenceScene iconId={encounter.lastChoiceIconId} />
             ) : undefined
           }
-        >
-          {next(correct ? FA.next : FA.watchAgain, correct ? 'advance-response' : 'retry-response')}
-        </DialogueCard>
+        />
       );
     }
 
     case 'reinforce':
       return (
-        <DialogueCard textFa={stepCopy.successFa} testId="encounter-reinforce">
-          {next(FA.next, 'advance-reinforce')}
-        </DialogueCard>
+        <DialogueCard
+          textFa={stepCopy.successFa}
+          testId="encounter-reinforce"
+          onTap={onAdvance}
+          hideText={hideCopy}
+        />
       );
 
     case 'complete':
       return (
-        <DialogueCard textFa={copy.completionFa} testId="encounter-complete">
-          {next(FA.next, 'advance-complete')}
-        </DialogueCard>
+        <DialogueCard
+          textFa={copy.completionFa}
+          testId="encounter-complete"
+          onTap={onAdvance}
+          hideText={hideCopy}
+        />
       );
   }
 }

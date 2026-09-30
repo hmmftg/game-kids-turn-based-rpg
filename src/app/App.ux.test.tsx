@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { getQuestCopy } from '../content/fa/quests.ts';
@@ -50,38 +50,29 @@ async function pickChoice(user: ReturnType<typeof userEvent.setup>, index: numbe
   await new Promise((r) => setTimeout(r, 250));
 }
 
-async function advanceIfPresent(
-  user: ReturnType<typeof userEvent.setup>,
-  testId: string,
-): Promise<boolean> {
-  const button = screen.queryByTestId(testId);
-  if (!button) return false;
-  await user.click(button);
-  return true;
-}
-
-/** Plays one quest picking the correct (first) icon at each step. */
+/** Plays one quest picking the correct (first) icon at each step. Passive
+ *  beats auto-play — the only action is the object choice; we wait for the
+ *  choice strip to appear rather than clicking continue. */
 async function completeQuest(
   user: ReturnType<typeof userEvent.setup>,
   questId: 'quest-greeting' | 'quest-helping' | 'quest-tidying' | 'quest-finale',
 ) {
   await user.click(screen.getByTestId(`trail-${questId}`));
   await user.click(await screen.findByTestId('start-quest'));
-  await user.click(await screen.findByTestId('advance-intro'));
   for (let guard = 0; guard < 20; guard += 1) {
-    if (screen.queryByTestId('scene-choice')) {
-      await pickChoice(user, 0);
-      continue;
-    }
-    if (
-      (await advanceIfPresent(user, 'advance-intro')) ||
-      (await advanceIfPresent(user, 'advance-demonstrate')) ||
-      (await advanceIfPresent(user, 'advance-response')) ||
-      (await advanceIfPresent(user, 'advance-reinforce'))
-    ) {
-      continue;
-    }
-    if (await advanceIfPresent(user, 'advance-complete')) break;
+    // Wait for the next decision point — the choice strip, or the
+    // celebration that follows the last step's reinforce.
+    await waitFor(
+      () => {
+        const ready =
+          screen.queryByTestId('scene-choice') !== null ||
+          screen.queryByTestId('quest-celebration') !== null;
+        expect(ready).toBe(true);
+      },
+      { timeout: 10000 },
+    );
+    if (screen.queryByTestId('scene-choice') === null) break;
+    await pickChoice(user, 0);
   }
 }
 
@@ -107,7 +98,9 @@ async function switchToProfile(user: ReturnType<typeof userEvent.setup>, profile
   await screen.findByTestId('hud');
 }
 
-describe('UX pass', () => {
+// Passive encounter beats run on real timers (~8–10 s per quest), so
+// multi-quest tests need a generous budget.
+describe('UX pass', { timeout: 90000 }, () => {
   it('shows the current objective in the hub and hides it off-quest', async () => {
     const { user } = renderApp();
     await user.click(await screen.findByTestId('start-button'));
@@ -266,17 +259,22 @@ describe('UX pass', () => {
 
     await user.click(screen.getByTestId('trail-quest-greeting'));
     await user.click(await screen.findByTestId('start-quest'));
-    await user.click(await screen.findByTestId('advance-intro'));
-    await user.click(await screen.findByTestId('advance-demonstrate'));
+    await screen.findByTestId('scene-choice', undefined, { timeout: 8000 });
     await pickChoice(user, 1); // wrong icon
 
-    const response = await screen.findByTestId('encounter-response');
-    expect(response.className).toContain('dialogue-card--retry');
-    expect(response).toHaveTextContent('👀');
+    // The card element is reused across phases — query fresh so a held
+    // reference can't read a stale className after auto-advance.
+    await waitFor(() => {
+      const response = document.querySelector(
+        '[data-testid="encounter-response"].dialogue-card--retry',
+      );
+      expect(response).not.toBeNull();
+      expect(response).toHaveTextContent('👀');
+    });
 
-    // The domain retry path is untouched: watch-again re-demonstrates.
-    await user.click(screen.getByTestId('retry-response'));
-    expect(await screen.findByTestId('encounter-demonstrate')).toBeInTheDocument();
+    // The domain retry path is untouched: watch-again re-demonstrates,
+    // now on its own — the child never taps to continue.
+    await screen.findByTestId('encounter-demonstrate', undefined, { timeout: 10000 });
   });
 
   it('keeps quality controls out of the child pause menu but in the parent area', async () => {

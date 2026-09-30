@@ -30,17 +30,16 @@ async function playQuest(page: Page, questId: (typeof QUESTS)[number]) {
   await openQuestDialogue(page, questId);
   await page.getByTestId('start-quest').click();
 
+  // Passive beats auto-play — the only mandatory action is the scene tap.
   for (const step of getQuestDefinition(questId).steps) {
-    await page.getByTestId('advance-intro').click();
-    await page.getByTestId('advance-demonstrate').click();
+    await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
     await page.getByTestId(`scene-${step.correctIconId}`).click();
-    await page.getByTestId('advance-response').click();
-    await page.getByTestId('advance-reinforce').click();
+    await expect(page.getByTestId('encounter-choice')).toBeHidden({ timeout: 10000 });
   }
   // The last reinforce closes the quest and returns to the hub with a new
   // sticker; the celebration overlay must be dismissed before tapping onward.
   const dismiss = page.getByTestId('celebration-continue');
-  const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 2000 }).then(
+  const celebrated = await dismiss.waitFor({ state: 'visible', timeout: 8000 }).then(
     () => true,
     () => false,
   );
@@ -64,8 +63,9 @@ test.describe('vertical slice', () => {
 
   test('all town quests and the cooperative finale can be completed in order', async ({ page }) => {
     // The chain grew from 3 to 8 quests after the area activities — each one
-    // still plays through every encounter phase in order.
-    test.setTimeout(180000);
+    // still plays through every encounter phase in order; passive beats add
+    // ~4 s per step on top of the walking time.
+    test.setTimeout(300000);
     await startGame(page);
     for (const questId of QUESTS) {
       await playQuest(page, questId);
@@ -77,14 +77,13 @@ test.describe('vertical slice', () => {
     await startGame(page);
     await openQuestDialogue(page, 'quest-greeting');
     await page.getByTestId('start-quest').click();
-    await page.getByTestId('advance-intro').click();
-    await page.getByTestId('advance-demonstrate').click();
+    await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
     const step = getQuestDefinition('quest-greeting').steps[0]!;
     const wrong = step.choiceIconIds.find((icon) => icon !== step.correctIconId)!;
     await page.getByTestId(`scene-${wrong}`).click();
-    await expect(page.getByTestId('retry-response')).toBeVisible();
-    await page.getByTestId('retry-response').click();
-    await expect(page.getByTestId('encounter-demonstrate')).toBeVisible();
+    await expect(page.getByTestId('encounter-response')).toBeVisible();
+    // Re-demonstration plays on its own — no retry tap to continue.
+    await expect(page.getByTestId('encounter-demonstrate')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('trail-quest-greeting')).toBeEnabled();
   });
 
@@ -113,6 +112,7 @@ test.describe('vertical slice', () => {
   });
 
   test('two siblings keep separate progress on one device', async ({ page }) => {
+    test.setTimeout(120000);
     await startGame(page, 'avatar-aban');
     await playQuest(page, 'quest-greeting');
 
