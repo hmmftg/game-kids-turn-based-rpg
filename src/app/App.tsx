@@ -24,6 +24,8 @@ import { ObjectiveChip } from '../ui/child/ObjectiveChip.tsx';
 import { PauseMenu } from '../ui/child/PauseMenu.tsx';
 import { ProfileSelectScreen } from '../ui/child/ProfileSelectScreen.tsx';
 import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
+import { SceneGlyph } from '../ui/child/SceneChoice.tsx';
+import { sceneElementFor } from '../ui/child/contextInteraction.ts';
 import { StickerAlbum } from '../ui/child/StickerAlbum.tsx';
 import {
   AvatarSelectScreen,
@@ -478,7 +480,6 @@ export function App() {
                 : getNpcCopy(currentLine.speakerId)?.nameFa
             }
             speakerEmoji={npcEmoji(currentLine.speakerId)}
-            iconId={dialogueNode.iconId}
             textFa={currentLine.textFa}
             testId="npc-dialogue"
             hideText={noCopyTest}
@@ -497,24 +498,31 @@ export function App() {
               </button>
             ) : null}
             {isLastLine
-              ? (dialogueNode.choices ?? []).map((choice) => (
-                  <button
-                    key={choice.id}
-                    type="button"
-                    className="btn btn--large"
-                    onClick={() => {
-                      playSfx('sfx-choice');
-                      dispatch({
-                        type: 'OPEN_DIALOGUE',
-                        npcId: dialogueNode.npcId,
-                        nodeId: choice.nextNodeId,
-                      });
-                    }}
-                    data-testid={`dialogue-choice-${choice.id}`}
-                  >
-                    {choice.labelFa}
-                  </button>
-                ))
+              ? (dialogueNode.choices ?? []).map((choice) => {
+                  // Object chips: the choice shows the thing, not an action
+                  // icon — a choice with no physical target keeps its label.
+                  const element = sceneElementFor(choice.iconId);
+                  return (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      className="btn btn--large btn--icon choice"
+                      onClick={() => {
+                        playSfx('sfx-choice');
+                        dispatch({
+                          type: 'OPEN_DIALOGUE',
+                          npcId: dialogueNode.npcId,
+                          nodeId: choice.nextNodeId,
+                        });
+                      }}
+                      data-testid={`dialogue-choice-${choice.id}`}
+                      data-element={element ?? undefined}
+                    >
+                      {element !== null ? <SceneGlyph element={element} size={44} /> : null}
+                      <span className="choice__label">{choice.labelFa}</span>
+                    </button>
+                  );
+                })
               : null}
             {isLastLine && dialogueNode.nextNodeId !== undefined ? (
               <button

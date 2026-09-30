@@ -4,6 +4,8 @@ import { FA } from '../../content/fa/strings.ts';
 import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
 import type { MapId, QuestId, QuestStatus, StickerId } from '../../domain/game/types.ts';
 import { questEmoji } from './emoji.ts';
+import { SceneGlyph } from './SceneChoice.tsx';
+import { questElementFor } from './contextInteraction.ts';
 
 const STATUS_LABEL: Record<QuestStatus, string> = {
   locked: FA.questLocked,
@@ -58,6 +60,7 @@ export function QuestTrail({
         const locked = status === 'locked' || offMap;
         const current = quest.id === currentId && status !== 'completed';
         const label = `${copy.titleFa} — ${STATUS_LABEL[status]}`;
+        const objectElement = questElementFor(quest.id);
         return (
           <div key={quest.id} className={`trail__step${index === 0 ? ' trail__step--first' : ''}`}>
             <button
@@ -76,9 +79,15 @@ export function QuestTrail({
               <span className="trail__badge" aria-hidden="true">
                 {STATUS_GLYPH[status]}
               </span>
-              <span className="emoji trail__emoji" aria-hidden="true">
-                {questEmoji(quest.id)}
-              </span>
+              {objectElement !== null ? (
+                <span className="trail__object" aria-hidden="true">
+                  <SceneGlyph element={objectElement} size={40} />
+                </span>
+              ) : (
+                <span className="emoji trail__emoji" aria-hidden="true">
+                  {questEmoji(quest.id)}
+                </span>
+              )}
               <span className="trail__title">{copy.titleFa}</span>
               <span className="text--soft trail__status">{STATUS_LABEL[status]}</span>
               {current ? (

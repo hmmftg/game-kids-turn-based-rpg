@@ -65,6 +65,14 @@
   font-size: 30px;
 }
 
+.objective__object,
+.trail__object {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
 .hud__side {
   inset-block-start: 50%;
   inset-inline-start: calc(var(--safe-left) + var(--space-3));
@@ -434,75 +442,6 @@
   }
 }
 
-/* Action-glyph cues: the object's motion IS the explanation — the moving
-   part (glyph-object / glyph-hand) loops under its per-cue keyframe. Pure
-   CSS, no JS, and the whole set freezes under prefers-reduced-motion. */
-.action-glyph .glyph-object,
-.action-glyph .glyph-hand,
-.action-glyph .glyph-cue {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.glyph--anim-pick .glyph-object {
-  animation: glyph-lift var(--duration-slow) ease-in-out infinite alternate;
-}
-.glyph--anim-lift .glyph-object {
-  animation: glyph-lift var(--duration-slow) ease-in-out infinite alternate;
-}
-.glyph--anim-place .glyph-object {
-  animation: glyph-lower var(--duration-slow) ease-in-out infinite alternate;
-}
-.glyph--anim-drop .glyph-object {
-  animation: glyph-drop var(--duration-slow) ease-in-out infinite alternate;
-}
-.glyph--anim-nudge .glyph-object {
-  animation: glyph-nudge var(--duration-slow) ease-in-out infinite alternate;
-}
-.glyph--anim-wash .glyph-object {
-  animation: glyph-lower var(--duration-slow) ease-in-out infinite alternate;
-}
-.glyph--anim-wave .glyph-hand {
-  animation: glyph-wave var(--duration-fast) ease-in-out infinite alternate;
-}
-.glyph--anim-pulse .glyph-object {
-  animation: glyph-pulse var(--duration-slow) ease-in-out infinite alternate;
-}
-.glyph--anim-pop .glyph-object {
-  animation: glyph-pulse var(--duration-fast) ease-in-out infinite alternate;
-}
-
-@keyframes glyph-lift {
-  to {
-    transform: translateY(-10px);
-  }
-}
-@keyframes glyph-lower {
-  to {
-    transform: translateY(9px);
-  }
-}
-@keyframes glyph-drop {
-  to {
-    transform: translate(8px, 7px) rotate(24deg);
-  }
-}
-@keyframes glyph-nudge {
-  to {
-    transform: translateX(10px);
-  }
-}
-@keyframes glyph-wave {
-  to {
-    transform: rotate(-18deg) translateY(-2px);
-  }
-}
-@keyframes glyph-pulse {
-  to {
-    transform: scale(1.15);
-  }
-}
-
 /* First-use teaching cue: finger + one short line, pure CSS motion. */
 .hint {
   display: inline-flex;
@@ -831,9 +770,6 @@
   .scene-exec-drop,
   .scene-exec-pop,
   .demo,
-  .action-glyph .glyph-object,
-  .action-glyph .glyph-hand,
-  .action-glyph .glyph-cue,
   .hint__finger,
   .world-marker,
   .celebration__burst,

@@ -98,6 +98,8 @@ export function sceneElementFor(iconId: IconId): SceneElement | null {
       return 'crystal';
     case 'icon-give-crystal':
       return 'mouse';
+    case 'icon-play':
+      return 'ball';
     default:
       return null;
   }
@@ -152,4 +154,12 @@ export function contextForStep(questId: QuestId, stepIndex: number): ContextInte
     held,
     objects,
   };
+}
+
+/** The physical thing a quest asks the child to interact with — the first
+ *  step's target. Navigation chips (trail, objective) speak in objects,
+ *  not abstract badges. */
+export function questElementFor(questId: QuestId): SceneElement | null {
+  const step = getQuestStep(questId, 0);
+  return step === null ? null : sceneElementFor(step.correctIconId);
 }

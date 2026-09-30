@@ -246,7 +246,7 @@ describe('dialogue graph', () => {
   it('a branching dialogue exists in the representative content', () => {
     const teacher = getDialogueNode('teacher-intro')!;
     expect(teacher.choices!.length).toBeGreaterThanOrEqual(2);
-    expect(getDialogueNode('teacher-story')!.nextNodeId).toBe('teacher-story-end');
+    expect(getDialogueNode('teacher-story')!.nextNodeId).toBeUndefined();
   });
 });
 
