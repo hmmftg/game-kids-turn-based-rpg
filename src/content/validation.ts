@@ -1,4 +1,9 @@
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../domain/quests/definitions.ts';
+import {
+  allDialogueReports,
+  allQuestReports,
+  INTERACTION_LIMITS,
+} from '../domain/quests/interactionSteps.ts';
 import type { AreaId } from '../domain/world/types.ts';
 import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from '../world/registry.ts';
 import { ANCHORS, EDGES, getAnchorOrNull } from '../world/navigation/graph.ts';
@@ -472,6 +477,38 @@ function validateWorld(issues: ValidationIssue[]): void {
   }
 }
 
+/**
+ * Interaction-budget gate (hard validator): counts forced child actions on
+ * the interaction graph, not dialogue structure. A standard step may force
+ * at most INTERACTION_LIMITS.step actions (1 today); a routine dialogue at
+ * most INTERACTION_LIMITS.dialogue on its heaviest required-choice path;
+ * leaving always costs 0 and is never checked.
+ */
+function validateInteractionBudget(issues: ValidationIssue[]): void {
+  for (const report of allQuestReports()) {
+    report.steps.forEach((actions, index) => {
+      if (actions > INTERACTION_LIMITS.step) {
+        issues.push({
+          severity: 'error',
+          code: 'interaction-budget',
+          where: `${report.questId}.steps[${index}]`,
+          message: `Step forces ${actions} child actions; the limit is ${INTERACTION_LIMITS.step}.`,
+        });
+      }
+    });
+  }
+  for (const report of allDialogueReports()) {
+    if (report.toComplete > INTERACTION_LIMITS.dialogue) {
+      issues.push({
+        severity: 'error',
+        code: 'interaction-budget',
+        where: report.nodeId,
+        message: `Dialogue forces ${report.toComplete} child actions on its heaviest path; the limit is ${INTERACTION_LIMITS.dialogue}.`,
+      });
+    }
+  }
+}
+
 export function validateContent(
   options: ValidationOptions = { requireApproved: false },
 ): ValidationReport {
@@ -480,6 +517,7 @@ export function validateContent(
   const npcIds = new Set(NPCS.map((npc) => npc.npcId));
 
   validateWorld(issues);
+  validateInteractionBudget(issues);
 
   // World NPCs must have copy rows; copy rows must describe real NPCs.
   for (const npc of NPC_DEFINITIONS) {
