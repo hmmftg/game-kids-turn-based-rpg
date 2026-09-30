@@ -84,6 +84,16 @@
   pointer-events: auto;
 }
 
+/* Modal rule: a tap anywhere outside the card leaves it — the sheet covers
+   the world (z 0) but stays under the HUD strips (z 10) so trail and pause
+   remain reachable. World taps never pass through it. */
+.hud__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: rgba(52, 42, 28, 0.1);
+}
+
 .hud__hint {
   background: var(--color-surface);
   border-radius: var(--radius-md);

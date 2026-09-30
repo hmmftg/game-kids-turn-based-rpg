@@ -45,8 +45,11 @@ export function useWalker(
   // observe arrivals without guessing walk durations.
   useEffect(() => {
     const w = window as unknown as Record<string, unknown>;
-    if (import.meta.env.DEV || w['__WORLD_PROBE']) w['__worldAt'] = at;
-  }, [at]);
+    if (import.meta.env.DEV || w['__WORLD_PROBE']) {
+      w['__worldAt'] = at;
+      w['__worldMoving'] = moving;
+    }
+  }, [at, moving]);
 
   const finishWalk = useCallback(
     (anchor: AnchorId) => {

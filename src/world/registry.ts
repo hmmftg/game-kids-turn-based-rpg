@@ -350,6 +350,20 @@ export function resolveNpcAnchor(npc: NpcDefinition, worldTime: number): AnchorI
   return resolveNpcSpot(npc, worldTime)?.anchorId ?? npc.anchorId;
 }
 
+/**
+ * Small deterministic stand offset per NPC. Two people resolving to the
+ * same anchor with no authored spot offset would otherwise occupy the
+ * exact same point — one figure inside the other's tap cylinder, and the
+ * front one unreachable. A stable ring slot (by registry order) keeps
+ * every co-located pair distinct; callers add it on top of the authored
+ * spot offset so both probes and rendering agree.
+ */
+export function npcFigureJitter(npcId: string): { readonly x: number; readonly z: number } {
+  const index = NPC_DEFINITIONS.findIndex((npc) => npc.id === npcId);
+  const angle = ((index < 0 ? 0 : index) / 8) * Math.PI * 2;
+  return { x: Math.cos(angle) * 0.7, z: Math.sin(angle) * 0.7 };
+}
+
 /** Stable activity label for an NPC's current spot (schedule-aware). */
 export function resolveNpcActivity(npc: NpcDefinition, worldTime: number): NpcSimState {
   return resolveNpcSpot(npc, worldTime)?.activity ?? 'at-home';

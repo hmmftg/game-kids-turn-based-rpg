@@ -1,10 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
+import { enableWorldProbe, openQuestDialogue, tapNpcFigure, waitForWalkerIdle } from './npcTap.ts';
 
 const LANDSCAPE = { width: 880, height: 420 };
 const PORTRAIT = { width: 360, height: 800 };
 
 async function startGame(page: Page) {
+  await enableWorldProbe(page);
   await page.goto('/');
   await page.getByTestId('start-button').click();
   await page.getByTestId('avatar-aban').click();
@@ -55,8 +57,7 @@ test.describe('orientation', () => {
 
   test('a dialogue stays open and usable across a rotation', async ({ page }) => {
     await startGame(page);
-    await page.getByTestId('trail-quest-greeting').click();
-    await expect(page.getByTestId('npc-dialogue')).toBeVisible();
+    await openQuestDialogue(page, 'quest-greeting');
     await tagCanvas(page);
 
     await page.setViewportSize(PORTRAIT);
@@ -72,7 +73,7 @@ test.describe('orientation', () => {
 
   test('an encounter choice phase survives rotation in both directions', async ({ page }) => {
     await startGame(page);
-    await page.getByTestId('trail-quest-greeting').click();
+    await openQuestDialogue(page, 'quest-greeting');
     await page.getByTestId('start-quest').click();
     await page.getByTestId('advance-intro').click();
     await page.getByTestId('advance-demonstrate').click();
@@ -115,17 +116,27 @@ test.describe('orientation', () => {
     await expect(page.getByTestId('world-canvas')).toBeVisible();
   });
 
-  test('rotation mid-walk does not cancel movement: arrival opens the dialogue', async ({
+  test('rotation mid-walk does not cancel movement: the tapped NPC still talks', async ({
     page,
   }) => {
     await startGame(page);
     await tagCanvas(page);
 
-    // Tapping the trail sends the avatar walking; the dialogue opens on arrival.
+    // Tapping the trail sends the avatar walking — navigation only, no
+    // auto-dialogue. Rotate immediately, while the walker is travelling.
     await page.getByTestId('trail-quest-greeting').click();
-    // Rotate immediately, while the walker is still travelling.
     await page.setViewportSize(PORTRAIT);
     await expectSameCanvas(page);
+    await waitForWalkerIdle(page);
+
+    // Talking is a tap on the person, still true after the rotation — if the
+    // portrait frame doesn't show him, the chip navigates again (still true
+    // ownership: the chip walks, the figure talks).
+    if (!(await tapNpcFigure(page, 'npc-neighbour', 15000))) {
+      await page.getByTestId('trail-quest-greeting').click();
+      await waitForWalkerIdle(page);
+      await tapNpcFigure(page, 'npc-neighbour');
+    }
     await expect(page.getByTestId('npc-dialogue')).toBeVisible({ timeout: 15000 });
 
     await page.setViewportSize(LANDSCAPE);
@@ -140,10 +151,12 @@ test.describe('orientation', () => {
     await startGame(page);
     await tagCanvas(page);
 
-    // Start the first quest; rotate mid-walk and confirm arrival opens dialogue.
+    // Start the first quest: the chip walks, the NPC tap talks. Rotate
+    // mid-walk, then open the offer once the avatar stops in portrait.
     await page.getByTestId('trail-quest-greeting').click();
     await page.setViewportSize(PORTRAIT);
     await expectSameCanvas(page);
+    await tapNpcFigure(page, 'npc-neighbour');
     await expect(page.getByTestId('npc-dialogue')).toBeVisible({ timeout: 15000 });
 
     // Start the encounter and make the first correct choice in portrait.
@@ -182,7 +195,7 @@ test.describe('orientation', () => {
 
   test('a completed quest stays completed after a rotation cycle', async ({ page }) => {
     await startGame(page);
-    await page.getByTestId('trail-quest-greeting').click();
+    await openQuestDialogue(page, 'quest-greeting');
     await page.getByTestId('start-quest').click();
     for (const step of getQuestDefinition('quest-greeting').steps) {
       await page.getByTestId('advance-intro').click();

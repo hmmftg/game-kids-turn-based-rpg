@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { AnchorId } from '../domain/game/types.ts';
@@ -12,6 +12,12 @@ import { noRaycast } from './models/raycast.ts';
  * the floating quest emoji. They are presentation-only — the walk and the
  * CHOOSE commands live elsewhere.
  */
+
+/** Who noticed the child's arrival — a one-shot cue target, `nonce` replays. */
+export interface NpcAttention {
+  readonly npcId: string;
+  readonly nonce: number;
+}
 
 export interface WorldSceneHandle {
   /**
@@ -83,6 +89,45 @@ export function Hotspot({
       <ringGeometry args={[0.5, suggested ? 0.9 : 0.78, 20]} />
     </mesh>
   );
+}
+
+/**
+ * One-shot "I see you" cue: the figure gives a single gentle bounce when the
+ * child reaches its spot. Under demand-rendering each animated frame
+ * invalidates explicitly; when the bounce settles the loop goes quiet again.
+ * Reduced motion keeps the still figure — the turn-to-face rule already
+ * carries the meaning.
+ */
+export function AttentionPulse({
+  nonce,
+  children,
+}: {
+  readonly nonce: number;
+  readonly children: ReactNode;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const startedAt = useRef<number | null>(null);
+  const invalidate = useThree((state) => state.invalidate);
+  const reduced = prefersReducedMotion();
+
+  useEffect(() => {
+    startedAt.current = null;
+    if (nonce > 0 && !reduced) invalidate();
+  }, [nonce, reduced, invalidate]);
+
+  useFrame((frameState) => {
+    if (reduced || !ref.current || nonce === 0) return;
+    if (startedAt.current === null) startedAt.current = frameState.clock.elapsedTime;
+    const t = (frameState.clock.elapsedTime - startedAt.current) / 0.55;
+    if (t >= 1) {
+      ref.current.scale.setScalar(1);
+      return;
+    }
+    ref.current.scale.setScalar(1 + Math.sin(t * Math.PI) * 0.18);
+    invalidate();
+  });
+
+  return <group ref={ref}>{children}</group>;
 }
 
 /** Destination marker shown at the walk target until the avatar arrives. */
