@@ -343,11 +343,14 @@ test.describe('follow camera', () => {
     // Drag the map under the finger: the look target slides the other way,
     // still inside the map bounds.
     const before = await cameraTarget(page);
-    const cx = 480;
-    const cy = 300;
+    const vp = page.viewportSize() ?? { width: 880, height: 420 };
+    const cx = Math.round(vp.width / 2);
+    const cy = Math.round(vp.height / 2);
     await page.mouse.move(cx, cy);
     await page.mouse.down();
-    await page.mouse.move(cx - 160, cy - 80, { steps: 12 });
+    await page.mouse.move(cx - Math.round(vp.width * 0.2), cy - Math.round(vp.height * 0.2), {
+      steps: 12,
+    });
     await page.mouse.up();
     const panned = await cameraTarget(page);
     expect(Math.hypot(panned.x - before.x, panned.z - before.z)).toBeGreaterThan(0.5);
