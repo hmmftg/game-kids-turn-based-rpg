@@ -1,4 +1,5 @@
-import { useImperativeHandle, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useState, type Ref } from 'react';
+import { publishCameraFocus } from './CameraRig.tsx';
 import { type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { AnchorId, AvatarId, HeadwearId, QuestId, QuestStatus } from '../domain/game/types.ts';
@@ -274,6 +275,11 @@ export function CaveWorld({
 }: CaveWorldProps) {
   const models = useModels();
   const walker = useWalker(startAnchorId, onArrive, interactive);
+  // The follow-camera reads the avatar's live position from this shared
+  // store — same useWalker source of truth, never a second copy.
+  useEffect(() => {
+    publishCameraFocus(walker.position.x, walker.position.z);
+  });
   const [walkTarget, setWalkTarget] = useState<AnchorId | null>(null);
 
   const activeAreaId: AreaId = areaForAnchor(walker.at);

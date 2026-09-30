@@ -36,6 +36,7 @@ import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
+import { publishCameraFocus } from './CameraRig.tsx';
 import { questEmoji } from '../ui/child/emoji.ts';
 import {
   AVATAR_VISUALS,
@@ -354,6 +355,11 @@ export function Hub({
 }: HubProps) {
   const models = useModels();
   const walker = useWalker(startAnchorId, onArrive, interactive);
+  // The follow-camera reads the avatar's live position from this shared
+  // store — same useWalker source of truth, never a second copy.
+  useEffect(() => {
+    publishCameraFocus(walker.position.x, walker.position.z);
+  });
   // Ambient critters: motion only while the world is interactive and motion
   // is allowed; on low tier they render as static silhouettes.
   const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel);
