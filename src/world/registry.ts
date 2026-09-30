@@ -7,7 +7,7 @@ import type {
   NpcSimState,
   WorldArea,
 } from '../domain/world/types.ts';
-import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
+import { ANCHORS, EDGES, getAnchor, getAnchorOrNull } from './navigation/graph.ts';
 
 /**
  * World registries: logical areas layered over the single world coordinate
@@ -128,6 +128,20 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     archetype: 'teacher',
     anchorId: 'anchor-school',
     homeAreaId: 'area-school',
+    // Class, then the yard with the children, then the square for errands —
+    // all inside the school area so her quest stays beside her.
+    schedule: {
+      spots: [
+        { anchorId: 'anchor-school', activity: 'working', dialogueId: 'teacher-at-class' },
+        { anchorId: 'anchor-school-yard', activity: 'talking', dialogueId: 'teacher-at-yard' },
+        {
+          anchorId: 'anchor-school',
+          activity: 'at-home',
+          facing: Math.PI,
+          dialogueId: 'teacher-at-square',
+        },
+      ],
+    },
     dialogueIds: ['teacher-intro'],
   },
   {
@@ -142,6 +156,26 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     archetype: 'parkkeeper',
     anchorId: 'anchor-park',
     homeAreaId: 'area-park',
+    // Tends the park, checks on the hill, rests by the cave-side flowerbeds.
+    schedule: {
+      spots: [
+        {
+          anchorId: 'anchor-park',
+          activity: 'working',
+          prop: 'planter',
+          propOffsetX: 0.9,
+          propOffsetZ: 0.4,
+          dialogueId: 'keeper-at-park',
+        },
+        { anchorId: 'anchor-park-hill', activity: 'talking', dialogueId: 'keeper-at-hill' },
+        {
+          anchorId: 'anchor-park',
+          activity: 'at-home',
+          facing: Math.PI / 2,
+          dialogueId: 'keeper-at-rest',
+        },
+      ],
+    },
     dialogueIds: ['parkkeeper-intro'],
   },
   {
@@ -149,6 +183,34 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     archetype: 'child',
     anchorId: 'anchor-park-hill',
     homeAreaId: 'area-park',
+    // Plays on the hill, drifts down to the park gate, comes back with her ball.
+    schedule: {
+      spots: [
+        {
+          anchorId: 'anchor-park-hill',
+          activity: 'at-home',
+          prop: 'ball',
+          propOffsetX: 0.8,
+          propOffsetZ: 0.5,
+          dialogueId: 'sara-on-hill',
+        },
+        {
+          anchorId: 'anchor-park',
+          activity: 'waiting',
+          offsetX: -0.6,
+          offsetZ: 0.8,
+          dialogueId: 'sara-at-gate',
+        },
+        {
+          anchorId: 'anchor-park-hill',
+          activity: 'talking',
+          prop: 'ball',
+          propOffsetX: -0.7,
+          propOffsetZ: 0.6,
+          dialogueId: 'sara-on-hill',
+        },
+      ],
+    },
     dialogueIds: ['sara-intro'],
   },
   {
@@ -156,13 +218,34 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     archetype: 'fisher',
     anchorId: 'anchor-river',
     homeAreaId: 'area-river',
-    // The fisher splits the day between the river and the bakery queue —
-    // a deterministic two-spot schedule driven by world time.
+    // The fisher's day: fish the river, queue at the bakery, rest on the
+    // bank — a deterministic routine driven by world time (the reference
+    // implementation other routines copy).
     schedule: {
       spots: [
-        { anchorId: 'anchor-river', activity: 'working' },
+        {
+          anchorId: 'anchor-river',
+          activity: 'working',
+          facing: -Math.PI / 2,
+          prop: 'basket',
+          propOffsetX: 0.8,
+          propOffsetZ: -0.5,
+          dialogueId: 'fisher-at-river',
+        },
         // Queues beside the baker, not inside him.
-        { anchorId: 'anchor-bakery', activity: 'waiting', offsetX: -0.7, offsetZ: 0.9 },
+        {
+          anchorId: 'anchor-bakery',
+          activity: 'waiting',
+          offsetX: -0.7,
+          offsetZ: 0.9,
+          dialogueId: 'fisher-at-bakery',
+        },
+        {
+          anchorId: 'anchor-river-bank',
+          activity: 'at-home',
+          facing: Math.PI / 2,
+          dialogueId: 'fisher-at-bank',
+        },
       ],
     },
     dialogueIds: ['fisher-intro'],
@@ -269,9 +352,24 @@ export function resolveNpcAnchor(npc: NpcDefinition, worldTime: number): AnchorI
 
 /** Stable activity label for an NPC's current spot (schedule-aware). */
 export function resolveNpcActivity(npc: NpcDefinition, worldTime: number): NpcSimState {
-  const anchorId = resolveNpcAnchor(npc, worldTime);
-  const spot = npc.schedule?.spots.find((entry) => entry.anchorId === anchorId);
-  return spot?.activity ?? 'at-home';
+  return resolveNpcSpot(npc, worldTime)?.activity ?? 'at-home';
+}
+
+/** Every NPC physically standing at `anchorId` at `worldTime`. */
+export function npcsAtAnchor(anchorId: AnchorId, worldTime: number): readonly NpcDefinition[] {
+  return NPC_DEFINITIONS.filter((npc) => resolveNpcAnchor(npc, worldTime) === anchorId);
+}
+
+/**
+ * The NPC presence at an anchor: the resident while they are standing there,
+ * otherwise a scheduled visitor. Anchors with nobody standing return null —
+ * an empty spot is a real part of a routine, so nothing answers there.
+ */
+export function npcStandingAt(anchorId: AnchorId, worldTime: number): NpcDefinition | null {
+  const present = npcsAtAnchor(anchorId, worldTime);
+  if (present.length === 0) return null;
+  const resident = getAnchorOrNull(anchorId)?.npcId ?? null;
+  return present.find((npc) => npc.id === resident) ?? present[0] ?? null;
 }
 
 /** All world-space points the world occupies (camera fits and bounds checks). */

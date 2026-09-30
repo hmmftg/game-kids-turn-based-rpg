@@ -12,7 +12,10 @@ import {
   areaAt,
   areaForAnchor,
   insideBounds,
+  npcsAtAnchor,
   npcsForArea,
+  npcStandingAt,
+  resolveNpcActivity,
   resolveNpcAnchor,
   visibleAreaIds,
 } from './registry.ts';
@@ -111,19 +114,49 @@ describe('area activation and schedules', () => {
 
   it('the scheduled fisher follows world time, not the player location', () => {
     const fisher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-fisher')!;
-    // The spot index is spots[worldTime % 2]: river → bakery → river …,
+    // The spot index is spots[worldTime % 3]: river → bakery → river bank …,
     // identical regardless of which area the player stands in.
     expect(resolveNpcAnchor(fisher, 0)).toBe('anchor-river');
     expect(resolveNpcAnchor(fisher, 1)).toBe('anchor-bakery');
-    expect(resolveNpcAnchor(fisher, 2)).toBe('anchor-river');
-    expect(resolveNpcAnchor(fisher, 3)).toBe('anchor-bakery');
+    expect(resolveNpcAnchor(fisher, 2)).toBe('anchor-river-bank');
+    expect(resolveNpcAnchor(fisher, 3)).toBe('anchor-river');
     expect(resolveNpcAnchor(fisher, 42)).toBe('anchor-river');
   });
 
   it('idle NPCs never move — their standpoint is data, not simulation', () => {
-    const teacher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-teacher')!;
+    const neighbour = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-neighbour')!;
     for (const tick of [0, 1, 7, 100]) {
-      expect(resolveNpcAnchor(teacher, tick)).toBe('anchor-school');
+      expect(resolveNpcAnchor(neighbour, tick)).toBe('anchor-home-gate');
+    }
+  });
+
+  it('routines resolve who stands at an anchor — resident first, then visitor', () => {
+    const fisher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-fisher')!;
+    // Tick 0: the fisher works the river — he answers at his home anchor.
+    expect(npcStandingAt('anchor-river', 0)?.id).toBe('npc-fisher');
+    // Tick 1: he queues at the bakery — the resident baker still answers
+    // there, and nobody is left at the river or the bank.
+    expect(npcStandingAt('anchor-bakery', 1)?.id).toBe('npc-baker');
+    expect(npcsAtAnchor('anchor-bakery', 1).map((npc) => npc.id)).toEqual([
+      'npc-baker',
+      'npc-fisher',
+    ]);
+    expect(npcStandingAt('anchor-river', 1)).toBeNull();
+    // Tick 2: resting on the bank — the river's own anchor is empty.
+    expect(npcStandingAt('anchor-river-bank', 2)?.id).toBe('npc-fisher');
+    expect(npcStandingAt('anchor-river', 2)).toBeNull();
+    expect(resolveNpcActivity(fisher, 2)).toBe('at-home');
+  });
+
+  it('every routine spot carries a reachable contextual greeting', () => {
+    for (const npc of NPC_DEFINITIONS) {
+      for (const spot of npc.schedule?.spots ?? []) {
+        if (spot.dialogueId === undefined) continue;
+        const node = DIALOGUE_NODES.find((entry) => entry.id === spot.dialogueId);
+        expect(node, `${npc.id} → ${spot.dialogueId}`).toBeDefined();
+        // A greeting belongs to the NPC who says it.
+        expect(node?.npcId, `${npc.id} → ${spot.dialogueId}`).toBe(npc.id);
+      }
     }
   });
 
@@ -180,7 +213,11 @@ describe('dialogue graph', () => {
 
   it('has no orphan nodes: everything is reachable from an entry point', () => {
     const reachable = new Set<string>([
-      ...NPC_DEFINITIONS.flatMap((npc) => [...npc.dialogueIds]),
+      ...NPC_DEFINITIONS.flatMap((npc) => [
+        ...npc.dialogueIds,
+        ...(npc.schedule?.spots.flatMap((spot) => (spot.dialogueId ? [spot.dialogueId] : [])) ??
+          []),
+      ]),
       ...QUEST_DEFINITIONS.flatMap((quest) => [...quest.dialogueIds]),
     ]);
     let frontier = [...reachable];

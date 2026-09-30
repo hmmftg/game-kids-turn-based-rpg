@@ -34,6 +34,7 @@ export function ParentArea({
   onReset,
   onResetProfile,
   onRenameProfile,
+  onDeleteProfile,
   onQualityChange,
   updateReady,
   onApplyUpdate,
@@ -48,6 +49,8 @@ export function ParentArea({
   readonly onReset: () => void;
   readonly onResetProfile: (id: string) => void;
   readonly onRenameProfile: (id: string, nameFa: string) => void;
+  /** Removes the profile card AND its save slot entirely. */
+  readonly onDeleteProfile: (id: string) => void;
   readonly onQualityChange: (tier: QualityTier) => void;
   readonly updateReady: boolean;
   readonly onApplyUpdate: () => void;
@@ -56,6 +59,7 @@ export function ParentArea({
 }) {
   const [confirming, setConfirming] = useState(false);
   const [confirmingProfileId, setConfirmingProfileId] = useState<string | null>(null);
+  const [deletingProfileId, setDeletingProfileId] = useState<string | null>(null);
 
   return (
     <div className="layer layer--overlay layer--parent" data-testid="parent-area">
@@ -188,6 +192,31 @@ export function ParentArea({
                       data-testid={`parent-reset-${profile.id}`}
                     >
                       {FA.parentReset}
+                    </button>
+                  )}
+                  {deletingProfileId === profile.id ? (
+                    <>
+                      <span className="text--soft">{FA.parentDeleteConfirm}</span>
+                      <button
+                        type="button"
+                        className="btn btn--accent"
+                        onClick={() => {
+                          setDeletingProfileId(null);
+                          onDeleteProfile(profile.id);
+                        }}
+                        data-testid={`parent-delete-confirm-${profile.id}`}
+                      >
+                        {FA.parentDeleteYes}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn--secondary"
+                      onClick={() => setDeletingProfileId(profile.id)}
+                      data-testid={`parent-delete-${profile.id}`}
+                    >
+                      {FA.parentDelete}
                     </button>
                   )}
                 </li>

@@ -829,13 +829,23 @@ export function CubicProp({
   const material = useMaterial(palette.body);
   return (
     <group position={[position.x, 0, position.z]} dispose={null}>
-      <mesh
-        geometry={shape === 'box' ? BOX : CYLINDER}
-        material={material}
-        position={[0, scale / 2, 0]}
-        scale={[scale, scale, scale]}
-        raycast={noRaycast}
-      />
+      {variant === 'ball' ? (
+        <mesh
+          geometry={SPHERE}
+          material={material}
+          position={[0, scale / 2, 0]}
+          scale={[scale, scale, scale]}
+          raycast={noRaycast}
+        />
+      ) : (
+        <mesh
+          geometry={shape === 'box' ? BOX : CYLINDER}
+          material={material}
+          position={[0, scale / 2, 0]}
+          scale={[scale, scale, scale]}
+          raycast={noRaycast}
+        />
+      )}
       <Detail level={detailLevel} min={1}>
         {variant === 'basket' ? (
           <>
