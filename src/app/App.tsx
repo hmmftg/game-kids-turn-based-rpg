@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
-import { getNpcOrNull } from '../world/registry.ts';
+import type { NpcDefinition } from '../domain/world/types.ts';
+import {
+  getNpcOrNull,
+  NPC_DEFINITIONS,
+  npcStandingAt,
+  resolveNpcActivity,
+  resolveNpcSpot,
+} from '../world/registry.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
-import type { AnchorId, IconId, QuestId } from '../domain/game/types.ts';
+import type { AnchorId, IconId, QuestId, QuestStatus } from '../domain/game/types.ts';
 import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { canStartQuest, nextSuggestedQuest } from '../domain/quests/prerequisites.ts';
 import { QuestCelebration } from '../ui/child/Celebration.tsx';
@@ -28,7 +35,7 @@ import { ParentArea } from '../ui/parent/ParentArea.tsx';
 import { ParentGate } from '../ui/parent/ParentGate.tsx';
 import { WorldCanvas } from '../world/WorldCanvas.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
-import { anchorForNpc, getAnchorOrNull } from '../world/navigation/graph.ts';
+import { getAnchorOrNull } from '../world/navigation/graph.ts';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { useGame } from './gameContext.ts';
 
@@ -36,16 +43,45 @@ function nodeForQuest(questId: QuestId): string | null {
   return DIALOGUE_NODES.find((node) => node.offersQuestId === questId)?.id ?? null;
 }
 
-function nodeForAnchor(anchor: AnchorId): string | null {
-  const npcId = getAnchorOrNull(anchor)?.npcId ?? null;
-  if (npcId === null) return null;
-  // The NPC definition declares its entry nodes (quest offer first); fall
-  // back to the first authored node for the NPC for older anchors.
+/**
+ * Whoever is physically standing at `anchor` at `worldTime` answers: their
+ * current routine spot's contextual greeting when they have one, otherwise
+ * their default entry node (quest offer first). An empty spot stays quiet —
+ * nobody answers where nobody stands.
+ */
+function nodeForNpc(
+  npc: NpcDefinition,
+  worldTime: number,
+  quests: Record<QuestId, QuestStatus>,
+): string | null {
+  // A quest the child can still do always outranks the routine's flavour
+  // line — the greeting must never hide the start-quest button.
+  const questNode = npc.dialogueIds
+    .map((id) => DIALOGUE_NODES.find((node) => node.id === id))
+    .find(
+      (node) =>
+        node?.offersQuestId !== null &&
+        node?.offersQuestId !== undefined &&
+        (quests[node.offersQuestId] === 'available' || quests[node.offersQuestId] === 'active'),
+    );
+  if (questNode) return questNode.id;
+  const spot = resolveNpcSpot(npc, worldTime);
   return (
-    getNpcOrNull(npcId)?.dialogueIds[0] ??
-    DIALOGUE_NODES.find((node) => node.npcId === npcId)?.id ??
+    spot?.dialogueId ??
+    npc.dialogueIds[0] ??
+    DIALOGUE_NODES.find((node) => node.npcId === npc.id)?.id ??
     null
   );
+}
+
+function nodeForAnchor(
+  anchor: AnchorId,
+  worldTime: number,
+  quests: Record<QuestId, QuestStatus>,
+): string | null {
+  const npc = npcStandingAt(anchor, worldTime);
+  if (npc === null) return null;
+  return nodeForNpc(npc, worldTime, quests);
 }
 
 export function App() {
@@ -66,6 +102,7 @@ export function App() {
     chooseAvatar,
     resetProfile,
     renameProfile,
+    deleteProfile,
   } = useGame();
   const hubRef = useRef<HubHandle>(null);
   // Which beat of a multi-line dialogue node is showing — transient UI state.
@@ -122,6 +159,12 @@ export function App() {
     [dispatch],
   );
 
+  // Coarse world clock: one tick per arrival drives every NPC routine —
+  // event-driven, deterministic, and never per-frame. The ref mirrors the
+  // state so arrival-time resolution reads the post-tick value immediately.
+  const [worldTime, setWorldTime] = useState(0);
+  const worldTimeRef = useRef(0);
+
   const discoveries = state.discoveries;
 
   // E2E/QA probe: the authoritative map + found facts. Lets tests wait for
@@ -131,8 +174,26 @@ export function App() {
     if (import.meta.env.DEV || w['__WORLD_PROBE']) {
       w['__worldMapId'] = state.mapId;
       w['__worldDiscoveries'] = state.discoveries;
+      // Where every NPC stands this tick — lets e2e observe routines without
+      // raycasting the scene graph.
+      w['__worldNpcs'] = Object.fromEntries(
+        NPC_DEFINITIONS.map((npc) => {
+          const spot = resolveNpcSpot(npc, worldTime);
+          const anchor = getAnchorOrNull(spot?.anchorId ?? npc.anchorId);
+          return [
+            npc.id,
+            {
+              anchorId: spot?.anchorId ?? npc.anchorId,
+              activity: resolveNpcActivity(npc, worldTime),
+              dialogueId: spot?.dialogueId ?? npc.dialogueIds[0] ?? null,
+              x: (anchor?.x ?? 0) + 0.9 + (spot?.offsetX ?? 0),
+              z: (anchor?.z ?? 0) - 0.4 + (spot?.offsetZ ?? 0),
+            },
+          ];
+        }),
+      );
     }
-  }, [state.mapId, state.discoveries]);
+  }, [state.mapId, state.discoveries, worldTime]);
   const onArrive = useCallback(
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
@@ -149,22 +210,47 @@ export function App() {
         dispatch({ type: 'CHANGE_MAP', mapId: transition.toMap, anchorId: transition.toAnchor });
         return;
       }
-      openNpc(nodeForAnchor(anchor));
+      worldTimeRef.current += 1;
+      setWorldTime(worldTimeRef.current);
+      openNpc(nodeForAnchor(anchor, worldTimeRef.current, statuses));
     },
-    [openNpc, playSfx, discoveries, dispatch],
+    [openNpc, playSfx, discoveries, dispatch, statuses],
+  );
+
+  // Tapping a person (not just a place) talks to them where they stand:
+  // walk to their current routine spot, then hear the line for what they
+  // are doing there. Falls back to opening the dialogue directly when the
+  // spot can't be walked to.
+  const onNpcTap = useCallback(
+    (npcId: string) => {
+      const npc = getNpcOrNull(npcId);
+      if (!npc) return;
+      const spot = resolveNpcSpot(npc, worldTimeRef.current);
+      const anchor = (spot?.anchorId ?? npc.anchorId) as AnchorId;
+      // Capture the right entry now (quest offer outranks routine flavour)
+      // so the walk itself cannot change which line the child hears.
+      const node = nodeForNpc(npc, worldTimeRef.current, statuses);
+      const open = () => openNpc(node);
+      if (!hubRef.current?.goTo(anchor, open)) open();
+    },
+    [openNpc, statuses],
   );
 
   const goToQuest = useCallback(
     (questId: QuestId) => {
       const definition = getQuestDefinition(questId);
-      const anchor = anchorForNpc(definition.steps[0]?.npcId ?? 'npc-elder');
+      const npc = getNpcOrNull(definition.steps[0]?.npcId ?? 'npc-elder');
+      // Walk to where the NPC actually stands now (their routine spot), not
+      // their home anchor — the camera lands on them, not an empty spot.
+      const spot = npc ? resolveNpcSpot(npc, worldTimeRef.current) : null;
+      const anchorId = (spot?.anchorId ?? npc?.anchorId ?? null) as AnchorId | null;
       const open = () => openNpc(nodeForQuest(questId));
       // Quests on another map can't be walked to — the trail button for them
       // is disabled; the DOM fallback (no WebGL) still opens the dialogue.
       if (state.webglAvailable && (definition.mapId ?? 'map-town') !== state.mapId) return;
-      // The avatar walks to the landmark first and the dialogue opens on
+      // The avatar walks to the NPC's current spot and the dialogue opens on
       // arrival; without a walker (no WebGL) the dialogue opens directly.
-      if (!anchor || !hubRef.current?.goTo(anchor.id, open)) open();
+      if (!anchorId || !hubRef.current?.goTo(anchorId, open)) open();
     },
     [openNpc, state.mapId, state.webglAvailable],
   );
@@ -231,6 +317,7 @@ export function App() {
           onReset={resetProgress}
           onResetProfile={resetProfile}
           onRenameProfile={renameProfile}
+          onDeleteProfile={deleteProfile}
           onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
           updateReady={updateReady}
           onApplyUpdate={applyUpdate}
@@ -297,6 +384,8 @@ export function App() {
           interactive={state.mode === 'hub'}
           qualityTier={state.qualityTier}
           onArrive={onArrive}
+          onNpcTap={onNpcTap}
+          worldTime={worldTime}
           onContextLost={() => dispatch({ type: 'WEBGL_AVAILABILITY_CHANGED', available: false })}
           handleRef={hubRef}
           suggestedQuestId={suggestedQuestId}

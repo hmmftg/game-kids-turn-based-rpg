@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import * as THREE from 'three';
 import type { DetailLevel } from './modelProvider.ts';
 import { noRaycast } from './raycast.ts';
 import { BOX, CYLINDER, DETAIL_COLORS, sharedLambert } from './shared.ts';
@@ -323,6 +324,78 @@ export function pathStonePositions(
     stones.push([x + nx * side, 0.05, z + nz * side]);
   }
   return stones;
+}
+
+interface RoadSlab {
+  readonly x: number;
+  readonly z: number;
+  readonly angle: number;
+}
+
+/** Paved-slab centres along an edge — a cobbled lane a pre-reader can follow. */
+function roadSlabs(
+  edges: readonly {
+    readonly from: { readonly x: number; readonly z: number };
+    readonly to: { readonly x: number; readonly z: number };
+  }[],
+  spacing = 0.62,
+): RoadSlab[] {
+  const out: RoadSlab[] = [];
+  for (const { from, to } of edges) {
+    const dx = to.x - from.x;
+    const dz = to.z - from.z;
+    const length = Math.hypot(dx, dz);
+    const n = Math.max(2, Math.floor(length / spacing));
+    const angle = Math.atan2(dx, dz);
+    for (let s = 0; s < n; s += 1) {
+      const t = (s + 0.5) / n;
+      // Alternate a tiny yaw so the lane reads as laid stones, not a ribbon.
+      out.push({
+        x: from.x + dx * t,
+        z: from.z + dz * t,
+        angle: angle + (s % 2 === 0 ? 0.1 : -0.1),
+      });
+    }
+  }
+  return out;
+}
+
+/** One instanced cobbled road across every path edge — a single draw call
+    that marks the walkable network; PathEdgeStones remains the curb. */
+export function StoneRoads({
+  edges,
+}: {
+  readonly edges: readonly {
+    readonly from: { readonly x: number; readonly z: number };
+    readonly to: { readonly x: number; readonly z: number };
+  }[];
+}) {
+  const slabs = useMemo(() => roadSlabs(edges), [edges]);
+  const ref = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const matrix = new THREE.Matrix4();
+    const quat = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+    const pos = new THREE.Vector3();
+    const scale = new THREE.Vector3(0.52, 0.07, 0.38);
+    slabs.forEach((slab, i) => {
+      pos.set(slab.x, 0.03, slab.z);
+      quat.setFromAxisAngle(up, slab.angle);
+      matrix.compose(pos, quat, scale);
+      mesh.setMatrixAt(i, matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  }, [slabs]);
+  return (
+    <instancedMesh
+      key={slabs.length}
+      ref={ref}
+      args={[BOX, sharedLambert('#cdbf9f'), slabs.length]}
+      raycast={noRaycast}
+    />
+  );
 }
 
 /** Edge stones along a path segment between two points (visual only). */

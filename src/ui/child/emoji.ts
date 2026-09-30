@@ -52,8 +52,9 @@ export const HEADWEAR_LABEL: Readonly<Record<HeadwearId, string>> = {
   beanie: FA.headwearBeanie,
 };
 
-/** Pickable badges a kid uses to spot their own card on the player picker. */
-export const BADGE_EMOJIS = ['🐱', '🦊', '🐰', '🐻', '🦁', '🐸', '🐼', '🐵'] as const;
+/** Pickable badges a kid uses to spot their own card on the player picker.
+    Objects and weather, not animals — the kid is the hero, not a mascot. */
+export const BADGE_EMOJIS = ['⭐', '🌈', '🌸', '🎈', '🍉', '🌙', '☀️', '🍎'] as const;
 
 /** First badge no existing profile uses, so siblings rarely collide. */
 export function pickProfileBadge(existing: readonly ProfileMeta[]): string {

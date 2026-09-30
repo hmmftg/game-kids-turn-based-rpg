@@ -430,6 +430,26 @@ function validateWorld(issues: ValidationIssue[]): void {
           message: `Schedule spot ${spot.anchorId} does not exist.`,
         });
       }
+      // A contextual greeting belongs to the NPC saying it — a spot may only
+      // point at a dialogue node owned by this NPC.
+      if (spot.dialogueId !== undefined) {
+        const spotNode = DIALOGUE_NODES.find((node) => node.id === spot.dialogueId) ?? null;
+        if (spotNode === null) {
+          issues.push({
+            severity: 'error',
+            code: 'unknown-dialogue',
+            where: npc.id,
+            message: `Schedule spot references unknown dialogue node ${spot.dialogueId}.`,
+          });
+        } else if (spotNode.npcId !== npc.id) {
+          issues.push({
+            severity: 'error',
+            code: 'dialogue-owner-mismatch',
+            where: npc.id,
+            message: `Schedule spot dialogue ${spot.dialogueId} belongs to ${spotNode.npcId}, not ${npc.id}.`,
+          });
+        }
+      }
     }
     if (npc.dialogueIds.length === 0) {
       issues.push({
@@ -648,7 +668,12 @@ export function validateContent(
     nodeIds.add(node.id);
   }
   const reachable = new Set<string>([
-    ...NPC_DEFINITIONS.flatMap((npc) => [...npc.dialogueIds]),
+    ...NPC_DEFINITIONS.flatMap((npc) => [
+      ...npc.dialogueIds,
+      // Contextual greetings are entry points too: a routine spot's
+      // dialogueId is how the child reaches that node.
+      ...(npc.schedule?.spots.flatMap((spot) => (spot.dialogueId ? [spot.dialogueId] : [])) ?? []),
+    ]),
     ...QUEST_DEFINITIONS.flatMap((quest) => [...quest.dialogueIds]),
   ]);
   for (const node of DIALOGUE_NODES) {

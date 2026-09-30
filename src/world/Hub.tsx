@@ -27,6 +27,7 @@ import {
   Detail,
   FlowerPatch,
   PathEdgeStones,
+  StoneRoads,
   PlantCluster,
   StoneCluster,
 } from './models/details.tsx';
@@ -64,6 +65,10 @@ export interface HubProps {
   /** Persistent world facts — the revealed secret entrance swaps its look. */
   readonly discoveries: readonly DiscoveryId[];
   readonly onArrive: (anchor: AnchorId) => void;
+  /** Tap a mounted NPC figure → talk to them where they currently stand. */
+  readonly onNpcTap?: ((npcId: string) => void) | undefined;
+  /** Coarse world clock driving NPC routines (ticks once per arrival). */
+  readonly worldTime?: number | undefined;
   readonly handleRef: Ref<HubHandle> | undefined;
 }
 
@@ -136,7 +141,7 @@ function CaveEntranceRock({
   });
 
   const approach = (event: ThreeEvent<MouseEvent>) => {
-    if (!interactive) return;
+    if (!interactive || event.delta > 6) return;
     event.stopPropagation();
     onApproach();
   };
@@ -351,6 +356,8 @@ export function Hub({
   startAnchorId,
   discoveries,
   onArrive,
+  onNpcTap,
+  worldTime = 0,
   handleRef,
 }: HubProps) {
   const models = useModels();
@@ -371,17 +378,11 @@ export function Hub({
   // can grow without growing per-frame work.
   const activeAreaId: AreaId = areaForAnchor(walker.at);
   const visibleAreas = visibleAreaIds(activeAreaId);
-  // Coarse world clock: each arrival ticks once, so scheduled NPCs advance
-  // through their spots as the world is travelled — event-driven, never a
-  // per-frame clock, and never a function of where the player stands.
-  const [worldClock, setWorldClock] = useState<{ at: AnchorId; tick: number }>({
-    at: walker.at,
-    tick: 0,
-  });
-  if (worldClock.at !== walker.at) {
-    setWorldClock({ at: walker.at, tick: worldClock.tick + 1 });
-  }
-  const worldTime = worldClock.tick;
+  // The world clock lives in App (it also picks who answers on arrival);
+  // `worldTime` is a pure prop here. Each arrival ticks once, so scheduled
+  // NPCs advance through their spots as the world is travelled —
+  // event-driven, never a per-frame clock, never a function of where the
+  // player stands.
   const inVisibleArea = (x: number, z: number) => {
     const areaId = areaAt(x, z);
     return areaId !== null && visibleAreas.includes(areaId);
@@ -437,9 +438,9 @@ export function Hub({
         rotation={[-Math.PI / 2, 0, 0]}
         name="ground"
         onClick={(event: ThreeEvent<MouseEvent>) => {
-          if (!interactive) return;
+          if (!interactive || event.delta > 6) return;
           event.stopPropagation();
-          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 2.5, 'map-town');
+          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 4, 'map-town');
           if (anchor) walkHere(anchor);
         }}
       />
@@ -521,20 +522,47 @@ export function Hub({
         const dx = walker.position.x - npcX;
         const dz = walker.position.z - npcZ;
         // Neighbours turn to watch the player approach: attention is feedback.
-        const facing = Math.hypot(dx, dz) < 6 ? Math.atan2(dx, dz) : 0;
+        // From afar they keep the pose authored on their routine spot.
+        const facing = Math.hypot(dx, dz) < 6 ? Math.atan2(dx, dz) : (spot?.facing ?? 0);
         const look = npcLook(npc.id);
         return (
-          <models.Figure
-            key={npc.id}
-            position={{ x: npcX, z: npcZ }}
-            rotationY={facing}
-            palette={look.palette}
-            hairStyle={look.hairStyle}
-            hairColor={look.hairColor}
-            label={npc.id}
-            detailLevel={detailLevel}
-            role={look.role}
-          />
+          <group key={npc.id}>
+            {/* Invisible-but-tappable hit cylinder: a tap on the person
+                talks to them where they stand. Generous radius — small
+                fingers, and the figure itself reads as the target. */}
+            <mesh
+              position={[npcX, 0.75, npcZ]}
+              onClick={(event: ThreeEvent<MouseEvent>) => {
+                if (!interactive || event.delta > 6) return;
+                event.stopPropagation();
+                onNpcTap?.(npc.id);
+              }}
+            >
+              <cylinderGeometry args={[0.9, 0.9, 2.2, 8]} />
+              <meshBasicMaterial visible={false} />
+            </mesh>
+            <models.Figure
+              position={{ x: npcX, z: npcZ }}
+              rotationY={facing}
+              palette={look.palette}
+              hairStyle={look.hairStyle}
+              hairColor={look.hairColor}
+              label={npc.id}
+              detailLevel={detailLevel}
+              role={look.role}
+            />
+            {spot?.prop ? (
+              <models.Prop
+                position={{
+                  x: npcX + (spot.propOffsetX ?? 0),
+                  z: npcZ + (spot.propOffsetZ ?? 0),
+                }}
+                palette={PROP_PALETTE}
+                variant={spot.prop}
+                detailLevel={detailLevel}
+              />
+            ) : null}
+          </group>
         );
       })}
 
@@ -569,10 +597,18 @@ export function Hub({
       />
 
       {/* Visual path decoration derived from EDGES — read-only, never alters
-          anchors, pathfinding, or movement. dispose={null}: this block and
-          the authored GROUND_DECORATIONS below consume only module-level
+          anchors, pathfinding, or movement. The cobbled road is meaning (it
+          marks where the child can walk), so it is never detail-gated; the
+          curb stones beside it stay decorative. dispose={null}: this block
+          and the authored GROUND_DECORATIONS below consume only module-level
           shared resources, so canvas remounts must not dispose them. */}
       <group dispose={null}>
+        <StoneRoads
+          edges={EDGES.filter((edge) => getAnchor(edge.from).mapId === 'map-town').map((edge) => ({
+            from: getAnchor(edge.from),
+            to: getAnchor(edge.to),
+          }))}
+        />
         <Detail level={detailLevel} min={1}>
           {EDGES.filter((edge) => getAnchor(edge.from).mapId === 'map-town').map((edge) => (
             <PathEdgeStones

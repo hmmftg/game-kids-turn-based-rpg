@@ -25,6 +25,7 @@ export interface GameShell {
   /** Wipes one profile's progress; its card stays on the picker. */
   readonly resetProfile: (id: string) => void;
   readonly renameProfile: (id: string, nameFa: string) => void;
+  readonly deleteProfile: (id: string) => void;
 }
 
 export const GameContext = createContext<GameShell | null>(null);

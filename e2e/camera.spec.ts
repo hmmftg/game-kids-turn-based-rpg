@@ -333,6 +333,40 @@ test.describe('follow camera', () => {
     expect(atEdge.x).toBeGreaterThan(edgeAnchor.x - CAMERA_PADDING - 0.01);
   });
 
+  test('drag pans the map and walking snaps the camera back to the child', async ({ page }) => {
+    test.setTimeout(120000);
+    await startGame(page);
+    await waitForMap(page, 'map-town');
+    const spawn = getAnchor(getMap('map-town').spawnAnchorId);
+    await waitForCamera(page, spawn.x, spawn.z);
+
+    // Drag the map under the finger: the look target slides the other way,
+    // still inside the map bounds.
+    const before = await cameraTarget(page);
+    const vp = page.viewportSize() ?? { width: 880, height: 420 };
+    const cx = Math.round(vp.width / 2);
+    const cy = Math.round(vp.height / 2);
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx - Math.round(vp.width * 0.2), cy - Math.round(vp.height * 0.2), {
+      steps: 12,
+    });
+    await page.mouse.up();
+    const panned = await cameraTarget(page);
+    expect(Math.hypot(panned.x - before.x, panned.z - before.z)).toBeGreaterThan(0.5);
+    const town = getMap('map-town');
+    expect(panned.x).toBeGreaterThanOrEqual(town.bounds.minX - 0.5);
+    expect(panned.x).toBeLessThanOrEqual(town.bounds.maxX + 0.5);
+    expect(panned.z).toBeGreaterThanOrEqual(town.bounds.minZ - 0.5);
+    expect(panned.z).toBeLessThanOrEqual(town.bounds.maxZ + 0.5);
+
+    // Walking anywhere snaps the pan back: the child is the focus again.
+    await tapWorld(page, 'anchor-path-west');
+    await waitForAnchor(page, 'anchor-path-west');
+    const west = getAnchor('anchor-path-west');
+    await waitForCamera(page, west.x, west.z, 1.5);
+  });
+
   test('refocuses on cave entry and exit, and taps still work after the camera moved', async ({
     page,
   }) => {

@@ -102,6 +102,10 @@ export interface WorldCanvasProps {
   readonly startAnchorId: AnchorId;
   readonly discoveries: readonly DiscoveryId[];
   readonly onArrive: (anchor: AnchorId) => void;
+  /** Tap a mounted NPC figure → talk to them where they currently stand. */
+  readonly onNpcTap?: (npcId: string) => void;
+  /** Coarse world clock driving NPC routines (ticks once per arrival). */
+  readonly worldTime?: number;
   readonly onContextLost: () => void;
   readonly handleRef?: Ref<HubHandle>;
 }
@@ -118,6 +122,8 @@ export function WorldCanvas({
   startAnchorId,
   discoveries,
   onArrive,
+  onNpcTap,
+  worldTime,
   onContextLost,
   handleRef,
 }: WorldCanvasProps) {
@@ -218,6 +224,8 @@ export function WorldCanvas({
               startAnchorId={startAnchorId}
               discoveries={discoveries}
               onArrive={onArrive}
+              onNpcTap={onNpcTap}
+              worldTime={worldTime}
               handleRef={handleRef}
             />
           )}

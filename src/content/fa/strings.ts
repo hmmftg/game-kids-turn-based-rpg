@@ -90,6 +90,9 @@ export const FA = {
   parentResetConfirm: 'همه‌ی پیشرفت پاک شود؟',
   parentResetYes: 'بله، پاک کن',
   parentResetNo: 'نه',
+  parentDelete: 'حذف بازیکن',
+  parentDeleteYes: 'بله، حذف کن',
+  parentDeleteConfirm: 'این بازیکن و ذخیره‌اش کاملاً حذف شود؟',
   parentClose: 'بستن',
 
   privacyBody:

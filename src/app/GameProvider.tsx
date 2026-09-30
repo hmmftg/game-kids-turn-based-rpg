@@ -364,6 +364,23 @@ export function GameProvider({
     [writeProfileList],
   );
 
+  /** Removes a profile card AND its save slot entirely — no undo. */
+  const deleteProfile = useCallback(
+    (id: string) => {
+      const repo = repositoryRef.current;
+      writeProfileList(profilesRef.current.filter((entry) => entry.id !== id));
+      void repo?.clear(profileSlotKey(id)).catch(() => {
+        /* storage may be evicted */
+      });
+      // Deleting the profile the child is playing drops back to the picker.
+      if (activeProfileIdRef.current === id) {
+        setActiveProfile(null);
+        dispatch({ type: 'RESET_PROGRESS' });
+      }
+    },
+    [writeProfileList, setActiveProfile],
+  );
+
   const renameProfile = useCallback(
     (id: string, nameFa: string) => {
       writeProfileList(
@@ -410,6 +427,7 @@ export function GameProvider({
       chooseAvatar,
       resetProfile,
       renameProfile,
+      deleteProfile,
     }),
     [
       state,
@@ -425,6 +443,7 @@ export function GameProvider({
       chooseAvatar,
       resetProfile,
       renameProfile,
+      deleteProfile,
     ],
   );
 

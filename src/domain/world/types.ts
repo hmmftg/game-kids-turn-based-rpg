@@ -116,6 +116,9 @@ export type NpcArchetype =
 /** Coarse schedule states — enough for routines, cheap enough for many NPCs. */
 export type NpcSimState = 'at-home' | 'walking' | 'working' | 'talking' | 'waiting';
 
+/** A small activity prop rendered beside the NPC while at this spot. */
+export type NpcRoutineProp = 'basket' | 'crate' | 'planter' | 'ball';
+
 export interface NpcScheduleSpot {
   readonly anchorId: AnchorId;
   readonly activity: NpcSimState;
@@ -125,6 +128,22 @@ export interface NpcScheduleSpot {
    */
   readonly offsetX?: number;
   readonly offsetZ?: number;
+  /**
+   * Authored facing (radians) used while the player is far; nearby the NPC
+   * still turns to watch the child approach.
+   */
+  readonly facing?: number;
+  /** Activity prop shown beside the figure at this spot. */
+  readonly prop?: NpcRoutineProp;
+  /** Where the prop sits relative to the figure (world units). */
+  readonly propOffsetX?: number;
+  readonly propOffsetZ?: number;
+  /**
+   * Contextual dialogue entry while at this spot — talking to the NPC here
+   * opens this node instead of their default `dialogueIds[0]`. Must reference
+   * a dialogue node owned by this NPC (content-validated).
+   */
+  readonly dialogueId?: string;
 }
 
 export interface NpcSchedule {

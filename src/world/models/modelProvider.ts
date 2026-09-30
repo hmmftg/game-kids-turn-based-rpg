@@ -34,7 +34,7 @@ export function detailLevelFor(tier: QualityTier): DetailLevel {
 export type LandmarkVisualVariant = 'square' | 'home-gate' | 'shop' | 'garden' | 'fountain';
 export type FigureVisualRole =
   'elder' | 'neighbour' | 'shopkeeper' | 'gardener' | 'friend' | 'avatar';
-export type PropVisualVariant = 'basket' | 'crate' | 'planter';
+export type PropVisualVariant = 'basket' | 'crate' | 'planter' | 'ball';
 
 export interface FigureProps {
   readonly position: GroundPoint;
