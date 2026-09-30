@@ -4,7 +4,6 @@ import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { getQuestStep } from '../../domain/quests/definitions.ts';
 import type { EncounterState } from '../../domain/game/types.ts';
-import { ActionGlyph } from './ActionGlyph.tsx';
 import { DialogueCard } from './DialogueCard.tsx';
 import { ConsequenceScene, SceneChoice, SceneGlyph } from './SceneChoice.tsx';
 import { contextForStep, sceneElementFor } from './contextInteraction.ts';
@@ -76,6 +75,7 @@ export function EncounterPanel({
 
     case 'demonstrate': {
       const cueIcon = getIcon(step.correctIconId);
+      const element = sceneElementFor(step.correctIconId);
       return (
         <DialogueCard
           textFa={stepCopy.demonstrateFa}
@@ -88,7 +88,9 @@ export function EncounterPanel({
             aria-hidden="true"
             data-cue={step.demonstrationCue}
           >
-            <ActionGlyph iconId={step.correctIconId} size={56} color={cueIcon.color} animate />
+            {element !== null ? (
+              <SceneGlyph element={element} size={56} color={cueIcon.color} />
+            ) : null}
           </span>
           {leave}
         </DialogueCard>

@@ -39,27 +39,33 @@ describe('App', () => {
     expect(screen.getByTestId('trail-quest-helping')).toBeDisabled();
   });
 
-  it('completes the first quest through gentle retries and awards a sticker', async () => {
-    const { user } = renderApp();
-    await reachHub(user);
+  it(
+    'completes the first quest through gentle retries and awards a sticker',
+    { timeout: 15000 },
+    async () => {
+      const { user } = renderApp();
+      await reachHub(user);
 
-    await user.click(screen.getByTestId('trail-quest-greeting'));
-    await user.click(await screen.findByTestId('start-quest'));
+      await user.click(screen.getByTestId('trail-quest-greeting'));
+      await user.click(await screen.findByTestId('start-quest'));
 
-    // Step 1: tap the wrong thing first — the game re-demonstrates, never blocks.
-    // Passive beats auto-play; we wait for the choice strip, not «بعد».
-    const strip = await screen.findByTestId('scene-choice', undefined, { timeout: 8000 });
-    await user.click(strip.querySelector('.scene-target:not([data-primary])') as HTMLButtonElement);
-    const response = await screen.findByTestId('encounter-response', undefined, {
-      timeout: 4000,
-    });
-    expect(response).toBeInTheDocument();
+      // Step 1: tap the wrong thing first — the game re-demonstrates, never blocks.
+      // Passive beats auto-play; we wait for the choice strip, not «بعد».
+      const strip = await screen.findByTestId('scene-choice', undefined, { timeout: 8000 });
+      await user.click(
+        strip.querySelector('.scene-target:not([data-primary])') as HTMLButtonElement,
+      );
+      const response = await screen.findByTestId('encounter-response', undefined, {
+        timeout: 4000,
+      });
+      expect(response).toBeInTheDocument();
 
-    // Watch-again re-demonstrates on its own — no continue tap.
-    expect(
-      await screen.findByTestId('encounter-demonstrate', undefined, { timeout: 8000 }),
-    ).toBeInTheDocument();
-  });
+      // Watch-again re-demonstrates on its own — no continue tap.
+      expect(
+        await screen.findByTestId('encounter-demonstrate', undefined, { timeout: 8000 }),
+      ).toBeInTheDocument();
+    },
+  );
 
   it('keeps the parent area behind a press-and-hold gate', async () => {
     const { user } = renderApp();

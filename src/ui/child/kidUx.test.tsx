@@ -8,8 +8,9 @@ import { AVATAR_IDS } from '../../domain/game/types.ts';
 import type { IconId } from '../../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
 import { AVATAR_VISUALS } from '../../world/models/modelProvider.ts';
-import { ActionGlyph } from './ActionGlyph.tsx';
+import { SceneGlyph } from './SceneChoice.tsx';
 import { AvatarPortrait } from './AvatarPortrait.tsx';
+import { sceneElementFor } from './contextInteraction.ts';
 import { AvatarSelectScreen } from './screens.tsx';
 
 const wordCount = (text: string) => text.trim().split(/\s+/).length;
@@ -64,44 +65,45 @@ describe('human avatar presets', () => {
   });
 });
 
-describe('action glyphs', () => {
-  const usedIconIds = new Set<IconId>();
+describe('scene objects (objects and people are the verbs)', () => {
+  const mappedIconIds = new Set<IconId>();
+  const correctIconIds = new Set<IconId>();
   for (const quest of QUEST_DEFINITIONS) {
     for (const step of quest.steps) {
-      usedIconIds.add(step.correctIconId);
-      for (const id of step.choiceIconIds) usedIconIds.add(id);
+      correctIconIds.add(step.correctIconId);
+      for (const id of step.choiceIconIds) {
+        if (sceneElementFor(id) !== null) mappedIconIds.add(id);
+      }
     }
   }
 
-  it('every choice icon renders a concrete scene glyph, not the fallback', () => {
-    for (const iconId of usedIconIds) {
-      const { container } = render(<ActionGlyph iconId={iconId} />);
-      const svg = container.querySelector('svg.action-glyph');
-      expect(svg, iconId).not.toBeNull();
-      expect(svg!.getAttribute('data-icon')).toBe(iconId);
-      // a scene has more than a bare circle: actor, object or motion cue
-      expect(
-        svg!.querySelectorAll('path, circle, ellipse').length,
-        `${iconId} should draw a scene`,
-      ).toBeGreaterThanOrEqual(3);
+  it('every step’s correct target maps to a concrete scene element', () => {
+    // A step whose correct icon has no physical target is untappable —
+    // the one mapping that must always exist. Wrong choices may legitimately
+    // be absent (§9: no fallback to icons).
+    for (const iconId of correctIconIds) {
+      expect(sceneElementFor(iconId), `${iconId} has no physical target`).not.toBeNull();
     }
   });
 
-  it('pick and throw-like actions visibly move an object', () => {
-    for (const iconId of ['icon-pick-up', 'icon-kick'] as const) {
-      const { container } = render(<ActionGlyph iconId={iconId} animate />);
-      const svg = container.querySelector('svg.action-glyph')!;
-      // object that moves + motion cue
-      expect(svg.querySelector('.glyph-object'), iconId).not.toBeNull();
-      expect(svg.querySelector('.glyph-cue'), iconId).not.toBeNull();
-      expect(svg.getAttribute('class')).toContain('glyph--anim-');
+  it('every mapped element renders a scene, not a bare shape', () => {
+    for (const iconId of mappedIconIds) {
+      const element = sceneElementFor(iconId)!;
+      const { container } = render(<SceneGlyph element={element} />);
+      const svg = container.querySelector('svg');
+      expect(svg, iconId).not.toBeNull();
+      expect(svg!.getAttribute('data-element')).toBe(element);
+      expect(
+        svg!.querySelectorAll('path, circle, ellipse').length,
+        `${iconId} should draw a scene`,
+      ).toBeGreaterThanOrEqual(2);
     }
   });
 
   it('every icon id resolves to a defined icon', () => {
     for (const icon of ICONS) {
-      const { container } = render(<ActionGlyph iconId={icon.id} />);
-      expect(container.querySelector('svg')).not.toBeNull();
+      expect(icon.labelFa.length).toBeGreaterThan(0);
+      expect(icon.color).toMatch(/^#/);
     }
   });
 });

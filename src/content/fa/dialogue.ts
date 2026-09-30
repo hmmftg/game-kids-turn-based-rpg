@@ -162,37 +162,10 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
   {
     id: 'teacher-story',
     npcId: 'npc-teacher',
-    textFa: 'معلم قصه‌ی کوتاهی می‌گوید.',
+    textFa: 'روزی جوجه به مادرش کمک کرد و لبخند زدند.',
     iconId: 'icon-watch',
     offersQuestId: null,
-    lines: [
-      {
-        speakerId: 'npc-teacher',
-        textFa: 'معلم قصه‌ی کوتاهی می‌گوید.',
-        emotion: 'calm',
-      },
-      {
-        speakerId: 'npc-teacher',
-        textFa: 'روزی یک جوجه‌ی کوچک به مادرش کمک کرد.',
-        emotion: 'calm',
-      },
-      {
-        speakerId: 'npc-teacher',
-        textFa: 'همه با هم لبخند زدند.',
-        emotion: 'happy',
-        reaction: 'clap',
-      },
-    ],
-    nextNodeId: 'teacher-story-end',
     parentNoteFa: 'قصه‌ی کوتاه بدون پیام مستقیم؛ الگوی کمک‌کردن.',
-    review: DRAFT_REVIEW,
-  },
-  {
-    id: 'teacher-story-end',
-    npcId: 'npc-teacher',
-    textFa: 'قصه تمام شد. معلم منتظر نوبت بعدی است.',
-    iconId: 'icon-smile',
-    offersQuestId: null,
     review: DRAFT_REVIEW,
   },
   {
