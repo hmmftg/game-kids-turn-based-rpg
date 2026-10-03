@@ -28,6 +28,12 @@ services ───────────┘         world/ (R3F hub)
 - **Encounter machine** (`domain/quests/encounter.ts`):
   `intro → demonstrate → playerChoice → worldResponse → reinforce → complete`.
   Wrong choice → back to `demonstrate` (`retries + 1`). No failure state.
+- **Passive pacing** (`usePacedAdvance` in `EncounterPanel`): every phase except
+  `playerChoice` auto-fires `ADVANCE` after `PASSIVE_DWELL_MS` (1.4s→0.7s). The reducer
+  stays the source of truth — the hook only decides _when_ the UI requests a state
+  transition; one timeout per phase, cleared on unmount/phase change, paused while
+  the tab is hidden, restarted on visibility restore. Auto-advance never auto-selects:
+  only a real tap on the concrete object fires `CHOOSE`.
 - **Commands**: child taps dispatch `CHOOSE(iconId, correct)` — interaction visuals are
   _implementation details on top_, never a second action system.
 - **Persistence**: versioned schema, corrupt → fresh state (never deletes payload), checkpoint
@@ -52,6 +58,14 @@ response card: ConsequenceScene only if correct  src/ui/child/SceneChoice.tsx
 ```
 
 Details and invariants: [INTERACTION-MODEL.md](INTERACTION-MODEL.md).
+
+## Interaction budget
+
+`domain/quests/interactionSteps.ts` measures **mandatory child actions** on the
+interaction graph (passive 0 / choice 1 / entry 1 / exit 0 / optional taps 0) and
+`validate:content` fails the build over the limits in `INTERACTION_LIMITS`
+(step ≤2, dialogue ≤1, exit 0). New content must fit the budget — see
+`docs/INTERACTION-MODEL.md` § Interaction budget.
 
 ## Ambient world
 
@@ -88,6 +102,21 @@ spawnAnchorId}`. Every anchor — and therefore every NPC, landmark, hotspot and
   the loaf to the shop shelf), school (answer by tapping the right picture). Steps reuse the
   existing `EncounterStep`/contextual-target model; adding an activity is content data
   (quest def + copy + icon → scene element/held item/consequence mappings).
+- **NPC routines** (`NpcSchedule`): authored `spots` sequence moves an NPC between anchors
+  deterministically (`resolveNpcAnchor` picks the spot from a world-clock tick that advances
+  on anchor arrivals). Schedule movement is event-driven — walking to a person never ticks
+  the clock, so an NPC cannot relocate mid-approach. Contextual dialogue: `dialogueIds`
+  resolve per current spot (e.g. the fisher greets differently at the river vs the bakery).
+  NPC figures are themselves tappable (invisible hit cylinder, deterministic jitter to
+  disambiguate co-located NPCs) — tapping a figure is the only way to open dialogue.
+- **Camera** (`world/camera.ts` + `world/CameraRig.tsx`): player-following orthographic
+  rig. `clampCameraTarget` projects map bounds at the current zoom/aspect so the viewport
+  never shows outside-map space; the rig lerps toward the clamped walker position,
+  invalidating only while settling (idle → zero frames; reduced motion → snap). Per-map
+  `cameraZoom` override; `mapId` remounts the rig and snaps to the map's spawn anchor.
+  Child gestures: drag pans within bounds (a walk command snaps back to the child),
+  tapping a quest chip walks the child to the quest NPC's current routine spot, and
+  taps anywhere on the ground — near or far — walk there.
 - **Maps** (`world/maps.ts`): `WorldMapDefinition {id, bounds, spawnAnchorId, environment}` —
   the outdoor town (`map-town`) plus secondary scenes with a local coordinate system and their
   own environment (`map-cave`). Only the current map's scene mounts (`WorldCanvas` keys
