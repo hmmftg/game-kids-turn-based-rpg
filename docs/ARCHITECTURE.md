@@ -44,8 +44,10 @@ services ───────────┘         world/ (R3F hub)
 - **Authored-content seam**: `QuestDefinition`, `DialogueNode`, `WorldMapDefinition`,
   `NpcDefinition`, `MapTransition` are the game's content contract. Authored data flows
   through `validate:content` into the pure domain and is rendered — never executed
-  imperatively; referential integrity across those ids is a validation responsibility
-  (`registry.test.ts`, `validate:content`), not a runtime fallback. New child content
+  imperatively; referential integrity across those ids is a pre-runtime validation
+  responsibility, enforced by `validate:content` and dedicated registry/content tests
+  where the validator does not currently own the relation — not a runtime fallback.
+  New child content
   is new data or new fields on these types, never ad-hoc flags in `src/app`/`src/world`.
   Validation returns a structured report consumed by script + tests — it does not
   throw at runtime.
