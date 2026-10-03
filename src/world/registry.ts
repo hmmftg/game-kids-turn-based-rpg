@@ -8,6 +8,7 @@ import type {
   WorldArea,
 } from '../domain/world/types.ts';
 import { ANCHORS, EDGES, getAnchor, getAnchorOrNull } from './navigation/graph.ts';
+import { insideBounds } from '../domain/world/geometry.ts';
 
 /**
  * World registries: logical areas layered over the single world coordinate
@@ -278,9 +279,7 @@ export function getNpcOrNull(id: string): NpcDefinition | null {
   return NPC_BY_ID.get(id as NpcId) ?? null;
 }
 
-export function insideBounds(bounds: Bounds, x: number, z: number): boolean {
-  return x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ;
-}
+export { insideBounds };
 
 /** The area a world-space point falls inside; null when outside every area. */
 export function areaAt(x: number, z: number): AreaId | null {

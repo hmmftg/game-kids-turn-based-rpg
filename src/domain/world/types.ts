@@ -1,4 +1,4 @@
-import type { AnchorId, NpcId } from '../game/types.ts';
+import type { AnchorId, LandmarkId, NpcId } from '../game/types.ts';
 
 /**
  * World-structure types: logical areas layered over the single world
@@ -112,6 +112,49 @@ export type NpcArchetype =
   | 'parkkeeper'
   | 'critter'
   | 'child';
+
+/**
+ * A waypoint in the data-defined navigation graph. Movement is restricted to
+ * anchors, so the child can never walk into geometry and no physics engine is
+ * needed. Every anchor declares its `areaId` and `mapId`: areas connect through
+ * normal edges that cross area bounds; cross-map travel uses transitions.
+ */
+export interface Anchor {
+  readonly id: AnchorId;
+  /** World position on the ground plane (metres). */
+  readonly x: number;
+  readonly z: number;
+  readonly walkable: boolean;
+  /** The world area this anchor belongs to — world content owns an area. */
+  readonly areaId: AreaId;
+  /** The map this anchor lives on; cross-map travel uses transitions, not edges. */
+  readonly mapId: MapId;
+  /** Interaction the anchor stands in front of, if any. */
+  readonly npcId: NpcId | null;
+  readonly landmarkId: LandmarkId | null;
+  /** Map transition triggered by arriving here (doors, hidden entrances). */
+  readonly transitionId?: `transition-${string}` | undefined;
+  readonly labelFa: string;
+}
+
+/** An undirected walking edge between two anchors on the same map. */
+export interface Edge {
+  readonly from: AnchorId;
+  readonly to: AnchorId;
+}
+
+/**
+ * The home/resident spot of one NPC, as authored world structure. Builder
+ * documents carry placements rather than `NpcDefinition`s: archetype,
+ * schedule and dialogue stay content-owned. A placement overrides the NPC's
+ * `anchorId`/home location for preview; schedule spot anchors are unaffected.
+ */
+export interface NpcPlacement {
+  readonly npcId: NpcId;
+  readonly anchorId: AnchorId;
+  readonly offsetX?: number;
+  readonly offsetZ?: number;
+}
 
 /** Coarse schedule states — enough for routines, cheap enough for many NPCs. */
 export type NpcSimState = 'at-home' | 'walking' | 'working' | 'talking' | 'waiting';
