@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, type Ref } from 'react';
 import { publishCameraFocus } from './CameraRig.tsx';
 import { type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -8,18 +8,10 @@ import type { AreaId, EnvironmentDefinition } from '../domain/world/types.ts';
 import { ANCHORS, getAnchor } from './navigation/graph.ts';
 import { areaForAnchor, visibleAreaIds } from './registry.ts';
 import { CIRCLE, BOX, CYLINDER, SPHERE, sharedLambert } from './models/shared.ts';
-import {
-  AttentionPulse,
-  DestinationMarker,
-  Hotspot,
-  QuestMarker,
-  type NpcAttention,
-  type WorldSceneHandle,
-} from './sceneBits.tsx';
+import { CharacterReact, Hotspot, type NpcAttention, type WorldSceneHandle } from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
-import { questEmoji } from '../ui/child/emoji.ts';
 import { AVATAR_VISUALS, useModels, type DetailLevel } from './models/modelProvider.ts';
 
 export type CaveHandle = WorldSceneHandle;
@@ -30,7 +22,6 @@ export interface CaveWorldProps {
   readonly questStatuses: Record<QuestId, QuestStatus>;
   readonly interactive: boolean;
   readonly detailLevel: DetailLevel;
-  readonly suggestedQuestId: QuestId | null;
   readonly startAnchorId: AnchorId;
   readonly environment: EnvironmentDefinition;
   readonly onArrive: (anchor: AnchorId) => void;
@@ -278,7 +269,6 @@ export function CaveWorld({
   questStatuses,
   interactive,
   detailLevel,
-  suggestedQuestId,
   startAnchorId,
   environment,
   onArrive,
@@ -293,8 +283,6 @@ export function CaveWorld({
   useEffect(() => {
     publishCameraFocus(walker.position.x, walker.position.z);
   });
-  const [walkTarget, setWalkTarget] = useState<AnchorId | null>(null);
-
   const activeAreaId: AreaId = areaForAnchor(walker.at);
   const visibleAreas = visibleAreaIds(activeAreaId);
 
@@ -303,15 +291,12 @@ export function CaveWorld({
     () => ({
       goTo: (anchor, onArrived) => {
         const walked = walker.walkTo(anchor, () => {
-          setWalkTarget(null);
           onArrive(anchor);
           onArrived?.();
         });
-        if (walked) setWalkTarget(anchor);
         return walked;
       },
       cancel: () => {
-        setWalkTarget(null);
         walker.cancel();
       },
     }),
@@ -319,11 +304,9 @@ export function CaveWorld({
   );
 
   const walkHere = (anchor: AnchorId) => {
-    const walked = walker.walkTo(anchor, () => {
-      setWalkTarget(null);
+    walker.walkTo(anchor, () => {
       onArrive(anchor);
     });
-    if (walked) setWalkTarget(anchor);
   };
 
   const mouseAnchor = getAnchor('anchor-cave-mouse');
@@ -387,32 +370,17 @@ export function CaveWorld({
         if (!visibleAreas.includes(anchor.areaId)) return null;
         const status = questStatuses[quest.id];
         const active = interactive && status !== 'locked';
-        const suggested = quest.id === suggestedQuestId && status !== 'locked';
         return (
-          <group key={quest.id}>
-            <Hotspot
-              x={anchor.x}
-              z={anchor.z}
-              active={active}
-              suggested={suggested}
-              label={`hotspot-${quest.id}`}
-              onSelect={() => walkHere(anchor.id)}
-            />
-            {active ? (
-              <QuestMarker
-                x={anchor.x}
-                z={anchor.z}
-                emoji={questEmoji(quest.id)}
-                suggested={suggested}
-              />
-            ) : null}
-          </group>
+          <Hotspot
+            key={quest.id}
+            x={anchor.x}
+            z={anchor.z}
+            active={active}
+            label={`hotspot-${quest.id}`}
+            onSelect={() => walkHere(anchor.id)}
+          />
         );
       })}
-
-      {walkTarget !== null ? (
-        <DestinationMarker x={getAnchor(walkTarget).x} z={getAnchor(walkTarget).z} />
-      ) : null}
 
       {/* The cave mouse — the map's one resident. Rendered by the shared
           animal slot so a GLB model set supplies it too; grey tint reads
@@ -431,11 +399,15 @@ export function CaveWorld({
           <cylinderGeometry args={[0.7, 0.7, 1.4, 8]} />
           <meshBasicMaterial visible={false} />
         </mesh>
-        <AttentionPulse nonce={attention?.npcId === 'npc-cave-mouse' ? attention.nonce : 0}>
+        <CharacterReact
+          npcId="npc-cave-mouse"
+          nonce={attention?.npcId === 'npc-cave-mouse' ? attention.nonce : 0}
+          context={attention?.context ?? 'notices-child'}
+        >
           <group rotation={[0, mouseFacing, 0]}>
             <models.Animal variant="cat" tint="#8d8391" detailLevel={detailLevel} />
           </group>
-        </AttentionPulse>
+        </CharacterReact>
       </group>
 
       {/* Avatar — same model and walk feel as outside. */}

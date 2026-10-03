@@ -119,7 +119,6 @@ await page.goto(URL);
 await page.getByTestId('start-button').click();
 await page.getByTestId('avatar-aban').click();
 await page.getByTestId('headwear-next').click();
-await page.getByTestId('badge-0').click();
 await page.getByTestId('hud').waitFor();
 await page.getByTestId('world-canvas').waitFor();
 

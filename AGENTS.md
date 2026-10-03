@@ -186,7 +186,17 @@ The child's interaction language is **the physical thing**, never an action icon
 - **Model boundary.** Interaction context is computed by `contextForStep()` (pure). UI components must not re-derive correctness or invent interaction rules — and gameplay rules never move into UI components.
 - **Double-tap guard** on `InteractiveTarget` must stay: the buffered commit window makes it required.
 
-## 9.1 Interaction budget (hard validator)
+## 9.1 Semantic animation rules (PR F contract — full reference: `docs/ANIMATIONS.md`)
+
+- **Physical transition or nothing.** Every primary gameplay animation is a recognizable physical state transition; feedback/decorative motion is secondary reinforcement only, never the sole explanation. Abstract "this is important" effects (pulses, rings, floating markers, wobbles) are forbidden.
+- **One semantic episode at a time.** A short physical submotion chain (`ObjectLift → ObjectFlyTo → settled`) plus at most one contextual `CharacterReact`; no competing unrelated effects.
+- **Primitive vocabulary is closed:** `ObjectLift/Drop/Open/Bounce/FlyTo/Separate/Uncover/Receive`, `CharacterReact(actor, context)` with its finite context list. `CharacterTurn/Look/Wave` are internal composition helpers, never standalone gameplay feedback. New primitives only on a second real use.
+- **Wrong answers move nothing.** `CharacterReact(actor, questioning)` only — the wrong object stays put; no success animation, shake, or wobble.
+- **Never add replacement animation for its own sake.** Removing a marker adds nothing — `remove marker → nothing added` is correct.
+- **`?kidtest=noactionicons`** strips every non-physical affordance; physical state (the actually-held object) remains. Compose with `nocopy` for the full semantic-comprehension mode.
+- **Instrumentation:** semantic episodes record to `window.__worldAnimationEvents`/`__worldAnimationStats` (dev/probe only); `active === 0` must hold after every episode — no permanent loop exists just to keep a cue alive.
+
+## 9.2 Interaction budget (hard validator)
 
 `src/domain/quests/interactionSteps.ts` counts **mandatory child actions** on the interaction graph: passive beat 0, object choice 1, interaction entry 1, outside-tap exit 0, optional dialogue tap 0. `validate:content` fails the build (`interaction-budget`) when a step forces >2 actions or a dialogue forces >1 on its heaviest required-choice path; a dialogue with no required choice costs 0 to exit. Any new quest/dialogue content must stay inside the budget — adding a forced tap fails `npm run verify`.
 
@@ -198,5 +208,6 @@ The child's interaction language is **the physical thing**, never an action icon
 - `AGENTS.md` — rules every agent must follow (this file).
 - `docs/ARCHITECTURE.md` — module map, invariants, budgets.
 - `docs/INTERACTION-MODEL.md` — contextual-target interaction contract.
+- `docs/ANIMATIONS.md` — semantic animation vocabulary and episode rules.
 - `docs/QA.md` — suites, perf baselines, lifecycle/reduced-motion QA, kid-test protocol.
 - `.agents/skills/testing-kids-rpg/` — how to drive the app for UI-driven testing.

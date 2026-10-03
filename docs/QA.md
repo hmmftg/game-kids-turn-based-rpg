@@ -15,13 +15,14 @@ Always run `verify`, `measure-world`, `qa-screenshots`, and Playwright before a 
 ## Performance numbers
 
 Budget **ceilings** are enforced in `scripts/measure-world.ts`. The current **observed sampled
-maxima** (PR #16 era, unchanged since — DOM-only interaction work doesn't touch the canvas):
+maxima** (measured on this branch; `main` measures within ±1 call and −6 objects of these —
+the ceilings below are stale and already exceeded on `main`):
 
 | Tier   | Calls | Objects | Triangles |
 | ------ | ----- | ------- | --------- |
-| low    | 76    | 118     | 3,260     |
-| medium | 203   | 275     | 6,566     |
-| high   | 296   | 389     | 9,002     |
+| low    | 86    | 178     | 4,322     |
+| medium | 227   | 404     | 7,484     |
+| high   | 326   | 546     | 9,992     |
 
 These are observed samples, **not** mathematical bounds — they may vary a little across runs. Do
 not raise ceilings to fit a feature; simplify geometry first.
@@ -60,6 +61,27 @@ dialogue), `openQuestDialogue`, `tapWorldAnchor` (hop-aware far-anchor taps unde
 follow camera), `waitForCameraSettle`, `dismissDialogue`. Mode B (`?kidtest=nocopy`)
 runs with all rendered copy hidden — the pictographic question card must carry the
 question; school steps record tap positions for same-position-pattern detection.
+`?kidtest=` accepts a comma/space-separated flag list: `nocopy` hides rendered copy;
+`noactionicons` strips every non-physical action affordance (quest emoji, hand
+markers, action icons, directional arrows, held-item badges) while physical state
+like the actually-held object stays. `?kidtest=nocopy,noactionicons` is the full
+semantic-comprehension mode.
+
+## Semantic animation storyboard
+
+`e2e/animations.spec.ts` runs under `?kidtest=nocopy,noactionicons` and asserts the
+physical-episode contract from `docs/ANIMATIONS.md` on the dev-only instrumentation
+(`window.__worldAnimationEvents` / `__worldAnimationStats`, enabled via
+`__WORLD_PROBE` before first goto): arrival earns `notices-child` and tapping the
+figure earns `greets-child` in parallel with dialogue; kite pickup is
+`object-lift → object-fly-to(hand)`; giving is `object-fly-to` plus the receiver's
+`CharacterReact`; shell→basket ends in authoritative `object-receive`; the book
+answer is `object-open` + `looks-at-book`; a wrong pick records **exactly**
+`character-react/questioning` — no success events, no held or destination change.
+Every scenario asserts `active === 0` after the episode, proving no permanent
+animation loop exists to keep a cue alive. The noactionicons scenario keeps the
+book scene's distractors (ball and friends) visible and tappable while asserting
+zero rings, marks, badges, and copy.
 
 ## Scalable world QA
 
@@ -100,6 +122,15 @@ with a child, run the protocol used since PR #17:
 Measure **Recognition** (knows what to touch unaided), **Action understanding** (predicts the
 result), and **Recovery** (figures out the next step after a wrong pick). A 3–5s hesitation
 counts as a weak signal even if the child eventually succeeds.
+
+For the animation contract the gate is **binary per flow** — record, per flow: first
+target tapped, wrong taps before the first correct target, time to first intentional
+tap, and "what is this?" count. A flow passes only when the child independently
+identifies the physical target and starts the interaction; one exploratory tap is
+tolerable, repeated wrong targeting or "where do I tap?" fails that flow. Do not
+average across flows. At least one scene must present multiple plausible physical
+things (the book scene keeps the ball and other objects) — a lone obvious object
+proves nothing about discoverability.
 
 Simulated pre-reader passes (an agent ignoring all text and judging visuals only) are a useful
 cheap proxy, but they measure legibility, not cognition — they do not replace the real session.

@@ -31,8 +31,10 @@ ContextInteraction (pure model)
         ┌─────────┴─────────┐
     correct                 wrong
         ▼                     ▼
-ConsequenceScene         gentle retry
-(truthful animation)   (NO success animation)
+ConsequenceScene      CharacterReact(actor,
+(physical consequence)   questioning)
+                      (NO success animation —
+                       object stays put)
 ```
 
 **Truthfulness rule — the most important one.** Never show an accepted-looking animation before
@@ -69,9 +71,13 @@ distinct elements for genuinely new world things; never map two meanings onto on
 
 ## Consequence scenes
 
-`ConsequenceScene(iconId)` renders the truthful outcome on the response card after a correct
-choice: object-into-hand (pick), object-into-destination (place), actor reaction (talk).
-One-shot CSS (`scene-exec-*` keyframes), frozen under `prefers-reduced-motion`.
+`ConsequenceScene(iconId)` renders the truthful physical consequence on the response card
+after a correct choice — object lifted into the hand (pick), object flown to its
+destination (give/place), the asked object opened (book). A wrong choice gets
+`QuestioningReact` — a single `CharacterReact(actor, questioning)` — and the wrong object
+stays physically where it is. One-shot CSS (`scene-exec-*` keyframes), frozen under
+`prefers-reduced-motion`. Every consequence records a semantic episode on
+`window.__worldAnimationEvents` (see `docs/ANIMATIONS.md`).
 
 ## Fallbacks and surfaces
 

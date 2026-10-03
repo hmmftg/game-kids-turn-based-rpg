@@ -96,7 +96,6 @@ export interface WorldCanvasProps {
   readonly completedCount: number;
   readonly interactive: boolean;
   readonly qualityTier: QualityTier;
-  readonly suggestedQuestId: QuestId | null;
   /** The map currently mounted — the other map's scene does not exist. */
   readonly mapId: MapId;
   /** Anchor the avatar stands at on this map (spawn/restored position). */
@@ -120,7 +119,6 @@ export function WorldCanvas({
   completedCount,
   interactive,
   qualityTier,
-  suggestedQuestId,
   mapId,
   startAnchorId,
   discoveries,
@@ -209,7 +207,6 @@ export function WorldCanvas({
               questStatuses={questStatuses}
               interactive={interactive}
               detailLevel={detailLevel}
-              suggestedQuestId={suggestedQuestId}
               startAnchorId={startAnchorId}
               environment={env}
               onArrive={onArrive}
@@ -226,7 +223,6 @@ export function WorldCanvas({
               completedCount={completedCount}
               interactive={interactive}
               detailLevel={detailLevel}
-              suggestedQuestId={suggestedQuestId}
               startAnchorId={startAnchorId}
               discoveries={discoveries}
               onArrive={onArrive}

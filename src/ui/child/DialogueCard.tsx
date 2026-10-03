@@ -24,7 +24,8 @@ export function DialogueCard({
   readonly scene?: ReactNode;
   readonly children?: ReactNode;
   readonly testId?: string | undefined;
-  /** 'retry' adds a gentle wobble + 👀 marker after a not-quite pick. */
+  /** 'retry' marks the card as a gentle retry state; the physical reaction
+   *  (the actor questioning) lives in the scene, not as an abstract marker. */
   readonly variant?: 'retry' | undefined;
   /** Optional skip-anywhere: tapping the card advances the current beat.
    *  Never required — the beat also advances on its own. */
@@ -42,11 +43,6 @@ export function DialogueCard({
       data-testid={testId ?? 'dialogue-card'}
       onClick={onTap}
     >
-      {variant === 'retry' ? (
-        <span className="emoji dialogue-card__look" aria-hidden="true">
-          👀
-        </span>
-      ) : null}
       {speakerFa && !hideText ? (
         <p className="dialogue-card__speaker">
           {speakerEmoji ? (

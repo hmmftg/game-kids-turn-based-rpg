@@ -390,16 +390,14 @@
   background: var(--color-primary);
 }
 
-/* Demonstration animations; disabled under reduced motion. */
+/* Demonstration scenes speak the same physical verbs as the consequence
+   scenes; no generic bob. Disabled under reduced motion. */
 .demo {
-  inline-size: 48px;
-  block-size: 48px;
+  inline-size: 56px;
+  block-size: 56px;
   border-radius: var(--radius-sm);
   background: var(--color-accent-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: demo-bob var(--duration-slow) ease-in-out infinite alternate;
+  display: block;
 }
 
 /* Emoji glyphs come from the system emoji font: colourful and offline-safe. */
@@ -433,15 +431,6 @@
   font-size: 56px;
 }
 
-@keyframes demo-bob {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-10px);
-  }
-}
-
 /* First-use teaching cue: finger + one short line, pure CSS motion. */
 .hint {
   display: inline-flex;
@@ -455,19 +444,10 @@
   box-shadow: var(--shadow-card);
 }
 
-.hint__finger {
-  font-size: 34px;
-  animation: hint-tap var(--duration-slow) ease-in-out infinite alternate;
-}
-
-/* Gentle retry: soft wobble + a looking-eyes marker, never an error colour. */
+/* Gentle retry: a soft border only — the actor's questioning reaction in
+   the scene carries the meaning; never a shake or an error colour. */
 .dialogue-card--retry {
-  animation: retry-wobble var(--duration-slow) ease-in-out 2;
   border: 3px solid var(--color-accent-soft);
-}
-
-.dialogue-card__look {
-  font-size: 30px;
 }
 
 /* Quest completion overlay. */
@@ -562,28 +542,6 @@
   }
   to {
     box-shadow: 0 0 0 8px rgba(224, 138, 60, 0.12);
-  }
-}
-
-@keyframes hint-tap {
-  from {
-    transform: translateY(0) scale(1);
-  }
-  to {
-    transform: translateY(-8px) scale(1.06);
-  }
-}
-
-@keyframes retry-wobble {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  30% {
-    transform: translateX(-6px);
-  }
-  65% {
-    transform: translateX(5px);
   }
 }
 
@@ -702,10 +660,51 @@
   transform: translateY(-6px) scale(1.08);
 }
 
-/* Consequence scene on the response card: one-shot outcome motion. */
-.scene-consequence {
+/* Consequence scene on the response card: one-shot physical transitions —
+   every keyframe moves a recognizable object or actor from source to
+   destination, never a glow/pulse that only says "something happened". */
+.scene-consequence,
+.scene-questioning {
   display: block;
   margin-inline: auto;
+}
+
+.scene-exec-fly-arc {
+  animation: scene-exec-fly-arc 0.65s ease-out backwards;
+}
+
+.scene-exec-fly-give {
+  animation: scene-exec-fly-give 0.6s ease-out backwards;
+}
+
+.scene-exec-receive {
+  animation: scene-exec-receive 0.5s ease-out backwards;
+}
+
+.scene-exec-open {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: scene-exec-open 0.5s ease-out backwards;
+}
+
+.scene-exec-bounce {
+  animation: scene-exec-bounce 0.55s ease-out backwards;
+}
+
+.scene-exec-uncover {
+  animation: scene-exec-uncover 0.45s ease-out backwards;
+}
+
+.scene-exec-look {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scene-exec-look 0.6s ease-out backwards;
+}
+
+.scene-exec-question {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scene-exec-question 0.9s ease-in-out backwards;
 }
 
 .scene-exec-lift {
@@ -718,6 +717,118 @@
 
 .scene-exec-pop {
   animation: scene-exec-pop 0.45s ease-out backwards;
+}
+
+/* ObjectLift → ObjectFlyTo(hand): the drawn thing starts low on the ground
+   side and lands against the hand, staying on-screen the whole way. */
+@keyframes scene-exec-fly-arc {
+  0% {
+    transform: translate(-11px, 24px);
+    opacity: 0.95;
+  }
+  55% {
+    transform: translate(-5px, 8px);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+/* ObjectFlyTo(destination): continuous travel from the held side into the
+   person/container the child just tapped. */
+@keyframes scene-exec-fly-give {
+  0% {
+    transform: translate(-13px, 12px);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+/* ObjectReceive: the destination's single small settle — the visual for the
+   authoritative "it is inside/held now" state. */
+@keyframes scene-exec-receive {
+  0% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-3px);
+  }
+  70% {
+    transform: translateY(1.5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* ObjectOpen: a page opens outward from its hinge edge. */
+@keyframes scene-exec-open {
+  0% {
+    transform: scaleX(0.15);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* ObjectBounce: one hop with a tiny squash — a physical ball/fish motion. */
+@keyframes scene-exec-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  45% {
+    transform: translateY(-9px) scale(0.97, 1.03);
+  }
+  80% {
+    transform: translateY(1px) scale(1.04, 0.96);
+  }
+}
+
+/* ObjectUncover/Separate: the thing rises out of what covered it. */
+@keyframes scene-exec-uncover {
+  0% {
+    transform: translateY(10px) scale(0.9);
+    opacity: 0.25;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* CharacterReact(looks-at-book): a head turn + small settle. */
+@keyframes scene-exec-look {
+  0% {
+    transform: translateX(5px) rotate(6deg);
+  }
+  60% {
+    transform: translateX(-1px) rotate(-2deg);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+/* CharacterReact(questioning): look at the thing, back, a slight head tilt. */
+@keyframes scene-exec-question {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-7deg) translateY(1px);
+  }
+  70% {
+    transform: rotate(5deg);
+  }
 }
 
 @keyframes scene-exec-lift {
@@ -766,16 +877,21 @@
 
 @media (prefers-reduced-motion: reduce) {
   .scene-el,
+  .scene-exec-fly-arc,
+  .scene-exec-fly-give,
+  .scene-exec-receive,
+  .scene-exec-open,
+  .scene-exec-bounce,
+  .scene-exec-uncover,
+  .scene-exec-look,
+  .scene-exec-question,
   .scene-exec-lift,
   .scene-exec-drop,
   .scene-exec-pop,
-  .demo,
-  .hint__finger,
   .world-marker,
   .celebration__burst,
   .celebration__sticker,
-  .trail__item--current,
-  .dialogue-card--retry {
+  .trail__item--current {
     animation: none;
   }
 }
