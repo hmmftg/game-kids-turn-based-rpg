@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { AnchorId } from '../domain/game/types.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import { getAnchor } from './navigation/graph.ts';
 import { findPath, type PathPoint } from './navigation/pathfinding.ts';
 
@@ -27,12 +28,13 @@ export interface Walker {
  * `invalidate()`; when the walk finishes the loop goes quiet again.
  */
 export function useWalker(
+  source: WorldSource,
   start: AnchorId,
   onArrive: (anchor: AnchorId) => void,
   enabled: boolean,
 ): Walker {
   const invalidate = useThree((state) => state.invalidate);
-  const startAnchor = getAnchor(start);
+  const startAnchor = getAnchor(source, start);
   const queue = useRef<AnchorId[]>([]);
   const [position, setPosition] = useState<PathPoint>({ x: startAnchor.x, z: startAnchor.z });
   const [heading, setHeading] = useState(0);
@@ -70,7 +72,7 @@ export function useWalker(
   const walkTo = useCallback(
     (target: AnchorId, onArrived?: () => void) => {
       if (!enabled) return false;
-      const path = findPath(at, target);
+      const path = findPath(source, at, target);
       if (path.length === 0) return false;
       queue.current = [...path.slice(1)];
       pendingArrival.current = onArrived ?? null;
@@ -79,7 +81,7 @@ export function useWalker(
       else invalidate();
       return true;
     },
-    [at, enabled, invalidate, finishWalk],
+    [source, at, enabled, invalidate, finishWalk],
   );
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export function useWalker(
       if (moving) setMoving(false);
       return;
     }
-    const target = getAnchor(next);
+    const target = getAnchor(source, next);
     const dx = target.x - position.x;
     const dz = target.z - position.z;
     const distance = Math.hypot(dx, dz);

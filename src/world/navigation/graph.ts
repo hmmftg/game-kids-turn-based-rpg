@@ -1,4 +1,5 @@
 import type { AnchorId, LandmarkId, NpcId } from '../../domain/game/types.ts';
+import type { WorldSource } from '../../domain/world/source.ts';
 import type { Anchor, Edge } from '../../domain/world/types.ts';
 
 // The types live in `domain/world/types.ts` (shared world-structure contract);
@@ -324,40 +325,60 @@ export const EDGES: readonly Edge[] = [
   { from: 'anchor-cave-mouse', to: 'anchor-cave-crystal' },
 ];
 
-const BY_ID = new Map<AnchorId, Anchor>(ANCHORS.map((anchor) => [anchor.id, anchor]));
+// Lookups are source-parameterized (WorldSource carries the anchor/edge
+// tables): the same helpers resolve the shipped world and a builder's
+// `DocumentWorldSource` identically. Results are memoized per table identity
+// so gameplay passes the static source at zero extra cost.
+const BY_ID = new WeakMap<readonly Anchor[], Map<AnchorId, Anchor>>();
+const NEIGHBOURS = new WeakMap<readonly Edge[], Map<AnchorId, AnchorId[]>>();
 
-export function getAnchor(id: AnchorId): Anchor {
-  const anchor = BY_ID.get(id);
+function anchorsById(anchors: readonly Anchor[]): Map<AnchorId, Anchor> {
+  let byId = BY_ID.get(anchors);
+  if (!byId) {
+    byId = new Map(anchors.map((anchor) => [anchor.id, anchor]));
+    BY_ID.set(anchors, byId);
+  }
+  return byId;
+}
+
+function neighboursById(source: WorldSource): Map<AnchorId, AnchorId[]> {
+  let byId = NEIGHBOURS.get(source.edges);
+  if (!byId) {
+    byId = new Map(source.anchors.map((anchor) => [anchor.id, []]));
+    for (const edge of source.edges) {
+      byId.get(edge.from)?.push(edge.to);
+      byId.get(edge.to)?.push(edge.from);
+    }
+    NEIGHBOURS.set(source.edges, byId);
+  }
+  return byId;
+}
+
+export function getAnchor(source: WorldSource, id: AnchorId): Anchor {
+  const anchor = anchorsById(source.anchors).get(id);
   if (!anchor) throw new Error(`Unknown anchor: ${id}`);
   return anchor;
 }
 
-export function getAnchorOrNull(id: string): Anchor | null {
-  return BY_ID.get(id as AnchorId) ?? null;
+export function getAnchorOrNull(source: WorldSource, id: string): Anchor | null {
+  return anchorsById(source.anchors).get(id as AnchorId) ?? null;
 }
 
-const NEIGHBOURS = (() => {
-  const map = new Map<AnchorId, AnchorId[]>(ANCHORS.map((anchor) => [anchor.id, []]));
-  for (const edge of EDGES) {
-    map.get(edge.from)?.push(edge.to);
-    map.get(edge.to)?.push(edge.from);
-  }
-  return map;
-})();
-
 /** Walkable neighbours only; unwalkable anchors are decoration/interaction-only. */
-export function neighboursOf(id: AnchorId): readonly AnchorId[] {
-  return (NEIGHBOURS.get(id) ?? []).filter((neighbour) => getAnchor(neighbour).walkable);
+export function neighboursOf(source: WorldSource, id: AnchorId): readonly AnchorId[] {
+  return (neighboursById(source).get(id) ?? []).filter(
+    (neighbour) => getAnchor(source, neighbour).walkable,
+  );
 }
 
 export function distanceBetween(a: Anchor, b: Anchor): number {
   return Math.hypot(a.x - b.x, a.z - b.z);
 }
 
-export function anchorForNpc(npcId: NpcId): Anchor | null {
-  return ANCHORS.find((anchor) => anchor.npcId === npcId) ?? null;
+export function anchorForNpc(source: WorldSource, npcId: NpcId): Anchor | null {
+  return source.anchors.find((anchor) => anchor.npcId === npcId) ?? null;
 }
 
-export function anchorForLandmark(landmarkId: LandmarkId): Anchor | null {
-  return ANCHORS.find((anchor) => anchor.landmarkId === landmarkId) ?? null;
+export function anchorForLandmark(source: WorldSource, landmarkId: LandmarkId): Anchor | null {
+  return source.anchors.find((anchor) => anchor.landmarkId === landmarkId) ?? null;
 }

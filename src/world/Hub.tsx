@@ -11,15 +11,15 @@ import type {
   QuestStatus,
 } from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import type { AreaId } from '../domain/world/types.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
-import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
+import { getAnchor, getAnchorOrNull } from './navigation/graph.ts';
 import {
-  NPC_DEFINITIONS,
   areaAt,
   areaForAnchor,
   npcFigureJitter,
-  resolveNpcSpot,
+  resolveNpcStand,
   visibleAreaIds,
 } from './registry.ts';
 import { npcLook } from './npcLooks.ts';
@@ -51,6 +51,9 @@ import {
 export type HubHandle = WorldSceneHandle;
 
 export interface HubProps {
+  /** World data — the static source in the game, a document source in the
+      World Builder preview. */
+  readonly world: WorldSource;
   readonly avatarId: AvatarId;
   readonly headwear: HeadwearId;
   readonly questStatuses: Record<QuestId, QuestStatus>;
@@ -346,6 +349,7 @@ function KeepsakeTree({
 }
 
 export function Hub({
+  world,
   avatarId,
   headwear,
   questStatuses,
@@ -361,7 +365,7 @@ export function Hub({
   handleRef,
 }: HubProps) {
   const models = useModels();
-  const walker = useWalker(startAnchorId, onArrive, interactive);
+  const walker = useWalker(world, startAnchorId, onArrive, interactive);
   // The follow-camera reads the avatar's live position from this shared
   // store — same useWalker source of truth, never a second copy.
   useEffect(() => {
@@ -375,22 +379,23 @@ export function Hub({
   // areas one waypoint-hop away are "visible". NPCs outside this set are data
   // in memory only — no React subtree, no animation work — so the NPC count
   // can grow without growing per-frame work.
-  const activeAreaId: AreaId = areaForAnchor(walker.at);
-  const visibleAreas = visibleAreaIds(activeAreaId);
+  const activeAreaId: AreaId = areaForAnchor(world, walker.at);
+  const visibleAreas = visibleAreaIds(world, activeAreaId);
   // The world clock lives in App (it also picks who answers on arrival);
   // `worldTime` is a pure prop here. Each arrival ticks once, so scheduled
   // NPCs advance through their spots as the world is travelled —
   // event-driven, never a per-frame clock, never a function of where the
   // player stands.
   const inVisibleArea = (x: number, z: number) => {
-    const areaId = areaAt(x, z);
+    const areaId = areaAt(world, x, z);
     return areaId !== null && visibleAreas.includes(areaId);
   };
   // Proximity cue for the secret: the rock shimmers once when the child
   // wanders close — discoverable by exploration, not by a marker.
-  const playerAnchor = getAnchor(walker.at);
-  const entranceAnchor = getAnchor('anchor-cave-entrance');
+  const playerAnchor = getAnchor(world, walker.at);
+  const entranceAnchor = getAnchorOrNull(world, 'anchor-cave-entrance');
   const nearEntrance =
+    entranceAnchor !== null &&
     Math.hypot(playerAnchor.x - entranceAnchor.x, playerAnchor.z - entranceAnchor.z) < 4.5;
   useImperativeHandle(
     handleRef,
@@ -434,43 +439,46 @@ export function Hub({
         onClick={(event: ThreeEvent<MouseEvent>) => {
           if (!interactive || event.delta > 6) return;
           event.stopPropagation();
-          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 4, 'map-town');
+          const anchor = nearestWalkableAnchor(world, event.point.x, event.point.z, 4, 'map-town');
           if (anchor) walkHere(anchor);
         }}
       />
 
-      {ANCHORS.filter((anchor) => anchor.walkable && anchor.mapId === 'map-town').map((anchor) => (
-        <mesh
-          key={`path-${anchor.id}`}
-          geometry={GROUND}
-          material={PATH_MATERIAL}
-          scale={[0.045, 0.045, 1]}
-          position={[anchor.x, 0.01, anchor.z]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          raycast={noRaycast}
-        />
-      ))}
+      {world.anchors
+        .filter((anchor) => anchor.walkable && anchor.mapId === 'map-town')
+        .map((anchor) => (
+          <mesh
+            key={`path-${anchor.id}`}
+            geometry={GROUND}
+            material={PATH_MATERIAL}
+            scale={[0.045, 0.045, 1]}
+            position={[anchor.x, 0.01, anchor.z]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            raycast={noRaycast}
+          />
+        ))}
 
       {/* Landmarks come from anchor data — one row per landmark anchor,
           visible only while its area participates in rendering. */}
-      {ANCHORS.filter(
-        (anchor) => anchor.landmarkId !== null && visibleAreas.includes(anchor.areaId),
-      ).map((anchor) => (
-        <models.Landmark
-          key={anchor.landmarkId}
-          position={{ x: anchor.x, z: anchor.z - 1.2 }}
-          palette={LANDMARK_PALETTE}
-          detailLevel={detailLevel}
-          variant={landmarkVariant(anchor.landmarkId)}
-        />
-      ))}
+      {world.anchors
+        .filter((anchor) => anchor.landmarkId !== null && visibleAreas.includes(anchor.areaId))
+        .map((anchor) => (
+          <models.Landmark
+            key={anchor.landmarkId}
+            position={{ x: anchor.x, z: anchor.z - 1.2 }}
+            palette={LANDMARK_PALETTE}
+            detailLevel={detailLevel}
+            variant={landmarkVariant(anchor.landmarkId)}
+          />
+        ))}
 
       {/* Quest hotspots follow the same activation rule as NPCs: outside the
           visible areas nothing mounts — no Hotspot subtree, no useFrame pulse —
           so interaction cost scales with visible content, not quest count. */}
       {QUEST_DEFINITIONS.map((quest) => {
         if ((quest.mapId ?? 'map-town') !== 'map-town') return null;
-        const anchor = getAnchor(quest.anchorId as AnchorId);
+        const anchor = getAnchorOrNull(world, quest.anchorId);
+        if (!anchor) return null;
         if (!visibleAreas.includes(anchor.areaId)) return null;
         const status = questStatuses[quest.id];
         const active = interactive && status !== 'locked';
@@ -491,14 +499,16 @@ export function Hub({
           visible area mount a figure — schedules resolve standpoints as a
           deterministic function of world time, so idle NPCs cost
           nothing and `frameloop="demand"` is untouched. */}
-      {NPC_DEFINITIONS.map((npc) => {
-        const spot = resolveNpcSpot(npc, worldTime);
-        const anchor = getAnchor(spot?.anchorId ?? npc.anchorId);
+      {world.npcDefinitions.map((npc) => {
+        const stand = resolveNpcStand(world, npc, worldTime);
+        const spot = stand.spot;
+        const anchor = getAnchorOrNull(world, stand.anchorId);
+        if (!anchor) return null;
         if (!visibleAreas.includes(anchor.areaId)) return null;
         if (anchor.mapId !== 'map-town') return null;
-        const jitter = npcFigureJitter(npc.id);
-        const npcX = anchor.x + 0.9 + (spot?.offsetX ?? 0) + jitter.x;
-        const npcZ = anchor.z - 0.4 + (spot?.offsetZ ?? 0) + jitter.z;
+        const jitter = npcFigureJitter(world, npc.id);
+        const npcX = anchor.x + 0.9 + stand.offsetX + jitter.x;
+        const npcZ = anchor.z - 0.4 + stand.offsetZ + jitter.z;
         const dx = walker.position.x - npcX;
         const dz = walker.position.z - npcZ;
         // Neighbours turn to watch the player approach: attention is feedback.
@@ -596,20 +606,31 @@ export function Hub({
           shared resources, so canvas remounts must not dispose them. */}
       <group dispose={null}>
         <StoneRoads
-          edges={EDGES.filter((edge) => getAnchor(edge.from).mapId === 'map-town').map((edge) => ({
-            from: getAnchor(edge.from),
-            to: getAnchor(edge.to),
-          }))}
+          edges={world.edges
+            .filter((edge) => getAnchorOrNull(world, edge.from)?.mapId === 'map-town')
+            .flatMap((edge) => {
+              const from = getAnchorOrNull(world, edge.from);
+              const to = getAnchorOrNull(world, edge.to);
+              return from && to ? [{ from, to }] : [];
+            })}
         />
         <Detail level={detailLevel} min={1}>
-          {EDGES.filter((edge) => getAnchor(edge.from).mapId === 'map-town').map((edge) => (
-            <PathEdgeStones
-              key={`${edge.from}-${edge.to}`}
-              from={getAnchor(edge.from)}
-              to={getAnchor(edge.to)}
-              count={detailLevel >= 2 ? 6 : 4}
-            />
-          ))}
+          {world.edges
+            .filter((edge) => getAnchorOrNull(world, edge.from)?.mapId === 'map-town')
+            .flatMap((edge) => {
+              const from = getAnchorOrNull(world, edge.from);
+              const to = getAnchorOrNull(world, edge.to);
+              return from && to
+                ? [
+                    <PathEdgeStones
+                      key={`${edge.from}-${edge.to}`}
+                      from={from}
+                      to={to}
+                      count={detailLevel >= 2 ? 6 : 4}
+                    />,
+                  ]
+                : [];
+            })}
         </Detail>
 
         {/* Fixed authored ground decoration (decorations.ts validates every slot

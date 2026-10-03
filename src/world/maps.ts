@@ -1,6 +1,6 @@
 import type { AnchorId } from '../domain/game/types.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import type { MapId, MapTransition, WorldMapDefinition } from '../domain/world/types.ts';
-import { ANCHORS } from './navigation/graph.ts';
 
 /**
  * Map registry: the playable scenes of the world. The outdoor neighbourhood
@@ -72,17 +72,26 @@ export const MAP_TRANSITIONS: readonly MapTransition[] = [
   },
 ];
 
-const MAP_BY_ID = new Map<MapId, WorldMapDefinition>(WORLD_MAPS.map((m) => [m.id, m]));
+const MAP_BY_ID = new WeakMap<readonly WorldMapDefinition[], Map<MapId, WorldMapDefinition>>();
 
-export function getMap(id: MapId): WorldMapDefinition {
-  const map = MAP_BY_ID.get(id);
+function mapsById(maps: readonly WorldMapDefinition[]): Map<MapId, WorldMapDefinition> {
+  let byId = MAP_BY_ID.get(maps);
+  if (!byId) {
+    byId = new Map(maps.map((m) => [m.id, m]));
+    MAP_BY_ID.set(maps, byId);
+  }
+  return byId;
+}
+
+export function getMap(source: WorldSource, id: MapId): WorldMapDefinition {
+  const map = mapsById(source.maps).get(id);
   if (!map) throw new Error(`Unknown map: ${id}`);
   return map;
 }
 
 /** The transition (if any) a player triggers by arriving at this anchor. */
-export function transitionForAnchor(anchorId: AnchorId): MapTransition | null {
-  const anchor = ANCHORS.find((a) => a.id === anchorId);
+export function transitionForAnchor(source: WorldSource, anchorId: AnchorId): MapTransition | null {
+  const anchor = source.anchors.find((a) => a.id === anchorId);
   if (!anchor?.transitionId) return null;
-  return MAP_TRANSITIONS.find((t) => t.id === anchor.transitionId) ?? null;
+  return source.transitions.find((t) => t.id === anchor.transitionId) ?? null;
 }

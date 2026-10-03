@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ANCHORS, getAnchor } from '../src/world/navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from '../src/world/worldSource.ts';
 import { findPath } from '../src/world/navigation/pathfinding.ts';
 import type { AnchorId } from '../src/domain/game/types.ts';
 import { CAMERA_PADDING } from '../src/world/camera.ts';
@@ -75,7 +76,7 @@ async function waitForCameraSettle(page: Page) {
 
 /** Screen pixels for a world anchor — every offset that lands on the canvas. */
 async function screenPoints(page: Page, anchorId: AnchorId) {
-  const anchor = getAnchor(anchorId);
+  const anchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
   return page.evaluate(
     ({ ax, az }: { ax: number; az: number }) => {
       const toScreen = (window as unknown as WorldProbe).__worldToScreen!;
@@ -198,8 +199,8 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     // Candidate pixels: ground between the walker and the target first (a
     // child taps visible ground toward the thing, not the anchor itself),
     // then the ring of offsets around the anchor.
-    const goalAnchor = getAnchor(anchorId);
-    const atPos = at ? getAnchor(at) : undefined;
+    const goalAnchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
+    const atPos = at ? getAnchor(STATIC_WORLD_SOURCE, at) : undefined;
     const midPts = atPos ? await groundPointsBetween(page, atPos, goalAnchor) : [];
     const pts = [...midPts, ...(await screenPoints(page, anchorId))];
     for (const point of pts) {
@@ -218,10 +219,10 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     if (progressed) continue;
     // Path hop: the child follows the visible path — walk to the next anchor
     // on the authored route toward the target.
-    const goal = getAnchor(anchorId);
-    const path = at ? findPath(at, anchorId) : [];
+    const goal = getAnchor(STATIC_WORLD_SOURCE, anchorId);
+    const path = at ? findPath(STATIC_WORLD_SOURCE, at, anchorId) : [];
     const nextHopId = path.length > 1 ? path[1] : undefined;
-    const nextHop = nextHopId ? getAnchor(nextHopId) : null;
+    const nextHop = nextHopId ? getAnchor(STATIC_WORLD_SOURCE, nextHopId) : null;
     if (!nextHop) break;
     let hopped = false;
     const hopPts = await screenPoints(page, nextHop.id);
@@ -300,18 +301,18 @@ test.describe('follow camera', () => {
     test.setTimeout(180000);
     await startGame(page);
     await waitForMap(page, 'map-town');
-    const town = getMap('map-town');
+    const town = getMap(STATIC_WORLD_SOURCE, 'map-town');
 
     // 1–2) Centered spawn: the camera boots focused on the square, not the
     // middle of the authored bounds.
-    const spawn = getAnchor(town.spawnAnchorId);
+    const spawn = getAnchor(STATIC_WORLD_SOURCE, town.spawnAnchorId);
     await waitForCamera(page, spawn.x, spawn.z);
 
     // 3) Follow: walking west pulls the camera toward the walker and lets
     // it settle on the new position.
     await tapWorld(page, 'anchor-path-west');
     await waitForAnchor(page, 'anchor-path-west');
-    const west = getAnchor('anchor-path-west');
+    const west = getAnchor(STATIC_WORLD_SOURCE, 'anchor-path-west');
     await waitForCamera(page, west.x, west.z, 1.5);
     const afterMove = await cameraTarget(page);
     expect(afterMove.x).toBeLessThan(spawn.x);
@@ -321,7 +322,7 @@ test.describe('follow camera', () => {
     // sits at the west edge without touching the cave transition.
     await tapWorld(page, 'anchor-park-hill');
     await waitForAnchor(page, 'anchor-park-hill');
-    const edgeAnchor = getAnchor('anchor-park-hill');
+    const edgeAnchor = getAnchor(STATIC_WORLD_SOURCE, 'anchor-park-hill');
     await waitForCamera(page, edgeAnchor.x, edgeAnchor.z, 12);
     const atEdge = await cameraTarget(page);
     expect(atEdge.x).toBeGreaterThanOrEqual(town.bounds.minX);
@@ -336,7 +337,10 @@ test.describe('follow camera', () => {
     test.setTimeout(120000);
     await startGame(page);
     await waitForMap(page, 'map-town');
-    const spawn = getAnchor(getMap('map-town').spawnAnchorId);
+    const spawn = getAnchor(
+      STATIC_WORLD_SOURCE,
+      getMap(STATIC_WORLD_SOURCE, 'map-town').spawnAnchorId,
+    );
     await waitForCamera(page, spawn.x, spawn.z);
 
     // Drag the map under the finger: the look target slides the other way,
@@ -353,7 +357,7 @@ test.describe('follow camera', () => {
     await page.mouse.up();
     const panned = await cameraTarget(page);
     expect(Math.hypot(panned.x - before.x, panned.z - before.z)).toBeGreaterThan(0.5);
-    const town = getMap('map-town');
+    const town = getMap(STATIC_WORLD_SOURCE, 'map-town');
     expect(panned.x).toBeGreaterThanOrEqual(town.bounds.minX - 0.5);
     expect(panned.x).toBeLessThanOrEqual(town.bounds.maxX + 0.5);
     expect(panned.z).toBeGreaterThanOrEqual(town.bounds.minZ - 0.5);
@@ -362,7 +366,7 @@ test.describe('follow camera', () => {
     // Walking anywhere snaps the pan back: the child is the focus again.
     await tapWorld(page, 'anchor-path-west');
     await waitForAnchor(page, 'anchor-path-west');
-    const west = getAnchor('anchor-path-west');
+    const west = getAnchor(STATIC_WORLD_SOURCE, 'anchor-path-west');
     await waitForCamera(page, west.x, west.z, 1.5);
   });
 
@@ -382,8 +386,8 @@ test.describe('follow camera', () => {
 
     // Cave spawns focused inside its own bounds (never stale town target):
     // the small interior pins the target to the clamped center.
-    const cave = getMap('map-cave');
-    const mouth = getAnchor(cave.spawnAnchorId);
+    const cave = getMap(STATIC_WORLD_SOURCE, 'map-cave');
+    const mouth = getAnchor(STATIC_WORLD_SOURCE, cave.spawnAnchorId);
     await waitForCamera(page, mouth.x, (cave.bounds.minZ + cave.bounds.maxZ) / 2);
 
     // The cave fits in view: target stays pinned near bounds center.
@@ -394,7 +398,7 @@ test.describe('follow camera', () => {
     // Leaving refocuses on the town side of the transition.
     await tapWorld(page, 'anchor-cave-mouth');
     await waitForMap(page, 'map-town');
-    const entrance = getAnchor('anchor-cave-entrance');
+    const entrance = getAnchor(STATIC_WORLD_SOURCE, 'anchor-cave-entrance');
     await waitForCamera(page, entrance.x, entrance.z, 12);
 
     // Reload resumes on the right map without a stale camera.
@@ -403,7 +407,7 @@ test.describe('follow camera', () => {
     await expect(page.getByTestId('hud')).toBeVisible();
     await waitForProbe(page);
     await waitForMap(page, 'map-town');
-    const town = getMap('map-town');
+    const town = getMap(STATIC_WORLD_SOURCE, 'map-town');
     await waitForCameraSettle(page);
     const t = await cameraTarget(page);
     expect(t.x).toBeGreaterThanOrEqual(town.bounds.minX);

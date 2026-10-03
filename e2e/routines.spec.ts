@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ANCHORS, getAnchor } from '../src/world/navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from '../src/world/worldSource.ts';
 import { findPath } from '../src/world/navigation/pathfinding.ts';
 import type { AnchorId } from '../src/domain/game/types.ts';
 
@@ -73,7 +74,7 @@ async function waitForCameraSettle(page: Page) {
 
 /** Screen pixels for a world anchor — every offset that lands on the canvas. */
 async function screenPoints(page: Page, anchorId: AnchorId) {
-  const anchor = getAnchor(anchorId);
+  const anchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
   return worldPoints(page, anchor.x, anchor.z);
 }
 
@@ -176,8 +177,8 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
     await waitForCameraSettle(page);
     await dismissDialogue(page);
     const at = (await playerAt(page)) as AnchorId | undefined;
-    const goalAnchor = getAnchor(anchorId);
-    const atPos = at ? getAnchor(at) : undefined;
+    const goalAnchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
+    const atPos = at ? getAnchor(STATIC_WORLD_SOURCE, at) : undefined;
     const midPts = atPos ? await groundPointsBetween(page, atPos, goalAnchor) : [];
     const pts = [...midPts, ...(await screenPoints(page, anchorId))];
     let progressed = false;
@@ -192,9 +193,9 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
       }
     }
     if (progressed) continue;
-    const path = at ? findPath(at, anchorId) : [];
+    const path = at ? findPath(STATIC_WORLD_SOURCE, at, anchorId) : [];
     const nextHopId = path.length > 1 ? path[1] : undefined;
-    const nextHop = nextHopId ? getAnchor(nextHopId) : null;
+    const nextHop = nextHopId ? getAnchor(STATIC_WORLD_SOURCE, nextHopId) : null;
     if (!nextHop) break;
     let hopped = false;
     const hopPts = await screenPoints(page, nextHop.id);

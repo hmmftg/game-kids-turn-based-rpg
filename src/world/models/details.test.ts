@@ -4,6 +4,7 @@ import { detailLevelFor } from './modelProvider.ts';
 import { PATH_STONE_CLEARANCE, pathStonePositions } from './details.tsx';
 import { sharedLambert, sharedMaterialCount } from './shared.ts';
 import { EDGES, getAnchor } from '../navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from '../worldSource.ts';
 
 describe('detailLevelFor', () => {
   it('is the single quality-tier → detail-level mapping', () => {
@@ -37,8 +38,8 @@ describe('sharedLambert', () => {
 describe('pathStonePositions', () => {
   it('keeps every stone at least PATH_STONE_CLEARANCE from both anchors', () => {
     for (const edge of EDGES) {
-      const from = getAnchor(edge.from);
-      const to = getAnchor(edge.to);
+      const from = getAnchor(STATIC_WORLD_SOURCE, edge.from);
+      const to = getAnchor(STATIC_WORLD_SOURCE, edge.to);
       for (const [x, , z] of pathStonePositions(from, to, 6)) {
         expect(Math.hypot(x - from.x, z - from.z)).toBeGreaterThanOrEqual(PATH_STONE_CLEARANCE);
         expect(Math.hypot(x - to.x, z - to.z)).toBeGreaterThanOrEqual(PATH_STONE_CLEARANCE);

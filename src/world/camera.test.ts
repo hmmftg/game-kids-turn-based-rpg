@@ -9,9 +9,10 @@ import {
 } from './camera.ts';
 import { WORLD_MAPS, getMap } from './maps.ts';
 import { getAnchor } from './navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from './worldSource.ts';
 
-const TOWN = getMap('map-town').bounds;
-const CAVE = getMap('map-cave').bounds;
+const TOWN = getMap(STATIC_WORLD_SOURCE, 'map-town').bounds;
+const CAVE = getMap(STATIC_WORLD_SOURCE, 'map-cave').bounds;
 const PAD = 1.0;
 
 // The clamp's footprint inset for a viewport/zoom pair (must match the
@@ -96,9 +97,9 @@ describe('clampCameraTarget', () => {
 
   it('keeps every town spawn and boundary anchor inside the clamped range', () => {
     for (const map of WORLD_MAPS) {
-      const pad = cameraPaddingForMap(map.id);
-      const zoom = zoomForMap(map.id);
-      const spawn = getAnchor(map.spawnAnchorId);
+      const pad = cameraPaddingForMap(STATIC_WORLD_SOURCE, map.id);
+      const zoom = zoomForMap(STATIC_WORLD_SOURCE, map.id);
+      const spawn = getAnchor(STATIC_WORLD_SOURCE, map.spawnAnchorId);
       const t = clampCameraTarget(spawn, map.bounds, 880, 420, zoom, pad);
       expect(Number.isFinite(t.x)).toBe(true);
       expect(Number.isFinite(t.z)).toBe(true);
@@ -111,14 +112,16 @@ describe('clampCameraTarget', () => {
 describe('map camera presentation', () => {
   it('every map resolves a zoom inside the bounds', () => {
     for (const map of WORLD_MAPS) {
-      const zoom = zoomForMap(map.id);
+      const zoom = zoomForMap(STATIC_WORLD_SOURCE, map.id);
       expect(zoom).toBeGreaterThanOrEqual(MIN_ZOOM);
       expect(zoom).toBeLessThanOrEqual(MAX_ZOOM);
     }
   });
 
   it('town uses the default zoom; the cave is tighter', () => {
-    expect(zoomForMap('map-town')).toBe(DEFAULT_ZOOM);
-    expect(zoomForMap('map-cave')).toBeGreaterThan(zoomForMap('map-town'));
+    expect(zoomForMap(STATIC_WORLD_SOURCE, 'map-town')).toBe(DEFAULT_ZOOM);
+    expect(zoomForMap(STATIC_WORLD_SOURCE, 'map-cave')).toBeGreaterThan(
+      zoomForMap(STATIC_WORLD_SOURCE, 'map-town'),
+    );
   });
 });

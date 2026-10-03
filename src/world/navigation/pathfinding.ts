@@ -1,9 +1,11 @@
 import type { AnchorId } from '../../domain/game/types.ts';
+import type { WorldSource } from '../../domain/world/source.ts';
 import type { MapId } from '../../domain/world/types.ts';
-import { ANCHORS, distanceBetween, getAnchor, neighboursOf } from './graph.ts';
+import { distanceBetween, getAnchor, neighboursOf } from './graph.ts';
 
 /** Nearest *walkable* anchor to a ground-plane point, within an optional radius. */
 export function nearestWalkableAnchor(
+  source: WorldSource,
   x: number,
   z: number,
   maxDistance = Infinity,
@@ -11,7 +13,7 @@ export function nearestWalkableAnchor(
 ): AnchorId | null {
   let best: AnchorId | null = null;
   let bestDistance = maxDistance;
-  for (const anchor of ANCHORS) {
+  for (const anchor of source.anchors) {
     if (!anchor.walkable) continue;
     if (mapId !== undefined && anchor.mapId !== mapId) continue;
     const distance = Math.hypot(anchor.x - x, anchor.z - z);
@@ -27,15 +29,17 @@ export function nearestWalkableAnchor(
  * A* over the waypoint graph. The graph is tiny (tens of nodes), so a linear
  * scan of the open set is cheaper than a heap and allocates nothing per frame.
  */
-export function findPath(from: AnchorId, to: AnchorId): readonly AnchorId[] {
+export function findPath(source: WorldSource, from: AnchorId, to: AnchorId): readonly AnchorId[] {
   if (from === to) return [from];
-  const goal = getAnchor(to);
+  const goal = getAnchor(source, to);
   if (!goal.walkable) return [];
 
   const open = new Set<AnchorId>([from]);
   const cameFrom = new Map<AnchorId, AnchorId>();
   const gScore = new Map<AnchorId, number>([[from, 0]]);
-  const fScore = new Map<AnchorId, number>([[from, distanceBetween(getAnchor(from), goal)]]);
+  const fScore = new Map<AnchorId, number>([
+    [from, distanceBetween(getAnchor(source, from), goal)],
+  ]);
 
   while (open.size > 0) {
     let current: AnchorId | null = null;
@@ -52,12 +56,13 @@ export function findPath(from: AnchorId, to: AnchorId): readonly AnchorId[] {
 
     open.delete(current);
     const currentG = gScore.get(current) ?? Infinity;
-    for (const neighbour of neighboursOf(current)) {
-      const tentative = currentG + distanceBetween(getAnchor(current), getAnchor(neighbour));
+    for (const neighbour of neighboursOf(source, current)) {
+      const tentative =
+        currentG + distanceBetween(getAnchor(source, current), getAnchor(source, neighbour));
       if (tentative >= (gScore.get(neighbour) ?? Infinity)) continue;
       cameFrom.set(neighbour, current);
       gScore.set(neighbour, tentative);
-      fScore.set(neighbour, tentative + distanceBetween(getAnchor(neighbour), goal));
+      fScore.set(neighbour, tentative + distanceBetween(getAnchor(source, neighbour), goal));
       open.add(neighbour);
     }
   }
@@ -80,9 +85,9 @@ export interface PathPoint {
   readonly z: number;
 }
 
-export function pathToPoints(path: readonly AnchorId[]): readonly PathPoint[] {
+export function pathToPoints(source: WorldSource, path: readonly AnchorId[]): readonly PathPoint[] {
   return path.map((id) => {
-    const anchor = getAnchor(id);
+    const anchor = getAnchor(source, id);
     return { x: anchor.x, z: anchor.z };
   });
 }

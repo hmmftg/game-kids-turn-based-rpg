@@ -1,4 +1,5 @@
 import type { MapId } from '../domain/game/types.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import { getMap } from './maps.ts';
 
 /**
@@ -81,13 +82,13 @@ export function clampCameraTarget(
 }
 
 /** The zoom a map renders with: its authored override or the default. */
-export function zoomForMap(mapId: MapId): number {
-  const override = getMap(mapId).cameraZoom;
+export function zoomForMap(source: WorldSource, mapId: MapId): number {
+  const override = getMap(source, mapId).cameraZoom;
   const zoom = override ?? DEFAULT_ZOOM;
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 }
 
 /** The padding a map renders with: its authored override or the default. */
-export function cameraPaddingForMap(mapId: MapId): number {
-  return getMap(mapId).cameraPadding ?? CAMERA_PADDING;
+export function cameraPaddingForMap(source: WorldSource, mapId: MapId): number {
+  return getMap(source, mapId).cameraPadding ?? CAMERA_PADDING;
 }

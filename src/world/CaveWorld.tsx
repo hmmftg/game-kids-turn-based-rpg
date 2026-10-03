@@ -4,8 +4,9 @@ import { type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { AnchorId, AvatarId, HeadwearId, QuestId, QuestStatus } from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import type { AreaId, EnvironmentDefinition } from '../domain/world/types.ts';
-import { ANCHORS, getAnchor } from './navigation/graph.ts';
+import { getAnchor, getAnchorOrNull } from './navigation/graph.ts';
 import { areaForAnchor, visibleAreaIds } from './registry.ts';
 import { CIRCLE, BOX, CYLINDER, SPHERE, sharedLambert } from './models/shared.ts';
 import { CharacterReact, Hotspot, type NpcAttention, type WorldSceneHandle } from './sceneBits.tsx';
@@ -17,6 +18,9 @@ import { AVATAR_VISUALS, useModels, type DetailLevel } from './models/modelProvi
 export type CaveHandle = WorldSceneHandle;
 
 export interface CaveWorldProps {
+  /** World data — the static source in the game, a document source in the
+      World Builder preview. */
+  readonly world: WorldSource;
   readonly avatarId: AvatarId;
   readonly headwear: HeadwearId;
   readonly questStatuses: Record<QuestId, QuestStatus>;
@@ -218,8 +222,8 @@ function CaveProps({ detailLevel }: { readonly detailLevel: DetailLevel }) {
 }
 
 /** The bright doorway back out — the exit hotspot lives on its walkable anchor. */
-function ExitArchway() {
-  const mouth = getAnchor('anchor-cave-mouth');
+function ExitArchway({ world }: { readonly world: WorldSource }) {
+  const mouth = getAnchor(world, 'anchor-cave-mouth');
   return (
     <group position={[mouth.x, 0, mouth.z + 1.5]} name="cave-exit" dispose={null}>
       <mesh
@@ -264,6 +268,7 @@ function ExitArchway() {
  * the town: ANCHORS/EDGES (mapId-scoped), useWalker, Hotspot, QuestMarker.
  */
 export function CaveWorld({
+  world,
   avatarId,
   headwear,
   questStatuses,
@@ -277,14 +282,14 @@ export function CaveWorld({
   handleRef,
 }: CaveWorldProps) {
   const models = useModels();
-  const walker = useWalker(startAnchorId, onArrive, interactive);
+  const walker = useWalker(world, startAnchorId, onArrive, interactive);
   // The follow-camera reads the avatar's live position from this shared
   // store — same useWalker source of truth, never a second copy.
   useEffect(() => {
     publishCameraFocus(walker.position.x, walker.position.z);
   });
-  const activeAreaId: AreaId = areaForAnchor(walker.at);
-  const visibleAreas = visibleAreaIds(activeAreaId);
+  const activeAreaId: AreaId = areaForAnchor(world, walker.at);
+  const visibleAreas = visibleAreaIds(world, activeAreaId);
 
   useImperativeHandle(
     handleRef,
@@ -309,7 +314,7 @@ export function CaveWorld({
     });
   };
 
-  const mouseAnchor = getAnchor('anchor-cave-mouse');
+  const mouseAnchor = getAnchor(world, 'anchor-cave-mouse');
   const dx = walker.position.x - (mouseAnchor.x + 0.8);
   const dz = walker.position.z - mouseAnchor.z;
   const mouseFacing = Math.hypot(dx, dz) < 5 ? Math.atan2(dx, dz) : 0.6;
@@ -329,34 +334,36 @@ export function CaveWorld({
         onClick={(event: ThreeEvent<MouseEvent>) => {
           if (!interactive || event.delta > 6) return;
           event.stopPropagation();
-          const anchor = nearestWalkableAnchor(event.point.x, event.point.z, 4, MAP_ID);
+          const anchor = nearestWalkableAnchor(world, event.point.x, event.point.z, 4, MAP_ID);
           if (anchor) walkHere(anchor);
         }}
       />
 
-      {ANCHORS.filter((anchor) => anchor.walkable && anchor.mapId === MAP_ID).map((anchor) => (
-        <mesh
-          key={`path-${anchor.id}`}
-          geometry={CIRCLE}
-          material={sharedLambert('#7a7286')}
-          scale={[1.1, 1.1, 1]}
-          position={[anchor.x, 0.015, anchor.z]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          raycast={noRaycast}
-        />
-      ))}
+      {world.anchors
+        .filter((anchor) => anchor.walkable && anchor.mapId === MAP_ID)
+        .map((anchor) => (
+          <mesh
+            key={`path-${anchor.id}`}
+            geometry={CIRCLE}
+            material={sharedLambert('#7a7286')}
+            scale={[1.1, 1.1, 1]}
+            position={[anchor.x, 0.015, anchor.z]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            raycast={noRaycast}
+          />
+        ))}
 
       <CaveShell />
       <CavePool />
       <CrystalCluster />
-      <ExitArchway />
+      <ExitArchway world={world} />
       <CaveProps detailLevel={detailLevel} />
 
       {/* The way out: a tappable hotspot on the mouth anchor — arriving there
           resolves `transition-cave-exit` via the shared arrival handler. */}
       <Hotspot
-        x={getAnchor('anchor-cave-mouth').x}
-        z={getAnchor('anchor-cave-mouth').z}
+        x={getAnchor(world, 'anchor-cave-mouth').x}
+        z={getAnchor(world, 'anchor-cave-mouth').z}
         active={interactive}
         label="hotspot-exit"
         onSelect={() => walkHere('anchor-cave-mouth')}
@@ -366,7 +373,8 @@ export function CaveWorld({
           on this map and whose area is visible mount anything. */}
       {QUEST_DEFINITIONS.map((quest) => {
         if ((quest.mapId ?? 'map-town') !== MAP_ID) return null;
-        const anchor = getAnchor(quest.anchorId as AnchorId);
+        const anchor = getAnchorOrNull(world, quest.anchorId);
+        if (!anchor) return null;
         if (!visibleAreas.includes(anchor.areaId)) return null;
         const status = questStatuses[quest.id];
         const active = interactive && status !== 'locked';
