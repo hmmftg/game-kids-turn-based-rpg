@@ -210,4 +210,5 @@ The child's interaction language is **the physical thing**, never an action icon
 - `docs/INTERACTION-MODEL.md` — contextual-target interaction contract.
 - `docs/ANIMATIONS.md` — semantic animation vocabulary and episode rules.
 - `docs/QA.md` — suites, perf baselines, lifecycle/reduced-motion QA, kid-test protocol.
+- `docs/ARCHITECTURE-REFERENCES.md` — audit of external RPG architectures (pinned SHAs) and which ideas are adopted/deferred/rejected.
 - `.agents/skills/testing-kids-rpg/` — how to drive the app for UI-driven testing.
