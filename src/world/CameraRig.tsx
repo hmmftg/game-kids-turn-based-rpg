@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { MapId } from '../domain/game/types.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
 import { getMap } from './maps.ts';
 import { getAnchor } from './navigation/graph.ts';
@@ -80,15 +81,21 @@ interface DragGesture {
   panning: boolean;
 }
 
-export function CameraRig({ mapId }: { readonly mapId: MapId }) {
+export function CameraRig({
+  world,
+  mapId,
+}: {
+  readonly world: WorldSource;
+  readonly mapId: MapId;
+}) {
   const size = useThree((state) => state.size);
   const invalidate = useThree((state) => state.invalidate);
   const gl = useThree((state) => state.gl);
   const camera = useThree((state) => state.camera);
   const reduced = prefersReducedMotion();
-  const map = getMap(mapId);
-  const zoom = zoomForMap(mapId);
-  const padding = cameraPaddingForMap(mapId);
+  const map = getMap(world, mapId);
+  const zoom = zoomForMap(world, mapId);
+  const padding = cameraPaddingForMap(world, mapId);
 
   // Single reusable vectors — no per-frame allocation while settling.
   const target = useRef<MutableTarget>({ x: 0, z: 0 });
@@ -211,7 +218,7 @@ export function CameraRig({ mapId }: { readonly mapId: MapId }) {
       // load cameraFocus already holds the spawn (the walker spawns there),
       // and on a map transition it holds the arrival anchor — either way the
       // rig never inherits a stale target from the previous map.
-      const spawn = getAnchor(map.spawnAnchorId);
+      const spawn = getAnchor(world, map.spawnAnchorId);
       const start = desired(
         cameraFocus.x === 0 && cameraFocus.z === 0 ? spawn.x : cameraFocus.x,
         cameraFocus.x === 0 && cameraFocus.z === 0 ? spawn.z : cameraFocus.z,

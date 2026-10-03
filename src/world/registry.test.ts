@@ -3,6 +3,7 @@ import type { AnchorId, NpcId } from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS, questChain } from '../domain/quests/definitions.ts';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from './worldSource.ts';
 import { GROUND_DECORATIONS } from './decorations.ts';
 import { NPC_LOOKS } from './npcLooks.ts';
 import {
@@ -43,20 +44,22 @@ describe('world areas', () => {
 
   it('every decoration slot belongs to a visible area', () => {
     for (const slot of GROUND_DECORATIONS) {
-      expect(areaAt(slot.x, slot.z), `(${slot.x}, ${slot.z})`).not.toBeNull();
+      expect(areaAt(STATIC_WORLD_SOURCE, slot.x, slot.z), `(${slot.x}, ${slot.z})`).not.toBeNull();
     }
   });
 
   it('areas connect through shared edges (single coordinate system)', () => {
     const crossArea = EDGES.filter(
-      (edge) => getAnchor(edge.from).areaId !== getAnchor(edge.to).areaId,
+      (edge) =>
+        getAnchor(STATIC_WORLD_SOURCE, edge.from).areaId !==
+        getAnchor(STATIC_WORLD_SOURCE, edge.to).areaId,
     );
     expect(crossArea.length).toBeGreaterThan(0);
     for (const edge of crossArea) {
-      const a = getAnchor(edge.from).areaId;
-      const b = getAnchor(edge.to).areaId;
-      expect(adjacentAreaIds(a)).toContain(b);
-      expect(adjacentAreaIds(b)).toContain(a);
+      const a = getAnchor(STATIC_WORLD_SOURCE, edge.from).areaId;
+      const b = getAnchor(STATIC_WORLD_SOURCE, edge.to).areaId;
+      expect(adjacentAreaIds(STATIC_WORLD_SOURCE, a)).toContain(b);
+      expect(adjacentAreaIds(STATIC_WORLD_SOURCE, b)).toContain(a);
     }
   });
 });
@@ -70,7 +73,7 @@ describe('NPC registry', () => {
   it('every NPC has a valid home area, anchor, look and dialogue', () => {
     for (const npc of NPC_DEFINITIONS) {
       expect(areaIds.has(npc.homeAreaId), npc.id).toBe(true);
-      expect(getAnchor(npc.anchorId).areaId, npc.id).toBe(npc.homeAreaId);
+      expect(getAnchor(STATIC_WORLD_SOURCE, npc.anchorId).areaId, npc.id).toBe(npc.homeAreaId);
       expect(NPC_LOOKS[npc.id], npc.id).toBeDefined();
       expect(npc.dialogueIds.length, npc.id).toBeGreaterThan(0);
       for (const id of npc.dialogueIds) {
@@ -90,14 +93,18 @@ describe('NPC registry', () => {
       homeAreaId: 'area-park',
       dialogueIds: ['sara-intro'],
     }));
-    const visible = visibleAreaIds('area-town');
+    const visible = visibleAreaIds(STATIC_WORLD_SOURCE, 'area-town');
     const rendered = synthetic.filter((npc) =>
-      visible.includes(areaForAnchor(resolveNpcAnchor(npc, 0))),
+      visible.includes(
+        areaForAnchor(STATIC_WORLD_SOURCE, resolveNpcAnchor(STATIC_WORLD_SOURCE, npc, 0)),
+      ),
     );
     expect(rendered).toHaveLength(0);
     // The real cast renders the town + adjacent subset only.
     const real = NPC_DEFINITIONS.filter((npc) =>
-      visible.includes(areaForAnchor(resolveNpcAnchor(npc, 0))),
+      visible.includes(
+        areaForAnchor(STATIC_WORLD_SOURCE, resolveNpcAnchor(STATIC_WORLD_SOURCE, npc, 0)),
+      ),
     );
     expect(real.length).toBeGreaterThan(0);
     expect(real.length).toBeLessThan(NPC_DEFINITIONS.length);
@@ -106,45 +113,48 @@ describe('NPC registry', () => {
 
 describe('area activation and schedules', () => {
   it('visibleAreaIds is the active area plus one-hop neighbours', () => {
-    expect(visibleAreaIds('area-town')).toContain('area-town');
-    expect(visibleAreaIds('area-town')).toContain('area-home');
-    expect(visibleAreaIds('area-town')).not.toContain('area-park');
-    expect(visibleAreaIds('area-park')).toEqual(['area-park', 'area-fountain']);
+    expect(visibleAreaIds(STATIC_WORLD_SOURCE, 'area-town')).toContain('area-town');
+    expect(visibleAreaIds(STATIC_WORLD_SOURCE, 'area-town')).toContain('area-home');
+    expect(visibleAreaIds(STATIC_WORLD_SOURCE, 'area-town')).not.toContain('area-park');
+    expect(visibleAreaIds(STATIC_WORLD_SOURCE, 'area-park')).toEqual([
+      'area-park',
+      'area-fountain',
+    ]);
   });
 
   it('the scheduled fisher follows world time, not the player location', () => {
     const fisher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-fisher')!;
     // The spot index is spots[worldTime % 3]: river → bakery → river bank …,
     // identical regardless of which area the player stands in.
-    expect(resolveNpcAnchor(fisher, 0)).toBe('anchor-river');
-    expect(resolveNpcAnchor(fisher, 1)).toBe('anchor-bakery');
-    expect(resolveNpcAnchor(fisher, 2)).toBe('anchor-river-bank');
-    expect(resolveNpcAnchor(fisher, 3)).toBe('anchor-river');
-    expect(resolveNpcAnchor(fisher, 42)).toBe('anchor-river');
+    expect(resolveNpcAnchor(STATIC_WORLD_SOURCE, fisher, 0)).toBe('anchor-river');
+    expect(resolveNpcAnchor(STATIC_WORLD_SOURCE, fisher, 1)).toBe('anchor-bakery');
+    expect(resolveNpcAnchor(STATIC_WORLD_SOURCE, fisher, 2)).toBe('anchor-river-bank');
+    expect(resolveNpcAnchor(STATIC_WORLD_SOURCE, fisher, 3)).toBe('anchor-river');
+    expect(resolveNpcAnchor(STATIC_WORLD_SOURCE, fisher, 42)).toBe('anchor-river');
   });
 
   it('idle NPCs never move — their standpoint is data, not simulation', () => {
     const neighbour = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-neighbour')!;
     for (const tick of [0, 1, 7, 100]) {
-      expect(resolveNpcAnchor(neighbour, tick)).toBe('anchor-home-gate');
+      expect(resolveNpcAnchor(STATIC_WORLD_SOURCE, neighbour, tick)).toBe('anchor-home-gate');
     }
   });
 
   it('routines resolve who stands at an anchor — resident first, then visitor', () => {
     const fisher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-fisher')!;
     // Tick 0: the fisher works the river — he answers at his home anchor.
-    expect(npcStandingAt('anchor-river', 0)?.id).toBe('npc-fisher');
+    expect(npcStandingAt(STATIC_WORLD_SOURCE, 'anchor-river', 0)?.id).toBe('npc-fisher');
     // Tick 1: he queues at the bakery — the resident baker still answers
     // there, and nobody is left at the river or the bank.
-    expect(npcStandingAt('anchor-bakery', 1)?.id).toBe('npc-baker');
-    expect(npcsAtAnchor('anchor-bakery', 1).map((npc) => npc.id)).toEqual([
+    expect(npcStandingAt(STATIC_WORLD_SOURCE, 'anchor-bakery', 1)?.id).toBe('npc-baker');
+    expect(npcsAtAnchor(STATIC_WORLD_SOURCE, 'anchor-bakery', 1).map((npc) => npc.id)).toEqual([
       'npc-baker',
       'npc-fisher',
     ]);
-    expect(npcStandingAt('anchor-river', 1)).toBeNull();
+    expect(npcStandingAt(STATIC_WORLD_SOURCE, 'anchor-river', 1)).toBeNull();
     // Tick 2: resting on the bank — the river's own anchor is empty.
-    expect(npcStandingAt('anchor-river-bank', 2)?.id).toBe('npc-fisher');
-    expect(npcStandingAt('anchor-river', 2)).toBeNull();
+    expect(npcStandingAt(STATIC_WORLD_SOURCE, 'anchor-river-bank', 2)?.id).toBe('npc-fisher');
+    expect(npcStandingAt(STATIC_WORLD_SOURCE, 'anchor-river', 2)).toBeNull();
     expect(resolveNpcActivity(fisher, 2)).toBe('at-home');
   });
 
@@ -164,17 +174,17 @@ describe('area activation and schedules', () => {
     // Interaction cost must scale with visible content: a quest whose anchor
     // sits outside active + adjacent areas mounts no Hotspot at all. From the
     // park, no quest anchor is visible — zero hotspots mounted.
-    const farVisible = visibleAreaIds('area-park');
+    const farVisible = visibleAreaIds(STATIC_WORLD_SOURCE, 'area-park');
     const mountedFar = QUEST_DEFINITIONS.filter((quest) =>
-      farVisible.includes(getAnchor(quest.anchorId as AnchorId).areaId),
+      farVisible.includes(getAnchor(STATIC_WORLD_SOURCE, quest.anchorId as AnchorId).areaId),
     );
     // Only the park quest itself is mounted there.
     expect(mountedFar.map((quest) => quest.id)).toEqual(['quest-park-kite']);
     // Around the town only quests anchored in town + adjacent areas mount —
     // the river and school quests stay data-only until the child walks over.
-    const townVisible = visibleAreaIds('area-town');
+    const townVisible = visibleAreaIds(STATIC_WORLD_SOURCE, 'area-town');
     const mountedTown = QUEST_DEFINITIONS.filter((quest) =>
-      townVisible.includes(getAnchor(quest.anchorId as AnchorId).areaId),
+      townVisible.includes(getAnchor(STATIC_WORLD_SOURCE, quest.anchorId as AnchorId).areaId),
     );
     expect(mountedTown.map((quest) => quest.id)).toEqual([
       'quest-greeting',
@@ -289,7 +299,7 @@ describe('quest references and chains', () => {
     expect(byId.get('quest-bread-errand')?.areaId).toBe('area-market');
     expect(byId.get('quest-school-answer')?.areaId).toBe('area-school');
     for (const quest of QUEST_DEFINITIONS) {
-      const anchor = getAnchor(quest.anchorId as AnchorId);
+      const anchor = getAnchor(STATIC_WORLD_SOURCE, quest.anchorId as AnchorId);
       expect(anchor.areaId, quest.id).toBe(quest.areaId);
     }
   });
@@ -297,13 +307,15 @@ describe('quest references and chains', () => {
 
 describe('render budget shape', () => {
   it('npcsForArea stays a small visible subset as the world grows', () => {
-    expect(npcsForArea('area-park').length).toBe(2);
+    expect(npcsForArea(STATIC_WORLD_SOURCE, 'area-park').length).toBe(2);
     // One-hop visibility bounds the active NPC set regardless of total count.
     for (const area of areaIds) {
-      const visible = visibleAreaIds(area);
+      const visible = visibleAreaIds(STATIC_WORLD_SOURCE, area);
       for (const tick of [0, 1, 2, 3]) {
         const active = NPC_DEFINITIONS.filter((npc) =>
-          visible.includes(areaForAnchor(resolveNpcAnchor(npc, tick))),
+          visible.includes(
+            areaForAnchor(STATIC_WORLD_SOURCE, resolveNpcAnchor(STATIC_WORLD_SOURCE, npc, tick)),
+          ),
         );
         expect(active.length).toBeLessThanOrEqual(8);
       }

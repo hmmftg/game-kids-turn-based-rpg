@@ -1,4 +1,5 @@
 import { getAnchor } from '../world/navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
 import { ANCHORS, EDGES } from '../world/navigation/graph.ts';
 import { MAP_TRANSITIONS, WORLD_MAPS } from '../world/maps.ts';
 import { NPC_DEFINITIONS, WORLD_AREAS } from '../world/registry.ts';
@@ -22,7 +23,7 @@ import { validateWorldDocument } from '../domain/worldbuilder/validation.ts';
 function deriveAreaMapIds(): Readonly<Record<AreaId, MapId>> {
   const mapIds: Record<AreaId, MapId> = {} as Record<AreaId, MapId>;
   for (const area of WORLD_AREAS) {
-    mapIds[area.id] = getAnchor(area.spawnAnchorId).mapId;
+    mapIds[area.id] = getAnchor(STATIC_WORLD_SOURCE, area.spawnAnchorId).mapId;
   }
   return mapIds;
 }

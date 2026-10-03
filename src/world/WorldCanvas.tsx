@@ -11,6 +11,7 @@ import type {
   QuestId,
   QuestStatus,
 } from '../domain/game/types.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import { maxPixelRatioFor } from '../services/device/capabilities.ts';
 import { Hub, type HubHandle } from './Hub.tsx';
 import { CUBIC_MODELS } from './models/cubicModels.ts';
@@ -96,6 +97,9 @@ export interface WorldCanvasProps {
   readonly completedCount: number;
   readonly interactive: boolean;
   readonly qualityTier: QualityTier;
+  /** The world data this canvas renders — static for the game, a document
+      source under the World Builder. */
+  readonly world: WorldSource;
   /** The map currently mounted — the other map's scene does not exist. */
   readonly mapId: MapId;
   /** Anchor the avatar stands at on this map (spawn/restored position). */
@@ -110,6 +114,8 @@ export interface WorldCanvasProps {
   readonly attention?: NpcAttention | null;
   readonly onContextLost: () => void;
   readonly handleRef?: Ref<HubHandle>;
+  /** Extra scene content (World Builder overlays in edit mode). */
+  readonly overlays?: React.ReactNode;
 }
 
 export function WorldCanvas({
@@ -119,6 +125,7 @@ export function WorldCanvas({
   completedCount,
   interactive,
   qualityTier,
+  world,
   mapId,
   startAnchorId,
   discoveries,
@@ -128,14 +135,15 @@ export function WorldCanvas({
   attention,
   onContextLost,
   handleRef,
+  overlays,
 }: WorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneAlive = useRef(false);
-  const zoom = zoomForMap(mapId);
+  const zoom = zoomForMap(world, mapId);
   // The quality tier is the only quality system; the world only derives how
   // much decoration it draws from it, never a different render pipeline.
   const detailLevel = detailLevelFor(qualityTier);
-  const map = getMap(mapId);
+  const map = getMap(world, mapId);
   const env = map.environment;
 
   // E2E/QA probe: which map is mounted (same Canvas — map switches don't
@@ -186,7 +194,7 @@ export function WorldCanvas({
         {/* Follow-camera: tracks the avatar, clamped to this map's bounds.
             `key` remounts it per map so a transition snaps to the new
             spawn instead of easing from stale cross-map coordinates. */}
-        <CameraRig key={mapId} mapId={mapId} />
+        <CameraRig key={mapId} world={world} mapId={mapId} />
         {/* Atmosphere comes from the map's EnvironmentDefinition — a cave
             swaps the sky+haze for a closed dark look without new code. */}
         {env.fog ? <fog attach="fog" args={[env.fog.color, env.fog.near, env.fog.far]} /> : null}
@@ -202,6 +210,7 @@ export function WorldCanvas({
           {mapId === 'map-cave' ? (
             <CaveWorld
               key="map-cave"
+              world={world}
               avatarId={avatarId}
               headwear={headwear}
               questStatuses={questStatuses}
@@ -217,6 +226,7 @@ export function WorldCanvas({
           ) : (
             <Hub
               key="map-town"
+              world={world}
               avatarId={avatarId}
               headwear={headwear}
               questStatuses={questStatuses}
@@ -233,6 +243,7 @@ export function WorldCanvas({
             />
           )}
         </ModelContext.Provider>
+        {overlays}
       </Canvas>
     </div>
   );

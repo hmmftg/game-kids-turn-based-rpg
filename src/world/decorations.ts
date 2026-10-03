@@ -1,4 +1,5 @@
 import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from './worldSource.ts';
 import type { DetailLevel } from './models/modelProvider.ts';
 
 /**
@@ -89,7 +90,11 @@ const POINT_ZONES: readonly ExclusionZone[] = [
     (a) => a.landmarkId !== null && a.landmarkId !== 'landmark-fountain' && a.mapId === 'map-town',
   ).map((a) => ({ x: a.x, z: a.z - 1.2, radius: 1.5 })),
   // fountain basin
-  { x: getAnchor('anchor-fountain').x, z: getAnchor('anchor-fountain').z, radius: 1.9 },
+  {
+    x: getAnchor(STATIC_WORLD_SOURCE, 'anchor-fountain').x,
+    z: getAnchor(STATIC_WORLD_SOURCE, 'anchor-fountain').z,
+    radius: 1.9,
+  },
   // keepsake tree
   { x: -1.2, z: 1.6, radius: 1.0 },
   // existing props
@@ -126,9 +131,9 @@ export function isDecorationClear(x: number, z: number, radius = 0): boolean {
     if (Math.hypot(x - zone.x, z - zone.z) < zone.radius + radius) return false;
   }
   for (const edge of EDGES) {
-    const from = getAnchor(edge.from);
+    const from = getAnchor(STATIC_WORLD_SOURCE, edge.from);
     if (from.mapId !== 'map-town') continue;
-    const to = getAnchor(edge.to);
+    const to = getAnchor(STATIC_WORLD_SOURCE, edge.to);
     if (distToSegment(x, z, from.x, from.z, to.x, to.z) < CORRIDOR_HALF_WIDTH + radius)
       return false;
   }

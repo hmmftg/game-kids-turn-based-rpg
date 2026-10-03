@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App.tsx';
 import { ErrorBoundary } from './app/ErrorBoundary.tsx';
@@ -9,16 +9,30 @@ import './styles/global.css';
 const container = document.getElementById('root');
 if (!container) throw new Error('#root missing');
 
+// Dev-only authoring surface: `?worldbuilder=1` mounts the World Builder
+// instead of the game — no reducer boot, no IndexedDB, separate shell.
+const worldBuilderRequested =
+  import.meta.env.DEV && new URLSearchParams(window.location.search).has('worldbuilder');
+const BuilderApp = lazy(() =>
+  import('./worldbuilder/BuilderApp.tsx').then((module) => ({ default: module.BuilderApp })),
+);
+
 createRoot(container).render(
   <StrictMode>
     <ErrorBoundary>
-      <GameProvider>
-        <App />
-        {/* Draft-content marker: the educational copy has not been reviewed. */}
-        <span className="draft-badge" title={FA.draftBadgeLong}>
-          {FA.draftBadge}
-        </span>
-      </GameProvider>
+      {worldBuilderRequested ? (
+        <Suspense fallback={null}>
+          <BuilderApp />
+        </Suspense>
+      ) : (
+        <GameProvider>
+          <App />
+          {/* Draft-content marker: the educational copy has not been reviewed. */}
+          <span className="draft-badge" title={FA.draftBadgeLong}>
+            {FA.draftBadge}
+          </span>
+        </GameProvider>
+      )}
     </ErrorBoundary>
   </StrictMode>,
 );
