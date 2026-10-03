@@ -41,6 +41,14 @@ services ───────────┘         world/ (R3F hub)
 - **Rendering**: `frameloop="demand"`, orthographic camera, raycast only on ground/hotspot rings,
   quality tiers, no persistent animation loops, reduced-motion freezes decoration not meaning.
 - **RTL**: all text in the DOM, never inside WebGL. No `row-reverse` on the quest trail.
+- **Authored-content seam**: `QuestDefinition`, `DialogueNode`, `WorldMapDefinition`,
+  `NpcDefinition`, `MapTransition` are the game's content contract. Authored data flows
+  through `validate:content` into the pure domain and is rendered — never executed
+  imperatively; referential integrity across those ids is a validation responsibility
+  (`registry.test.ts`, `validate:content`), not a runtime fallback. New child content
+  is new data or new fields on these types, never ad-hoc flags in `src/app`/`src/world`.
+  Validation returns a structured report consumed by script + tests — it does not
+  throw at runtime.
 
 ## The interaction stack (child flow)
 
