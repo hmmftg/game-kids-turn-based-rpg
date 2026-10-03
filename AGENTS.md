@@ -172,16 +172,23 @@ npx playwright test   # golden-path e2e (landscape-mobile project)
 
 ---
 
-# 9. Contextual Interaction Rules (PR #19 contract)
+# 9. Contextual Interaction Rules (overhaul contract, PRs #27–#31)
 
 The child's interaction language is **the physical thing**, never an action icon. Full contract:
 `docs/INTERACTION-MODEL.md`. Agent-facing rules:
 
+- **The child must always be able to leave.** Never force a child to read, talk, confirm, continue, or complete a chain merely because they entered an interaction. Outside-tap dismissal is universal and free (0 mandatory actions); a modal's backdrop swallows world input so it never double-fires.
+- **No continue-to-continue.** A successful child action advances the game automatically to the next meaningful state — no intermediate "Next" gates. Passive encounter phases auto-play on dwell timers; only the object choice waits for the child.
+- **Interaction ownership.** Arriving at an NPC or hotspot never opens dialogue; only a deliberate tap on the figure/object does. Quest chips navigate and focus only.
 - **Truthful feedback.** Never animate an accepted outcome before `CHOOSE` resolves. Pre-commit feedback is the ~160 ms press pulse only; `ConsequenceScene` may appear **only** on a correct response — a wrong tap gets gentle retry, never a success animation.
 - **One obvious target.** `prominence` derives from `iconId === correctIconId`, not from role. Exactly one `primary` object per step; wrong objects stay tappable but `secondary`, escape routes faintest. Enforced by test.
-- **No action vocabulary on the child surface.** Do not reintroduce a glyph/icon row into `playerChoice`. Choices without a distinct physical target (`sceneElementFor → null`) are absent, not degraded to icons. `ActionGlyph` is for the demonstrate phase and parent/debug surfaces only.
+- **No action vocabulary on the child surface.** Do not reintroduce a glyph/icon row into `playerChoice` (or anywhere — `ActionGlyph` is deleted). Choices without a distinct physical target (`sceneElementFor → null`) are absent, not degraded to icons.
 - **Model boundary.** Interaction context is computed by `contextForStep()` (pure). UI components must not re-derive correctness or invent interaction rules — and gameplay rules never move into UI components.
 - **Double-tap guard** on `InteractiveTarget` must stay: the buffered commit window makes it required.
+
+## 9.1 Interaction budget (hard validator)
+
+`src/domain/quests/interactionSteps.ts` counts **mandatory child actions** on the interaction graph: passive beat 0, object choice 1, interaction entry 1, outside-tap exit 0, optional dialogue tap 0. `validate:content` fails the build (`interaction-budget`) when a step forces >2 actions or a dialogue forces >1 on its heaviest required-choice path; a dialogue with no required choice costs 0 to exit. Any new quest/dialogue content must stay inside the budget — adding a forced tap fails `npm run verify`.
 
 ---
 

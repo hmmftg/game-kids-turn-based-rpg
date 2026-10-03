@@ -2,13 +2,13 @@
 
 ## Suites
 
-| Suite               | Command                                                                    | What it covers                                                                        |
-| ------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Unit/component      | `npm test` (Vitest + jsdom)                                                | domain transitions, persistence, kidUx limits, contextual targets, critter controller |
-| Full check          | `npm run verify`                                                           | format → lint → typecheck → tests → build (content validation + bundle budgets)       |
-| Renderer budgets    | `node --experimental-strip-types scripts/measure-world.ts --url <dev-url>` | calls/tri/obj/geo per tier ×3 samples, pass/fail ceilings                             |
-| Visual/lifecycle QA | `node --experimental-strip-types scripts/qa-screenshots.ts <outdir>`       | deterministic screenshots, remount lifecycle regression, reduced-motion immobility    |
-| E2E                 | `npx playwright test`                                                      | 38 tests, golden paths, orientation, areas/dialogue branching, offline, multi-profile |
+| Suite               | Command                                                                    | What it covers                                                                                                                                                                                                |
+| ------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit/component      | `npm test` (Vitest + jsdom)                                                | domain transitions, persistence, kidUx limits, contextual targets, critter controller                                                                                                                         |
+| Full check          | `npm run verify`                                                           | format → lint → typecheck → tests → build (content validation + bundle budgets)                                                                                                                               |
+| Renderer budgets    | `node --experimental-strip-types scripts/measure-world.ts --url <dev-url>` | calls/tri/obj/geo per tier ×3 samples, pass/fail ceilings                                                                                                                                                     |
+| Visual/lifecycle QA | `node --experimental-strip-types scripts/qa-screenshots.ts <outdir>`       | deterministic screenshots, remount lifecycle regression, reduced-motion immobility                                                                                                                            |
+| E2E                 | `npx playwright test`                                                      | golden paths, orientation, areas/dialogue branching, camera, cave maps, pacing, Mode-B no-copy, offline, multi-profile — never run two playwright invocations in parallel; `rm -rf test-results` between runs |
 
 Always run `verify`, `measure-world`, `qa-screenshots`, and Playwright before a PR.
 
@@ -47,6 +47,19 @@ Deterministic states in `qa-screenshots.ts`: `scene-pick` (leaf primary + faint 
 `scene-place-held` (held basket + destinations), `scene-place-targets`,
 `scene-consequence` (truthful outcome on the response card), plus the original portrait,
 demonstrate, choice, and success captures.
+
+## Pacing & interaction-ownership QA
+
+`e2e/pacing.spec.ts` covers the encounter-compression contract: passive phases
+auto-advance on dwell timers, a real object tap is the only mandatory action per step,
+reload mid-passive-phase resumes cleanly, tab hide/restore restarts the phase timer, and
+outside-tap leaves a dialogue or encounter without confirmation.
+`e2e/npcTap.ts` is the shared harness — `enableWorldProbe` (init flag before first goto),
+`waitForProbe`, `tapNpcFigure` (the figure itself, not nearby ground — arrival never opens
+dialogue), `openQuestDialogue`, `tapWorldAnchor` (hop-aware far-anchor taps under the
+follow camera), `waitForCameraSettle`, `dismissDialogue`. Mode B (`?kidtest=nocopy`)
+runs with all rendered copy hidden — the pictographic question card must carry the
+question; school steps record tap positions for same-position-pattern detection.
 
 ## Scalable world QA
 
