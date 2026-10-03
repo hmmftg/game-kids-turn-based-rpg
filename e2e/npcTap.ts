@@ -14,7 +14,29 @@ export interface WorldProbe {
   __worldAt?: string;
   __worldDiscoveries?: string[];
   __worldMoving?: boolean;
-  __worldAttention?: { npcId: string; nonce: number } | null;
+  __worldAttention?: {
+    npcId: string;
+    nonce: number;
+    context: 'notices-child' | 'greets-child';
+  } | null;
+  __worldAnimationEvents?: Array<{
+    type:
+      | 'object-lift'
+      | 'object-drop'
+      | 'object-open'
+      | 'object-bounce'
+      | 'object-fly-to'
+      | 'object-separate'
+      | 'object-uncover'
+      | 'object-receive'
+      | 'character-react';
+    subjectId: string;
+    actorId?: string;
+    context?: string;
+    startedAt: number;
+    completedAt: number;
+  }>;
+  __worldAnimationStats?: { active: number; started: number; completed: number };
   __worldCamera?: { position: { x: number; z: number } };
   __worldToScreen?: (x: number, z: number) => { x: number; y: number };
   __worldNpcs?: Record<

@@ -5,7 +5,13 @@ import { FA } from '../../content/fa/strings.ts';
 import { getQuestStep } from '../../domain/quests/definitions.ts';
 import type { EncounterState } from '../../domain/game/types.ts';
 import { DialogueCard } from './DialogueCard.tsx';
-import { ConsequenceScene, SceneChoice, SceneGlyph } from './SceneChoice.tsx';
+import {
+  ConsequenceScene,
+  DemoScene,
+  QuestioningReact,
+  SceneChoice,
+  SceneGlyph,
+} from './SceneChoice.tsx';
 import { contextForStep, sceneElementFor } from './contextInteraction.ts';
 import { usePacedAdvance } from './usePacedAdvance.ts';
 
@@ -21,6 +27,7 @@ import { usePacedAdvance } from './usePacedAdvance.ts';
 export function EncounterPanel({
   encounter,
   hideCopy,
+  hideActionIcons = false,
   onAdvance,
   onChoose,
   onLeave,
@@ -28,6 +35,8 @@ export function EncounterPanel({
   readonly encounter: EncounterState;
   /** Mode-B kid test: no rendered copy; the question is a picture. */
   readonly hideCopy?: boolean | undefined;
+  /** Mode noactionicons: remove every non-physical action affordance. */
+  readonly hideActionIcons?: boolean | undefined;
   readonly onAdvance: () => void;
   readonly onChoose: (iconId: `icon-${string}`, correct: boolean) => void;
   readonly onLeave: () => void;
@@ -83,15 +92,9 @@ export function EncounterPanel({
           onTap={onAdvance}
           hideText={hideCopy}
         >
-          <span
-            className={`demo demo--${step.demonstrationCue}`}
-            aria-hidden="true"
-            data-cue={step.demonstrationCue}
-          >
-            {element !== null ? (
-              <SceneGlyph element={element} size={56} color={cueIcon.color} />
-            ) : null}
-          </span>
+          {element !== null ? (
+            <DemoScene cue={step.demonstrationCue} element={element} color={cueIcon.color} />
+          ) : null}
           {leave}
         </DialogueCard>
       );
@@ -108,11 +111,21 @@ export function EncounterPanel({
       const askedElement = sceneElementFor(step.correctIconId);
       // Mode B: objects never pre-highlighted — the ❓ card is the only
       // question signal, so "what is asked" can't collapse into "what glows".
-      const choiceObjects = hideCopy
-        ? context.objects.map((object) =>
-            object.role === 'escape' ? object : { ...object, prominence: 'secondary' as const },
-          )
-        : context.objects;
+      const choiceObjects = context.objects
+        // Mode noactionicons: directional arrows are removed outright —
+        // outside-tap is still the free escape. Physical distractors stay.
+        .filter(
+          (object) =>
+            !hideActionIcons ||
+            (object.element !== 'path-back' &&
+              object.element !== 'path-forward' &&
+              object.element !== 'person-away'),
+        )
+        .map((object) =>
+          hideCopy && object.role !== 'escape'
+            ? { ...object, prominence: 'secondary' as const }
+            : object,
+        );
       return (
         <DialogueCard
           textFa={stepCopy.promptFa}
@@ -127,12 +140,14 @@ export function EncounterPanel({
                     size={76}
                     color={getIcon(step.correctIconId).color}
                   />
-                  <span className="emoji scene-question__mark">❓</span>
+                  {hideActionIcons ? null : <span className="emoji scene-question__mark">❓</span>}
                 </span>
               ) : null}
               <SceneChoice
                 objects={choiceObjects}
                 held={context.held ?? undefined}
+                plainHeld={hideActionIcons}
+                bareTargets={hideActionIcons}
                 onSelect={(iconId) => onChoose(iconId, iconId === step.correctIconId)}
               />
             </>
@@ -155,7 +170,9 @@ export function EncounterPanel({
           scene={
             correct && encounter.lastChoiceIconId ? (
               <ConsequenceScene iconId={encounter.lastChoiceIconId} />
-            ) : undefined
+            ) : (
+              <QuestioningReact actorId={step.npcId} />
+            )
           }
         />
       );

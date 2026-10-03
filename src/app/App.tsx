@@ -113,17 +113,27 @@ export function App() {
   const suggestedQuestId = nextSuggestedQuest(state);
   // Session-only UI affordances: never persisted, never part of game state.
   const [worldHintSeen, setWorldHintSeen] = useState(false);
-  // Mode-B kid test (?kidtest=nocopy): the encounter plays with no rendered
-  // copy — questions are pictures. Read once; never persisted.
-  const [noCopyTest] = useState(
-    () => new URLSearchParams(window.location.search).get('kidtest') === 'nocopy',
+  // Kid-test URL flags (?kidtest=nocopy,noactionicons, repeatable/comma-
+  // separated): the encounter plays with no rendered copy and/or with every
+  // non-physical action affordance stripped. Read once; never persisted.
+  const [kidTestFlags] = useState(
+    () =>
+      new Set(
+        new URLSearchParams(window.location.search)
+          .getAll('kidtest')
+          .flatMap((value) => value.split(/[\s,]+/))
+          .filter((flag) => flag.length > 0),
+      ),
   );
+  const noCopyTest = kidTestFlags.has('nocopy');
+  const noActionIcons = kidTestFlags.has('noactionicons');
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
   // Who noticed the child arriving — the figure gives a brief non-verbal
   // attention cue. `nonce` replays the cue on repeat arrivals.
   const [attention, setAttention] = useState<NpcAttention | null>(null);
   const attentionNonceRef = useRef(0);
+  const suppressNoticeForRef = useRef<string | null>(null);
   const previousCompletedRef = useRef<number | null>(null);
   // Highest checkpoint timestamp observed this session. Persisted checkpoints
   // carry the earlier session's completion time and re-hydrated ones repeat a
@@ -229,9 +239,18 @@ export function App() {
       // actions. Whoever stands at the anchor just notices the child: a
       // brief non-verbal cue (turn/bounce), no card.
       const present = npcStandingAt(anchor, worldTimeRef.current);
-      if (present !== null) {
+      // A walk the child started by tapping that same NPC already got its
+      // acknowledgement — the greet IS the arrival cue; a notices-child on
+      // top would be a competing second reaction.
+      const suppressed = suppressNoticeForRef.current;
+      suppressNoticeForRef.current = null;
+      if (present !== null && present.id !== suppressed) {
         attentionNonceRef.current += 1;
-        setAttention({ npcId: present.id, nonce: attentionNonceRef.current });
+        setAttention({
+          npcId: present.id,
+          nonce: attentionNonceRef.current,
+          context: 'notices-child',
+        });
       }
     },
     [playSfx, discoveries, dispatch],
@@ -255,6 +274,11 @@ export function App() {
         openNpc(node);
       };
       skipArrivalTick.current = true;
+      suppressNoticeForRef.current = npcId;
+      // The greeting plays in parallel with the walk/dialogue — the NPC
+      // reacts as soon as the child chooses them, never after a gate.
+      attentionNonceRef.current += 1;
+      setAttention({ npcId, nonce: attentionNonceRef.current, context: 'greets-child' });
       if (!hubRef.current?.goTo(anchor, open)) open();
     },
     [openNpc, statuses],
@@ -415,7 +439,6 @@ export function App() {
           worldTime={worldTime}
           onContextLost={() => dispatch({ type: 'WEBGL_AVAILABILITY_CHANGED', available: false })}
           handleRef={hubRef}
-          suggestedQuestId={suggestedQuestId}
           mapId={state.mapId}
           startAnchorId={spawnAnchor}
           discoveries={state.discoveries}
@@ -441,7 +464,11 @@ export function App() {
 
       {state.mode === 'hub' || state.mode === 'dialogue' ? (
         <div className="hud__objective">
-          <ObjectiveChip questId={suggestedQuestId} />
+          <ObjectiveChip
+            questId={suggestedQuestId}
+            hideActionIcons={noActionIcons}
+            hideText={noCopyTest}
+          />
         </div>
       ) : null}
 
@@ -450,6 +477,8 @@ export function App() {
           statuses={statuses}
           currentId={suggestedQuestId}
           mapId={state.mapId}
+          hideActionIcons={noActionIcons}
+          hideText={noCopyTest}
           onGo={goToQuest}
         />
       </div>
@@ -571,6 +600,7 @@ export function App() {
           <EncounterPanel
             encounter={state.encounter}
             hideCopy={noCopyTest}
+            hideActionIcons={noActionIcons}
             onAdvance={() => {
               // Only the step-completion beat chimes — passive beats auto-play
               // and a jingle per beat would read as noise.
@@ -587,8 +617,10 @@ export function App() {
 
         {state.mode === 'hub' ? (
           state.webglAvailable ? (
-            worldHintSeen ? (
-              <p className="text text--soft hud__hint">{FA.hotspotHint}</p>
+            worldHintSeen || noActionIcons ? (
+              noCopyTest || noActionIcons ? null : (
+                <p className="text text--soft hud__hint">{FA.hotspotHint}</p>
+              )
             ) : (
               <InteractionHint />
             )

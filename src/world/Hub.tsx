@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
@@ -33,20 +33,12 @@ import {
   StoneCluster,
 } from './models/details.tsx';
 import { BOX, CYLINDER, PLANE, sharedGroundMaterial, sharedLambert } from './models/shared.ts';
-import {
-  AttentionPulse,
-  DestinationMarker,
-  Hotspot,
-  QuestMarker,
-  type NpcAttention,
-  type WorldSceneHandle,
-} from './sceneBits.tsx';
+import { CharacterReact, Hotspot, type NpcAttention, type WorldSceneHandle } from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
 import { publishCameraFocus } from './CameraRig.tsx';
-import { questEmoji } from '../ui/child/emoji.ts';
 import {
   AVATAR_VISUALS,
   LANDMARK_PALETTE,
@@ -66,8 +58,6 @@ export interface HubProps {
   readonly interactive: boolean;
   /** Decorative density derived from the quality tier (0/1/2). */
   readonly detailLevel: DetailLevel;
-  /** The quest the objective chip currently points at, if any. */
-  readonly suggestedQuestId: QuestId | null;
   /** Anchor the avatar starts from on this map (spawn/restored position). */
   readonly startAnchorId: AnchorId;
   /** Persistent world facts — the revealed secret entrance swaps its look. */
@@ -362,7 +352,6 @@ export function Hub({
   completedCount,
   interactive,
   detailLevel,
-  suggestedQuestId,
   startAnchorId,
   discoveries,
   onArrive,
@@ -381,7 +370,6 @@ export function Hub({
   // Ambient critters: motion only while the world is interactive and motion
   // is allowed; on low tier they render as static silhouettes.
   const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel);
-  const [walkTarget, setWalkTarget] = useState<AnchorId | null>(null);
 
   // Area-based activation: the area the avatar currently stands in plus the
   // areas one waypoint-hop away are "visible". NPCs outside this set are data
@@ -409,17 +397,14 @@ export function Hub({
     () => ({
       goTo: (anchor, onArrived) => {
         const walked = walker.walkTo(anchor, () => {
-          setWalkTarget(null);
           // Arrival side effects (sound, first-use hint) always run; the
           // caller's callback (e.g. opening the quest dialogue) runs on top.
           onArrive(anchor);
           onArrived?.();
         });
-        if (walked) setWalkTarget(anchor);
         return walked;
       },
       cancel: () => {
-        setWalkTarget(null);
         walker.cancel();
       },
     }),
@@ -427,13 +412,11 @@ export function Hub({
   );
 
   const walkHere = (anchor: AnchorId) => {
-    const walked = walker.walkTo(anchor, () => {
-      setWalkTarget(null);
-      // Tapping the world is a full interaction: clear the marker and fire
-      // the shared arrival handler so NPC taps open their dialogue.
+    walker.walkTo(anchor, () => {
+      // Tapping the world is a full interaction: the shared arrival handler
+      // decides who noticed and what (if anything) opens.
       onArrive(anchor);
     });
-    if (walked) setWalkTarget(anchor);
   };
 
   return (
@@ -491,32 +474,17 @@ export function Hub({
         if (!visibleAreas.includes(anchor.areaId)) return null;
         const status = questStatuses[quest.id];
         const active = interactive && status !== 'locked';
-        const suggested = quest.id === suggestedQuestId && status !== 'locked';
         return (
-          <group key={quest.id}>
-            <Hotspot
-              x={anchor.x}
-              z={anchor.z}
-              active={active}
-              suggested={suggested}
-              label={`hotspot-${quest.id}`}
-              onSelect={() => walkHere(anchor.id)}
-            />
-            {active ? (
-              <QuestMarker
-                x={anchor.x}
-                z={anchor.z}
-                emoji={questEmoji(quest.id)}
-                suggested={suggested}
-              />
-            ) : null}
-          </group>
+          <Hotspot
+            key={quest.id}
+            x={anchor.x}
+            z={anchor.z}
+            active={active}
+            label={`hotspot-${quest.id}`}
+            onSelect={() => walkHere(anchor.id)}
+          />
         );
       })}
-
-      {walkTarget !== null ? (
-        <DestinationMarker x={getAnchor(walkTarget).x} z={getAnchor(walkTarget).z} />
-      ) : null}
 
       {/* NPCs are data-driven: one row in NPC_DEFINITIONS + one row in
           NPC_LOOKS is a whole character. Only NPCs currently standing in a
@@ -553,10 +521,16 @@ export function Hub({
               <cylinderGeometry args={[0.9, 0.9, 2.2, 8]} />
               <meshBasicMaterial visible={false} />
             </mesh>
-            {/* Reaching an NPC earns a one-shot attention bounce (never a
-                dialogue) — the child decides whether to tap and talk. */}
+            {/* Reaching an NPC earns CharacterReact(notices-child); tapping
+                the figure earns CharacterReact(greets-child) in parallel with
+                the walk/dialogue — never a marker or a gated sequence. */}
             <group position={[npcX, 0, npcZ]}>
-              <AttentionPulse nonce={attention?.npcId === npc.id ? attention.nonce : 0}>
+              <CharacterReact
+                npcId={npc.id}
+                nonce={attention?.npcId === npc.id ? attention.nonce : 0}
+                context={attention?.context ?? 'notices-child'}
+                armColor={look.palette.limb}
+              >
                 <models.Figure
                   position={{ x: 0, z: 0 }}
                   rotationY={facing}
@@ -567,7 +541,7 @@ export function Hub({
                   detailLevel={detailLevel}
                   role={look.role}
                 />
-              </AttentionPulse>
+              </CharacterReact>
             </group>
             {spot?.prop ? (
               <models.Prop

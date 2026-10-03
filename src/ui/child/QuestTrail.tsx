@@ -36,12 +36,19 @@ export function QuestTrail({
   statuses,
   currentId,
   mapId,
+  hideActionIcons = false,
+  hideText = false,
   onGo,
 }: {
   readonly statuses: Record<QuestId, QuestStatus>;
   readonly currentId: QuestId | null;
   /** The mounted map — quests living elsewhere are shown but not go-able. */
   readonly mapId: MapId;
+  /** Mode noactionicons: status/action badges and emoji fallbacks go;
+   *  physical quest objects remain the affordance. */
+  readonly hideActionIcons?: boolean | undefined;
+  /** Mode-B kid test: no rendered copy. */
+  readonly hideText?: boolean | undefined;
   readonly onGo: (questId: QuestId) => void;
 }) {
   const currentRef = useRef<HTMLButtonElement>(null);
@@ -76,25 +83,31 @@ export function QuestTrail({
               aria-label={label}
               data-testid={`trail-${quest.id}`}
             >
-              <span className="trail__badge" aria-hidden="true">
-                {STATUS_GLYPH[status]}
-              </span>
+              {hideActionIcons ? null : (
+                <span className="trail__badge" aria-hidden="true">
+                  {STATUS_GLYPH[status]}
+                </span>
+              )}
               {objectElement !== null ? (
                 <span className="trail__object" aria-hidden="true">
                   <SceneGlyph element={objectElement} size={40} />
                 </span>
-              ) : (
+              ) : hideActionIcons ? null : (
                 <span className="emoji trail__emoji" aria-hidden="true">
                   {questEmoji(quest.id)}
                 </span>
               )}
-              <span className="trail__title">{copy.titleFa}</span>
-              <span className="text--soft trail__status">{STATUS_LABEL[status]}</span>
-              {current ? (
-                <span className="trail__here" aria-hidden="true">
-                  {FA.goThere}
-                </span>
-              ) : null}
+              {hideText ? null : (
+                <>
+                  <span className="trail__title">{copy.titleFa}</span>
+                  <span className="text--soft trail__status">{STATUS_LABEL[status]}</span>
+                  {current ? (
+                    <span className="trail__here" aria-hidden="true">
+                      {FA.goThere}
+                    </span>
+                  ) : null}
+                </>
+              )}
             </button>
           </div>
         );

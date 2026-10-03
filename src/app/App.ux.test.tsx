@@ -269,7 +269,10 @@ describe('UX pass', { timeout: 90000 }, () => {
         '[data-testid="encounter-response"].dialogue-card--retry',
       );
       expect(response).not.toBeNull();
-      expect(response).toHaveTextContent('👀');
+      // The actor questioning is the physical reaction; no marker emoji and
+      // no success consequence scene.
+      expect(response?.querySelector('[data-reaction="questioning"]')).not.toBeNull();
+      expect(response?.querySelector('.scene-consequence')).toBeNull();
     });
 
     // The domain retry path is untouched: watch-again re-demonstrates,
@@ -317,10 +320,10 @@ describe('UX pass', { timeout: 90000 }, () => {
     expect(screen.queryByTestId('sticker-album')).toBeNull();
   });
 
-  it('interaction hint points at the hotspot with a finger and short text', () => {
+  it('interaction hint is one short line — no animated hand marker', () => {
     render(<InteractionHint />);
     const hint = screen.getByTestId('interaction-hint');
-    expect(hint).toHaveTextContent('👆');
+    expect(hint).not.toHaveTextContent('👆');
     expect(hint).toHaveTextContent(FA.tapHere);
   });
 
