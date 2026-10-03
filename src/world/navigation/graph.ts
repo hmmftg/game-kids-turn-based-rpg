@@ -1,28 +1,9 @@
 import type { AnchorId, LandmarkId, NpcId } from '../../domain/game/types.ts';
-import type { AreaId, MapId } from '../../domain/world/types.ts';
+import type { Anchor, Edge } from '../../domain/world/types.ts';
 
-export interface Anchor {
-  readonly id: AnchorId;
-  /** World position on the ground plane (metres). */
-  readonly x: number;
-  readonly z: number;
-  readonly walkable: boolean;
-  /** The world area this anchor belongs to — world content owns an area. */
-  readonly areaId: AreaId;
-  /** The map this anchor lives on; cross-map travel uses transitions, not edges. */
-  readonly mapId: MapId;
-  /** Interaction the anchor stands in front of, if any. */
-  readonly npcId: NpcId | null;
-  readonly landmarkId: LandmarkId | null;
-  /** Map transition triggered by arriving here (doors, hidden entrances). */
-  readonly transitionId?: `transition-${string}` | undefined;
-  readonly labelFa: string;
-}
-
-export interface Edge {
-  readonly from: AnchorId;
-  readonly to: AnchorId;
-}
+// The types live in `domain/world/types.ts` (shared world-structure contract);
+// re-exported so existing `./navigation/graph.ts` imports keep working.
+export type { Anchor, Edge } from '../../domain/world/types.ts';
 
 /**
  * Data-defined waypoint graph. Movement is restricted to these anchors, so the
