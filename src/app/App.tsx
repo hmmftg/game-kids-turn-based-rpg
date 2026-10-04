@@ -242,8 +242,10 @@ export function App() {
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
       playSfx('sfx-arrive');
-      // Every avatar arrival gets exactly one identity — exploration walks
-      // and walk-to-talk arrivals alike.
+      // Every completed avatar arrival gets exactly one identity —
+      // exploration walks, walk-to-talk arrivals, and returns to the same
+      // anchor alike. Monotonic and session-local: renders, camera moves,
+      // and schedule ticks never mint one (docs/LIVING-WORLD.md).
       arrivalNonceRef.current += 1;
       setArrivalNonce(arrivalNonceRef.current);
       // Map transitions are resolved from data: an anchor carrying a

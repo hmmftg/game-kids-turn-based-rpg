@@ -61,14 +61,50 @@ when the avatar settles, then plays the glance as a bounded out-and-back.
 
 Arrival-related behavior can be produced by several paths (walker arrival,
 world-time tick, NPC schedule resolution, React re-renders, reload). The
-reaction therefore carries an explicit identity: `arrivalNonce`, a counter
-incremented once per avatar arrival in `App.tsx` and stamped onto
+reaction therefore carries an explicit identity: `arrivalNonce`, stamped onto
 `NpcAttention`/`__worldAttention` and the avatar's liveliness wrapper.
 
-**Invariant:** a given avatar arrival may produce at most one `notices-child`
-episode for a given visible NPC — regardless of re-renders, dwell time, or
-repeated demand renders. A new arrival (a new nonce) may earn a new cue; the
-same arrival may never re-fire.
+`arrivalNonce` is **monotonic and session-local**:
+
+- It increments exactly once per **completed** avatar arrival — the walker's
+  `finishWalk`, whether the destination is a new anchor or the same anchor
+  after leaving and returning.
+- It never increments from React renders, camera changes, or NPC schedule
+  ticks — those change what is rendered, not what arrived.
+- It lives in session state only; nothing persists it, so a reload restarts
+  at zero and can never replay a flourish.
+
+The testable invariant:
+
+```text
+same arrival + same visible NPC = at most 1 notices-child
+new arrival                     = eligible for 1 new notices-child
+reload                          = no replay
+```
+
+A new arrival (a new nonce) may earn a new cue; the same arrival may never
+re-fire — regardless of re-renders, dwell time, or repeated demand renders.
+
+## One transform owner per group
+
+A figure's transform has exactly **one owner per group node**, composed by
+nesting — never several components independently mutating the same node:
+
+```text
+walk / React props        →  figure placement (position, rotationY props)
+CharacterReact            →  its own group (semantic reaction transform)
+IdleFlourish              →  its own nested group INSIDE CharacterReact
+AvatarLiveliness          →  its own wrapper group around the avatar figure
+local refs (eyes, arm)    →  detail meshes only, owned by the enclosing component
+```
+
+`useWalker` never touches the avatar's scene group — it drives props on
+`models.Figure`, and React applies them. `AvatarLiveliness` may animate only
+its own wrapper's rotation/scale, `IdleFlourish` only its own group's
+lean/offset (plus the eye meshes it discovers below itself). Anything that
+needs to move a figure for a new reason composes a new nested group, not a
+second writer on an existing one — multiple writers on one node is the
+classic way this layer regresses.
 
 ## Where the layers meet
 
