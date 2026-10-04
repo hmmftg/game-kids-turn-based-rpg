@@ -1,8 +1,10 @@
 import type { AnchorId, NpcId } from '../domain/game/types.ts';
+import type { WorldSource } from '../domain/world/source.ts';
 import type {
   AreaId,
   Bounds,
   NpcDefinition,
+  NpcPlacement,
   NpcScheduleSpot,
   NpcSimState,
   WorldArea,
@@ -260,61 +262,88 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
   },
 ];
 
-const AREA_BY_ID = new Map<AreaId, WorldArea>(WORLD_AREAS.map((area) => [area.id, area]));
-const NPC_BY_ID = new Map<NpcId, NpcDefinition>(NPC_DEFINITIONS.map((npc) => [npc.id, npc]));
+// Id lookups are source-parameterized: the same resolvers serve the shipped
+// registries (STATIC_WORLD_SOURCE) and a builder DocumentWorldSource.
+// Derived maps are memoized per table identity so the static path stays free.
+const AREA_BY_ID = new WeakMap<readonly WorldArea[], Map<AreaId, WorldArea>>();
+const NPC_BY_ID = new WeakMap<readonly NpcDefinition[], Map<NpcId, NpcDefinition>>();
 
-export function getArea(id: AreaId): WorldArea {
-  const area = AREA_BY_ID.get(id);
+function areasById(areas: readonly WorldArea[]): Map<AreaId, WorldArea> {
+  let byId = AREA_BY_ID.get(areas);
+  if (!byId) {
+    byId = new Map(areas.map((area) => [area.id, area]));
+    AREA_BY_ID.set(areas, byId);
+  }
+  return byId;
+}
+
+function npcsById(npcs: readonly NpcDefinition[]): Map<NpcId, NpcDefinition> {
+  let byId = NPC_BY_ID.get(npcs);
+  if (!byId) {
+    byId = new Map(npcs.map((npc) => [npc.id, npc]));
+    NPC_BY_ID.set(npcs, byId);
+  }
+  return byId;
+}
+
+export function getArea(source: WorldSource, id: AreaId): WorldArea {
+  const area = areasById(source.areas).get(id);
   if (!area) throw new Error(`Unknown area: ${id}`);
   return area;
 }
 
-export function getNpc(id: NpcId): NpcDefinition {
-  const npc = NPC_BY_ID.get(id);
+export function getNpc(source: WorldSource, id: NpcId): NpcDefinition {
+  const npc = npcsById(source.npcDefinitions).get(id);
   if (!npc) throw new Error(`Unknown NPC: ${id}`);
   return npc;
 }
 
-export function getNpcOrNull(id: string): NpcDefinition | null {
-  return NPC_BY_ID.get(id as NpcId) ?? null;
+export function getNpcOrNull(source: WorldSource, id: string): NpcDefinition | null {
+  return npcsById(source.npcDefinitions).get(id as NpcId) ?? null;
 }
 
 export { insideBounds };
 
 /** The area a world-space point falls inside; null when outside every area. */
-export function areaAt(x: number, z: number): AreaId | null {
-  for (const area of WORLD_AREAS) {
+export function areaAt(source: WorldSource, x: number, z: number): AreaId | null {
+  for (const area of source.areas) {
     if (insideBounds(area.bounds, x, z)) return area.id;
   }
   return null;
 }
 
-export function areaForAnchor(anchorId: AnchorId): AreaId {
-  return getAnchor(anchorId).areaId;
+export function areaForAnchor(source: WorldSource, anchorId: AnchorId): AreaId {
+  return getAnchor(source, anchorId).areaId;
 }
 
-export function npcsForArea(areaId: AreaId): readonly NpcDefinition[] {
-  return NPC_DEFINITIONS.filter((npc) => npc.homeAreaId === areaId);
+export function npcsForArea(source: WorldSource, areaId: AreaId): readonly NpcDefinition[] {
+  return source.npcDefinitions.filter((npc) => npc.homeAreaId === areaId);
 }
 
 /**
  * Areas reachable in one waypoint hop: an edge whose ends live in different
  * areas is the portal between them.
  */
-const ADJACENT_AREAS = (() => {
-  const map = new Map<AreaId, Set<AreaId>>(WORLD_AREAS.map((area) => [area.id, new Set()]));
-  for (const edge of EDGES) {
-    const a = getAnchor(edge.from).areaId;
-    const b = getAnchor(edge.to).areaId;
-    if (a === b) continue;
-    map.get(a)?.add(b);
-    map.get(b)?.add(a);
+const ADJACENT_AREAS = new WeakMap<readonly WorldArea[], Map<AreaId, Set<AreaId>>>();
+
+function adjacentAreas(source: WorldSource): Map<AreaId, Set<AreaId>> {
+  let map = ADJACENT_AREAS.get(source.areas);
+  if (!map) {
+    map = new Map(source.areas.map((area) => [area.id, new Set()]));
+    for (const edge of source.edges) {
+      const a = getAnchor(source, edge.from).areaId;
+      const b = getAnchor(source, edge.to).areaId;
+      if (a === b) continue;
+      map.get(a)?.add(b);
+      map.get(b)?.add(a);
+    }
+    ADJACENT_AREAS.set(source.areas, map);
   }
   return map;
-})();
+}
 
-export function adjacentAreaIds(areaId: AreaId): readonly AreaId[] {
-  return [...(ADJACENT_AREAS.get(areaId) ?? [])];
+export function adjacentAreaIds(source: WorldSource, areaId: AreaId): readonly AreaId[] {
+  return [...(adjacentAreas(source).get(areaId) ?? [])];
 }
 
 /**
@@ -323,8 +352,8 @@ export function adjacentAreaIds(areaId: AreaId): readonly AreaId[] {
  * `visibleAreaIds`; data for every other NPC/area stays in memory but costs
  * nothing per frame.
  */
-export function visibleAreaIds(activeAreaId: AreaId): readonly AreaId[] {
-  return [activeAreaId, ...adjacentAreaIds(activeAreaId)];
+export function visibleAreaIds(source: WorldSource, activeAreaId: AreaId): readonly AreaId[] {
+  return [activeAreaId, ...adjacentAreaIds(source, activeAreaId)];
 }
 
 /**
@@ -345,8 +374,46 @@ export function resolveNpcSpot(npc: NpcDefinition, worldTime: number): NpcSchedu
   return spots[tick % spots.length] ?? null;
 }
 
-export function resolveNpcAnchor(npc: NpcDefinition, worldTime: number): AnchorId {
-  return resolveNpcSpot(npc, worldTime)?.anchorId ?? npc.anchorId;
+/** The NPC's home placement in this source (null when it has none). */
+export function npcHomePlacement(source: WorldSource, npcId: NpcId): NpcPlacement | null {
+  return source.npcPlacements.find((placement) => placement.npcId === npcId) ?? null;
+}
+
+/**
+ * Where the NPC stands: schedule spot when it has one (schedule wins),
+ * otherwise its home placement in this source — a builder-edited placement
+ * relocates an unscheduled NPC everywhere this resolves. Spot offsets apply
+ * on schedule spots; placement offsets apply at home.
+ */
+export function resolveNpcStand(
+  source: WorldSource,
+  npc: NpcDefinition,
+  worldTime: number,
+): { anchorId: AnchorId; offsetX: number; offsetZ: number; spot: NpcScheduleSpot | null } {
+  const spot = resolveNpcSpot(npc, worldTime);
+  if (spot) {
+    return {
+      anchorId: spot.anchorId,
+      offsetX: spot.offsetX ?? 0,
+      offsetZ: spot.offsetZ ?? 0,
+      spot,
+    };
+  }
+  const home = npcHomePlacement(source, npc.id);
+  return {
+    anchorId: home?.anchorId ?? npc.anchorId,
+    offsetX: home?.offsetX ?? 0,
+    offsetZ: home?.offsetZ ?? 0,
+    spot: null,
+  };
+}
+
+export function resolveNpcAnchor(
+  source: WorldSource,
+  npc: NpcDefinition,
+  worldTime: number,
+): AnchorId {
+  return resolveNpcStand(source, npc, worldTime).anchorId;
 }
 
 /**
@@ -357,8 +424,11 @@ export function resolveNpcAnchor(npc: NpcDefinition, worldTime: number): AnchorI
  * every co-located pair distinct; callers add it on top of the authored
  * spot offset so both probes and rendering agree.
  */
-export function npcFigureJitter(npcId: string): { readonly x: number; readonly z: number } {
-  const index = NPC_DEFINITIONS.findIndex((npc) => npc.id === npcId);
+export function npcFigureJitter(
+  source: WorldSource,
+  npcId: string,
+): { readonly x: number; readonly z: number } {
+  const index = source.npcDefinitions.findIndex((npc) => npc.id === npcId);
   const angle = ((index < 0 ? 0 : index) / 8) * Math.PI * 2;
   return { x: Math.cos(angle) * 0.7, z: Math.sin(angle) * 0.7 };
 }
@@ -369,8 +439,14 @@ export function resolveNpcActivity(npc: NpcDefinition, worldTime: number): NpcSi
 }
 
 /** Every NPC physically standing at `anchorId` at `worldTime`. */
-export function npcsAtAnchor(anchorId: AnchorId, worldTime: number): readonly NpcDefinition[] {
-  return NPC_DEFINITIONS.filter((npc) => resolveNpcAnchor(npc, worldTime) === anchorId);
+export function npcsAtAnchor(
+  source: WorldSource,
+  anchorId: AnchorId,
+  worldTime: number,
+): readonly NpcDefinition[] {
+  return source.npcDefinitions.filter(
+    (npc) => resolveNpcAnchor(source, npc, worldTime) === anchorId,
+  );
 }
 
 /**
@@ -378,10 +454,14 @@ export function npcsAtAnchor(anchorId: AnchorId, worldTime: number): readonly Np
  * otherwise a scheduled visitor. Anchors with nobody standing return null —
  * an empty spot is a real part of a routine, so nothing answers there.
  */
-export function npcStandingAt(anchorId: AnchorId, worldTime: number): NpcDefinition | null {
-  const present = npcsAtAnchor(anchorId, worldTime);
+export function npcStandingAt(
+  source: WorldSource,
+  anchorId: AnchorId,
+  worldTime: number,
+): NpcDefinition | null {
+  const present = npcsAtAnchor(source, anchorId, worldTime);
   if (present.length === 0) return null;
-  const resident = getAnchorOrNull(anchorId)?.npcId ?? null;
+  const resident = getAnchorOrNull(source, anchorId)?.npcId ?? null;
   return present.find((npc) => npc.id === resident) ?? present[0] ?? null;
 }
 
@@ -400,3 +480,4 @@ export const WORLD_BOUNDS: Bounds = WORLD_AREAS.reduce(
 // without an areaId is a compile error upstream, and a typo'd areaId fails in
 // content validation.
 void ANCHORS;
+void EDGES;

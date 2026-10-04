@@ -8,6 +8,7 @@ import type { AreaId } from '../domain/world/types.ts';
 import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from '../world/registry.ts';
 import { ANCHORS, EDGES, getAnchorOrNull } from '../world/navigation/graph.ts';
 import { MAP_TRANSITIONS, WORLD_MAPS } from '../world/maps.ts';
+import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
 import { DIALOGUE_NODES } from './fa/dialogue.ts';
 import { hasIcon } from './fa/icons.ts';
 import { NPCS, QUEST_COPY } from './fa/quests.ts';
@@ -277,7 +278,7 @@ function validateWorld(issues: ValidationIssue[]): void {
         message: 'Area bounds are contradictory (min must be below max).',
       });
     }
-    const spawn = getAnchorOrNull(area.spawnAnchorId);
+    const spawn = getAnchorOrNull(STATIC_WORLD_SOURCE, area.spawnAnchorId);
     if (!spawn) {
       issues.push({
         severity: 'error',
@@ -338,7 +339,7 @@ function validateWorld(issues: ValidationIssue[]): void {
         message: 'Map bounds are contradictory (min must be below max).',
       });
     }
-    const spawn = getAnchorOrNull(map.spawnAnchorId);
+    const spawn = getAnchorOrNull(STATIC_WORLD_SOURCE, map.spawnAnchorId);
     if (!spawn || spawn.mapId !== map.id || !spawn.walkable) {
       issues.push({
         severity: 'error',
@@ -358,8 +359,8 @@ function validateWorld(issues: ValidationIssue[]): void {
       });
     }
     transitionIds.add(transition.id);
-    const from = getAnchorOrNull(transition.fromAnchor);
-    const to = getAnchorOrNull(transition.toAnchor);
+    const from = getAnchorOrNull(STATIC_WORLD_SOURCE, transition.fromAnchor);
+    const to = getAnchorOrNull(STATIC_WORLD_SOURCE, transition.toAnchor);
     if (!from || from.mapId !== transition.fromMap || from.transitionId !== transition.id) {
       issues.push({
         severity: 'error',
@@ -379,8 +380,8 @@ function validateWorld(issues: ValidationIssue[]): void {
   }
   // Edges must never cross maps — cross-map travel is transitions only.
   for (const edge of EDGES) {
-    const a = getAnchorOrNull(edge.from);
-    const b = getAnchorOrNull(edge.to);
+    const a = getAnchorOrNull(STATIC_WORLD_SOURCE, edge.from);
+    const b = getAnchorOrNull(STATIC_WORLD_SOURCE, edge.to);
     if (a && b && a.mapId !== b.mapId) {
       issues.push({
         severity: 'error',
@@ -410,7 +411,7 @@ function validateWorld(issues: ValidationIssue[]): void {
         message: `NPC home area ${npc.homeAreaId} does not exist.`,
       });
     }
-    const home = getAnchorOrNull(npc.anchorId);
+    const home = getAnchorOrNull(STATIC_WORLD_SOURCE, npc.anchorId);
     if (!home) {
       issues.push({
         severity: 'error',
@@ -427,7 +428,7 @@ function validateWorld(issues: ValidationIssue[]): void {
       });
     }
     for (const spot of npc.schedule?.spots ?? []) {
-      if (!getAnchorOrNull(spot.anchorId)) {
+      if (!getAnchorOrNull(STATIC_WORLD_SOURCE, spot.anchorId)) {
         issues.push({
           severity: 'error',
           code: 'unknown-anchor',

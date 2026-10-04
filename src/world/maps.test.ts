@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AnchorId } from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from './worldSource.ts';
 import { getMap, MAP_TRANSITIONS, transitionForAnchor, WORLD_MAPS } from './maps.ts';
 import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from './registry.ts';
 
@@ -10,7 +11,7 @@ describe('world map registry', () => {
     const ids = new Set(WORLD_MAPS.map((map) => map.id));
     expect(ids.size).toBe(WORLD_MAPS.length);
     for (const map of WORLD_MAPS) {
-      const spawn = getAnchor(map.spawnAnchorId as AnchorId);
+      const spawn = getAnchor(STATIC_WORLD_SOURCE, map.spawnAnchorId as AnchorId);
       expect(spawn.mapId, `${map.id} spawn`).toBe(map.id);
       expect(spawn.walkable, `${map.id} spawn`).toBe(true);
       expect(insideBounds(map.bounds, spawn.x, spawn.z), `${map.id} spawn`).toBe(true);
@@ -28,7 +29,8 @@ describe('world map registry', () => {
   it('no navigation edge crosses maps — transitions are the only way', () => {
     for (const edge of EDGES) {
       expect(
-        getAnchor(edge.from).mapId === getAnchor(edge.to).mapId,
+        getAnchor(STATIC_WORLD_SOURCE, edge.from).mapId ===
+          getAnchor(STATIC_WORLD_SOURCE, edge.to).mapId,
         `${edge.from}→${edge.to}`,
       ).toBe(true);
     }
@@ -39,13 +41,15 @@ describe('map transitions', () => {
   it('transition ids are unique and both endpoints are real walkable anchors', () => {
     expect(new Set(MAP_TRANSITIONS.map((t) => t.id)).size).toBe(MAP_TRANSITIONS.length);
     for (const transition of MAP_TRANSITIONS) {
-      const from = getAnchor(transition.fromAnchor as AnchorId);
-      const to = getAnchor(transition.toAnchor as AnchorId);
+      const from = getAnchor(STATIC_WORLD_SOURCE, transition.fromAnchor as AnchorId);
+      const to = getAnchor(STATIC_WORLD_SOURCE, transition.toAnchor as AnchorId);
       expect(from.mapId, transition.id).toBe(transition.fromMap);
       expect(from.transitionId, transition.id).toBe(transition.id);
       expect(to.mapId, transition.id).toBe(transition.toMap);
       expect(to.walkable, transition.id).toBe(true);
-      expect(insideBounds(getMap(transition.toMap).bounds, to.x, to.z)).toBe(true);
+      expect(insideBounds(getMap(STATIC_WORLD_SOURCE, transition.toMap).bounds, to.x, to.z)).toBe(
+        true,
+      );
     }
   });
 
@@ -60,9 +64,9 @@ describe('map transitions', () => {
     // The secret is discovered once; the exit is always plain travel.
     expect(enter!.discoveryId).toBe('discovery-cave-entrance');
     expect(exit!.discoveryId).toBeUndefined();
-    expect(transitionForAnchor('anchor-cave-entrance')?.id).toBe(enter!.id);
-    expect(transitionForAnchor('anchor-cave-mouth')?.id).toBe(exit!.id);
-    expect(transitionForAnchor('anchor-square')).toBeNull();
+    expect(transitionForAnchor(STATIC_WORLD_SOURCE, 'anchor-cave-entrance')?.id).toBe(enter!.id);
+    expect(transitionForAnchor(STATIC_WORLD_SOURCE, 'anchor-cave-mouth')?.id).toBe(exit!.id);
+    expect(transitionForAnchor(STATIC_WORLD_SOURCE, 'anchor-square')).toBeNull();
   });
 });
 
@@ -77,12 +81,12 @@ describe('map content ownership', () => {
     expect(caveArea).toBeDefined();
     const caveNpc = NPC_DEFINITIONS.find((n) => n.homeAreaId === 'area-cave');
     expect(caveNpc?.id).toBe('npc-cave-mouse');
-    expect(getAnchor(caveNpc!.anchorId).mapId).toBe('map-cave');
+    expect(getAnchor(STATIC_WORLD_SOURCE, caveNpc!.anchorId).mapId).toBe('map-cave');
   });
 
   it('a quest never mounts on the wrong map: quest.mapId matches its anchor', () => {
     for (const quest of QUEST_DEFINITIONS) {
-      const anchor = getAnchor(quest.anchorId as AnchorId);
+      const anchor = getAnchor(STATIC_WORLD_SOURCE, quest.anchorId as AnchorId);
       expect(anchor.mapId, quest.id).toBe(quest.mapId ?? 'map-town');
     }
     const caveQuests = QUEST_DEFINITIONS.filter((q) => q.mapId === 'map-cave');

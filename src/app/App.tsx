@@ -3,12 +3,13 @@ import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import type { NpcDefinition } from '../domain/world/types.ts';
 import {
   getNpcOrNull,
-  NPC_DEFINITIONS,
   npcFigureJitter,
   npcStandingAt,
   resolveNpcActivity,
   resolveNpcSpot,
+  resolveNpcStand,
 } from '../world/registry.ts';
+import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
@@ -42,6 +43,10 @@ import type { HubHandle } from '../world/Hub.tsx';
 import { getAnchorOrNull } from '../world/navigation/graph.ts';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { useGame } from './gameContext.ts';
+
+// The shipped world: gameplay resolves every anchor/NPC/transition through
+// this one source — the same seam the World Builder swaps for a document.
+const WORLD = STATIC_WORLD_SOURCE;
 
 function nodeForQuest(questId: QuestId): string | null {
   return DIALOGUE_NODES.find((node) => node.offersQuestId === questId)?.id ?? null;
@@ -196,17 +201,18 @@ export function App() {
       w['__worldAttention'] = attention;
       w['__worldDialogueNpc'] = state.dialogue?.npcId ?? null;
       w['__worldNpcs'] = Object.fromEntries(
-        NPC_DEFINITIONS.map((npc) => {
-          const spot = resolveNpcSpot(npc, worldTime);
-          const anchor = getAnchorOrNull(spot?.anchorId ?? npc.anchorId);
+        WORLD.npcDefinitions.map((npc) => {
+          const stand = resolveNpcStand(WORLD, npc, worldTime);
+          const anchor = getAnchorOrNull(WORLD, stand.anchorId);
+          const jitter = npcFigureJitter(WORLD, npc.id);
           return [
             npc.id,
             {
-              anchorId: spot?.anchorId ?? npc.anchorId,
+              anchorId: stand.anchorId,
               activity: resolveNpcActivity(npc, worldTime),
-              dialogueId: spot?.dialogueId ?? npc.dialogueIds[0] ?? null,
-              x: (anchor?.x ?? 0) + 0.9 + (spot?.offsetX ?? 0) + npcFigureJitter(npc.id).x,
-              z: (anchor?.z ?? 0) - 0.4 + (spot?.offsetZ ?? 0) + npcFigureJitter(npc.id).z,
+              dialogueId: stand.spot?.dialogueId ?? npc.dialogueIds[0] ?? null,
+              x: (anchor?.x ?? 0) + 0.9 + stand.offsetX + jitter.x,
+              z: (anchor?.z ?? 0) - 0.4 + stand.offsetZ + jitter.z,
             },
           ];
         }),
@@ -220,7 +226,7 @@ export function App() {
       // Map transitions are resolved from data: an anchor carrying a
       // transitionId either reveals itself once (a found secret persists)
       // or ferries the child to the matching anchor on the other map.
-      const transition = transitionForAnchor(anchor);
+      const transition = transitionForAnchor(WORLD, anchor);
       if (transition) {
         if (transition.discoveryId && !discoveries.includes(transition.discoveryId)) {
           dispatch({ type: 'DISCOVER', discoveryId: transition.discoveryId });
@@ -238,7 +244,7 @@ export function App() {
       // Arriving never opens dialogue — walking and talking are separate
       // actions. Whoever stands at the anchor just notices the child: a
       // brief non-verbal cue (turn/bounce), no card.
-      const present = npcStandingAt(anchor, worldTimeRef.current);
+      const present = npcStandingAt(WORLD, anchor, worldTimeRef.current);
       // A walk the child started by tapping that same NPC already got its
       // acknowledgement — the greet IS the arrival cue; a notices-child on
       // top would be a competing second reaction.
@@ -262,10 +268,9 @@ export function App() {
   // spot can't be walked to.
   const onNpcTap = useCallback(
     (npcId: string) => {
-      const npc = getNpcOrNull(npcId);
+      const npc = getNpcOrNull(WORLD, npcId);
       if (!npc) return;
-      const spot = resolveNpcSpot(npc, worldTimeRef.current);
-      const anchor = (spot?.anchorId ?? npc.anchorId) as AnchorId;
+      const anchor = resolveNpcStand(WORLD, npc, worldTimeRef.current).anchorId;
       // Capture the right entry now (quest offer outranks routine flavour)
       // so the walk itself cannot change which line the child hears.
       const node = nodeForNpc(npc, worldTimeRef.current, statuses);
@@ -294,11 +299,10 @@ export function App() {
         return;
       }
       if ((definition.mapId ?? 'map-town') !== state.mapId) return;
-      const npc = getNpcOrNull(definition.steps[0]?.npcId ?? 'npc-elder');
+      const npc = getNpcOrNull(WORLD, definition.steps[0]?.npcId ?? 'npc-elder');
       // Walk to where the NPC actually stands now (their routine spot), not
       // their home anchor — the camera lands on them, not an empty spot.
-      const spot = npc ? resolveNpcSpot(npc, worldTimeRef.current) : null;
-      const anchorId = (spot?.anchorId ?? npc?.anchorId ?? null) as AnchorId | null;
+      const anchorId = npc ? resolveNpcStand(WORLD, npc, worldTimeRef.current).anchorId : null;
       // A quest chip is navigation, not conversation: walk there and stop.
       // Talking stays the child's choice — a tap on the person opens it.
       if (anchorId) hubRef.current?.goTo(anchorId);
@@ -418,16 +422,17 @@ export function App() {
 
   // Where the child stands on the mounted map: the persisted spot when it
   // belongs to this map (reload replays it), otherwise the map's own spawn.
-  const persistedAnchor = getAnchorOrNull(state.mapAnchorId);
+  const persistedAnchor = getAnchorOrNull(WORLD, state.mapAnchorId);
   const spawnAnchor =
     persistedAnchor && persistedAnchor.mapId === state.mapId
       ? persistedAnchor.id
-      : getMap(state.mapId).spawnAnchorId;
+      : getMap(WORLD, state.mapId).spawnAnchorId;
 
   return (
     <div className="hud" data-testid="hud">
       {state.webglAvailable ? (
         <WorldCanvas
+          world={WORLD}
           avatarId={state.avatarId}
           headwear={state.headwear}
           questStatuses={statuses}

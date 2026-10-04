@@ -309,7 +309,7 @@ export function validateWorldDocument(
       const to = anchorById.get(edge.to);
       if (!from || !to || from.mapId !== map.id || to.mapId !== map.id) continue;
       (neighbours.get(edge.from) ?? neighbours.set(edge.from, []).get(edge.from)!).push(edge.to);
-      (neighbours.get(edge.to) ?? neighbours.set(edge.to, []).get(edge.to)!).push(edge.to);
+      (neighbours.get(edge.to) ?? neighbours.set(edge.to, []).get(edge.to)!).push(edge.from);
     }
     const seen = new Set<AnchorId>([spawn.id]);
     const queue: AnchorId[] = [spawn.id];

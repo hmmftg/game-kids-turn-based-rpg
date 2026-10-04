@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
 import type { AnchorId, QuestId } from '../src/domain/game/types.ts';
 import { ANCHORS, getAnchor } from '../src/world/navigation/graph.ts';
+import { STATIC_WORLD_SOURCE } from '../src/world/worldSource.ts';
 import { findPath } from '../src/world/navigation/pathfinding.ts';
 
 // Interaction ownership: arriving near an NPC only earns their attention —
@@ -310,8 +311,8 @@ export async function tapWorldAnchor(page: Page, anchorId: AnchorId) {
     const at = (await playerAt(page)) as AnchorId | undefined;
     const nowMap = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
     if (startMapId !== undefined && nowMap !== startMapId) return;
-    const goalAnchor = getAnchor(anchorId);
-    const atPos = at ? getAnchor(at) : undefined;
+    const goalAnchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
+    const atPos = at ? getAnchor(STATIC_WORLD_SOURCE, at) : undefined;
     const midPts = atPos ? await groundPointsBetween(page, atPos, goalAnchor) : [];
     const pts = [...midPts, ...(await worldPoints(page, goalAnchor.x, goalAnchor.z))];
     let progressed = false;
@@ -331,10 +332,10 @@ export async function tapWorldAnchor(page: Page, anchorId: AnchorId) {
     if (progressed) continue;
     // Path hop: the child follows the visible path — walk to the next anchor
     // on the authored route toward the target.
-    const goal = getAnchor(anchorId);
-    const path = at ? findPath(at, anchorId) : [];
+    const goal = getAnchor(STATIC_WORLD_SOURCE, anchorId);
+    const path = at ? findPath(STATIC_WORLD_SOURCE, at, anchorId) : [];
     const nextHopId = path.length > 1 ? path[1] : undefined;
-    const nextHop = nextHopId ? getAnchor(nextHopId) : null;
+    const nextHop = nextHopId ? getAnchor(STATIC_WORLD_SOURCE, nextHopId) : null;
     if (!nextHop) break;
     let hopped = false;
     const hopPts = await worldPoints(page, nextHop.x, nextHop.z);
