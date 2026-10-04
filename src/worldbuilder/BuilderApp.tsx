@@ -136,11 +136,25 @@ function Num({
 }
 
 export function BuilderApp() {
-  const [doc, setDoc] = useState<WorldBuilderDocument>(() => documentFromRuntime());
+  // Resume an in-progress draft when one exists — the authoring equivalent
+  // of the game's own continue behaviour (and the hook the acceptance e2e
+  // uses to seed an edited document).
+  const [doc, setDoc] = useState<WorldBuilderDocument>(() => {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (raw) {
+      try {
+        return parseDocument(raw);
+      } catch {
+        // Corrupt drafts fall back to the shipped world.
+      }
+    }
+    return documentFromRuntime();
+  });
   const [mode, setMode] = useState<'edit' | 'play'>('edit');
   const [mapId, setMapId] = useState<MapId>('map-town');
   const [walkerAt, setWalkerAt] = useState<AnchorId | null>(null);
   const [selection, setSelection] = useState<BuilderSelection | null>(null);
+  const [linkTarget, setLinkTarget] = useState<AnchorId | ''>('');
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -201,6 +215,56 @@ export function BuilderApp() {
     },
     [updateAnchor],
   );
+
+  // Creation controls: new areas/anchors are authored, never inferred — a
+  // fresh area starts empty (its spawn is set once real anchors exist), a
+  // fresh anchor lands at its parent area's centre.
+  const addArea = useCallback(() => {
+    const areaId = newId('area') as AreaId;
+    patchDoc((c) => {
+      const fallback = (c.maps.find((m) => m.id === mapId)?.spawnAnchorId ??
+        c.anchors[0]?.id) as AnchorId;
+      return {
+        ...c,
+        areas: [
+          ...c.areas,
+          {
+            id: areaId,
+            mapId,
+            labelFa: areaId,
+            bounds: { minX: 0, maxX: 4, minZ: 0, maxZ: 4 },
+            spawnAnchorId: fallback,
+          },
+        ],
+      };
+    });
+    setSelection({ kind: 'area', id: areaId });
+  }, [mapId, patchDoc]);
+
+  const addAnchor = useCallback(() => {
+    const anchorId = newId('anchor') as AnchorId;
+    patchDoc((c) => {
+      const parent = c.areas.find((a) => a.mapId === mapId) ?? c.areas[0];
+      if (!parent) return c;
+      return {
+        ...c,
+        anchors: [
+          ...c.anchors,
+          {
+            id: anchorId,
+            x: (parent.bounds.minX + parent.bounds.maxX) / 2,
+            z: (parent.bounds.minZ + parent.bounds.maxZ) / 2,
+            walkable: true,
+            areaId: parent.id,
+            mapId,
+            landmarkId: null,
+            labelFa: anchorId,
+          },
+        ],
+      };
+    });
+    setSelection({ kind: 'anchor', id: anchorId });
+  }, [mapId, patchDoc]);
 
   // Play mode walks the compiled source: arriving at a transition anchor
   // hops maps exactly as the game's reducer does.
@@ -302,6 +366,22 @@ export function BuilderApp() {
           data-testid="builder-play"
         >
           Play
+        </button>
+        <button
+          type="button"
+          style={styles.button}
+          onClick={addArea}
+          data-testid="builder-add-area"
+        >
+          + Area
+        </button>
+        <button
+          type="button"
+          style={styles.button}
+          onClick={addAnchor}
+          data-testid="builder-add-anchor"
+        >
+          + Anchor
         </button>
         <label>
           Map{' '}
@@ -405,6 +485,68 @@ export function BuilderApp() {
 
         <div style={styles.inspector} data-testid="builder-inspector">
           <strong>Inspector</strong>
+          <Field label="Inspect">
+            <select
+              style={selectStyle}
+              data-testid="builder-entity-select"
+              value={selection ? JSON.stringify(selection) : ''}
+              onChange={(e) => {
+                setSelection(
+                  e.target.value ? (JSON.parse(e.target.value) as BuilderSelection) : null,
+                );
+              }}
+            >
+              <option value="">—</option>
+              <optgroup label="Maps">
+                {doc.maps.map((m) => (
+                  <option key={m.id} value={JSON.stringify({ kind: 'map', id: m.id })}>
+                    {m.id}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Areas">
+                {doc.areas.map((a) => (
+                  <option key={a.id} value={JSON.stringify({ kind: 'area', id: a.id })}>
+                    {a.id}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Anchors">
+                {doc.anchors.map((a) => (
+                  <option key={a.id} value={JSON.stringify({ kind: 'anchor', id: a.id })}>
+                    {a.id}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Edges">
+                {doc.edges.map((e2) => (
+                  <option
+                    key={`${e2.from}~${e2.to}`}
+                    value={JSON.stringify({ kind: 'edge', from: e2.from, to: e2.to })}
+                  >
+                    {e2.from} → {e2.to}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Transitions">
+                {doc.transitions.map((t) => (
+                  <option key={t.id} value={JSON.stringify({ kind: 'transition', id: t.id })}>
+                    {t.id}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Placements">
+                {doc.npcPlacements.map((p) => (
+                  <option
+                    key={p.npcId}
+                    value={JSON.stringify({ kind: 'placement', npcId: p.npcId })}
+                  >
+                    {p.npcId}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </Field>
           {!selection ? <p style={{ opacity: 0.7 }}>Tap an overlay marker to inspect.</p> : null}
 
           {selectedMap ? (
@@ -646,6 +788,45 @@ export function BuilderApp() {
                   Connect to next
                 </button>
               </div>
+              <Field label="Link edge to">
+                <select
+                  style={selectStyle}
+                  data-testid="builder-link-target"
+                  value={linkTarget}
+                  onChange={(e) => setLinkTarget(e.target.value as AnchorId)}
+                >
+                  <option value="">—</option>
+                  {doc.anchors
+                    .filter((a) => a.id !== selectedAnchor.id && a.mapId === selectedAnchor.mapId)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.id}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  style={styles.button}
+                  data-testid="builder-link-edge"
+                  onClick={() => {
+                    if (!linkTarget) return;
+                    patchDoc((c) => {
+                      const exists = c.edges.some(
+                        (e) =>
+                          (e.from === selectedAnchor.id && e.to === linkTarget) ||
+                          (e.from === linkTarget && e.to === selectedAnchor.id),
+                      );
+                      if (exists) return c;
+                      return {
+                        ...c,
+                        edges: [...c.edges, { from: selectedAnchor.id, to: linkTarget }],
+                      };
+                    });
+                  }}
+                >
+                  Link
+                </button>
+              </Field>
             </>
           ) : null}
 

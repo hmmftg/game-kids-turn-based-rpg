@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
 import type { AnchorId, QuestId } from '../src/domain/game/types.ts';
-import { ANCHORS, getAnchor } from '../src/world/navigation/graph.ts';
+import { getAnchor } from '../src/world/navigation/graph.ts';
 import { STATIC_WORLD_SOURCE } from '../src/world/worldSource.ts';
+import type { WorldSource } from '../src/domain/world/source.ts';
 import { findPath } from '../src/world/navigation/pathfinding.ts';
 
 // Interaction ownership: arriving near an NPC only earns their attention —
@@ -299,7 +300,11 @@ async function waitForArrival(
  * anchor may sit outside the viewport — exactly like a kid, the helper then
  * walks hop-by-hop along the authored path until the target is in view.
  */
-export async function tapWorldAnchor(page: Page, anchorId: AnchorId) {
+export async function tapWorldAnchor(
+  page: Page,
+  anchorId: AnchorId,
+  source: WorldSource = STATIC_WORLD_SOURCE,
+) {
   await waitForProbe(page);
   await dismissDialogue(page);
   const startMapId = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
@@ -311,8 +316,8 @@ export async function tapWorldAnchor(page: Page, anchorId: AnchorId) {
     const at = (await playerAt(page)) as AnchorId | undefined;
     const nowMap = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
     if (startMapId !== undefined && nowMap !== startMapId) return;
-    const goalAnchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
-    const atPos = at ? getAnchor(STATIC_WORLD_SOURCE, at) : undefined;
+    const goalAnchor = getAnchor(source, anchorId);
+    const atPos = at ? getAnchor(source, at) : undefined;
     const midPts = atPos ? await groundPointsBetween(page, atPos, goalAnchor) : [];
     const pts = [...midPts, ...(await worldPoints(page, goalAnchor.x, goalAnchor.z))];
     let progressed = false;
@@ -332,10 +337,10 @@ export async function tapWorldAnchor(page: Page, anchorId: AnchorId) {
     if (progressed) continue;
     // Path hop: the child follows the visible path — walk to the next anchor
     // on the authored route toward the target.
-    const goal = getAnchor(STATIC_WORLD_SOURCE, anchorId);
-    const path = at ? findPath(STATIC_WORLD_SOURCE, at, anchorId) : [];
+    const goal = getAnchor(source, anchorId);
+    const path = at ? findPath(source, at, anchorId) : [];
     const nextHopId = path.length > 1 ? path[1] : undefined;
-    const nextHop = nextHopId ? getAnchor(STATIC_WORLD_SOURCE, nextHopId) : null;
+    const nextHop = nextHopId ? getAnchor(source, nextHopId) : null;
     if (!nextHop) break;
     let hopped = false;
     const hopPts = await worldPoints(page, nextHop.x, nextHop.z);
@@ -355,8 +360,8 @@ export async function tapWorldAnchor(page: Page, anchorId: AnchorId) {
     // Greedy fallback: the authored route may detour around a corner — tap
     // the visible walkable anchor nearest the goal and re-evaluate there.
     const mapId = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
-    const visible: Array<{ a: (typeof ANCHORS)[number]; d: number }> = [];
-    for (const candidate of ANCHORS) {
+    const visible: Array<{ a: WorldSource['anchors'][number]; d: number }> = [];
+    for (const candidate of source.anchors) {
       if (!candidate.walkable) continue;
       if (mapId !== undefined && candidate.mapId !== mapId) continue;
       if (candidate.id === at || tried.has(candidate.id)) continue;
