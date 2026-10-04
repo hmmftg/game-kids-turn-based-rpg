@@ -9,10 +9,11 @@ import './styles/global.css';
 const container = document.getElementById('root');
 if (!container) throw new Error('#root missing');
 
-// Dev-only authoring surface: `?worldbuilder=1` mounts the World Builder
-// instead of the game — no reducer boot, no IndexedDB, separate shell.
-const worldBuilderRequested =
-  import.meta.env.DEV && new URLSearchParams(window.location.search).has('worldbuilder');
+// Authoring surface: `?worldbuilder=1` mounts the World Builder instead of
+// the game — no reducer boot, no IndexedDB, separate shell. Gated on the
+// query param alone (the lazy chunk stays out of the normal game path) so
+// the e2e acceptance run can drive it against the production preview build.
+const worldBuilderRequested = new URLSearchParams(window.location.search).has('worldbuilder');
 const BuilderApp = lazy(() =>
   import('./worldbuilder/BuilderApp.tsx').then((module) => ({ default: module.BuilderApp })),
 );
