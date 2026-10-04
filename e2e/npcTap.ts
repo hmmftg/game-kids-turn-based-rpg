@@ -110,11 +110,15 @@ export async function worldPoints(page: Page, x: number, z: number) {
       );
       if (!canvas) return [];
       const offsets: Array<[number, number]> = [
+        // The anchor itself first — a tap on the exact spot must resolve to
+        // it deterministically (distance 0 wins nearestWalkableAnchor). The
+        // spread offsets exist for occlusion cases only: an offset nearer a
+        // *different* anchor walks there instead.
+        [0, 0],
         [0, -0.8],
         [0.4, -1.2],
         [0.8, -0.4],
         [-0.8, -0.4],
-        [0, 0],
         [0.6, 0.6],
         [-0.6, 0.6],
         [0, 1.2],
@@ -169,9 +173,6 @@ export async function tapNpcFigure(page: Page, npcId: string, timeout = 60000): 
     // Re-probe + re-project between clicks so each tap is honest.
     const pt = points.length > 0 ? (points[(attempt - 1) % points.length] ?? null) : null;
     if (pt === null) {
-      console.log(
-        `tapNpcFigure ${npcId} attempt ${attempt}: npc=${JSON.stringify(npc)} offscreen at=${await playerAt(page)}`,
-      );
       if (Date.now() > deadline) return false;
       await page.waitForTimeout(800);
       continue;
@@ -183,7 +184,6 @@ export async function tapNpcFigure(page: Page, npcId: string, timeout = 60000): 
       .catch(() => false);
     if (opened) {
       const who = await dialogueNpc(page);
-      console.log(`tapNpcFigure ${npcId}: dialogue opened for ${who}`);
       if (who === npcId) return true;
       // Two people can share an anchor — a routine visitor's cylinder
       // can overlap the resident's. Wrong person: leave and try another point.
@@ -289,7 +289,8 @@ async function waitForArrival(
   to: AnchorId,
   mapId: string | undefined,
 ) {
-  for (let i = 0; i < 60; i += 1) {
+  const dialogue = page.getByTestId('npc-dialogue');
+  for (let i = 0; i < 20; i += 1) {
     const [cur, curMap] = await page.evaluate(() => [
       (window as unknown as WorldProbe).__worldAt,
       (window as unknown as WorldProbe).__worldMapId,
@@ -297,8 +298,23 @@ async function waitForArrival(
     // Crossing a map transition counts: transition anchors (cave door) change
     // the map instead of landing on the tapped anchor.
     if (mapId !== undefined && curMap !== mapId) return 'arrived';
-    if (cur === to) return 'arrived';
+    // Standing on the target already: a same-anchor tap re-fires the arrival
+    // instantly (finishWalk), but a click that resolves to a *different*
+    // anchor still reports `to` for ~1s before moving away. Don't credit
+    // 'arrived' on the very first polls — wait until the click's effect can
+    // show (map change, dialogue, or a move).
+    if (cur === to && (cur !== from || i >= 4)) return 'arrived';
     if (cur !== from) return 'moved';
+    // A figure tap is feedback too — the click found a person, so the walk
+    // outcome is settled; don't sit the full poll window on it.
+    if (await dialogue.isVisible().catch(() => false)) return 'dialogue';
+    // Dead point: the click resolved to the anchor the child already stands
+    // on (or hit dead canvas) — no walk was ever issued. Bail fast so the
+    // next candidate point gets a turn instead of burning the full poll.
+    const still = await page.evaluate(
+      () => (window as unknown as WorldProbe).__worldMoving !== true,
+    );
+    if (still && i >= 3) return 'stuck';
     await page.waitForTimeout(500);
   }
   return 'stuck';

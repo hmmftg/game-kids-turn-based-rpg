@@ -36,6 +36,7 @@ import { BOX, CYLINDER, PLANE, sharedGroundMaterial, sharedLambert } from './mod
 import { CharacterReact, Hotspot, type NpcAttention, type WorldSceneHandle } from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
+import { caveEntranceRockPosition, landmarkPosition, NPC_STAND_OFFSET } from './placement.ts';
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
 import { AvatarLiveliness, IdleFlourish } from './livelinessBits.tsx';
@@ -118,12 +119,15 @@ function CaveEntranceRock({
   interactive,
   near,
   onApproach,
+  position,
 }: {
   readonly revealed: boolean;
   readonly interactive: boolean;
   /** Avatar is close enough to notice the secret — fires one shimmer. */
   readonly near: boolean;
   readonly onApproach: () => void;
+  /** Anchor-derived render position (`caveEntranceRockPosition`). */
+  readonly position: readonly [number, number, number];
 }) {
   const rock = sharedLambert('#7d7a82');
   const dark = sharedLambert('#241f2e');
@@ -159,7 +163,7 @@ function CaveEntranceRock({
     onApproach();
   };
   return (
-    <group position={[-12.2, 0, 4.6]} name="cave-entrance" dispose={null}>
+    <group position={position} name="cave-entrance" dispose={null}>
       {/* the rock itself — slightly apart from the walkable anchor in front */}
       <mesh
         geometry={BOX}
@@ -412,8 +416,8 @@ export function Hub({
     if (!visibleAreas.includes(anchor.areaId)) return [];
     if (anchor.mapId !== 'map-town') return [];
     const jitter = npcFigureJitter(world, npc.id);
-    const npcX = anchor.x + 0.9 + stand.offsetX + jitter.x;
-    const npcZ = anchor.z - 0.4 + stand.offsetZ + jitter.z;
+    const npcX = anchor.x + NPC_STAND_OFFSET.x + stand.offsetX + jitter.x;
+    const npcZ = anchor.z + NPC_STAND_OFFSET.z + stand.offsetZ + jitter.z;
     const dx = walker.position.x - npcX;
     const dz = walker.position.z - npcZ;
     // Neighbours turn to watch the player approach: attention is feedback.
@@ -536,7 +540,7 @@ export function Hub({
         .map((anchor) => (
           <models.Landmark
             key={anchor.landmarkId}
-            position={{ x: anchor.x, z: anchor.z - 1.2 }}
+            position={landmarkPosition(anchor)}
             palette={LANDMARK_PALETTE}
             detailLevel={detailLevel}
             variant={landmarkVariant(anchor.landmarkId)}
@@ -667,12 +671,19 @@ export function Hub({
       {/* The park's secret: an ordinary rock with a thin warm crack. Once the
           child has reached it the crack becomes a lit doorway — a persisted
           discovery, never a labelled "enter" button. */}
-      <CaveEntranceRock
-        revealed={discoveries.includes('discovery-cave-entrance')}
-        interactive={interactive}
-        near={nearEntrance}
-        onApproach={() => walkHere('anchor-cave-entrance')}
-      />
+      {entranceAnchor ? (
+        <CaveEntranceRock
+          revealed={discoveries.includes('discovery-cave-entrance')}
+          interactive={interactive}
+          near={nearEntrance}
+          onApproach={() => walkHere('anchor-cave-entrance')}
+          position={[
+            caveEntranceRockPosition(entranceAnchor).x,
+            0,
+            caveEntranceRockPosition(entranceAnchor).z,
+          ]}
+        />
+      ) : null}
 
       {/* Visual path decoration derived from EDGES — read-only, never alters
           anchors, pathfinding, or movement. The cobbled road is meaning (it

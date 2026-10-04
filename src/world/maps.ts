@@ -19,7 +19,10 @@ export const WORLD_MAPS: readonly WorldMapDefinition[] = [
   {
     id: 'map-town',
     labelFa: 'محله',
-    bounds: { minX: -13.5, maxX: 13.5, minZ: -10, maxZ: 9.5 },
+    // Camera clamps its visible footprint inside these bounds minus
+    // `cameraPadding` — the margin is wide enough that every interactive
+    // anchor stays inside the guaranteed-visible rect (see visibility.test).
+    bounds: { minX: -14.5, maxX: 15.5, minZ: -11.5, maxZ: 9.5 },
     spawnAnchorId: 'anchor-square',
     environment: {
       clearColor: '#cfe8ff',
@@ -35,7 +38,7 @@ export const WORLD_MAPS: readonly WorldMapDefinition[] = [
   {
     id: 'map-cave',
     labelFa: 'غار',
-    bounds: { minX: -4.5, maxX: 4.5, minZ: -4, maxZ: 5 },
+    bounds: { minX: -4.5, maxX: 4.5, minZ: -5, maxZ: 5 },
     spawnAnchorId: 'anchor-cave-mouth',
     // Small interior: a tighter default zoom than the open neighbourhood.
     cameraZoom: 72,

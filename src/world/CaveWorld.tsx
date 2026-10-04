@@ -10,6 +10,7 @@ import { getAnchor, getAnchorOrNull } from './navigation/graph.ts';
 import { areaForAnchor, visibleAreaIds } from './registry.ts';
 import { CIRCLE, BOX, CYLINDER, SPHERE, sharedLambert } from './models/shared.ts';
 import { CharacterReact, Hotspot, type NpcAttention, type WorldSceneHandle } from './sceneBits.tsx';
+import { CAVE_MOUSE_OFFSET } from './placement.ts';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
@@ -393,7 +394,9 @@ export function CaveWorld({
       {/* The cave mouse — the map's one resident. Rendered by the shared
           animal slot so a GLB model set supplies it too; grey tint reads
           "mouse", not "cat". */}
-      <group position={[mouseAnchor.x + 0.8, 0, mouseAnchor.z]}>
+      <group
+        position={[mouseAnchor.x + CAVE_MOUSE_OFFSET.x, 0, mouseAnchor.z + CAVE_MOUSE_OFFSET.z]}
+      >
         {/* The mouse is a person too: a tap on the figure talks to it, and
             reaching its spot earns the same one-shot attention cue. */}
         <mesh

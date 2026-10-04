@@ -192,7 +192,7 @@ export const ANCHORS: readonly Anchor[] = [
   },
   {
     id: 'anchor-river-bank',
-    x: 12.6,
+    x: 11.6,
     z: 4.8,
     walkable: true,
     areaId: 'area-river',
@@ -226,7 +226,7 @@ export const ANCHORS: readonly Anchor[] = [
   {
     id: 'anchor-school-yard',
     x: 9.5,
-    z: -8.2,
+    z: -7.6,
     walkable: true,
     areaId: 'area-school',
     mapId: 'map-town',
@@ -238,8 +238,12 @@ export const ANCHORS: readonly Anchor[] = [
   // `transitionId` makes arriving here reveal then enter the cave.
   {
     id: 'anchor-cave-entrance',
-    x: -12.2,
-    z: 3.4,
+    // South of the park↔hill path line so mid-path taps still resolve to
+    // the path anchors, and inside the clamped portrait footprint from the
+    // park stand: at 360px the camera target insets ~4.5u on the west rim,
+    // so the old corner spot (-12.2, 3.4) sat off-canvas from everywhere.
+    x: -11.8,
+    z: 0.9,
     walkable: true,
     areaId: 'area-park',
     mapId: 'map-town',
@@ -274,8 +278,11 @@ export const ANCHORS: readonly Anchor[] = [
   },
   {
     id: 'anchor-cave-crystal',
-    x: 2.2,
-    z: -1.6,
+    // Inside the pinned portrait footprint: map-cave is so small the camera
+    // target clamps to ~map centre at 360px — an east-rim spot would sit
+    // off-canvas (u=(x−z)/√2 > w/2·zoom).
+    x: 1.0,
+    z: -0.8,
     walkable: true,
     areaId: 'area-cave',
     mapId: 'map-cave',
