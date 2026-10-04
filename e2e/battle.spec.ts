@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { resumeFromPicker } from './harness.ts';
 import {
   enableWorldProbe,
   npcProbe,
@@ -125,6 +126,62 @@ test.describe('micro turn-based battle', () => {
     // Leaving mid-battle is always free and returns to the hub.
     await page.getByTestId('leave-battle').click();
     await expect(page.getByTestId('battle-scene')).toHaveCount(0);
+    await expect.poll(async () => battleState(page)).toBeNull();
+  });
+
+  // Session-only: a reload at a stable waiting phase drops the battle
+  // entirely — the child lands back in the hub, never inside a battle.
+  test('a reload during the battle returns to the hub with no battle state', async ({ page }) => {
+    await startGame(page);
+    await tapWorldAnchor(page, 'anchor-path-west');
+    expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
+    await waitForPhase(page, 'playerChoice');
+
+    // Reload lands on the persisted profile picker — never inside the battle.
+    await page.reload();
+    await resumeFromPicker(page);
+    await expect(page.getByTestId('battle-scene')).toHaveCount(0);
+    await expect.poll(async () => battleState(page)).toBeNull();
+  });
+
+  // Rapid/repeated taps must not duplicate actions: one choice per round, so
+  // a burst of taps on the ball still costs the mouse exactly one heart.
+  test('repeated taps on the ball still resolve exactly one action', async ({ page }) => {
+    await startGame(page);
+    await tapWorldAnchor(page, 'anchor-path-west');
+    expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
+    await waitForPhase(page, 'playerChoice');
+
+    // A synchronous burst of taps — all land while the button is still
+    // mounted, so the reducer's one-action-per-round rule is what decides.
+    await page.evaluate(() => {
+      const button = document.querySelector<HTMLElement>('[data-testid="battle-action-ball"]');
+      for (let i = 0; i < 4; i += 1) button?.click();
+    });
+    // The round must first leave playerChoice (the choice committed), then
+    // return to it exactly once — two hearts lost would mean round 3.
+    await expect
+      .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
+      .not.toBe('playerChoice');
+    await waitForPhase(page, 'playerChoice');
+    expect((await battleState(page))?.opponentHearts).toBe(2);
+    expect((await battleState(page))?.round).toBe(2);
+  });
+
+  // Reduced motion removes decoration, not meaning: phases still advance and
+  // the ball still costs a heart — the state change stays perceivable.
+  test('the battle resolves the same under reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await startGame(page);
+    await tapWorldAnchor(page, 'anchor-path-west');
+    expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
+    await waitForPhase(page, 'playerChoice');
+
+    await page.getByTestId('battle-action-ball').click();
+    await waitForPhase(page, 'playerChoice');
+    expect((await battleState(page))?.opponentHearts).toBe(2);
+
+    await page.getByTestId('leave-battle').click();
     await expect.poll(async () => battleState(page)).toBeNull();
   });
 });

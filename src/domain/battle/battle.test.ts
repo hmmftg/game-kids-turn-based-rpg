@@ -3,7 +3,9 @@ import { gameReducer } from '../game/reducer.ts';
 import { createInitialState } from '../game/initialState.ts';
 import type { GameState } from '../game/types.ts';
 import { advanceBattlePhase, chooseBattleAction, createBattle, enemyIntentFor } from './battle.ts';
+import { battleReducer } from './reducer.ts';
 import type { BattleDefinition, BattleState } from './types.ts';
+import { validateBattleDefinition } from './validation.ts';
 
 const DEFINITION: BattleDefinition = {
   battleId: 'battle-playful-mouse',
@@ -113,6 +115,42 @@ describe('battle rules', () => {
     expect(battle.phase).toBe('defeat');
     expect(battle.opponentHearts).toBe(3);
     expect(battle.playerHearts).toBe(3);
+  });
+});
+
+describe('battle reducer', () => {
+  it('delegates the state machine over BattleState | null', () => {
+    expect(battleReducer(null, { type: 'LEAVE_BATTLE' })).toBeNull();
+    expect(battleReducer(null, { type: 'ADVANCE_BATTLE_PHASE' })).toBeNull();
+    const started = battleReducer(null, { type: 'START_BATTLE', definition: DEFINITION });
+    expect(started?.phase).toBe('intro');
+    // Starting over an active battle is a no-op.
+    expect(battleReducer(started, { type: 'START_BATTLE', definition: DEFINITION })).toBe(started);
+    const advanced = battleReducer(started, { type: 'ADVANCE_BATTLE_PHASE' });
+    expect(advanced?.phase).toBe('playerChoice');
+    expect(battleReducer(advanced, { type: 'LEAVE_BATTLE' })).toBeNull();
+  });
+});
+
+describe('battle definition validation', () => {
+  it('winnability counts the cyclic intent pattern, not literal entries', () => {
+    // [rest, attack] over 6 rounds yields three scorable rest rounds — the
+    // validator must reuse the engine's cycling, not count pattern literals.
+    const cyclic: BattleDefinition = {
+      ...DEFINITION,
+      maxRounds: 6,
+      enemyIntentPattern: ['rest', 'attack'],
+    };
+    expect(validateBattleDefinition(cyclic)).toEqual([]);
+    // One rest per two rounds over 3 rounds can never take 3 hearts.
+    const stretched: BattleDefinition = {
+      ...DEFINITION,
+      maxRounds: 3,
+      enemyIntentPattern: ['rest', 'attack'],
+    };
+    expect(validateBattleDefinition(stretched).map((issue) => issue.code)).toContain(
+      'unwinnable-battle',
+    );
   });
 });
 

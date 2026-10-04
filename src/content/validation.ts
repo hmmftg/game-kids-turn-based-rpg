@@ -1,3 +1,4 @@
+import { validateBattleDefinition } from '../domain/battle/validation.ts';
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../domain/quests/definitions.ts';
 import {
   allDialogueReports,
@@ -537,42 +538,14 @@ function validateBattles(issues: ValidationIssue[]): void {
         message: `Battle opponent ${definition.opponentId} has no NPC definition.`,
       });
     }
-    if (definition.hearts <= 0 || definition.maxRounds <= 0) {
+    // Definition-level rules (budget, actions, pattern, winnability over the
+    // cyclic intent pattern) live in the battle domain.
+    for (const issue of validateBattleDefinition(definition)) {
       issues.push({
         severity: 'error',
-        code: 'bad-battle-budget',
+        code: issue.code,
         where: definition.battleId,
-        message: 'Battle hearts and maxRounds must be positive.',
-      });
-    }
-    if (definition.availableActions.length === 0) {
-      issues.push({
-        severity: 'error',
-        code: 'no-battle-actions',
-        where: definition.battleId,
-        message: 'Battle offers the child no actions.',
-      });
-    }
-    if (definition.enemyIntentPattern.length === 0) {
-      issues.push({
-        severity: 'error',
-        code: 'empty-intent-pattern',
-        where: definition.battleId,
-        message: 'Battle intent pattern is empty.',
-      });
-    }
-    // Winnability: scorable rounds (rest + an offered ball action) must be
-    // able to reach zero hearts within the round budget.
-    const restRounds = definition.enemyIntentPattern.filter(
-      (intent, index) => intent === 'rest' && index < definition.maxRounds,
-    ).length;
-    const scorable = definition.availableActions.includes('action-ball') ? restRounds : 0;
-    if (scorable < definition.hearts) {
-      issues.push({
-        severity: 'error',
-        code: 'unwinnable-battle',
-        where: definition.battleId,
-        message: `Battle cannot be won: only ${scorable} rest rounds within ${definition.maxRounds} rounds but ${definition.hearts} hearts to take.`,
+        message: issue.message,
       });
     }
     const copy = BATTLE_COPY.find((entry) => entry.battleId === definition.battleId);

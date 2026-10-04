@@ -1,4 +1,4 @@
-import { advanceBattlePhase, chooseBattleAction, createBattle } from '../battle/battle.ts';
+import { battleReducer } from '../battle/reducer.ts';
 import { advancePhase, applyChoice, createEncounter } from '../quests/encounter.ts';
 import { getQuestDefinition } from '../quests/definitions.ts';
 import { canStartQuest } from '../quests/prerequisites.ts';
@@ -320,22 +320,20 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
 
     case 'START_BATTLE': {
       // Session-only activity: never a Mode, never persisted. Starts only
-      // from a free hub (no battle/encounter/dialogue already running).
+      // from a free hub (no battle/encounter/dialogue already running) —
+      // GameState guards stay here; the transition delegates to the battle
+      // domain reducer like encounters delegate to `quests/encounter.ts`.
       if (state.mode !== 'hub' || state.battle !== null || state.dialogue !== null) return state;
-      return { ...state, battle: createBattle(command.definition) };
-    }
-
-    case 'CHOOSE_BATTLE_ACTION': {
-      if (state.battle === null) return state;
-      const battle = chooseBattleAction(state.battle, command.action);
-      if (battle === state.battle) return state;
+      const battle = battleReducer(state.battle, command);
+      if (battle === state.battle || battle === null) return state;
       return { ...state, battle };
     }
 
+    case 'CHOOSE_BATTLE_ACTION':
     case 'ADVANCE_BATTLE_PHASE': {
       if (state.battle === null) return state;
-      const battle = advanceBattlePhase(state.battle);
-      if (battle === state.battle) return state;
+      const battle = battleReducer(state.battle, command);
+      if (battle === state.battle || battle === null) return state;
       return { ...state, battle };
     }
 
@@ -343,7 +341,12 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // The only exit — victory/defeat are terminal battle states, leaving
       // returns to a plain hub with nothing persisted and nothing replayed.
       if (state.battle === null) return state;
-      return { ...state, battle: null, mode: 'hub', resumeMode: 'hub' };
+      return {
+        ...state,
+        battle: battleReducer(state.battle, command),
+        mode: 'hub',
+        resumeMode: 'hub',
+      };
     }
 
     case 'PAUSE':

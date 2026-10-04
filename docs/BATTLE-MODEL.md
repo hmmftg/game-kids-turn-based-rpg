@@ -64,6 +64,13 @@ failure — defeat only when the round limit expires.
   budgets, non-empty actions/pattern, definition↔copy bidirectionality,
   **winnability** (rest rounds within the budget must reach zero hearts via
   an offered ball action), and the usual child-copy text rules.
+  Definition-level rules live in `src/domain/battle/validation.ts`
+  (`validateBattleDefinition`); winnability reuses `enemyIntentFor`, so the
+  pattern **cycles** — `[rest, attack]` over 6 rounds yields three scorable
+  rounds, not one literal entry. `src/domain/battle/reducer.ts`
+  (`battleReducer` over `BattleState | null`) is the seam the game reducer
+  delegates `START_BATTLE`/`CHOOSE_BATTLE_ACTION`/`ADVANCE_BATTLE_PHASE`/
+  `LEAVE_BATTLE` to — same shape as the encounter delegation.
 - The playful mouse (`npc-playful-mouse`, fountain) is the MVP opponent —
   `archetype: 'critter'`, rendered through the animal slot in `Hub.tsx`
   like the cave mouse (a separate, untouched character). Its pattern is
