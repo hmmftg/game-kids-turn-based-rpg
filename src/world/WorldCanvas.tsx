@@ -112,6 +112,9 @@ export interface WorldCanvasProps {
   readonly worldTime?: number;
   /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
   readonly attention?: NpcAttention | null;
+  /** Arrival identity — increments once per avatar arrival; arrival-driven
+      presentation liveliness keys off it. */
+  readonly arrivalNonce?: number;
   readonly onContextLost: () => void;
   readonly handleRef?: Ref<HubHandle>;
   /** Extra scene content (World Builder overlays in edit mode). */
@@ -133,6 +136,7 @@ export function WorldCanvas({
   onNpcTap,
   worldTime,
   attention,
+  arrivalNonce,
   onContextLost,
   handleRef,
   overlays,
@@ -239,6 +243,7 @@ export function WorldCanvas({
               onNpcTap={onNpcTap}
               worldTime={worldTime}
               attention={attention}
+              arrivalNonce={arrivalNonce}
               handleRef={handleRef}
             />
           )}

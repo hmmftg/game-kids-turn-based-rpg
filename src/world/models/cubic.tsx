@@ -305,7 +305,10 @@ function Hair({
 function Face({ lift, level }: { readonly lift: number; readonly level: DetailLevel }) {
   return (
     <Detail level={level} min={1}>
+      {/* `face-eye` names let the presentation-liveliness layer blink the
+          eyes without touching the figure contract. */}
       <mesh
+        name="face-eye"
         geometry={BOX}
         material={sharedLambert('#33303a')}
         position={[-0.09, 1.2 + lift, 0.2]}
@@ -313,6 +316,7 @@ function Face({ lift, level }: { readonly lift: number; readonly level: DetailLe
         raycast={noRaycast}
       />
       <mesh
+        name="face-eye"
         geometry={BOX}
         material={sharedLambert('#33303a')}
         position={[0.09, 1.2 + lift, 0.2]}

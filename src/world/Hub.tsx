@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
@@ -38,6 +38,9 @@ import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
+import { AvatarLiveliness, IdleFlourish } from './livelinessBits.tsx';
+import { activityPoseFor, idleCueFor } from './liveliness.ts';
+import { resolveNpcActivity } from './registry.ts';
 import { publishCameraFocus } from './CameraRig.tsx';
 import {
   AVATAR_VISUALS,
@@ -72,6 +75,13 @@ export interface HubProps {
   readonly worldTime?: number | undefined;
   /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
   readonly attention?: NpcAttention | null | undefined;
+  /**
+   * Arrival identity: increments exactly once per avatar arrival. Every
+   * arrival-triggered behaviour keys off it, so a given arrival produces at
+   * most one flourish per target regardless of rerenders, dwell, or demand
+   * renders.
+   */
+  readonly arrivalNonce?: number | undefined;
   readonly handleRef: Ref<HubHandle> | undefined;
 }
 
@@ -362,6 +372,7 @@ export function Hub({
   onNpcTap,
   worldTime = 0,
   attention,
+  arrivalNonce = 0,
   handleRef,
 }: HubProps) {
   const models = useModels();
@@ -390,6 +401,66 @@ export function Hub({
     const areaId = areaAt(world, x, z);
     return areaId !== null && visibleAreas.includes(areaId);
   };
+
+  // Mounted NPC figures, resolved once per render — the glance target lookup
+  // reads this same list (one pass, no per-frame nearest-NPC search).
+  const npcFigures = world.npcDefinitions.flatMap((npc, index) => {
+    const stand = resolveNpcStand(world, npc, worldTime);
+    const spot = stand.spot;
+    const anchor = getAnchorOrNull(world, stand.anchorId);
+    if (!anchor) return [];
+    if (!visibleAreas.includes(anchor.areaId)) return [];
+    if (anchor.mapId !== 'map-town') return [];
+    const jitter = npcFigureJitter(world, npc.id);
+    const npcX = anchor.x + 0.9 + stand.offsetX + jitter.x;
+    const npcZ = anchor.z - 0.4 + stand.offsetZ + jitter.z;
+    const dx = walker.position.x - npcX;
+    const dz = walker.position.z - npcZ;
+    // Neighbours turn to watch the player approach: attention is feedback.
+    // From afar they keep the pose authored on their routine spot.
+    const facing = Math.hypot(dx, dz) < 6 ? Math.atan2(dx, dz) : (spot?.facing ?? 0);
+    const look = npcLook(npc.id);
+    const cue = idleCueFor(index, worldTime);
+    return [
+      {
+        npc,
+        spot,
+        npcX,
+        npcZ,
+        facing,
+        look,
+        // Critters have no face-eye meshes — a head-dip reads as the same
+        // beat; the flourish falls back automatically.
+        cue,
+        pose: activityPoseFor(resolveNpcActivity(npc, worldTime)),
+      },
+    ];
+  });
+
+  // Avatar glance: the look-target is resolved at the settle render —
+  // renders are event-driven, so this is one lookup per arrival, never a
+  // per-frame nearest-NPC search. Nearest mounted NPC figure within a short
+  // radius wins; nobody nearby → no glance.
+  const glanceHeading = useMemo(() => {
+    if (arrivalNonce === 0 || walker.moving) return null;
+    let best: number | null = null;
+    let bestDist = 3.5;
+    const px = walker.position.x;
+    const pz = walker.position.z;
+    for (const figure of npcFigures) {
+      const dx = figure.npcX - px;
+      const dz = figure.npcZ - pz;
+      const dist = Math.hypot(dx, dz);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = Math.atan2(dx, dz);
+      }
+    }
+    return best;
+    // npcFigures is rebuilt every render — deliberately not a dep: the
+    // settled position at this arrival is the only snapshot the glance uses.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrivalNonce, walker.moving, walker.position.x, walker.position.z]);
   // Proximity cue for the secret: the rock shimmers once when the child
   // wanders close — discoverable by exploration, not by a marker.
   const playerAnchor = getAnchor(world, walker.at);
@@ -499,22 +570,7 @@ export function Hub({
           visible area mount a figure — schedules resolve standpoints as a
           deterministic function of world time, so idle NPCs cost
           nothing and `frameloop="demand"` is untouched. */}
-      {world.npcDefinitions.map((npc) => {
-        const stand = resolveNpcStand(world, npc, worldTime);
-        const spot = stand.spot;
-        const anchor = getAnchorOrNull(world, stand.anchorId);
-        if (!anchor) return null;
-        if (!visibleAreas.includes(anchor.areaId)) return null;
-        if (anchor.mapId !== 'map-town') return null;
-        const jitter = npcFigureJitter(world, npc.id);
-        const npcX = anchor.x + 0.9 + stand.offsetX + jitter.x;
-        const npcZ = anchor.z - 0.4 + stand.offsetZ + jitter.z;
-        const dx = walker.position.x - npcX;
-        const dz = walker.position.z - npcZ;
-        // Neighbours turn to watch the player approach: attention is feedback.
-        // From afar they keep the pose authored on their routine spot.
-        const facing = Math.hypot(dx, dz) < 6 ? Math.atan2(dx, dz) : (spot?.facing ?? 0);
-        const look = npcLook(npc.id);
+      {npcFigures.map(({ npc, spot, npcX, npcZ, facing, look, cue, pose }) => {
         return (
           <group key={npc.id}>
             {/* Invisible-but-tappable hit cylinder: a tap on the person
@@ -542,29 +598,35 @@ export function Hub({
                 context={attention?.context ?? 'notices-child'}
                 armColor={look.palette.limb}
               >
-                {/* Critters (the fountain mouse) take the animal slot like the
-                    cave mouse; people take the humanoid figure. Same tap,
-                    same attention cue — only the body differs. */}
-                {npc.archetype === 'critter' ? (
-                  <group rotation={[0, facing, 0]}>
-                    <models.Animal
-                      variant="cat"
-                      tint={look.palette.body}
+                {/* Presentation liveliness lives inside the semantic wrapper
+                    deliberately: idle cues and the held activity pose are
+                    uninstrumented polish — `worldTime` is the tick trigger,
+                    never a permanent loop. */}
+                <IdleFlourish nonce={worldTime} cue={cue} pose={pose}>
+                  {/* Critters (the fountain mouse) take the animal slot like the
+                      cave mouse; people take the humanoid figure. Same tap,
+                      same attention cue — only the body differs. */}
+                  {npc.archetype === 'critter' ? (
+                    <group rotation={[0, facing, 0]}>
+                      <models.Animal
+                        variant="cat"
+                        tint={look.palette.body}
+                        detailLevel={detailLevel}
+                      />
+                    </group>
+                  ) : (
+                    <models.Figure
+                      position={{ x: 0, z: 0 }}
+                      rotationY={facing}
+                      palette={look.palette}
+                      hairStyle={look.hairStyle}
+                      hairColor={look.hairColor}
+                      label={npc.id}
                       detailLevel={detailLevel}
+                      role={look.role}
                     />
-                  </group>
-                ) : (
-                  <models.Figure
-                    position={{ x: 0, z: 0 }}
-                    rotationY={facing}
-                    palette={look.palette}
-                    hairStyle={look.hairStyle}
-                    hairColor={look.hairColor}
-                    label={npc.id}
-                    detailLevel={detailLevel}
-                    role={look.role}
-                  />
-                )}
+                  )}
+                </IdleFlourish>
               </CharacterReact>
             </group>
             {spot?.prop ? (
@@ -689,19 +751,24 @@ export function Hub({
         ))}
       </group>
 
-      <models.Figure
-        position={walker.position}
-        rotationY={walker.heading}
-        bobbing={walker.bobbing}
-        moving={walker.moving}
-        palette={AVATAR_VISUALS[avatarId].palette}
-        headwear={headwear}
-        hairStyle={AVATAR_VISUALS[avatarId].hairStyle}
-        hairColor={AVATAR_VISUALS[avatarId].hairColor}
-        label="avatar"
-        detailLevel={detailLevel}
-        role="avatar"
-      />
+      {/* Avatar arrival flourish: one bounded settle → glance → blink chain
+          per arrivalNonce — presentation only, uninstrumented, quiet again
+          when it ends. */}
+      <AvatarLiveliness arrivalNonce={arrivalNonce} glanceHeading={glanceHeading}>
+        <models.Figure
+          position={walker.position}
+          rotationY={walker.heading}
+          bobbing={walker.bobbing}
+          moving={walker.moving}
+          palette={AVATAR_VISUALS[avatarId].palette}
+          headwear={headwear}
+          hairStyle={AVATAR_VISUALS[avatarId].hairStyle}
+          hairColor={AVATAR_VISUALS[avatarId].hairColor}
+          label="avatar"
+          detailLevel={detailLevel}
+          role="avatar"
+        />
+      </AvatarLiveliness>
     </group>
   );
 }

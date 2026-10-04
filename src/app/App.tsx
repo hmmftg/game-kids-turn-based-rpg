@@ -141,6 +141,13 @@ export function App() {
   // attention cue. `nonce` replays the cue on repeat arrivals.
   const [attention, setAttention] = useState<NpcAttention | null>(null);
   const attentionNonceRef = useRef(0);
+  // Arrival identity: increments exactly once per avatar arrival. Every
+  // arrival-triggered behaviour (avatar flourish, NPC idle cue via the
+  // world-time tick, notices-child) keys off this or the tick, so a given
+  // arrival produces at most one cue per target regardless of rerenders,
+  // dwell time, or repeated demand renders.
+  const [arrivalNonce, setArrivalNonce] = useState(0);
+  const arrivalNonceRef = useRef(0);
   const suppressNoticeForRef = useRef<string | null>(null);
   const previousCompletedRef = useRef<number | null>(null);
   // Highest checkpoint timestamp observed this session. Persisted checkpoints
@@ -235,6 +242,10 @@ export function App() {
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
       playSfx('sfx-arrive');
+      // Every avatar arrival gets exactly one identity — exploration walks
+      // and walk-to-talk arrivals alike.
+      arrivalNonceRef.current += 1;
+      setArrivalNonce(arrivalNonceRef.current);
       // Map transitions are resolved from data: an anchor carrying a
       // transitionId either reveals itself once (a found secret persists)
       // or ferries the child to the matching anchor on the other map.
@@ -268,6 +279,9 @@ export function App() {
           npcId: present.id,
           nonce: attentionNonceRef.current,
           context: 'notices-child',
+          // The noticing belongs to THIS arrival — at most one
+          // notices-child per (arrival, npc), provable in e2e.
+          arrivalNonce: arrivalNonceRef.current,
         });
       }
     },
@@ -470,6 +484,7 @@ export function App() {
           onArrive={onArrive}
           onNpcTap={onNpcTap}
           worldTime={worldTime}
+          arrivalNonce={arrivalNonce}
           onContextLost={() => dispatch({ type: 'WEBGL_AVAILABILITY_CHANGED', available: false })}
           handleRef={hubRef}
           mapId={state.mapId}
