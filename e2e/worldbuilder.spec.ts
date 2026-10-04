@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { startGame } from './harness.ts';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -166,5 +167,23 @@ test.describe('world builder acceptance', () => {
     await expect.poll(() => currentMap(page), { timeout: 30000 }).toBe('map-cave');
     await waitForWalkerIdle(page);
     expect(await playerAt(page)).toBe('anchor-cave-mouth');
+  });
+
+  // The parent menu offers the builder to adults only: behind the
+  // press-and-hold gate, a tools entry navigates to `?worldbuilder=1`.
+  test('the parent area opens the world builder', async ({ page }) => {
+    await startGame(page);
+    await page.getByTestId('pause-button').click();
+    await page.getByTestId('parent-entry-pause').click();
+    const hold = await page.getByTestId('parent-gate-hold').boundingBox();
+    if (!hold) throw new Error('parent-gate-hold has no bounding box');
+    await page.mouse.move(hold.x + hold.width / 2, hold.y + hold.height / 2);
+    await page.mouse.down();
+    await page.getByTestId('parent-area').waitFor({ timeout: 8000 });
+    await page.mouse.up();
+
+    await page.getByTestId('open-worldbuilder').click();
+    await expect(page.getByTestId('worldbuilder-app')).toBeVisible();
+    expect(page.url()).toContain('worldbuilder=1');
   });
 });
