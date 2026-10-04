@@ -400,8 +400,9 @@ export function CaveWorld({
           position={[0, 0.6, 0]}
           onClick={(event: ThreeEvent<MouseEvent>) => {
             if (!interactive || event.delta > 6) return;
+            if (!onNpcTap) return;
             event.stopPropagation();
-            onNpcTap?.('npc-cave-mouse');
+            onNpcTap('npc-cave-mouse');
           }}
         >
           <cylinderGeometry args={[0.7, 0.7, 1.4, 8]} />

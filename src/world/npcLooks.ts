@@ -88,6 +88,13 @@ export const NPC_LOOKS: Readonly<Record<string, NpcLook>> = {
     hairStyle: 'short',
     hairColor: '#5a5260',
   },
+  // The fountain mouse — same animal slot as the cave mouse, a warmer brown
+  // so the two critters never read as the same character.
+  'npc-playful-mouse': {
+    palette: { body: '#a98a6b', head: '#c2a583', limb: '#8a6e52' },
+    hairStyle: 'short',
+    hairColor: '#6e563e',
+  },
 };
 
 export function npcLook(npcId: NpcId): NpcLook {

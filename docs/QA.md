@@ -107,6 +107,18 @@ map ownership of cave content, `DISCOVER`/`CHANGE_MAP` reducer semantics, and sa
 round-trips (old saves default to town). Canvas-tap tests are landscape-only — a portrait
 viewport can leave the rock outside the tappable canvas, which `tapWorld` skips cleanly.
 
+## Battle QA (PR I)
+
+`e2e/battle.spec.ts` drives the micro battle end to end: tap the playful mouse's
+figure → `battle-scene` mounts → intro auto-plays to `playerChoice` → ball taps
+take one heart per round → terminal `victory` → `battle-continue` returns to a
+plain hub with `__worldBattleState === null`. A second test asserts input
+ownership (the pause button sits under the overlay), the harmless cushion, and
+mid-battle leave. `src/domain/battle/battle.test.ts` covers the outcome matrix,
+final-round precedence (hearts beat the round counter), terminal states, the
+reducer's blocked-commands guard, and `LEAVE_BATTLE` semantics. Probe fields:
+`__worldBattleState`, `__worldBattleEvents` (`phase@round` rows + `end`).
+
 ## Kid-testing protocol (manual)
 
 The automated suites prove technical correctness, not comprehension. When validating UX changes

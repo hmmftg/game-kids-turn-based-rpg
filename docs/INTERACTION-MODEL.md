@@ -86,6 +86,15 @@ stays physically where it is. One-shot CSS (`scene-exec-*` keyframes), frozen un
   an icon row anywhere.
 - Instructional text stays minimal (step text ≤9 words, prompts ≤6 — enforced by kidUx tests).
 
+## Battle ownership (PR I)
+
+A battle is a self-contained interaction owner: while `GameState.battle !== null`
+the `BattleScene` overlay covers world input, the quest trail and pause — the
+only exits are the physical actions (ball/cushion, one per round) and the leave
+button (`LEAVE_BATTLE`). The reducer enforces the same boundary. Launch is a
+deliberate figure tap on the opponent NPC only; arrival never starts it. Details:
+`docs/BATTLE-MODEL.md`.
+
 ## Interaction budget (hard validator)
 
 `src/domain/quests/interactionSteps.ts` counts **mandatory child actions** on the interaction

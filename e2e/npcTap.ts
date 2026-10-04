@@ -12,6 +12,14 @@ import { findPath } from '../src/world/navigation/pathfinding.ts';
 
 export interface WorldProbe {
   __worldDialogueNpc?: string | null;
+  __worldBattleState?: {
+    battleId: string;
+    phase: string;
+    round: number;
+    playerHearts: number;
+    opponentHearts: number;
+  } | null;
+  __worldBattleEvents?: Array<{ mark: string; battle: unknown }>;
   __worldMapId?: string;
   __worldAt?: string;
   __worldDiscoveries?: string[];

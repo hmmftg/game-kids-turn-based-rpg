@@ -36,6 +36,13 @@ services ───────────┘         world/ (R3F hub)
   only a real tap on the concrete object fires `CHOOSE`.
 - **Commands**: child taps dispatch `CHOOSE(iconId, correct)` — interaction visuals are
   _implementation details on top_, never a second action system.
+- **Battle machine** (`domain/battle/`): session-only `GameState.battle` (never persisted,
+  never a `Mode`). `intro → playerChoice → playerResolution → enemyResolution →
+roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit only via
+  `LEAVE_BATTLE`. Deterministic outcome matrix, one child action/round. While
+  `battle !== null` the reducer blocks `OPEN_DIALOGUE`/`START_QUEST`/`CHANGE_MAP`/
+  `DISCOVER`/`PAUSE`/`SWITCH_PLAYER` — battle input ownership is enforced in the
+  UI overlay _and_ the domain. Full contract: `docs/BATTLE-MODEL.md`.
 - **Persistence**: versioned schema, corrupt → fresh state (never deletes payload), checkpoint
   watermarks prevent celebration replays on hydration.
 - **Rendering**: `frameloop="demand"`, orthographic camera, raycast only on ground/hotspot rings,

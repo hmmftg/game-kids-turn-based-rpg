@@ -40,6 +40,7 @@ export type SceneElement =
   | 'bread'
   | 'book'
   | 'ball'
+  | 'cushion'
   | 'crystal'
   | 'mouse';
 
@@ -224,6 +225,15 @@ function renderElement(element: SceneElement) {
         <>
           <circle cx="24" cy="30" r="10" {...stroke} />
           <path d="M14 30h20M24 20v20" {...stroke} opacity={0.6} />
+          {GROUND_LINE}
+        </>
+      );
+    case 'cushion':
+      // the soft cushion — a rounded pillow the child holds up in play
+      return (
+        <>
+          <rect x="12" y="18" width="24" height="20" rx="7" {...stroke} />
+          <path d="M18 24h12M18 30h12" {...stroke} opacity={0.5} />
           {GROUND_LINE}
         </>
       );

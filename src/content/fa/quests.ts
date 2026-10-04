@@ -31,6 +31,7 @@ export const NPCS: readonly NpcCopy[] = [
   { npcId: 'npc-child-sara', nameFa: 'سارا', roleFa: 'هم‌بازی پارک' },
   { npcId: 'npc-fisher', nameFa: 'ماهیگیر', roleFa: 'کنار رودخانه' },
   { npcId: 'npc-cave-mouse', nameFa: 'موش غار', roleFa: 'ته غار' },
+  { npcId: 'npc-playful-mouse', nameFa: 'موش بازیگوش', roleFa: 'کنار حوض' },
 ];
 
 export const QUEST_COPY: readonly QuestCopy[] = [
