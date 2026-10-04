@@ -397,6 +397,11 @@ export function App() {
           onRenameProfile={renameProfile}
           onDeleteProfile={deleteProfile}
           onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
+          onOpenWorldBuilder={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('worldbuilder', '1');
+            window.location.assign(url.toString());
+          }}
           updateReady={updateReady}
           onApplyUpdate={applyUpdate}
           installReady={installReady}

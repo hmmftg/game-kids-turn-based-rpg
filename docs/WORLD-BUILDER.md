@@ -64,7 +64,9 @@ only** (non-walkable anchors and transitions excluded).
 ## Using the builder
 
 Open `/?worldbuilder=1` (a plain query-param mount — works on the preview
-build, no dev flag). The toolbar offers Edit/Play, `+ Area`, `+ Anchor`,
+build, no dev flag), or use the «ابزارهای ساخت» section of the parent area
+(behind the press-and-hold gate — pause → parent entry → hold) which
+navigates to the same URL. The toolbar offers Edit/Play, `+ Area`, `+ Anchor`,
 a map selector, draft save/load (localStorage `worldbuilder.doc.v1`),
 JSON export/import, and reset. The inspector edits the selected entity;
 the viewport overlay renders the document (areas, anchors, edges,

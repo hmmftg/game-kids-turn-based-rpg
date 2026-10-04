@@ -36,6 +36,7 @@ export function ParentArea({
   onRenameProfile,
   onDeleteProfile,
   onQualityChange,
+  onOpenWorldBuilder,
   updateReady,
   onApplyUpdate,
   installReady,
@@ -52,6 +53,8 @@ export function ParentArea({
   /** Removes the profile card AND its save slot entirely. */
   readonly onDeleteProfile: (id: string) => void;
   readonly onQualityChange: (tier: QualityTier) => void;
+  /** Navigates to the `?worldbuilder=1` authoring tool. */
+  readonly onOpenWorldBuilder: () => void;
   readonly updateReady: boolean;
   readonly onApplyUpdate: () => void;
   readonly installReady: boolean;
@@ -114,6 +117,19 @@ export function ParentArea({
         <section>
           <h3 className="subtitle">{FA.parentPrivacy}</h3>
           <p className="text text--soft">{FA.privacyBody}</p>
+        </section>
+
+        <section data-testid="parent-tools">
+          <h3 className="subtitle">{FA.parentTools}</h3>
+          <p className="text text--soft">{FA.worldBuilderHint}</p>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={onOpenWorldBuilder}
+            data-testid="open-worldbuilder"
+          >
+            {FA.worldBuilderOpen}
+          </button>
         </section>
 
         <section>
