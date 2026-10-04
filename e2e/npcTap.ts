@@ -28,6 +28,7 @@ export interface WorldProbe {
     npcId: string;
     nonce: number;
     context: 'notices-child' | 'greets-child';
+    arrivalNonce?: number;
   } | null;
   __worldAnimationEvents?: Array<{
     type:
@@ -301,6 +302,23 @@ async function waitForArrival(
     await page.waitForTimeout(500);
   }
   return 'stuck';
+}
+
+/**
+ * Taps one exact world point. No hop-by-hop walking: the caller picks a spot
+ * whose nearest walkable anchor is the intended destination — used when the
+ * arrival itself is under test (a locked hotspot's tap zone intentionally
+ * swallows clicks, so anchor centers are not always safe tap points).
+ */
+export async function tapWorldGround(page: Page, x: number, z: number) {
+  await waitForProbe(page);
+  const point = await page.evaluate(
+    ({ wx, wz }: { wx: number; wz: number }) =>
+      (window as unknown as WorldProbe).__worldToScreen?.(wx, wz) ?? null,
+    { wx: x, wz: z },
+  );
+  if (!point) throw new Error(`worldToScreen missing for (${x}, ${z})`);
+  await page.mouse.click(point.x, point.y);
 }
 
 /**

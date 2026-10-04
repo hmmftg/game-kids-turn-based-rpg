@@ -85,6 +85,18 @@ zero rings, marks, badges, and copy.
 
 ## Scalable world QA
 
+`e2e/liveliness.spec.ts` covers the presentation-liveliness contract
+(`docs/LIVING-WORLD.md`): one arrival produces at most one `notices-child` per
+NPC (`arrivalNonce` identity), dwell never repeats, a second arrival earns a
+fresh cue, idle flourishes/poses never enter `__worldAnimationEvents`,
+`active === 0` after settling, reduced motion drops flourish motion but keeps
+meaning, and reload never replays arrival liveliness. For arrival assertions
+prefer `tapWorldGround(page, x, z)` — a single exact ground tap. Anchor centers
+are not always safe tap points: a locked quest hotspot's tap zone intentionally
+swallows clicks (`stopPropagation` with `active === false`), so a tap meant to
+walk somewhere must land on open ground whose nearest walkable anchor is the
+intended destination.
+
 `e2e/areas.spec.ts` covers the world-growth scenario: multiple areas/NPCs in the world data,
 multi-beat dialogue + a branch choice through the quest trail, leave/return persistence, and
 the full area-activity chain — every expanded-area quest (park kite, river shell, market

@@ -21,6 +21,12 @@ export interface NpcAttention {
   readonly nonce: number;
   /** Closed CharacterReact vocabulary for world reactions. */
   readonly context: 'notices-child' | 'greets-child';
+  /**
+   * Arrival identity the cue belongs to, when it is an arrival reaction.
+   * Invariant: a given avatar arrival produces at most one `notices-child`
+   * per NPC, regardless of rerenders, dwell, or demand renders.
+   */
+  readonly arrivalNonce?: number | undefined;
 }
 
 export interface WorldSceneHandle {

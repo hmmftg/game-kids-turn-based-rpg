@@ -100,6 +100,10 @@ completedAt}` per semantic instance.
   timestamps (not timers). Counts **only** new-layer semantic instances — never passive
   CSS transitions, audio, ambient critters, or camera follow.
 
+Presentation liveliness — blinks, idle cues, settle/glance flourishes, held activity
+poses — is bounded visual polish and is **never** recorded here; the stream answers
+"what semantic thing happened?", not "what moved?". See `docs/LIVING-WORLD.md`.
+
 Assertion: `active === 0` after each semantic episode completes, before the next
 interaction. Post-consequence HUD decoration is outside this metric. There is zero
 animation-driven rendering when idle — no permanent animation loop may exist solely to

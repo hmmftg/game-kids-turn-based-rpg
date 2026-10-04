@@ -195,6 +195,7 @@ The child's interaction language is **the physical thing**, never an action icon
 - **Never add replacement animation for its own sake.** Removing a marker adds nothing — `remove marker → nothing added` is correct.
 - **`?kidtest=noactionicons`** strips every non-physical affordance; physical state (the actually-held object) remains. Compose with `nocopy` for the full semantic-comprehension mode.
 - **Instrumentation:** semantic episodes record to `window.__worldAnimationEvents`/`__worldAnimationStats` (dev/probe only); `active === 0` must hold after every episode — no permanent loop exists just to keep a cue alive.
+- **Presentation liveliness is not semantic.** Bounded idle cues, blinks, settle/glance flourishes, and activity poses (`src/world/liveliness*.ts*`) are event-triggered visual polish: they never record to the instrumentation stream, never add `CharacterReact` contexts, and never run a permanent loop. Full contract: `docs/LIVING-WORLD.md`.
 
 ## 9.2 Interaction budget (hard validator)
 
@@ -209,6 +210,7 @@ The child's interaction language is **the physical thing**, never an action icon
 - `docs/ARCHITECTURE.md` — module map, invariants, budgets.
 - `docs/INTERACTION-MODEL.md` — contextual-target interaction contract.
 - `docs/ANIMATIONS.md` — semantic animation vocabulary and episode rules.
+- `docs/LIVING-WORLD.md` — presentation liveliness contract: semantic vs. presentation boundary, triggers, `arrivalNonce` invariant.
 - `docs/QA.md` — suites, perf baselines, lifecycle/reduced-motion QA, kid-test protocol.
 - `docs/ARCHITECTURE-REFERENCES.md` — audit of external RPG architectures (pinned SHAs) and which ideas are adopted/deferred/rejected.
 - `docs/WORLD-BUILDER.md` — `?worldbuilder=1` authoring tool: document model, validation contract, WorldSource seam, boundaries.
