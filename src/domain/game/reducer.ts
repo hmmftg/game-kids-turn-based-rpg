@@ -1,3 +1,4 @@
+import { advanceBattlePhase, chooseBattleAction, createBattle } from '../battle/battle.ts';
 import { advancePhase, applyChoice, createEncounter } from '../quests/encounter.ts';
 import { getQuestDefinition } from '../quests/definitions.ts';
 import { canStartQuest } from '../quests/prerequisites.ts';
@@ -90,9 +91,24 @@ function applyPersisted(state: GameState, persisted: PersistedState): GameState 
  * - Every transition is idempotent: re-applying a command in the resulting mode
  *   either no-ops or produces an equivalent state.
  * - Only transitions wrapped in `stable()` are autosaved.
+ * - While `battle !== null` the battle owns all child input: the commands in
+ *   `BATTLE_BLOCKED_COMMANDS` return the same object, closing every escape
+ *   path the still-`hub` mode would otherwise leave open.
  */
+const BATTLE_BLOCKED_COMMANDS: ReadonlySet<Command['type']> = new Set([
+  'OPEN_DIALOGUE',
+  'START_QUEST',
+  'CHANGE_MAP',
+  'DISCOVER',
+  'PAUSE',
+  'SWITCH_PLAYER',
+]);
+
 export function gameReducer(state: GameState, command: Command, now = 0): GameState {
   if (state.mode === 'fatalFallback' && command.type !== 'RESET_PROGRESS') {
+    return state;
+  }
+  if (state.battle !== null && BATTLE_BLOCKED_COMMANDS.has(command.type)) {
     return state;
   }
 
@@ -142,6 +158,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
         resumeMode: next,
         encounter: null,
         dialogue: null,
+        battle: null,
         saveHealth: command.health,
         corruptSaveDetected: command.health === 'recovered',
       };
@@ -156,6 +173,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
           ...createFreshPersistedState(now),
           encounter: null,
           dialogue: null,
+          battle: null,
           saveHealth: 'fresh',
           corruptSaveDetected: false,
           headwear: 'none',
@@ -300,6 +318,34 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       };
     }
 
+    case 'START_BATTLE': {
+      // Session-only activity: never a Mode, never persisted. Starts only
+      // from a free hub (no battle/encounter/dialogue already running).
+      if (state.mode !== 'hub' || state.battle !== null || state.dialogue !== null) return state;
+      return { ...state, battle: createBattle(command.definition) };
+    }
+
+    case 'CHOOSE_BATTLE_ACTION': {
+      if (state.battle === null) return state;
+      const battle = chooseBattleAction(state.battle, command.action);
+      if (battle === state.battle) return state;
+      return { ...state, battle };
+    }
+
+    case 'ADVANCE_BATTLE_PHASE': {
+      if (state.battle === null) return state;
+      const battle = advanceBattlePhase(state.battle);
+      if (battle === state.battle) return state;
+      return { ...state, battle };
+    }
+
+    case 'LEAVE_BATTLE': {
+      // The only exit — victory/defeat are terminal battle states, leaving
+      // returns to a plain hub with nothing persisted and nothing replayed.
+      if (state.battle === null) return state;
+      return { ...state, battle: null, mode: 'hub', resumeMode: 'hub' };
+    }
+
     case 'PAUSE':
       if (!isResumable(state.mode)) return state;
       return { ...state, mode: 'paused', resumeMode: state.mode };
@@ -355,6 +401,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
           ...createFreshPersistedState(now),
           encounter: null,
           dialogue: null,
+          battle: null,
           saveHealth: 'fresh',
           corruptSaveDetected: false,
           headwear: 'none',

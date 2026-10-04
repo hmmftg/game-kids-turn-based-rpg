@@ -895,3 +895,77 @@
     animation: none;
   }
 }
+
+/* Micro battle overlay (PR I): while battle !== null the battle owns every
+   child input, so the sheet sits above the HUD strips (z 10) — trail, pause
+   and world are all beneath it. The leave button is the only exit. */
+.battle {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.battle__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(52, 42, 28, 0.35);
+}
+
+.battle__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  max-inline-size: min(560px, 94vw);
+}
+
+.battle__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+.battle__hearts {
+  font-size: var(--font-size-lg);
+  letter-spacing: 0.1em;
+}
+
+.battle__round {
+  min-inline-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-surface-strong);
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.battle__opponent {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-4);
+  box-shadow: var(--shadow-card);
+  color: #a98a6b;
+}
+
+.battle__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--touch-large);
+  min-block-size: var(--touch-large);
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-strong);
+  color: var(--color-ink);
+}

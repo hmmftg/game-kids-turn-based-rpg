@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { battleForOpponent, getBattleCopy } from '../content/fa/battles.ts';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import type { NpcDefinition } from '../domain/world/types.ts';
 import {
@@ -28,6 +29,7 @@ import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
 import { SceneGlyph } from '../ui/child/SceneChoice.tsx';
 import { sceneElementFor } from '../ui/child/contextInteraction.ts';
 import { StickerAlbum } from '../ui/child/StickerAlbum.tsx';
+import { BattleScene } from '../ui/child/BattleScene.tsx';
 import {
   AvatarSelectScreen,
   ErrorScreen,
@@ -116,6 +118,7 @@ export function App() {
   const statuses = selectQuestStatuses(state);
   const completed = selectCompletedQuestCount(state);
   const suggestedQuestId = nextSuggestedQuest(state);
+  const battleCopy = state.battle !== null ? getBattleCopy(state.battle.battleId) : null;
   // Session-only UI affordances: never persisted, never part of game state.
   const [worldHintSeen, setWorldHintSeen] = useState(false);
   // Kid-test URL flags (?kidtest=nocopy,noactionicons, repeatable/comma-
@@ -200,6 +203,15 @@ export function App() {
       // raycasting the scene graph.
       w['__worldAttention'] = attention;
       w['__worldDialogueNpc'] = state.dialogue?.npcId ?? null;
+      w['__worldBattleState'] = state.battle;
+      // Phase history for e2e: one row per phase entry (and battle end).
+      type BattleEvent = { mark: string; battle: unknown };
+      const events = (w['__worldBattleEvents'] ??= [] as BattleEvent[]) as BattleEvent[];
+      const last = events[events.length - 1];
+      const mark = state.battle === null ? 'end' : `${state.battle.phase}@${state.battle.round}`;
+      if (mark !== last?.mark && (state.battle !== null || last?.mark !== 'end')) {
+        events.push({ mark, battle: state.battle });
+      }
       w['__worldNpcs'] = Object.fromEntries(
         WORLD.npcDefinitions.map((npc) => {
           const stand = resolveNpcStand(WORLD, npc, worldTime);
@@ -218,7 +230,7 @@ export function App() {
         }),
       );
     }
-  }, [state.mapId, state.discoveries, state.dialogue, worldTime, attention]);
+  }, [state.mapId, state.discoveries, state.dialogue, state.battle, worldTime, attention]);
   const onArrive = useCallback(
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
@@ -268,6 +280,17 @@ export function App() {
   // spot can't be walked to.
   const onNpcTap = useCallback(
     (npcId: string) => {
+      if (state.battle !== null) return;
+      // A battle opponent launches its micro battle directly — the tap on
+      // the figure IS the launch; walking up never starts it.
+      const battle = battleForOpponent(npcId);
+      if (battle) {
+        playSfx('sfx-choice');
+        attentionNonceRef.current += 1;
+        setAttention({ npcId, nonce: attentionNonceRef.current, context: 'greets-child' });
+        dispatch({ type: 'START_BATTLE', definition: battle });
+        return;
+      }
       const npc = getNpcOrNull(WORLD, npcId);
       if (!npc) return;
       const anchor = resolveNpcStand(WORLD, npc, worldTimeRef.current).anchorId;
@@ -286,7 +309,7 @@ export function App() {
       setAttention({ npcId, nonce: attentionNonceRef.current, context: 'greets-child' });
       if (!hubRef.current?.goTo(anchor, open)) open();
     },
-    [openNpc, statuses],
+    [openNpc, statuses, playSfx, dispatch, state.battle],
   );
 
   const goToQuest = useCallback(
@@ -437,7 +460,7 @@ export function App() {
           headwear={state.headwear}
           questStatuses={statuses}
           completedCount={completed}
-          interactive={state.mode === 'hub'}
+          interactive={state.mode === 'hub' && state.battle === null}
           qualityTier={state.qualityTier}
           onArrive={onArrive}
           onNpcTap={onNpcTap}
@@ -617,6 +640,23 @@ export function App() {
               dispatch({ type: 'CHOOSE', iconId, correct });
             }}
             onLeave={() => dispatch({ type: 'ABANDON_ENCOUNTER' })}
+          />
+        ) : null}
+
+        {/* Micro battle (PR I): `mode` stays 'hub' while battle !== null
+            owns every child input — the overlay covers trail/pause/world
+            alike, and the reducer guards the same commands server-side. */}
+        {state.battle !== null && battleCopy !== null ? (
+          <BattleScene
+            battle={state.battle}
+            copy={battleCopy}
+            hideCopy={noCopyTest}
+            onAdvance={() => dispatch({ type: 'ADVANCE_BATTLE_PHASE' })}
+            onChoose={(action) => {
+              playSfx('sfx-choice');
+              dispatch({ type: 'CHOOSE_BATTLE_ACTION', action });
+            }}
+            onLeave={() => dispatch({ type: 'LEAVE_BATTLE' })}
           />
         ) : null}
 

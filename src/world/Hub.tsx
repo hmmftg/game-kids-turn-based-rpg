@@ -524,8 +524,9 @@ export function Hub({
               position={[npcX, 0.75, npcZ]}
               onClick={(event: ThreeEvent<MouseEvent>) => {
                 if (!interactive || event.delta > 6) return;
+                if (!onNpcTap) return;
                 event.stopPropagation();
-                onNpcTap?.(npc.id);
+                onNpcTap(npc.id);
               }}
             >
               <cylinderGeometry args={[0.9, 0.9, 2.2, 8]} />
@@ -541,16 +542,29 @@ export function Hub({
                 context={attention?.context ?? 'notices-child'}
                 armColor={look.palette.limb}
               >
-                <models.Figure
-                  position={{ x: 0, z: 0 }}
-                  rotationY={facing}
-                  palette={look.palette}
-                  hairStyle={look.hairStyle}
-                  hairColor={look.hairColor}
-                  label={npc.id}
-                  detailLevel={detailLevel}
-                  role={look.role}
-                />
+                {/* Critters (the fountain mouse) take the animal slot like the
+                    cave mouse; people take the humanoid figure. Same tap,
+                    same attention cue — only the body differs. */}
+                {npc.archetype === 'critter' ? (
+                  <group rotation={[0, facing, 0]}>
+                    <models.Animal
+                      variant="cat"
+                      tint={look.palette.body}
+                      detailLevel={detailLevel}
+                    />
+                  </group>
+                ) : (
+                  <models.Figure
+                    position={{ x: 0, z: 0 }}
+                    rotationY={facing}
+                    palette={look.palette}
+                    hairStyle={look.hairStyle}
+                    hairColor={look.hairColor}
+                    label={npc.id}
+                    detailLevel={detailLevel}
+                    role={look.role}
+                  />
+                )}
               </CharacterReact>
             </group>
             {spot?.prop ? (

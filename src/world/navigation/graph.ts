@@ -120,7 +120,7 @@ export const ANCHORS: readonly Anchor[] = [
     walkable: false,
     areaId: 'area-fountain',
     mapId: 'map-town',
-    npcId: null,
+    npcId: 'npc-playful-mouse',
     landmarkId: 'landmark-fountain',
     labelFa: 'حوض',
   },

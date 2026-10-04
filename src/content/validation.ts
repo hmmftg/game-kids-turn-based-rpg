@@ -9,6 +9,7 @@ import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from '../world/registry.ts
 import { ANCHORS, EDGES, getAnchorOrNull } from '../world/navigation/graph.ts';
 import { MAP_TRANSITIONS, WORLD_MAPS } from '../world/maps.ts';
 import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
+import { BATTLE_COPY, BATTLE_DEFINITIONS } from './fa/battles.ts';
 import { DIALOGUE_NODES } from './fa/dialogue.ts';
 import { hasIcon } from './fa/icons.ts';
 import { NPCS, QUEST_COPY } from './fa/quests.ts';
@@ -510,6 +511,112 @@ function validateInteractionBudget(issues: ValidationIssue[]): void {
   }
 }
 
+/**
+ * Micro battles (PR I): authored rows only — the opponent must be a real
+ * world NPC, every definition needs copy, every copy row needs a definition,
+ * and the child-facing lines pass the same text rules as dialogue.
+ */
+function validateBattles(issues: ValidationIssue[]): void {
+  const definedNpcIds = new Set(NPC_DEFINITIONS.map((npc) => npc.id));
+  const battleIds = new Set<string>();
+  for (const definition of BATTLE_DEFINITIONS) {
+    if (battleIds.has(definition.battleId)) {
+      issues.push({
+        severity: 'error',
+        code: 'duplicate-battle',
+        where: definition.battleId,
+        message: 'Duplicate battle id.',
+      });
+    }
+    battleIds.add(definition.battleId);
+    if (!definedNpcIds.has(definition.opponentId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-opponent',
+        where: definition.battleId,
+        message: `Battle opponent ${definition.opponentId} has no NPC definition.`,
+      });
+    }
+    if (definition.hearts <= 0 || definition.maxRounds <= 0) {
+      issues.push({
+        severity: 'error',
+        code: 'bad-battle-budget',
+        where: definition.battleId,
+        message: 'Battle hearts and maxRounds must be positive.',
+      });
+    }
+    if (definition.availableActions.length === 0) {
+      issues.push({
+        severity: 'error',
+        code: 'no-battle-actions',
+        where: definition.battleId,
+        message: 'Battle offers the child no actions.',
+      });
+    }
+    if (definition.enemyIntentPattern.length === 0) {
+      issues.push({
+        severity: 'error',
+        code: 'empty-intent-pattern',
+        where: definition.battleId,
+        message: 'Battle intent pattern is empty.',
+      });
+    }
+    // Winnability: scorable rounds (rest + an offered ball action) must be
+    // able to reach zero hearts within the round budget.
+    const restRounds = definition.enemyIntentPattern.filter(
+      (intent, index) => intent === 'rest' && index < definition.maxRounds,
+    ).length;
+    const scorable = definition.availableActions.includes('action-ball') ? restRounds : 0;
+    if (scorable < definition.hearts) {
+      issues.push({
+        severity: 'error',
+        code: 'unwinnable-battle',
+        where: definition.battleId,
+        message: `Battle cannot be won: only ${scorable} rest rounds within ${definition.maxRounds} rounds but ${definition.hearts} hearts to take.`,
+      });
+    }
+    const copy = BATTLE_COPY.find((entry) => entry.battleId === definition.battleId);
+    if (!copy) {
+      issues.push({
+        severity: 'error',
+        code: 'missing-battle-copy',
+        where: definition.battleId,
+        message: 'Battle definition has no Persian copy row.',
+      });
+    }
+  }
+  const definitionIds = new Set<string>(
+    BATTLE_DEFINITIONS.map((definition) => definition.battleId),
+  );
+  for (const copy of BATTLE_COPY) {
+    if (!definitionIds.has(copy.battleId)) {
+      issues.push({
+        severity: 'error',
+        code: 'orphan-battle-copy',
+        where: copy.battleId,
+        message: 'Battle copy exists without a battle definition.',
+      });
+      continue;
+    }
+    checkText(`${copy.battleId}.introFa`, copy.introFa, issues);
+    checkText(`${copy.battleId}.promptFa`, copy.promptFa, issues);
+    checkText(`${copy.battleId}.victoryFa`, copy.victoryFa, issues);
+    checkText(`${copy.battleId}.defeatFa`, copy.defeatFa, issues);
+    checkLength(`${copy.battleId}.introFa`, copy.introFa, MAX_DIALOGUE_LINE_WORDS, issues);
+    checkLength(`${copy.battleId}.promptFa`, copy.promptFa, MAX_DIALOGUE_LINE_WORDS, issues);
+    checkLength(`${copy.battleId}.victoryFa`, copy.victoryFa, MAX_DIALOGUE_LINE_WORDS, issues);
+    checkLength(`${copy.battleId}.defeatFa`, copy.defeatFa, MAX_DIALOGUE_LINE_WORDS, issues);
+    for (const [outcome, text] of Object.entries(copy.outcomeFa)) {
+      checkText(`${copy.battleId}.outcomeFa.${outcome}`, text, issues);
+      checkLength(`${copy.battleId}.outcomeFa.${outcome}`, text, MAX_DIALOGUE_LINE_WORDS, issues);
+    }
+    for (const [intent, text] of Object.entries(copy.intentFa)) {
+      checkText(`${copy.battleId}.intentFa.${intent}`, text, issues);
+      checkLength(`${copy.battleId}.intentFa.${intent}`, text, MAX_DIALOGUE_LINE_WORDS, issues);
+    }
+  }
+}
+
 export function validateContent(
   options: ValidationOptions = { requireApproved: false },
 ): ValidationReport {
@@ -519,6 +626,7 @@ export function validateContent(
 
   validateWorld(issues);
   validateInteractionBudget(issues);
+  validateBattles(issues);
 
   // World NPCs must have copy rows; copy rows must describe real NPCs.
   for (const npc of NPC_DEFINITIONS) {

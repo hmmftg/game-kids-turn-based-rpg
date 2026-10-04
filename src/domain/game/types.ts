@@ -5,6 +5,7 @@
  * or storage APIs. Everything here is serialisable or derived from serialisable data.
  */
 
+import type { BattleActionId, BattleDefinition, BattleState } from '../battle/types.ts';
 import type { DiscoveryId, MapId } from '../world/types.ts';
 
 export const MODES = [
@@ -153,6 +154,11 @@ export interface GameState extends PersistedState {
   readonly resumeMode: ResumableMode;
   readonly encounter: EncounterState | null;
   readonly dialogue: DialogueState | null;
+  /**
+   * Micro battle in progress — session-only, never persisted, never a Mode:
+   * `mode` stays `hub` while `battle !== null` owns all child input.
+   */
+  readonly battle: BattleState | null;
   /** Current device orientation: recorded session/device state, never persisted. */
   readonly orientation: 'landscape' | 'portrait';
   readonly webglAvailable: boolean;
@@ -200,6 +206,10 @@ export type Command =
   | { readonly type: 'ADVANCE_PHASE' }
   | { readonly type: 'CHOOSE'; readonly iconId: IconId; readonly correct: boolean }
   | { readonly type: 'ABANDON_ENCOUNTER' }
+  | { readonly type: 'START_BATTLE'; readonly definition: BattleDefinition }
+  | { readonly type: 'CHOOSE_BATTLE_ACTION'; readonly action: BattleActionId }
+  | { readonly type: 'ADVANCE_BATTLE_PHASE' }
+  | { readonly type: 'LEAVE_BATTLE' }
   | { readonly type: 'PAUSE' }
   | { readonly type: 'RESUME' }
   | { readonly type: 'OPEN_PARENT_GATE' }

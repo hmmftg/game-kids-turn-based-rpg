@@ -260,6 +260,16 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     homeAreaId: 'area-cave',
     dialogueIds: ['cavemouse-intro'],
   },
+  {
+    // The playful mouse by the fountain is the micro-battle opponent: a tap
+    // on its figure starts the standalone battle activity (PR I) — it never
+    // offers a quest and never changes the world.
+    id: 'npc-playful-mouse',
+    archetype: 'critter',
+    anchorId: 'anchor-fountain',
+    homeAreaId: 'area-fountain',
+    dialogueIds: ['playfulmouse-intro'],
+  },
 ];
 
 // Id lookups are source-parameterized: the same resolvers serve the shipped

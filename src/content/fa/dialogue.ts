@@ -242,6 +242,24 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     ],
     review: DRAFT_REVIEW,
   },
+  {
+    // The playful mouse is a battle opponent, not a talker — the node exists
+    // only so the content contract (every NPC has dialogueIds) holds; the
+    // figure tap starts the battle instead of opening dialogue.
+    id: 'playfulmouse-intro',
+    npcId: 'npc-playful-mouse',
+    textFa: 'موش بازیگوش کنار حوض منتظر بازی است.',
+    iconId: 'icon-tap-ball',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-playful-mouse',
+        textFa: 'موش بازیگوش کنار حوض منتظر بازی است.',
+        emotion: 'happy',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
   // Routine greetings: short contextual lines keyed to where the NPC stands.
   {
     id: 'fisher-at-river',
