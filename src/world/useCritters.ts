@@ -18,6 +18,7 @@ import {
   type CritterKind,
 } from './critters.ts';
 import type { Xyz } from './models/details.tsx';
+import { recordReactionProbe } from './reactions.ts';
 
 /**
  * Ambient animal motion under `frameloop="demand"`.
@@ -30,7 +31,9 @@ import type { Xyz } from './models/details.tsx';
  *
  * Species behaviours:
  *  cat:   idle → dash between patrol spots → sit → idle
+ *         (a settled child nearby earns one follow hop or a look)
  *  bird:  perch → parabolic hop to another perch → idle
+ *         (a tap sends it early to its next deterministic perch)
  *  eagle: perch → takeoff hop → soar laps → land hop → idle
  *  fish:  pause → short swim burst along a basin arc → pause (≤1 active)
  */
@@ -41,6 +44,12 @@ const EAGLE_SPEED = 3.0;
 const EAGLE_SOAR_ANGULAR = 0.55; // rad/s — a lap ≈ 11.4 s
 const EAGLE_SOAR_LAPS = 2;
 const FISH_SPEED = 0.9;
+/** A settled child within this radius earns the cat's attention. */
+const CAT_NOTICE_RADIUS = 4.0;
+/** Closer than this the cat just looks — no step needed. */
+const CAT_TOO_CLOSE = 0.9;
+/** Max distance one follow hop covers — a step, not a chase. */
+const CAT_FOLLOW_STEP = 0.8;
 
 const IDLE_RANGE: Record<CritterKind, readonly [number, number]> = {
   cat: [2000, 6000],
@@ -91,6 +100,8 @@ export interface Controller {
   step: (delta: number) => void;
   setTimersEnabled: (active: boolean) => void;
   dartFish: (fromX: number, fromZ: number) => void;
+  noticeCats: (x: number, z: number) => void;
+  startleBird: (key: string) => void;
 }
 
 export interface CritterView {
@@ -99,6 +110,8 @@ export interface CritterView {
   readonly tint: string | undefined;
   readonly moving: boolean;
   readonly register: (node: THREE.Group | null) => void;
+  /** Birds only: send this critter to its next deterministic perch. */
+  readonly startle?: (() => void) | undefined;
 }
 
 interface ControllerEffects {
@@ -155,6 +168,8 @@ export function createCritterController(effects: ControllerEffects): Controller 
     step: () => {},
     setTimersEnabled: () => {},
     dartFish: () => {},
+    noticeCats: () => {},
+    startleBird: () => {},
   };
 
   const setMoving = (rt: RuntimeCritter, moving: boolean) => {
@@ -328,6 +343,79 @@ export function createCritterController(effects: ControllerEffects): Controller 
     }
   };
 
+  /**
+   * Arrival reaction (Delight PR 3): the child settling near a cat earns one
+   * bounded response per arrival — a cat within reach either follow-hops a
+   * step toward the child (swept-path safe, never crossing decor) or, when
+   * already close, simply turns to look. `startHop`'s own duration bounds
+   * the hop; the normal idle schedule resumes on arrival, so the cat always
+   * returns to its patrol. A mid-dash cat retargets toward the child —
+   * same one-bounded-event contract as the fish dart.
+   */
+  controller.noticeCats = (x, z) => {
+    if (!controller.timersEnabled) return;
+    for (const rt of critters) {
+      if (rt.kind !== 'cat') continue;
+      const dx = x - rt.x;
+      const dz = z - rt.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > CAT_NOTICE_RADIUS) continue;
+      rt.heading = Math.atan2(dx, dz);
+      if (dist <= CAT_TOO_CLOSE) {
+        // Already beside the child — a look, not a step.
+        if (rt.node) rt.node.rotation.y = rt.heading;
+        recordReactionProbe(rt.key, 'notice');
+        effects.invalidate();
+        continue;
+      }
+      const step = Math.min(CAT_FOLLOW_STEP, dist - CAT_TOO_CLOSE);
+      const target: [number, number, number] = [
+        rt.x + (dx / dist) * step,
+        0,
+        rt.z + (dz / dist) * step,
+      ];
+      if (!catPathIsSafe({ x: rt.x, z: rt.z }, { x: target[0], z: target[2] })) {
+        if (rt.node) rt.node.rotation.y = rt.heading;
+        recordReactionProbe(rt.key, 'notice');
+        effects.invalidate();
+        continue;
+      }
+      if (rt.timer) {
+        clearTimeout(rt.timer);
+        rt.timer = null;
+      }
+      recordReactionProbe(rt.key, 'follow');
+      // No spot claim: the cat lands off-patrol at the follow point and
+      // resumes its patrol by location on the next scheduled move.
+      startHop(rt, target, CAT_SPEED * 1.15, 'dash');
+    }
+  };
+
+  /**
+   * Bird tap (Delight PR 3): the bird leaves its perch for a deterministic
+   * alternate — the same seeded pick its idle schedule would make next, just
+   * early. One bounded hop; a bird already in the air retargets mid-flight.
+   */
+  controller.startleBird = (key) => {
+    if (!controller.timersEnabled) return;
+    const rt = critters.find((c) => c.key === key);
+    if (!rt || rt.kind !== 'bird') return;
+    rt.seed = nextSeed(rt.seed);
+    const claimed = claimedSpots();
+    claimed.delete(rt.spotId);
+    const perch = pickSpot(rt.seed, BIRD_PERCHES, claimed);
+    if (!perch) {
+      controller.schedule(rt, idleDelay(rt.kind, rt.seed));
+      return;
+    }
+    if (rt.timer) {
+      clearTimeout(rt.timer);
+      rt.timer = null;
+    }
+    recordReactionProbe(rt.key, 'flutter');
+    startHop(rt, perch.position, BIRD_SPEED, 'hop', perch.id);
+  };
+
   controller.step = (delta) => {
     const step = Math.min(delta, 0.05);
     let anyMoving = false;
@@ -425,6 +513,7 @@ export function useCritters(
   enabled: boolean,
   detailLevel: DetailLevel,
   dartFocus?: { readonly nonce: number; readonly x: number; readonly z: number },
+  noticeFocus?: { readonly nonce: number; readonly x: number; readonly z: number },
 ): CritterView[] {
   const invalidate = useThree((state) => state.invalidate);
   const controllerRef = useRef<Controller | null>(null);
@@ -463,10 +552,22 @@ export function useCritters(
     getController().dartFish(dartX, dartZ);
   }, [dartNonce, dartX, dartZ, getController]);
 
-  // Dev-only QA hook: lets measure/QA scripts read critter transforms without
-  // a production test hook or animation loop. Stripped from builds entirely.
+  // Avatar arrival → nearby cats notice/follow. Same nonce contract as
+  // `arrivalNonce` drives NPC attention: once per completed arrival.
+  const noticeNonce = noticeFocus?.nonce ?? 0;
+  const noticeX = noticeFocus?.x ?? 0;
+  const noticeZ = noticeFocus?.z ?? 0;
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
+    if (noticeNonce === 0) return;
+    getController().noticeCats(noticeX, noticeZ);
+  }, [noticeNonce, noticeX, noticeZ, getController]);
+
+  // QA/e2e hook: lets measure/QA scripts and e2e read critter transforms
+  // (e.g. to find a bird to tap) without raycasting the scene. Probe-gated
+  // like the rest of the world probes — never a production test hook.
+  useEffect(() => {
+    if (!import.meta.env.DEV && !(window as unknown as Record<string, unknown>)['__WORLD_PROBE'])
+      return;
     const w = window as unknown as {
       __worldCritterTransforms?: () => readonly (readonly [
         string,
@@ -501,6 +602,12 @@ export function useCritters(
             node.rotation.y = rt.heading;
           }
         },
+        startle:
+          p.kind === 'bird'
+            ? () => {
+                getController().startleBird(p.key);
+              }
+            : undefined,
       })),
     [movingMap, getController],
   );

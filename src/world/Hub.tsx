@@ -33,14 +33,21 @@ import {
   StoneCluster,
 } from './models/details.tsx';
 import { BOX, CYLINDER, PLANE, sharedGroundMaterial, sharedLambert } from './models/shared.ts';
-import { CharacterReact, Hotspot, type NpcAttention, type WorldSceneHandle } from './sceneBits.tsx';
+import {
+  CharacterReact,
+  Hotspot,
+  TAP_ONLY_MATERIAL,
+  type NpcAttention,
+  type WorldSceneHandle,
+} from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
 import { caveEntranceRockPosition, landmarkPosition, NPC_STAND_OFFSET } from './placement.ts';
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
 import { FOUNTAIN_BASIN } from './critters.ts';
-import { ReactionRipple, ReactiveProp } from './reactionBits.tsx';
+import { HIDDEN_FINDS } from './decorations.ts';
+import { HiddenFind, ReactionRipple, ReactiveProp } from './reactionBits.tsx';
 import { AvatarLiveliness, IdleFlourish } from './livelinessBits.tsx';
 import { activityPoseFor, idleCueFor } from './liveliness.ts';
 import { resolveNpcActivity } from './registry.ts';
@@ -393,7 +400,21 @@ export function Hub({
   // Fountain tap: a bloop + ripple, and the fish dart away from the touch —
   // the micro-story "the fish noticed me". Nonce-keyed: one dart per tap.
   const [fishDart, setFishDart] = useState({ nonce: 0, x: 0, z: 0 });
-  const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel, fishDart);
+  // Arrival → nearby cats: same nonce contract as NPC attention — one
+  // notice/follow per completed arrival, position snapshotted at settle.
+  const catNotice = useMemo(
+    () => ({ nonce: arrivalNonce, x: walker.position.x, z: walker.position.z }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [arrivalNonce],
+  );
+  const critters = useCritters(
+    interactive && !prefersReducedMotion(),
+    detailLevel,
+    fishDart,
+    catNotice,
+  );
+  // Micro-discoveries: session-local set of finds the child has uncovered.
+  const [revealedFinds, setRevealedFinds] = useState<ReadonlySet<string>>(new Set());
 
   // Area-based activation: the area the avatar currently stands in plus the
   // areas one waypoint-hop away are "visible". NPCs outside this set are data
@@ -801,6 +822,26 @@ export function Hub({
 
       <KeepsakeTree completedCount={completedCount} detailLevel={detailLevel} />
 
+      {/* Micro-discoveries: leaf piles hiding tiny finds — one bounded
+          physical uncover each, then the revealed state stays for the
+          session. No text, no marker, no counter. */}
+      {HIDDEN_FINDS.map((find) => (
+        <HiddenFind
+          key={find.id}
+          subject={find.id}
+          position={[find.x, 0, find.z]}
+          revealed={revealedFinds.has(find.id)}
+          enabled={interactive}
+          onReveal={() =>
+            setRevealedFinds((set) => {
+              const next = new Set(set);
+              next.add(find.id);
+              return next;
+            })
+          }
+        />
+      ))}
+
       {/* Ambient animals: transforms are ref-driven by useCritters — the group
           has no position prop so React never overwrites animated placement. */}
       <group dispose={null}>
@@ -812,6 +853,23 @@ export function Hub({
               moving={critter.moving}
               detailLevel={detailLevel}
             />
+            {/* Bird tap surface inside the critter's own moving node — it
+                follows the bird wherever it perches. No stopPropagation:
+                the touch also reaches the ground, so the child walks over
+                while the bird flutters to its next perch. */}
+            {critter.startle && (
+              <mesh
+                name={`tap-${critter.key}`}
+                position={[0, 0.15, 0]}
+                material={TAP_ONLY_MATERIAL}
+                onClick={(event: ThreeEvent<MouseEvent>) => {
+                  if (!interactive || event.delta > 6) return;
+                  critter.startle?.();
+                }}
+              >
+                <sphereGeometry args={[0.55, 8, 8]} />
+              </mesh>
+            )}
           </group>
         ))}
       </group>

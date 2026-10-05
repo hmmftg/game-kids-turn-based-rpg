@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { GROUND_DECORATIONS, decorationFootprint, isDecorationClear } from './decorations.ts';
+import { ANCHORS } from './navigation/graph.ts';
+import {
+  GROUND_DECORATIONS,
+  HIDDEN_FINDS,
+  decorationFootprint,
+  isDecorationClear,
+} from './decorations.ts';
 
 describe('GROUND_DECORATIONS', () => {
   it('every authored footprint clears anchors, NPCs, landmarks, props and path corridors', () => {
@@ -44,5 +50,22 @@ describe('isDecorationClear', () => {
     const z = -1.2;
     expect(isDecorationClear(x, z, 0)).toBe(true); // center clears
     expect(isDecorationClear(x, z, 1.32)).toBe(false); // footprint does not
+  });
+});
+
+describe('HIDDEN_FINDS (Delight PR 3)', () => {
+  it('every authored find spot is reachable ground: clear of decor, hotspots, and corridors', () => {
+    for (const find of HIDDEN_FINDS) {
+      expect(isDecorationClear(find.x, find.z, 0.55)).toBe(true);
+    }
+  });
+
+  it('every find sits near a walkable anchor — a child can actually get to it', () => {
+    const walkable = ANCHORS.filter((a) => a.walkable);
+    for (const find of HIDDEN_FINDS) {
+      const nearest = Math.min(...walkable.map((a) => Math.hypot(a.x - find.x, a.z - find.z)));
+      expect(nearest).toBeLessThan(2.5);
+      expect(nearest).toBeGreaterThan(0.9); // not sitting ON a tap surface
+    }
   });
 });

@@ -4,10 +4,10 @@ import {
   reactionTransform,
   recordReactionProbe,
   REACTION_SECONDS,
-  type PropReaction,
+  type FlourishReaction,
 } from './reactions.ts';
 
-const ALL: PropReaction[] = ['bend', 'sway', 'bloop', 'door-swing'];
+const ALL: FlourishReaction[] = ['bend', 'sway', 'bloop', 'door-swing'];
 
 describe('reactive-prop vocabulary', () => {
   it('returns the rest transform at both ends of every reaction', () => {

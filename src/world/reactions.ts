@@ -1,32 +1,45 @@
 /**
- * Reactive-prop vocabulary — Delight Pass PR 2.
+ * World-reaction vocabulary — Delight Pass PRs 2–3.
  *
- * A child taps a physical thing and the thing does ONE bounded physical
- * reaction, then settles back: the flower bends and returns, the door swings
- * open a touch and closes, the fountain bloops while its fish dart away.
+ * A child touches or approaches a physical thing and the thing does ONE
+ * bounded physical reaction, then settles back: the flower bends and
+ * returns, the door swings open a touch and closes, the fountain bloops
+ * while its fish dart away, a cat follows a step closer, a bird flutters
+ * to another perch, a hidden leaf pile parts to show a ladybug.
  *
  * These are presentation liveliness, not semantic animation: nothing here
  * records to `window.__worldAnimationEvents`, and nothing here is a quest,
  * a mandatory action, or a second interaction model. The object stays the
  * subject of the interaction (docs/LIVING-WORLD.md).
  *
- * Deterministic and cheap: a tap starts one flourish; the demand renderer
- * idles again when it ends. No permanent loops, no per-object state beyond
- * the flourish clock.
+ * Deterministic and cheap: a tap or an arrival starts one bounded event;
+ * the demand renderer idles again when it ends. No permanent loops, no
+ * per-object state beyond a flourish clock or a settled reveal flag.
  */
 
-/** The closed tap-reaction vocabulary. New kinds need a second real use. */
-export type PropReaction = 'bend' | 'sway' | 'bloop' | 'door-swing';
+/**
+ * Reactions with a transform flourish curve (see `reactionTransform`).
+ * New kinds need a second real use.
+ */
+export type FlourishReaction = 'bend' | 'sway' | 'bloop' | 'door-swing';
+
+/**
+ * Everything the reaction layer can record — flourish kinds plus the
+ * event-style reactions driven by critters/finds (they animate through
+ * the critter controller or their own bounded reveal, not through
+ * `reactionTransform`).
+ */
+export type WorldReaction = FlourishReaction | 'follow' | 'notice' | 'flutter' | 'reveal';
 
 /** Seconds one flourish runs — all short enough to feel immediate, all finite. */
-export const REACTION_SECONDS: Record<PropReaction, number> = {
+export const REACTION_SECONDS: Record<FlourishReaction, number> = {
   bend: 0.6,
   sway: 0.7,
   bloop: 0.45,
   'door-swing': 0.9,
 };
 
-export interface PropReactionTransform {
+export interface FlourishTransform {
   readonly rotationX: number;
   readonly rotationY: number;
   readonly rotationZ: number;
@@ -34,7 +47,7 @@ export interface PropReactionTransform {
   readonly scaleY: number;
 }
 
-const REST: PropReactionTransform = {
+const REST: FlourishTransform = {
   rotationX: 0,
   rotationY: 0,
   rotationZ: 0,
@@ -46,7 +59,7 @@ const REST: PropReactionTransform = {
  * The flourish curve for `reaction` at progress `t` in [0,1]. Rest pose at
  * both ends — reactions return the object to where the child found it.
  */
-export function reactionTransform(reaction: PropReaction, t: number): PropReactionTransform {
+export function reactionTransform(reaction: FlourishReaction, t: number): FlourishTransform {
   if (t <= 0 || t >= 1) return REST;
   const arc = Math.sin(Math.PI * t);
   switch (reaction) {
@@ -74,13 +87,13 @@ export function reactionTransform(reaction: PropReaction, t: number): PropReacti
 export interface ReactionProbeEntry {
   readonly seq: number;
   readonly subject: string;
-  readonly reaction: PropReaction;
+  readonly reaction: WorldReaction;
 }
 
 const reactionLog: ReactionProbeEntry[] = [];
 let nextReactionSeq = 0;
 
-export function recordReactionProbe(subject: string, reaction: PropReaction): void {
+export function recordReactionProbe(subject: string, reaction: WorldReaction): void {
   reactionLog.push({ seq: nextReactionSeq++, subject, reaction });
   if (reactionLog.length > 20) reactionLog.shift();
 }
