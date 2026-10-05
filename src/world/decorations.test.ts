@@ -57,6 +57,13 @@ describe('HIDDEN_FINDS (Delight PR 3)', () => {
   it('every authored find spot is reachable ground: clear of decor, hotspots, and corridors', () => {
     for (const find of HIDDEN_FINDS) {
       expect(isDecorationClear(find.x, find.z, 0.55)).toBe(true);
+      // ...and of the decoration slots themselves — a leaf pile must not
+      // sit on an existing flower/stone/plant/patch footprint.
+      for (const decor of GROUND_DECORATIONS) {
+        const overlap =
+          Math.hypot(find.x - decor.x, find.z - decor.z) < decorationFootprint(decor) + 0.55;
+        expect(overlap, `find ${find.id} overlaps decor at ${decor.x},${decor.z}`).toBe(false);
+      }
     }
   });
 

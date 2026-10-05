@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FOUNTAIN_BASIN, nextSeed } from './critters.ts';
+import { reactionProbeLog } from './reactions.ts';
 import { createCritterController, type Controller } from './useCritters.ts';
 
 /**
@@ -315,6 +316,25 @@ describe('Delight PR 3 — critter reactions', () => {
     controller.setTimersEnabled(false);
   });
 
+  it('one arrival produces at most ONE cat response — the nearest cat', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const before = reactionProbeLog().length;
+    // (3,0) is anchor-path-east: cat-0 (2,-1.6) ≈1.9 and cat-1 (4.4,3) ≈3.3
+    // are BOTH inside CAT_NOTICE_RADIUS — only the nearest may respond.
+    controller.noticeCats(3, 0);
+    const cat1 = controller.critters.find((c) => c.key === 'cat-1')!;
+    expect(cat1.moving).toBe(false);
+    const logged = reactionProbeLog()
+      .slice(before)
+      .filter((r) => r.reaction === 'follow' || r.reaction === 'notice');
+    // Exactly one response globally, and it belongs to the nearer cat —
+    // whether it took a step or just looked is the path-safety detail.
+    expect(logged.map((r) => r.subject)).toEqual(['cat-0']);
+    controller.setTimersEnabled(false);
+  });
+
   it('cats out of range ignore the arrival entirely', () => {
     const { controller } = makeController();
     attachFakeNodes(controller);
@@ -338,6 +358,32 @@ describe('Delight PR 3 — critter reactions', () => {
     const perchTarget = bird.spotId;
     moveStepUntilIdle(controller);
     expect(bird.restSpotId).toBe(perchTarget);
+    controller.setTimersEnabled(false);
+  });
+
+  it('startle never returns the claimed destination or the last settled perch', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    for (const bird of controller.critters.filter((c) => c.kind === 'bird')) {
+      // Sweep seeds so every deterministic candidate pool is exercised —
+      // wherever the first candidate IS the departed perch, it must lose.
+      for (let seed = 1; seed < 400; seed = nextSeed(seed)) {
+        const claimed = bird.spotId;
+        const settled = bird.restSpotId;
+        bird.seed = seed;
+        controller.startleBird(bird.key);
+        expect(bird.moving).toBe(true);
+        expect(bird.spotId).not.toBe(claimed);
+        expect(bird.spotId).not.toBe(settled);
+        // Snap back deterministically for the next seed.
+        bird.moving = false;
+        bird.x = bird.restX;
+        bird.y = bird.restY;
+        bird.z = bird.restZ;
+        bird.spotId = bird.restSpotId;
+      }
+    }
     controller.setTimersEnabled(false);
   });
 

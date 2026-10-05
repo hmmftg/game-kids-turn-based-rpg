@@ -344,57 +344,67 @@ export function createCritterController(effects: ControllerEffects): Controller 
   };
 
   /**
-   * Arrival reaction (Delight PR 3): the child settling near a cat earns one
-   * bounded response per arrival — a cat within reach either follow-hops a
-   * step toward the child (swept-path safe, never crossing decor) or, when
-   * already close, simply turns to look. `startHop`'s own duration bounds
-   * the hop; the normal idle schedule resumes on arrival, so the cat always
-   * returns to its patrol. A mid-dash cat retargets toward the child —
-   * same one-bounded-event contract as the fish dart.
+   * Arrival reaction (Delight PR 3): the child settling near a cat earns
+   * ONE bounded response per arrival — the nearest cat in reach either
+   * follow-hops a step toward the child (swept-path safe, never crossing
+   * decor) or, when already close, simply turns to look; every other cat
+   * stays on patrol. `startHop`'s own duration bounds the hop; the normal
+   * idle schedule resumes on arrival, so the cat always returns to its
+   * patrol. A mid-dash cat retargets toward the child — same
+   * one-bounded-event contract as the fish dart.
    */
   controller.noticeCats = (x, z) => {
     if (!controller.timersEnabled) return;
+    let nearest: RuntimeCritter | null = null;
+    let nearestDist = CAT_NOTICE_RADIUS;
     for (const rt of critters) {
       if (rt.kind !== 'cat') continue;
-      const dx = x - rt.x;
-      const dz = z - rt.z;
-      const dist = Math.hypot(dx, dz);
-      if (dist > CAT_NOTICE_RADIUS) continue;
-      rt.heading = Math.atan2(dx, dz);
-      if (dist <= CAT_TOO_CLOSE) {
-        // Already beside the child — a look, not a step.
-        if (rt.node) rt.node.rotation.y = rt.heading;
-        recordReactionProbe(rt.key, 'notice');
-        effects.invalidate();
-        continue;
-      }
-      const step = Math.min(CAT_FOLLOW_STEP, dist - CAT_TOO_CLOSE);
-      const target: [number, number, number] = [
-        rt.x + (dx / dist) * step,
-        0,
-        rt.z + (dz / dist) * step,
-      ];
-      if (!catPathIsSafe({ x: rt.x, z: rt.z }, { x: target[0], z: target[2] })) {
-        if (rt.node) rt.node.rotation.y = rt.heading;
-        recordReactionProbe(rt.key, 'notice');
-        effects.invalidate();
-        continue;
-      }
-      if (rt.timer) {
-        clearTimeout(rt.timer);
-        rt.timer = null;
-      }
-      recordReactionProbe(rt.key, 'follow');
-      // No spot claim: the cat lands off-patrol at the follow point and
-      // resumes its patrol by location on the next scheduled move.
-      startHop(rt, target, CAT_SPEED * 1.15, 'dash');
+      const dist = Math.hypot(x - rt.x, z - rt.z);
+      if (dist > nearestDist || (nearest !== null && dist >= nearestDist)) continue;
+      nearest = rt;
+      nearestDist = dist;
     }
+    if (!nearest) return;
+    const rt = nearest;
+    const dx = x - rt.x;
+    const dz = z - rt.z;
+    rt.heading = Math.atan2(dx, dz);
+    if (nearestDist <= CAT_TOO_CLOSE) {
+      // Already beside the child — a look, not a step.
+      if (rt.node) rt.node.rotation.y = rt.heading;
+      recordReactionProbe(rt.key, 'notice');
+      effects.invalidate();
+      return;
+    }
+    const step = Math.min(CAT_FOLLOW_STEP, nearestDist - CAT_TOO_CLOSE);
+    const target: [number, number, number] = [
+      rt.x + (dx / nearestDist) * step,
+      0,
+      rt.z + (dz / nearestDist) * step,
+    ];
+    if (!catPathIsSafe({ x: rt.x, z: rt.z }, { x: target[0], z: target[2] })) {
+      if (rt.node) rt.node.rotation.y = rt.heading;
+      recordReactionProbe(rt.key, 'notice');
+      effects.invalidate();
+      return;
+    }
+    if (rt.timer) {
+      clearTimeout(rt.timer);
+      rt.timer = null;
+    }
+    recordReactionProbe(rt.key, 'follow');
+    // No spot claim: the cat lands off-patrol at the follow point and
+    // resumes its patrol by location on the next scheduled move.
+    startHop(rt, target, CAT_SPEED * 1.15, 'dash');
   };
 
   /**
    * Bird tap (Delight PR 3): the bird leaves its perch for a deterministic
    * alternate — the same seeded pick its idle schedule would make next, just
-   * early. One bounded hop; a bird already in the air retargets mid-flight.
+   * early, and NEVER the perch it left: the exclusion holds both the
+   * currently claimed destination (`spotId`) and the last settled perch
+   * (`restSpotId`), which differ mid-hop. One bounded hop; a bird already
+   * in the air retargets mid-flight.
    */
   controller.startleBird = (key) => {
     if (!controller.timersEnabled) return;
@@ -402,7 +412,7 @@ export function createCritterController(effects: ControllerEffects): Controller 
     if (!rt || rt.kind !== 'bird') return;
     rt.seed = nextSeed(rt.seed);
     const claimed = claimedSpots();
-    claimed.delete(rt.spotId);
+    claimed.add(rt.restSpotId);
     const perch = pickSpot(rt.seed, BIRD_PERCHES, claimed);
     if (!perch) {
       controller.schedule(rt, idleDelay(rt.kind, rt.seed));

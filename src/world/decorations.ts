@@ -30,7 +30,7 @@ export interface HiddenFindSpot {
 
 export const HIDDEN_FINDS: readonly HiddenFindSpot[] = [
   { id: 'find-park', x: 3.6, z: -1.8 },
-  { id: 'find-garden', x: -4.2, z: 3.6 },
+  { id: 'find-garden', x: -2.2, z: 6.3 },
 ];
 
 export const GROUND_DECORATIONS: readonly GroundDecoration[] = [

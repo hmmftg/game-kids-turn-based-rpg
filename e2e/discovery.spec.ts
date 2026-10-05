@@ -25,9 +25,21 @@ test.beforeEach(async ({ page }) => {
 
 test('a child arriving near a cat earns exactly one notice or follow', async ({ page }) => {
   await startGame(page);
-  // The NE cat patrols beside the north path — every patrol spot sits
-  // inside the notice radius of this anchor, so some response must land.
-  await tapWorldAnchor(page, 'anchor-path-north');
+  await waitForProbe(page);
+  // Deliberate overlap: at anchor-path-east (3,0) both cats' pockets touch
+  // the notice radius — the contract is still exactly ONE cat response per
+  // arrival, so this is the honest adversarial case. Cats roam, so wait
+  // for a moment when both are actually in range before walking.
+  await expect
+    .poll(
+      async () =>
+        (await critterTransforms(page)).filter(
+          ([key, x, , z]) => key.startsWith('cat-') && Math.hypot(3 - x, 0 - z) <= 4.0,
+        ).length,
+      { timeout: 15000 },
+    )
+    .toBe(2);
+  await tapWorldAnchor(page, 'anchor-path-east');
   await waitForWalkerIdle(page);
   await dismissDialogue(page);
 
@@ -35,18 +47,20 @@ test('a child arriving near a cat earns exactly one notice or follow', async ({ 
     .poll(
       async () =>
         (await reactionsProbe(page)).filter(
-          (r) => r.subject === 'cat-0' && (r.reaction === 'follow' || r.reaction === 'notice'),
+          (r) => r.reaction === 'follow' || r.reaction === 'notice',
         ).length,
       { timeout: 8000 },
     )
     .toBeGreaterThanOrEqual(1);
 
-  // The arrivalNonce contract: one arrival → at most one cat response.
+  // The arrivalNonce contract: one arrival → at most one cat response,
+  // counted globally — never one per cat.
   const catReactions = (await reactionsProbe(page)).filter(
-    (r) => r.subject === 'cat-0' && (r.reaction === 'follow' || r.reaction === 'notice'),
+    (r) => r.reaction === 'follow' || r.reaction === 'notice',
   );
   expect(catReactions.length).toBe(1);
-  expect(await playerAt(page)).toBe('anchor-path-north');
+  expect(catReactions[0]!.subject.startsWith('cat-')).toBe(true);
+  expect(await playerAt(page)).toBe('anchor-path-east');
 });
 
 test('a tapped bird flutters off to another perch', async ({ page }) => {

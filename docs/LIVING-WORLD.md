@@ -172,8 +172,8 @@ PR 3 extends the vocabulary to things that are _found_, not just touched:
 
 | reaction  | subject     | what the child sees                                                         |
 | --------- | ----------- | --------------------------------------------------------------------------- |
-| `notice`  | a cat       | stops and looks at the arriving child (child is already beside it)          |
-| `follow`  | a cat       | faces the child and hops one bounded step closer, then its patrol resumes   |
+| `notice`  | nearest cat | stops and looks at the arriving child (child is already beside it)          |
+| `follow`  | nearest cat | faces the child and hops one bounded step closer, then its patrol resumes   |
 | `flutter` | a bird      | leaves its perch for a deterministic alternate perch, then resumes hopping  |
 | `reveal`  | a leaf pile | the two leaf halves part once and a ladybug stays uncovered for the session |
 
@@ -184,16 +184,19 @@ hiding — recorded only in the `__worldReactions` probe and session state.
 
 - **Cat notice** reuses the `arrivalNonce` contract exactly: one completed
   arrival within the notice radius produces at most one cat response,
-  regardless of re-renders or dwell. `noticeCats` is a controller method on
-  `useCritters` (like `dartFish`), so it honors the same freeze flag; a
-  follow never claims a patrol spot — the cat lands off-route and its
-  ordinary location-driven patrol resumes.
+  regardless of re-renders or dwell — and when several cats are in range
+  only the NEAREST responds (one arrival, one cat, counted globally).
+  `noticeCats` is a controller method on `useCritters` (like `dartFish`),
+  so it honors the same freeze flag; a follow never claims a patrol spot —
+  the cat lands off-route and its ordinary location-driven patrol resumes.
 - **Bird startle** is triggered by a generous invisible tap sphere inside
   each bird's registered node (`startle?: () => void` on `CritterView`),
   kept under the same no-`stopPropagation` rule — tapping a bird also
   walks the child, like any world tap. The destination is picked by the
   shared seeded LCG (`pickSpot`), so the alternate perch is deterministic
-  per session and never the perch it left.
+  per session and never the perch it left — the exclusion holds both the
+  claimed destination (`spotId`) and the last settled perch (`restSpotId`),
+  which differ while the bird is mid-hop.
 - **Hidden finds** live in `HIDDEN_FINDS` (`decorations.ts`) — two authored
   spots verified clear of decorations and beside a walkable anchor. The
   cover (`FindCover`) is the only transform owner of its own leaf halves;
