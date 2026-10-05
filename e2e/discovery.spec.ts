@@ -155,6 +155,40 @@ test('a leaf pile parts once and stays revealed for the session', async ({ page 
   ).toBe(1);
 });
 
+test('a revealed find survives a map transition but not a reload', async ({ page }) => {
+  test.setTimeout(120000);
+  await startGame(page);
+  const revealedFinds = () =>
+    page.evaluate(
+      () => (window as unknown as { __worldRevealedFinds?: string[] }).__worldRevealedFinds ?? [],
+    );
+  const mapId = () =>
+    page.evaluate(() => (window as unknown as { __worldMapId?: string }).__worldMapId);
+
+  // Uncover the park find — session memory, not persistence.
+  await tapReactivePoint(page, 3.6, -1.8);
+  await expect.poll(() => revealedFinds(), { timeout: 8000 }).toContain('find-park');
+
+  // The Hub remounts on every map transition: entrance arrival discovers
+  // the cave, the next arrival swaps in the cave scene.
+  await tapWorldAnchor(page, 'anchor-cave-entrance');
+  await expect.poll(() => playerAt(page), { timeout: 60000 }).toBe('anchor-cave-entrance');
+  await tapWorldAnchor(page, 'anchor-cave-entrance');
+  await expect.poll(() => mapId(), { timeout: 30000 }).toBe('map-cave');
+  // ...and back — town mounts fresh, yet the find must stay revealed.
+  await tapWorldAnchor(page, 'anchor-cave-mouth');
+  await expect.poll(() => mapId(), { timeout: 30000 }).toBe('map-town');
+  await expect.poll(() => revealedFinds(), { timeout: 8000 }).toContain('find-park');
+
+  // A reload is the persistence boundary: session memory clears, the pile
+  // is covered again.
+  await page.reload();
+  await expect(page.getByTestId('profile-select')).toBeVisible();
+  await page.locator('[data-testid^="profile-card-"]').first().click();
+  await expect(page.getByTestId('hud')).toBeVisible();
+  await expect.poll(() => revealedFinds(), { timeout: 8000 }).not.toContain('find-park');
+});
+
 test('reduced motion still uncovers the find — meaning without the motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await startGame(page);

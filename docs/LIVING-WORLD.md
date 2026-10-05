@@ -200,10 +200,13 @@ hiding — recorded only in the `__worldReactions` probe and session state.
 - **Hidden finds** live in `HIDDEN_FINDS` (`decorations.ts`) — two authored
   spots verified clear of decorations and beside a walkable anchor. The
   cover (`FindCover`) is the only transform owner of its own leaf halves;
-  the ladybug is always mounted under them. The reveal is session-local
-  (`revealedFinds` in `Hub`) — nothing persists, a reload hides it again.
-  Under reduced motion the cover renders already parted: the uncovered
-  thing is the meaning, the parting is the decoration.
+  the ladybug is always mounted under them. The revealed set is **session
+  memory owned by `App`** (`revealedFinds`, passed down through
+  `WorldCanvas`) — it lives above the per-map scene mount, so a cave
+  round-trip keeps the find uncovered while a reload hides it again.
+  Nothing is persisted. Under reduced motion the cover renders already
+  parted: the uncovered thing is the meaning, the parting is the
+  decoration.
 
 ## Testing
 
@@ -225,7 +228,8 @@ hiding — recorded only in the `__worldReactions` probe and session state.
   enter `__worldAnimationEvents`, `__worldReactionStats` returns to
   `active === 0` after settling, repeated taps answer again, and reduced
   motion still registers the reaction.
-- `e2e/discovery.spec.ts` — one cat response per arrival, a tapped bird
-  leaves for another perch, a leaf pile parts exactly once and stays
-  revealed (a second tap is just an ordinary walk), and reduced motion
-  still uncovers the find.
+- `e2e/discovery.spec.ts` — one cat response per arrival (counted globally
+  with two cats in range), a tapped bird leaves for another perch, a leaf
+  pile parts exactly once and stays revealed (a second tap is just an
+  ordinary walk), the revealed find survives a cave round-trip but not a
+  reload, and reduced motion still uncovers the find.

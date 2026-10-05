@@ -92,6 +92,11 @@ export interface HubProps {
    * renders.
    */
   readonly arrivalNonce?: number | undefined;
+  /** Session-only find memory — owned by the caller (App) because this
+      component remounts on every map transition. Omitted in preview
+      contexts (World Builder): finds just stay covered. */
+  readonly revealedFinds?: ReadonlySet<string> | undefined;
+  readonly onRevealFind?: ((findId: string) => void) | undefined;
   readonly handleRef: Ref<HubHandle> | undefined;
 }
 
@@ -386,6 +391,8 @@ export function Hub({
   worldTime = 0,
   attention,
   arrivalNonce = 0,
+  revealedFinds,
+  onRevealFind,
   handleRef,
 }: HubProps) {
   const models = useModels();
@@ -413,9 +420,6 @@ export function Hub({
     fishDart,
     catNotice,
   );
-  // Micro-discoveries: session-local set of finds the child has uncovered.
-  const [revealedFinds, setRevealedFinds] = useState<ReadonlySet<string>>(new Set());
-
   // Area-based activation: the area the avatar currently stands in plus the
   // areas one waypoint-hop away are "visible". NPCs outside this set are data
   // in memory only — no React subtree, no animation work — so the NPC count
@@ -830,15 +834,9 @@ export function Hub({
           key={find.id}
           subject={find.id}
           position={[find.x, 0, find.z]}
-          revealed={revealedFinds.has(find.id)}
+          revealed={revealedFinds?.has(find.id) ?? false}
           enabled={interactive}
-          onReveal={() =>
-            setRevealedFinds((set) => {
-              const next = new Set(set);
-              next.add(find.id);
-              return next;
-            })
-          }
+          onReveal={() => onRevealFind?.(find.id)}
         />
       ))}
 
