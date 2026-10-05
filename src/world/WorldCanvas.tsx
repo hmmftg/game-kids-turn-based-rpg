@@ -1,5 +1,5 @@
 import { useEffect, useRef, type Ref, type RefObject } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
   AnchorId,
@@ -23,6 +23,7 @@ import { CaveWorld } from './CaveWorld.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { zoomForMap } from './camera.ts';
 import type { NpcAttention } from './sceneBits.tsx';
+import type { WorldDiag } from './diagnostics.ts';
 
 /** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
 let canvasInstanceCounter = 0;
@@ -90,6 +91,29 @@ function InvalidateOnChange({ token }: { readonly token: unknown }) {
   return null;
 }
 
+/**
+ * `?diagnostics=1` probe: publishes the live renderer/scene plus a rendered-
+ * frame counter on `window.__worldDiag` so the parent diagnostics panel can
+ * read FPS and `gl.info` on demand. Under `frameloop="demand"` `useFrame`
+ * fires only for frames actually drawn — the counter IS the fps base, it
+ * adds no work of its own.
+ */
+function DiagnosticsProbe({ mapId }: { readonly mapId: MapId }) {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+  useFrame(() => {
+    const diag = window.__worldDiag;
+    if (diag) diag.frames += 1;
+  });
+  useEffect(() => {
+    window.__worldDiag = { renderer: gl, scene, mapId, frames: 0 } satisfies WorldDiag;
+    return () => {
+      delete window.__worldDiag;
+    };
+  }, [gl, scene, mapId]);
+  return null;
+}
+
 export interface WorldCanvasProps {
   readonly avatarId: AvatarId;
   readonly headwear: HeadwearId;
@@ -123,6 +147,8 @@ export interface WorldCanvasProps {
   readonly handleRef?: Ref<HubHandle>;
   /** Extra scene content (World Builder overlays in edit mode). */
   readonly overlays?: React.ReactNode;
+  /** `?diagnostics=1`: publish the live world handle for the parent panel. */
+  readonly diagnostics?: boolean;
 }
 
 export function WorldCanvas({
@@ -146,6 +172,7 @@ export function WorldCanvas({
   onContextLost,
   handleRef,
   overlays,
+  diagnostics = false,
 }: WorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneAlive = useRef(false);
@@ -201,6 +228,7 @@ export function WorldCanvas({
       >
         <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
+        {diagnostics ? <DiagnosticsProbe mapId={mapId} /> : null}
         {/* Follow-camera: tracks the avatar, clamped to this map's bounds.
             `key` remounts it per map so a transition snaps to the new
             spawn instead of easing from stale cross-map coordinates. */}

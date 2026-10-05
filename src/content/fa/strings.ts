@@ -89,6 +89,7 @@ export const FA = {
   parentTools: 'ابزارهای ساخت',
   worldBuilderOpen: 'باز کردن جهان‌ساز',
   worldBuilderHint: 'ابزار ساخت و آزمون بخش‌های تازه‌ی محله — برای بزرگ‌ترها و سازندگان.',
+  diagnosticsOpen: 'نمای فنی زنده',
   parentInstall: 'نصب و اجرای آفلاین',
   parentReset: 'پاک کردن پیشرفت',
   parentResetConfirm: 'همه‌ی پیشرفت پاک شود؟',

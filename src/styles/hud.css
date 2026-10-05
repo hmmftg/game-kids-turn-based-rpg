@@ -1145,3 +1145,36 @@
   font-size: var(--font-size-sm);
   opacity: 0.75;
 }
+
+/* Diagnostics (?diagnostics=1, parent-facing): a small corner button opens
+   the live readout. Top inline-end so it never competes with the trail. */
+.hud__diag {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: calc(var(--safe-top) + var(--space-3));
+  inset-inline-end: calc(var(--safe-right) + var(--space-3));
+  pointer-events: none;
+}
+
+.hud__diag > * {
+  pointer-events: auto;
+}
+
+.diag-panel {
+  position: absolute;
+  z-index: 30;
+  inset-block-start: calc(var(--safe-top) + var(--space-6));
+  inset-inline-end: calc(var(--safe-right) + var(--space-3));
+  inline-size: min(300px, 82vw);
+  background: var(--color-surface-strong);
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3);
+}
+
+.diag-panel__rows {
+  margin: 0 0 var(--space-2);
+  padding-inline-start: var(--space-4);
+  font-variant-numeric: tabular-nums;
+}

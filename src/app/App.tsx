@@ -28,6 +28,7 @@ import { InteractionHint } from '../ui/child/InteractionHint.tsx';
 import { ObjectiveChip } from '../ui/child/ObjectiveChip.tsx';
 import { NearbySheet } from '../ui/child/NearbySheet.tsx';
 import { PauseMenu } from '../ui/child/PauseMenu.tsx';
+import { DiagnosticsPanel } from '../ui/parent/DiagnosticsPanel.tsx';
 import { ProfileSelectScreen } from '../ui/child/ProfileSelectScreen.tsx';
 import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
 import { SceneGlyph } from '../ui/child/SceneChoice.tsx';
@@ -139,6 +140,9 @@ export function App() {
       ),
   );
   const noCopyTest = kidTestFlags.has('nocopy');
+  // `?diagnostics=1` — parent/dev gate (same pattern as ?worldbuilder=1):
+  // publishes the live world handle and reveals the diagnostics HUD button.
+  const diagnosticsEnabled = new URLSearchParams(window.location.search).get('diagnostics') === '1';
   const noActionIcons = kidTestFlags.has('noactionicons');
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
@@ -146,6 +150,7 @@ export function App() {
   // attention cue. `nonce` replays the cue on repeat arrivals.
   const [attention, setAttention] = useState<NpcAttention | null>(null);
   const [nearbyOpen, setNearbyOpen] = useState(false);
+  const [diagOpen, setDiagOpen] = useState(false);
   // Avatar position snapshot taken when the sheet opens — "who is near me"
   // is answered at the moment the child asks, not per render.
   const [nearbyPos, setNearbyPos] = useState({ x: 0, z: 0 });
@@ -460,6 +465,11 @@ export function App() {
             url.searchParams.set('worldbuilder', '1');
             window.location.assign(url.toString());
           }}
+          onOpenDiagnostics={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('diagnostics', '1');
+            window.location.assign(url.toString());
+          }}
           updateReady={updateReady}
           onApplyUpdate={applyUpdate}
           installReady={installReady}
@@ -537,6 +547,7 @@ export function App() {
           attention={attention}
           revealedFinds={revealedFinds}
           onRevealFind={revealWorldFind}
+          diagnostics={diagnosticsEnabled}
         />
       ) : null}
 
@@ -600,6 +611,27 @@ export function App() {
           </button>
         </div>
       ) : null}
+
+      {/* Live technical readout (?diagnostics=1, parent-facing): a HUD
+          button opens the panel over the running world — the canvas has to
+          stay mounted for real numbers, which rules out the parent area. */}
+      {diagnosticsEnabled && state.webglAvailable ? (
+        <div className="hud__diag">
+          <button
+            type="button"
+            className="btn btn--secondary"
+            data-testid="diag-button"
+            aria-label={FA.diagnosticsOpen}
+            onClick={() => setDiagOpen(true)}
+          >
+            <span className="emoji" aria-hidden="true">
+              📊
+            </span>
+          </button>
+        </div>
+      ) : null}
+
+      {diagOpen ? <DiagnosticsPanel state={state} onClose={() => setDiagOpen(false)} /> : null}
 
       {nearbyOpen ? (
         <NearbySheet
