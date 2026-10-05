@@ -68,47 +68,271 @@ const stroke = {
 };
 
 const GROUND_LINE = <path d="M6 42h36" {...stroke} opacity={0.35} />;
-const LEAF_SHAPE = <ellipse cx="24" cy="38" rx="6" ry="3.4" {...stroke} />;
-const BASKET_SHAPE = (
-  <>
-    <path d="M15 24h18l-2.5 13H17.5z" {...stroke} />
-    <path d="M19 24a5 5 0 0 1 10 0" {...stroke} />
-  </>
-);
-const PERSON_SHAPE = (
-  <>
-    <circle cx="24" cy="14" r="6.5" {...stroke} />
-    <path d="M17 40c0-9 3-14 7-14s7 5 7 14" {...stroke} />
-  </>
-);
+
+const OBJ_INK = 'rgba(52, 42, 28, 0.75)';
+
+/**
+ * ObjectGlyph — ONE canonical filled silhouette per physical object, centered
+ * near (0,0), placed by the caller's <g transform="translate() scale()">.
+ * The thing a child taps in the choice strip is pixel-for-pixel the thing
+ * that flies in the consequence scene and rests in the held marker: object
+ * identity is carried by the shape+colour, never by the words.
+ * Detail lines use OBJ_INK; fills are the object's intrinsic colour.
+ * (48-box callers: translate(x,y) scale(s), s≈1 ≈24px wide.)
+ */
+export function ObjectGlyph({ element }: { readonly element: SceneElement }) {
+  switch (element) {
+    case 'leaf':
+      return (
+        <g data-shape="leaf">
+          <path
+            d="M0 -8 C6 -7 9 1 3 8 C-2 5 -6 -2 0 -8 Z"
+            fill="#5ca34a"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+          <path d="M0 -5 Q1 0 0 6" fill="none" stroke="#3c7a33" strokeWidth={1.4} />
+        </g>
+      );
+    case 'basket':
+      return (
+        <g data-shape="basket">
+          <path d="M-8 -1 L8 -1 L6 8 L-6 8 Z" fill="#b9874d" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path d="M-5 -1 a5 5 0 0 1 10 0" fill="none" stroke="#8a5c2e" strokeWidth={1.8} />
+          <path
+            d="M-6.8 2.5 h13.6 M-6.2 5.5 h12.4"
+            fill="none"
+            stroke="#8a5c2e"
+            strokeWidth={0.9}
+            opacity={0.8}
+          />
+        </g>
+      );
+    case 'kite':
+      return (
+        <g data-shape="kite">
+          <path d="M0 -9 L7 0 L0 9 L-7 0 Z" fill="#f0b73e" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path
+            d="M0 -9 V9 M-7 0 H7"
+            fill="none"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+            opacity={0.5}
+          />
+          <path d="M0 9 Q2 12 0 14 Q-2 16 -3 18" fill="none" stroke="#d88f2e" strokeWidth={1.8} />
+        </g>
+      );
+    case 'shell':
+      return (
+        <g data-shape="shell">
+          <path d="M-9 5 A10 10 0 0 1 9 5 Z" fill="#f2a989" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path
+            d="M-5 5 L-3 -4 M0 5 V-6 M5 5 L3 -4"
+            fill="none"
+            stroke="#cf7f64"
+            strokeWidth={1.3}
+          />
+        </g>
+      );
+    case 'bread':
+      return (
+        <g data-shape="bread">
+          <ellipse
+            cx="0"
+            cy="1"
+            rx="9"
+            ry="5.5"
+            fill="#d99a4e"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+          <path
+            d="M-4 -1 Q-2 -3 0 -1 M2 -2 Q4 -4 6 -2"
+            fill="none"
+            stroke="#a5702e"
+            strokeWidth={1.4}
+          />
+        </g>
+      );
+    case 'crystal':
+      return (
+        <g data-shape="crystal">
+          <path
+            d="M-4 6 L-6 -6 L-2 -10 L0 -6 Z"
+            fill="#9a7bd0"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+          <path d="M1 6 L2 -4 L6 -8 L7 -3 Z" fill="#b79fe0" stroke={OBJ_INK} strokeWidth={0.8} />
+        </g>
+      );
+    case 'water':
+      return (
+        <g data-shape="water">
+          <path
+            d="M0 -9 C4 -3 6 0 6 4 A6 6 0 1 1 -6 4 C-6 0 -4 -3 0 -9 Z"
+            fill="#5aa9de"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+        </g>
+      );
+    case 'fish':
+      return (
+        <g data-shape="fish">
+          <ellipse cx="-1" cy="0" rx="9" ry="5" fill="#5ba7c9" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path d="M8 0 l5 -4 v8 Z" fill="#4a93b5" stroke={OBJ_INK} strokeWidth={0.8} />
+          <circle cx="-4" cy="-1" r="1.2" fill="#ffffff" />
+          <circle cx="-4" cy="-1" r="0.6" fill={OBJ_INK} />
+        </g>
+      );
+    case 'ball':
+      return (
+        <g data-shape="ball">
+          <circle cx="0" cy="0" r="8" fill="#e2593f" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path
+            d="M-7.5 -2 Q0 4 7.5 -2 M-7.5 2 Q0 -3 7.5 2"
+            fill="none"
+            stroke="#f2e2c8"
+            strokeWidth={1.3}
+          />
+        </g>
+      );
+    case 'book':
+      return (
+        <g data-shape="book">
+          <path
+            d="M-10 -6 Q-5 -8 0 -6 V9 Q-5 7 -10 9 Z"
+            fill="#f4ead3"
+            stroke={OBJ_INK}
+            strokeWidth={0.9}
+          />
+          <path
+            d="M10 -6 Q5 -8 0 -6 V9 Q5 7 10 9 Z"
+            fill="#f4ead3"
+            stroke={OBJ_INK}
+            strokeWidth={0.9}
+          />
+          <path d="M0 -6 V9" fill="none" stroke={OBJ_INK} strokeWidth={1} />
+        </g>
+      );
+    case 'cushion':
+      return (
+        <g data-shape="cushion">
+          <rect
+            x="-10"
+            y="-7"
+            width="20"
+            height="14"
+            rx="5"
+            fill="#e28da0"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+          <circle cx="-4" cy="0" r="1" fill={OBJ_INK} opacity={0.4} />
+          <circle cx="4" cy="0" r="1" fill={OBJ_INK} opacity={0.4} />
+        </g>
+      );
+    case 'mouse':
+      return (
+        <g data-shape="mouse">
+          <ellipse
+            cx="0"
+            cy="1"
+            rx="8"
+            ry="6.5"
+            fill="#a98a6b"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+          <circle cx="-4.5" cy="-5" r="3.4" fill="#a98a6b" stroke={OBJ_INK} strokeWidth={0.8} />
+          <circle cx="4.5" cy="-5" r="3.4" fill="#a98a6b" stroke={OBJ_INK} strokeWidth={0.8} />
+          <circle cx="-4.5" cy="-5" r="1.6" fill="#e8b8c0" />
+          <circle cx="4.5" cy="-5" r="1.6" fill="#e8b8c0" />
+          <path d="M8 4 Q14 5 12 10" fill="none" stroke="#a98a6b" strokeWidth={2} />
+          <circle cx="-2" cy="0" r="1" fill={OBJ_INK} />
+          <circle cx="2" cy="0" r="1" fill={OBJ_INK} />
+          <path d="M0 2.5 L-1.4 4.5 H1.4 Z" fill={OBJ_INK} />
+        </g>
+      );
+    case 'person':
+      // head + torso; the torso stays icon-tinted so the actor keeps the
+      // encounter's colour; skin is intrinsic.
+      return (
+        <g data-shape="person">
+          <circle cx="0" cy="-8" r="6" fill="#f2c194" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path
+            d="M-7 10 C-7 0 -4 -2 0 -2 C4 -2 7 0 7 10 Z"
+            fill="currentColor"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+        </g>
+      );
+    case 'face':
+      return (
+        <g data-shape="face">
+          <circle cx="0" cy="0" r="12" fill="#f2c194" stroke={OBJ_INK} strokeWidth={0.8} />
+          <circle cx="-4.5" cy="-2" r="1.5" fill={OBJ_INK} />
+          <circle cx="4.5" cy="-2" r="1.5" fill={OBJ_INK} />
+          <path d="M-5 4 A6 6 0 0 0 5 4" fill="none" stroke={OBJ_INK} strokeWidth={1.4} />
+        </g>
+      );
+    case 'person-away':
+      return (
+        <g data-shape="person-away">
+          <circle cx="0" cy="-8" r="6" fill="#f2c194" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path d="M-5.6 -9.5 A6 6 0 0 1 5.6 -9.5 L5.6 -7 A6 6 0 0 0 -5.6 -7 Z" fill="#4a3b30" />
+          <path
+            d="M-7 10 C-7 0 -4 -2 0 -2 C4 -2 7 0 7 10 Z"
+            fill="currentColor"
+            stroke={OBJ_INK}
+            strokeWidth={0.8}
+          />
+        </g>
+      );
+    case 'bin':
+      return (
+        <g data-shape="bin">
+          <path d="M-8 -2 L8 -2 L6 8 L-6 8 Z" fill="#8a94a0" stroke={OBJ_INK} strokeWidth={0.8} />
+          <path d="M-9 -2 h18" fill="none" stroke="#6a747f" strokeWidth={2.6} />
+        </g>
+      );
+    // Places and directional verbs stay line-art — the child taps the
+    // object; the place is the backdrop, not the actor.
+    default:
+      return null;
+  }
+}
 
 function renderElement(element: SceneElement) {
+  // Objects render through the canonical filled silhouette (ObjectGlyph) —
+  // the thing here is pixel-for-pixel the thing that flies in the
+  // consequence; places and paths stay line-art.
   switch (element) {
     case 'person':
       // the neighbour — tap the person to greet/watch them
       return (
         <>
-          {PERSON_SHAPE}
+          <g transform="translate(24 20) scale(1.35)">
+            <ObjectGlyph element="person" />
+          </g>
           <path d="M33 22l6-8M35 26l8-6" {...stroke} />
           {GROUND_LINE}
         </>
       );
     case 'face':
       return (
-        <>
-          <circle cx="24" cy="22" r="14" {...stroke} />
-          <circle cx="19" cy="19" r="1.6" fill="currentColor" />
-          <circle cx="29" cy="19" r="1.6" fill="currentColor" />
-          <path d="M17 27a9 9 0 0 0 14 0" {...stroke} />
-        </>
+        <g transform="translate(24 22) scale(1.15)">
+          <ObjectGlyph element="face" />
+        </g>
       );
     case 'person-away':
       return (
         <>
-          {/* back of the head: hair cap, no face */}
-          <circle cx="24" cy="14" r="6.5" {...stroke} />
-          <path d="M18.5 12a6.5 6.5 0 0 1 11 0" {...stroke} strokeWidth={4.4} />
-          <path d="M17 40c0-9 3-14 7-14s7 5 7 14" {...stroke} />
+          <g transform="translate(24 20) scale(1.35)">
+            <ObjectGlyph element="person-away" />
+          </g>
           {GROUND_LINE}
           <path d="M8 30h-3m3 0l3-3M5 30l3 3" {...stroke} />
         </>
@@ -132,7 +356,9 @@ function renderElement(element: SceneElement) {
     case 'basket':
       return (
         <>
-          {BASKET_SHAPE}
+          <g transform="translate(24 30) scale(1.3)">
+            <ObjectGlyph element="basket" />
+          </g>
           {GROUND_LINE}
         </>
       );
@@ -155,23 +381,31 @@ function renderElement(element: SceneElement) {
     case 'leaf':
       return (
         <>
-          {LEAF_SHAPE}
+          <g transform="translate(24 36) scale(0.9)">
+            <ObjectGlyph element="leaf" />
+          </g>
           {GROUND_LINE}
         </>
       );
     case 'bin':
       return (
         <>
-          <path d="M16 22h16l-2 16H18z" {...stroke} />
-          <path d="M14 22h20" {...stroke} strokeWidth={4.4} />
+          <g transform="translate(24 30) scale(1.3)">
+            <ObjectGlyph element="bin" />
+          </g>
           {GROUND_LINE}
         </>
       );
     case 'water':
       return (
         <>
-          <path d="M10 22q7-6 14-2t14 0" {...stroke} />
-          <path d="M18 12q2.5 4 0 7M28 12q2.5 4 0 7M23 6q2.5 4 0 7" {...stroke} />
+          <path d="M10 30q7-6 14-2t14 0" {...stroke} />
+          <g transform="translate(18 14) scale(0.75)">
+            <ObjectGlyph element="water" />
+          </g>
+          <g transform="translate(30 14) scale(0.75)">
+            <ObjectGlyph element="water" />
+          </g>
           {GROUND_LINE}
         </>
       );
@@ -179,8 +413,9 @@ function renderElement(element: SceneElement) {
       // a fallen kite — diamond body, little tail
       return (
         <>
-          <path d="M24 12l9 10-9 12-9-12z" {...stroke} />
-          <path d="M24 34q2 4 0 8m0-8q-3 2-5 5" {...stroke} />
+          <g transform="translate(24 20) scale(1.1)">
+            <ObjectGlyph element="kite" />
+          </g>
           {GROUND_LINE}
         </>
       );
@@ -188,9 +423,9 @@ function renderElement(element: SceneElement) {
       // a little fish in the water
       return (
         <>
-          <path d="M12 26q6-7 13-7t11 7q-5 7-11 7t-13-7z" {...stroke} />
-          <circle cx="18" cy="25" r="1.4" fill="currentColor" />
-          <path d="M36 26l5-4v8z" {...stroke} />
+          <g transform="translate(24 25) scale(1.1)">
+            <ObjectGlyph element="fish" />
+          </g>
           <path d="M10 40q7-4 14-1t14 0" {...stroke} opacity={0.5} />
         </>
       );
@@ -198,8 +433,9 @@ function renderElement(element: SceneElement) {
       // a scallop shell on the bank
       return (
         <>
-          <path d="M14 38a10 10 0 0 1 20 0z" {...stroke} />
-          <path d="M18 38l2-8M24 38v-9M30 38l-2-8" {...stroke} />
+          <g transform="translate(24 34) scale(1.1)">
+            <ObjectGlyph element="shell" />
+          </g>
           {GROUND_LINE}
         </>
       );
@@ -207,24 +443,25 @@ function renderElement(element: SceneElement) {
       // a warm loaf
       return (
         <>
-          <ellipse cx="24" cy="30" rx="11" ry="6" {...stroke} />
-          <path d="M18 27q2-2 4 0M24 26q2-2 4 0" {...stroke} />
+          <g transform="translate(24 30) scale(1.15)">
+            <ObjectGlyph element="bread" />
+          </g>
           {GROUND_LINE}
         </>
       );
     case 'book':
       // an open picture card
       return (
-        <>
-          <path d="M10 16q7-3 14 0v20q-7-3-14 0z" {...stroke} />
-          <path d="M38 16q-7-3-14 0v20q7-3 14 0z" {...stroke} />
-        </>
+        <g transform="translate(24 27) scale(1.2)">
+          <ObjectGlyph element="book" />
+        </g>
       );
     case 'ball':
       return (
         <>
-          <circle cx="24" cy="30" r="10" {...stroke} />
-          <path d="M14 30h20M24 20v20" {...stroke} opacity={0.6} />
+          <g transform="translate(24 30) scale(1.2)">
+            <ObjectGlyph element="ball" />
+          </g>
           {GROUND_LINE}
         </>
       );
@@ -232,8 +469,9 @@ function renderElement(element: SceneElement) {
       // the soft cushion — a rounded pillow the child holds up in play
       return (
         <>
-          <rect x="12" y="18" width="24" height="20" rx="7" {...stroke} />
-          <path d="M18 24h12M18 30h12" {...stroke} opacity={0.5} />
+          <g transform="translate(24 28) scale(1.2)">
+            <ObjectGlyph element="cushion" />
+          </g>
           {GROUND_LINE}
         </>
       );
@@ -241,42 +479,30 @@ function renderElement(element: SceneElement) {
       // a small glowing crystal cluster
       return (
         <>
-          <path d="M20 38l-3-16 5-8 4 8zM28 38l1-12 5-6 2 8z" {...stroke} />
+          <g transform="translate(24 28) scale(1.2)">
+            <ObjectGlyph element="crystal" />
+          </g>
           <path d="M14 38h20" {...stroke} opacity={0.35} />
         </>
       );
     case 'mouse':
       // the little cave mouse — round ears, pointy nose, tail
       return (
-        <>
-          <circle cx="18" cy="14" r="5" {...stroke} />
-          <circle cx="30" cy="14" r="5" {...stroke} />
-          <ellipse cx="24" cy="28" rx="9" ry="8" {...stroke} />
-          <circle cx="21" cy="26" r="1.2" fill="currentColor" />
-          <circle cx="27" cy="26" r="1.2" fill="currentColor" />
-          <path d="M24 29l-2 3h4z" {...stroke} />
-          <path d="M33 32q8 2 6 8" {...stroke} />
-        </>
+        <g transform="translate(24 26) scale(1.3)">
+          <ObjectGlyph element="mouse" />
+        </g>
       );
   }
 }
 
-/** Small glyph carried in the hand marker — mirrors the scene element. */
+/** Small glyph carried in the hand marker — the SAME ObjectGlyph the child
+ *  tapped, scaled into the hand. */
 function heldShape(item: HeldItem) {
-  switch (item) {
-    case 'leaf':
-      return <ellipse cx="33" cy="12" rx="5" ry="2.8" {...stroke} />;
-    case 'basket':
-      return <path d="M28 8h10l-1.5 8h-7z" {...stroke} />;
-    case 'kite':
-      return <path d="M33 5l5 5-5 7-5-7z" {...stroke} />;
-    case 'shell':
-      return <path d="M28 15a5 5 0 0 1 10 0z" {...stroke} />;
-    case 'bread':
-      return <ellipse cx="33" cy="12" rx="6" ry="3.4" {...stroke} />;
-    case 'crystal':
-      return <path d="M30 18l-2-9 3-4 2 4zM34 18l1-7 3-3 1 4z" {...stroke} />;
-  }
+  return (
+    <g transform="translate(33 12) scale(0.62)">
+      <ObjectGlyph element={item} />
+    </g>
+  );
 }
 
 function HeldMarker({ item, plain }: { readonly item: HeldItem; readonly plain?: boolean }) {
@@ -484,12 +710,10 @@ export function QuestioningReact({ actorId }: { readonly actorId?: string | unde
       data-reaction="questioning"
     >
       <g className="scene-exec-question">
-        <circle cx="24" cy="14" r="6.5" {...stroke} />
-        <circle cx="21.5" cy="13" r="1.1" fill="currentColor" />
-        <circle cx="26.5" cy="13" r="1.1" fill="currentColor" />
-        <path d="M21 17.5q3 1.6 6 0" {...stroke} strokeWidth={2.6} />
+        <g transform="translate(24 24) scale(1.3)">
+          <ObjectGlyph element="person" />
+        </g>
       </g>
-      <path d="M17 40c0-9 3-14 7-14s7 5 7 14" {...stroke} />
       {GROUND_LINE}
     </svg>
   );
@@ -498,35 +722,69 @@ export function QuestioningReact({ actorId }: { readonly actorId?: string | unde
 const HAND_SHAPE = (
   <path
     d="M16 30a3 3 0 0 1 3-3v-3a3 3 0 0 1 6 0v-1a3 3 0 0 1 6 0v3a3 3 0 0 1 3 3v6a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7z"
-    {...stroke}
+    fill="#f2c194"
+    stroke={OBJ_INK}
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
   />
 );
 
 function consequenceScene(iconId: IconId) {
+  // Every consequence reuses the SAME ObjectGlyph the child tapped — a filled,
+  // recognisable object at the same silhouette — so "the leaf I touched" is
+  // visibly "the leaf that flew into the hand", not an abstract ellipse.
+  const obj = (
+    element: SceneElement,
+    x: number,
+    y: number,
+    scale = 1,
+    cls = 'scene-exec-fly-give',
+  ) => (
+    <g className={cls}>
+      <g transform={`translate(${x} ${y}) scale(${scale})`}>
+        <ObjectGlyph element={element} />
+      </g>
+    </g>
+  );
+  const heldBy = (element: SceneElement, x = 33, y = 11, scale = 0.85) =>
+    obj(element, x, y, scale, 'scene-exec-fly-arc');
   switch (iconId) {
     case 'icon-pick-up':
-    case 'icon-help-carry':
-    case 'icon-pick-kite':
-    case 'icon-collect-shell':
-    case 'icon-take-bread':
-      // ObjectLift → ObjectFlyTo: the object lifts off the ground and arcs
+      // ObjectLift → ObjectFlyTo: the LEAF lifts off the ground and arcs
       // into the hand — continuous motion, ends in the held state.
       return (
         <>
           {HAND_SHAPE}
-          <g className="scene-exec-fly-arc">
-            {iconId === 'icon-pick-up' ? (
-              <ellipse cx="33" cy="12" rx="5" ry="2.8" {...stroke} />
-            ) : iconId === 'icon-pick-kite' ? (
-              <path d="M33 5l5 5-5 7-5-7z" {...stroke} />
-            ) : iconId === 'icon-collect-shell' ? (
-              <path d="M28 15a5 5 0 0 1 10 0z" {...stroke} />
-            ) : iconId === 'icon-take-bread' ? (
-              <ellipse cx="33" cy="12" rx="6" ry="3.4" {...stroke} />
-            ) : (
-              <path d="M28 8h10l-1.5 8h-7z" {...stroke} />
-            )}
-          </g>
+          {heldBy('leaf', 33, 12, 0.8)}
+        </>
+      );
+    case 'icon-help-carry':
+      return (
+        <>
+          {HAND_SHAPE}
+          {heldBy('basket', 33, 10, 0.95)}
+        </>
+      );
+    case 'icon-pick-kite':
+      return (
+        <>
+          {HAND_SHAPE}
+          {heldBy('kite', 33, 10, 0.9)}
+        </>
+      );
+    case 'icon-collect-shell':
+      return (
+        <>
+          {HAND_SHAPE}
+          {heldBy('shell', 33, 12, 0.8)}
+        </>
+      );
+    case 'icon-take-bread':
+      return (
+        <>
+          {HAND_SHAPE}
+          {heldBy('bread', 33, 11, 0.85)}
         </>
       );
     case 'icon-give-kite':
@@ -535,13 +793,11 @@ function consequenceScene(iconId: IconId) {
       return (
         <>
           <g className="scene-exec-receive">
-            <circle cx="30" cy="14" r="6.5" {...stroke} />
-            <path d="M24 40c0-9 3-14 7-14s7 5 7 14" {...stroke} />
+            <g transform="translate(31 27)">
+              <ObjectGlyph element="person" />
+            </g>
           </g>
-          <g className="scene-exec-fly-give">
-            <path d="M18 18l7 8-7 9-7-9z" {...stroke} />
-            <path d="M18 35q1.5 3 0 6" {...stroke} />
-          </g>
+          {obj('kite', 18, 26, 1)}
           {GROUND_LINE}
         </>
       );
@@ -551,9 +807,9 @@ function consequenceScene(iconId: IconId) {
         <>
           <path d="M8 38q8-5 16-1t16 0" {...stroke} opacity={0.5} />
           <g className="scene-exec-bounce">
-            <path d="M14 22q5-6 11-6t9 6q-4 6-9 6t-11-6z" {...stroke} />
-            <circle cx="19" cy="21" r="1.2" fill="currentColor" />
-            <path d="M34 22l4-3v6z" {...stroke} />
+            <g transform="translate(24 21) scale(1.15)">
+              <ObjectGlyph element="fish" />
+            </g>
           </g>
         </>
       );
@@ -563,12 +819,11 @@ function consequenceScene(iconId: IconId) {
       return (
         <>
           <g className="scene-exec-receive">
-            <path d="M16 26h16l-2 14H18z" {...stroke} />
-            <path d="M14 26h20" {...stroke} strokeWidth={4.4} />
+            <g transform="translate(24 32) scale(1.1)">
+              <ObjectGlyph element="basket" />
+            </g>
           </g>
-          <g className="scene-exec-fly-give">
-            <path d="M19 20a5 5 0 0 1 10 0z" {...stroke} />
-          </g>
+          {obj('shell', 24, 19, 0.85)}
         </>
       );
     case 'icon-place-bread':
@@ -579,9 +834,7 @@ function consequenceScene(iconId: IconId) {
             <path d="M12 30h24" {...stroke} strokeWidth={4.4} />
             <path d="M16 30v10M32 30v10" {...stroke} />
           </g>
-          <g className="scene-exec-fly-give">
-            <ellipse cx="24" cy="20" rx="9" ry="4.6" {...stroke} />
-          </g>
+          {obj('bread', 24, 20, 1)}
         </>
       );
     case 'icon-tap-book':
@@ -590,15 +843,14 @@ function consequenceScene(iconId: IconId) {
       return (
         <>
           <g className="scene-exec-look">
-            <circle cx="38" cy="10" r="4.5" {...stroke} />
-            <circle cx="36.5" cy="9.2" r="0.9" fill="currentColor" />
-            <circle cx="39.5" cy="9.2" r="0.9" fill="currentColor" />
-            <path d="M36.5 12.5q1.6 1 3.2 0" {...stroke} strokeWidth={2.2} />
+            <g transform="translate(38 12) scale(0.75)">
+              <ObjectGlyph element="face" />
+            </g>
           </g>
-          <path d="M34 24c0-6 2-8 4-8" {...stroke} />
-          <path d="M10 18q6-2 12 0v20q-6-2-12 0z" {...stroke} />
           <g className="scene-exec-open">
-            <path d="M22 18q6-2 12 0v20q-6-2-12 0z" {...stroke} />
+            <g transform="translate(22 28)">
+              <ObjectGlyph element="book" />
+            </g>
           </g>
         </>
       );
@@ -609,14 +861,14 @@ function consequenceScene(iconId: IconId) {
       return (
         <>
           <g className="scene-exec-look">
-            <circle cx="38" cy="10" r="4.5" {...stroke} />
-            <circle cx="36.5" cy="9.2" r="0.9" fill="currentColor" />
-            <circle cx="39.5" cy="9.2" r="0.9" fill="currentColor" />
-            <path d="M36.5 12.5q1.6 1 3.2 0" {...stroke} strokeWidth={2.2} />
+            <g transform="translate(38 12) scale(0.75)">
+              <ObjectGlyph element="face" />
+            </g>
           </g>
           <g className="scene-exec-bounce">
-            <circle cx="24" cy="28" r="10" {...stroke} />
-            <path d="M14 28h20M24 18v20" {...stroke} opacity={0.6} />
+            <g transform="translate(24 28) scale(1.2)">
+              <ObjectGlyph element="ball" />
+            </g>
           </g>
           {GROUND_LINE}
         </>
@@ -629,7 +881,9 @@ function consequenceScene(iconId: IconId) {
           {HAND_SHAPE}
           <g className="scene-exec-fly-arc">
             <g className="scene-exec-uncover">
-              <path d="M30 18l-2-9 3-4 2 4zM34 18l1-7 3-3 1 4z" {...stroke} />
+              <g transform="translate(32 12) scale(0.9)">
+                <ObjectGlyph element="crystal" />
+              </g>
             </g>
           </g>
         </>
@@ -640,15 +894,11 @@ function consequenceScene(iconId: IconId) {
       return (
         <>
           <g className="scene-exec-receive">
-            <circle cx="18" cy="14" r="5" {...stroke} />
-            <circle cx="30" cy="14" r="5" {...stroke} />
-            <ellipse cx="24" cy="30" rx="9" ry="8" {...stroke} />
-            <circle cx="21" cy="28" r="1.2" fill="currentColor" />
-            <circle cx="27" cy="28" r="1.2" fill="currentColor" />
+            <g transform="translate(24 26)">
+              <ObjectGlyph element="mouse" />
+            </g>
           </g>
-          <g className="scene-exec-fly-give">
-            <path d="M22 22l-1-5 2-3 1 3zM25 22l1-4 2-2 1 2z" {...stroke} />
-          </g>
+          {obj('crystal', 24, 17, 0.8)}
         </>
       );
     case 'icon-place-basket':
@@ -659,10 +909,7 @@ function consequenceScene(iconId: IconId) {
             <path d="M12 30h24" {...stroke} strokeWidth={4.4} />
             <path d="M16 30v10M32 30v10" {...stroke} />
           </g>
-          <g className="scene-exec-fly-give">
-            <path d="M16 14h16l-2.5 13H18.5z" {...stroke} />
-            <path d="M20 14a4 4 0 0 1 8 0" {...stroke} />
-          </g>
+          {obj('basket', 24, 20, 1)}
         </>
       );
     case 'icon-basket-bin':
@@ -670,21 +917,27 @@ function consequenceScene(iconId: IconId) {
       return (
         <>
           <g className="scene-exec-receive">
-            <path d="M16 26h16l-2 14H18z" {...stroke} />
-            <path d="M14 26h20" {...stroke} strokeWidth={4.4} />
+            <g transform="translate(24 32) scale(1.05)">
+              <ObjectGlyph element="bin" />
+            </g>
           </g>
-          <g className="scene-exec-fly-give">
-            <ellipse cx="24" cy="18" rx="5" ry="2.8" {...stroke} />
-          </g>
+          {obj('leaf', 24, 18, 0.85)}
         </>
       );
     case 'icon-wash-hands':
+      // water drops fall into the water — teardrops, not wiggle lines
       return (
         <>
-          <path d="M10 24q7-6 14-2t14 0" {...stroke} />
-          <path d="M18 14q2.5 4 0 7M28 14q2.5 4 0 7M23 8q2.5 4 0 7" {...stroke} />
-          <g className="scene-exec-pop">
-            <path d="M13 34l3-3m3 3l-3-3m10 3l3-3m3 3l-3-3" {...stroke} />
+          <path d="M10 28q7-6 14-2t14 0" {...stroke} />
+          <g className="scene-exec-drop">
+            <g transform="translate(19 14) scale(0.7)">
+              <ObjectGlyph element="water" />
+            </g>
+          </g>
+          <g className="scene-exec-drop" style={{ animationDelay: '0.12s' }}>
+            <g transform="translate(29 12) scale(0.7)">
+              <ObjectGlyph element="water" />
+            </g>
           </g>
         </>
       );
@@ -695,7 +948,9 @@ function consequenceScene(iconId: IconId) {
       // the person reacts — a wave and a happy face
       return (
         <>
-          {PERSON_SHAPE}
+          <g transform="translate(24 20) scale(1.35)">
+            <ObjectGlyph element="person" />
+          </g>
           <g className="scene-exec-pop">
             <path d="M33 20l5-7M35 25l7-5" {...stroke} />
           </g>
@@ -874,7 +1129,11 @@ export function DemoScene({
         // the thing travels to the person
         return (
           <>
-            <g className="scene-exec-receive">{PERSON_SHAPE}</g>
+            <g className="scene-exec-receive">
+              <g transform="translate(24 26) scale(1.3)">
+                <ObjectGlyph element="person" />
+              </g>
+            </g>
             {glyph('scene-exec-fly-give')}
           </>
         );
@@ -883,7 +1142,11 @@ export function DemoScene({
         // the thing travels into its container
         return (
           <>
-            <g className="scene-exec-receive">{BASKET_SHAPE}</g>
+            <g className="scene-exec-receive">
+              <g transform="translate(24 30) scale(1.15)">
+                <ObjectGlyph element="basket" />
+              </g>
+            </g>
             {glyph('scene-exec-fly-give')}
           </>
         );

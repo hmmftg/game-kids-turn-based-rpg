@@ -60,6 +60,13 @@ and ends in the authoritative destination state.
 `ObjectReceive` is defined by its authoritative state change (shell no longer held /
 basket contains shell); the settle bounce is only its visual.
 
+**Object identity.** The object in a consequence scene must be the same
+recognizable thing the child tapped — one filled silhouette (`ObjectGlyph` in
+`SceneChoice.tsx`) is shared by the choice strip, the consequence scene, the
+held-object marker, and `DemoScene`, so "the leaf I touched" is visibly "the
+leaf that flew into the hand". A generic outline ellipse that could be
+anything fails the comprehension bar even when its motion is correct.
+
 Characters:
 
 - `CharacterReact(actor, context)` — the **only** child-facing semantic character
