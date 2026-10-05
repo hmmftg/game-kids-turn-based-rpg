@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
@@ -206,6 +206,91 @@ export function AvatarLiveliness({
 
   return (
     <group ref={groupRef} dispose={null}>
+      {children}
+    </group>
+  );
+}
+
+const TRANSIT_SPEED = 3.2; // world units per second — a stroll, not a dash.
+
+/**
+ * Routine relocations are walked, never teleported. When a tick moves an
+ * NPC's resolved stand to a new spot, the body physically strolls the
+ * difference and faces its direction of travel — the child reads "she is
+ * going over there", not "she vanished". The tap cylinder travels inside
+ * the same group so the figure stays tappable mid-walk, and `onNpcTap`
+ * still resolves the authoritative destination stand.
+ *
+ * Implementation: the wrapper keeps `offset = rendered − target`. A target
+ * change (detected in `useLayoutEffect`, before the next demand frame can
+ * draw) adds the old rendered spot into the offset; each drawn frame walks
+ * the offset back to zero at TRANSIT_SPEED and invalidates only while
+ * moving. Reduced motion skips the walk and snaps — honest, still legible.
+ */
+export function NpcTransit({
+  x,
+  z,
+  facing,
+  name,
+  children,
+}: {
+  readonly x: number;
+  readonly z: number;
+  /** The inner figure's settled facing — subtracted while travelling so the
+      body heads where it walks, not where it was posed. */
+  readonly facing: number;
+  /** Probe/debug name on the wrapper group. */
+  readonly name?: string;
+  readonly children: ReactNode;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const target = useRef({ x, z });
+  const offset = useRef({ x: 0, z: 0 });
+  const invalidate = useThree((state) => state.invalidate);
+  const reduced = prefersReducedMotion();
+
+  useLayoutEffect(() => {
+    const group = groupRef.current;
+    if (!group) return;
+    // Target moved: the figure stays where it rendered and walks back.
+    if (target.current.x !== x || target.current.z !== z) {
+      offset.current = {
+        x: target.current.x + offset.current.x - x,
+        z: target.current.z + offset.current.z - z,
+      };
+      target.current = { x, z };
+      if (reduced) {
+        offset.current = { x: 0, z: 0 };
+      } else {
+        invalidate();
+      }
+    }
+    group.position.set(x + offset.current.x, 0, z + offset.current.z);
+  });
+
+  useFrame((_, dt) => {
+    const group = groupRef.current;
+    if (!group) return;
+    const { x: ox, z: oz } = offset.current;
+    const dist = Math.hypot(ox, oz);
+    if (dist < 0.02) {
+      if (ox !== 0 || oz !== 0 || group.rotation.y !== 0) {
+        offset.current = { x: 0, z: 0 };
+        group.position.set(x, 0, z);
+        group.rotation.y = 0;
+        invalidate();
+      }
+      return;
+    }
+    const step = Math.min(dist, TRANSIT_SPEED * dt);
+    offset.current = { x: ox - (ox / dist) * step, z: oz - (oz / dist) * step };
+    group.position.set(x + offset.current.x, 0, z + offset.current.z);
+    group.rotation.y = Math.atan2(ox, oz) - facing;
+    invalidate();
+  });
+
+  return (
+    <group ref={groupRef} name={name ?? ''} position={[x, 0, z]} dispose={null}>
       {children}
     </group>
   );
