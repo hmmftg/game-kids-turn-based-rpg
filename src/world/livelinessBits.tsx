@@ -16,6 +16,11 @@ import { activityPoseTransform, type NpcActivityPose, type NpcIdleCue } from './
  * tick, or entering idle), runs one short motion, then stops and returns the
  * demand renderer to idle. Reduced motion skips the motion and keeps the
  * held activity pose — the settled state stays perceivable.
+ *
+ * Transform ownership: each wrapper here animates only its OWN group node
+ * (plus detail meshes it discovers inside itself, like `face-eye`); the
+ * walker drives `models.Figure` via props. New motion = a new nested group,
+ * never a second writer on an existing node (docs/LIVING-WORLD.md).
  */
 
 const LOOKS_AROUND_SECONDS = 0.8;

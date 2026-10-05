@@ -43,6 +43,20 @@ test('one arrival produces at most one notices-child per NPC', async ({ page }) 
   await page.waitForTimeout(2000);
   expect(await noticesFor(page, 'npc-elder')).toHaveLength(1);
 
+  // A camera pan — and the re-renders it causes — mints no new arrival:
+  // arrivalNonce is monotonic per completed walk, never per render.
+  const canvas = page.locator('#world-canvas canvas, .world canvas').first();
+  const box = await canvas.boundingBox();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2 + 140, box!.y + box!.height / 2, {
+    steps: 6,
+  });
+  await page.mouse.up();
+  await page.waitForTimeout(800);
+  expect((await attentionProbe(page))?.arrivalNonce).toBe(first!.arrivalNonce);
+  expect(await noticesFor(page, 'npc-elder')).toHaveLength(1);
+
   // Walk away and back: a NEW arrival earns a fresh cue — same npc, second
   // arrivalNonce, exactly one more semantic event.
   await tapWorldGround(page, 0, 3);
