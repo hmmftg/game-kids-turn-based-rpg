@@ -53,6 +53,7 @@ export interface WorldProbe {
   __worldAnimationStats?: { active: number; started: number; completed: number };
   __worldCamera?: { position: { x: number; z: number } };
   __worldToScreen?: (x: number, z: number, y?: number) => { x: number; y: number };
+  __worldCritterTransforms?: () => readonly (readonly [string, number, number, number, number])[];
   __worldNpcs?: Record<
     string,
     { anchorId: string; activity: string; dialogueId: string | null; x: number; z: number }
@@ -91,6 +92,11 @@ export async function attentionProbe(page: Page) {
 /** Presentation-layer reactive-prop taps — the `__worldReactions` probe log. */
 export async function reactionsProbe(page: Page) {
   return page.evaluate(() => (window as unknown as WorldProbe).__worldReactions ?? []);
+}
+
+/** Live critter transforms [key, x, y, z, heading] — probe-gated in useCritters. */
+export async function critterTransforms(page: Page) {
+  return page.evaluate(() => (window as unknown as WorldProbe).__worldCritterTransforms?.() ?? []);
 }
 
 /** Flourish lifecycle counters — `active` must return to 0 after settle. */

@@ -156,6 +156,17 @@ export function App() {
   // timestamp already seen, so only a strictly newer 'questCompleted' stamp is
   // a fresh win — reload, profile select, and switch-back can never replay it.
   const seenCheckpointAtRef = useRef<number | null>(null);
+  // Session-only world memory: finds the child uncovered this session. It
+  // lives above the per-map scene mount — `Hub` remounts on every map
+  // transition (cave round-trips), so the set must live here or the finds
+  // would re-cover. Session memory survives remounts; a reload clears it.
+  // Never persisted — no reducer, no PersistedState, no storage.
+  const [revealedFinds, setRevealedFinds] = useState<ReadonlySet<string>>(new Set());
+  const revealWorldFind = useCallback(
+    (findId: string) =>
+      setRevealedFinds((set) => (set.has(findId) ? set : new Set(set).add(findId))),
+    [],
+  );
 
   // Presentation-only celebration: the reducer has already completed the quest
   // and granted the sticker before this fires; the overlay just reports it.
@@ -210,6 +221,9 @@ export function App() {
       // Where every NPC stands this tick — lets e2e observe routines without
       // raycasting the scene graph.
       w['__worldAttention'] = attention;
+      // Session-only find memory — probe-visible so e2e can assert it
+      // survives scene remounts and clears on reload.
+      w['__worldRevealedFinds'] = [...revealedFinds];
       w['__worldReactions'] = reactionProbeLog();
       w['__worldReactionStats'] = reactionStatsProbe();
       w['__worldDialogueNpc'] = state.dialogue?.npcId ?? null;
@@ -240,7 +254,15 @@ export function App() {
         }),
       );
     }
-  }, [state.mapId, state.discoveries, state.dialogue, state.battle, worldTime, attention]);
+  }, [
+    state.mapId,
+    state.discoveries,
+    state.dialogue,
+    state.battle,
+    worldTime,
+    attention,
+    revealedFinds,
+  ]);
   const onArrive = useCallback(
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
@@ -496,6 +518,8 @@ export function App() {
           startAnchorId={spawnAnchor}
           discoveries={state.discoveries}
           attention={attention}
+          revealedFinds={revealedFinds}
+          onRevealFind={revealWorldFind}
         />
       ) : null}
 

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
-import type { Xyz } from './models/details.tsx';
+import { PlantCluster, type Xyz } from './models/details.tsx';
+import { noRaycast } from './models/raycast.ts';
+import { BOX, SPHERE, sharedLambert } from './models/shared.ts';
 import {
   reactionAborted,
   reactionCompleted,
@@ -10,7 +12,7 @@ import {
   recordReactionProbe,
   reactionTransform,
   REACTION_SECONDS,
-  type PropReaction,
+  type FlourishReaction,
 } from './reactions.ts';
 
 /**
@@ -55,7 +57,7 @@ export function ReactiveProp({
   onReact,
   children,
 }: {
-  readonly reaction: PropReaction;
+  readonly reaction: FlourishReaction;
   /** Probe subject id, e.g. 'flower@2,-2.6' or 'fountain'. */
   readonly subject: string;
   /** Taps are ignored while the world is non-interactive (dialogue, pause). */
@@ -118,7 +120,7 @@ function PropFlourish({
   nonce,
   children,
 }: {
-  readonly reaction: PropReaction;
+  readonly reaction: FlourishReaction;
   readonly nonce: number;
   readonly children: ReactNode;
 }) {
@@ -248,5 +250,150 @@ export function ReactionRipple({
       <ringGeometry args={[0.85, 1, 24]} />
       <meshBasicMaterial color="#eaf7ff" transparent opacity={0} />
     </mesh>
+  );
+}
+
+const REVEAL_SECONDS = 0.7;
+/** How far each leaf half slides when the find is uncovered. */
+const LEAF_PART = 0.26;
+
+/**
+ * A tiny ladybug hiding under two leaf clumps — the only "secret" the
+ * neighborhood keeps. Always mounted under the leaves so a reveal is a
+ * physical uncover, never a spawn.
+ */
+function HiddenLadybug() {
+  return (
+    <group raycast={noRaycast}>
+      <mesh
+        geometry={SPHERE}
+        material={sharedLambert('#d64a3a')}
+        position={[0, 0.055, 0]}
+        scale={[0.11, 0.07, 0.11]}
+      />
+      <mesh
+        geometry={SPHERE}
+        material={sharedLambert('#3a3230')}
+        position={[0, 0.05, 0.055]}
+        scale={[0.05, 0.045, 0.05]}
+      />
+      <mesh
+        geometry={BOX}
+        material={sharedLambert('#3a3230')}
+        position={[0, 0.075, -0.01]}
+        scale={[0.012, 0.012, 0.07]}
+      />
+    </group>
+  );
+}
+
+/**
+ * The two leaf halves plus the revealed creature. `open` drives one bounded
+ * parting animation (0→1, ~0.7s) that STOPS at the open pose — the settled
+ * revealed state, not a flourish that returns. Reduced motion renders the
+ * find already parted: same meaning, no motion.
+ */
+function FindCover({ open }: { readonly open: boolean }) {
+  const leftRef = useRef<THREE.Group>(null);
+  const rightRef = useRef<THREE.Group>(null);
+  const revealT = useRef(0);
+  const wasActive = useRef(false);
+  const invalidate = useThree((state) => state.invalidate);
+  const reduced = prefersReducedMotion();
+
+  const apply = (t: number) => {
+    const ease = t * t * (3 - 2 * t);
+    const part = 0.1 + ease * LEAF_PART;
+    leftRef.current?.position.set(-part, 0, -0.02 * ease);
+    rightRef.current?.position.set(part, 0, 0.02 * ease);
+  };
+
+  useEffect(() => {
+    if (open && !reduced) {
+      wasActive.current = true;
+      reactionStarted();
+      invalidate();
+    } else if (open) {
+      revealT.current = 1;
+      invalidate();
+    }
+    // Revealed state is session state — nothing ever re-covers.
+  }, [open, reduced, invalidate]);
+
+  useFrame((_, delta) => {
+    const left = leftRef.current;
+    const right = rightRef.current;
+    if (!left || !right) return;
+    if (revealT.current >= 1) {
+      if (wasActive.current) {
+        wasActive.current = false;
+        reactionCompleted();
+      }
+      apply(1);
+      return;
+    }
+    if (!wasActive.current) return;
+    revealT.current = Math.min(1, revealT.current + delta / REVEAL_SECONDS);
+    apply(revealT.current);
+    invalidate();
+  });
+
+  return (
+    <group dispose={null}>
+      <HiddenLadybug />
+      <group ref={leftRef} position={[-0.1, 0, 0]}>
+        <PlantCluster position={[0, 0, 0]} scale={0.9} />
+      </group>
+      <group ref={rightRef} position={[0.1, 0, 0]}>
+        <PlantCluster position={[0, 0, 0]} scale={0.75} />
+      </group>
+    </group>
+  );
+}
+
+/**
+ * Hidden find — Delight Pass PR 3. A physical thing half-hidden in the
+ * world; a deliberate touch parts the cover once and the find stays
+ * revealed for the rest of the session. Same tap contract as ReactiveProp:
+ * NO stopPropagation — the child also walks toward what it found. The
+ * reveal is its own reward: no text, no marker, no counter.
+ */
+export function HiddenFind({
+  subject,
+  position,
+  revealed,
+  onReveal,
+  enabled = true,
+  radius = 0.7,
+}: {
+  /** Probe subject id, e.g. 'find-garden'. */
+  readonly subject: string;
+  readonly position: Xyz;
+  readonly revealed: boolean;
+  readonly onReveal: () => void;
+  readonly enabled?: boolean;
+  /** Disc tap radius — generous for small fingers. */
+  readonly radius?: number;
+}) {
+  const onTap = (event: ThreeEvent<MouseEvent>) => {
+    if (!enabled || event.delta > 6) return;
+    if (revealed) return; // settled state — a retap is just a walk
+    // No stopPropagation: same layered semantics as ReactiveProp.
+    recordReactionProbe(subject, 'reveal');
+    onReveal();
+  };
+  return (
+    <group position={position} dispose={null}>
+      <mesh
+        name={`find-${subject}`}
+        position={[0, 0.05, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={TAP_MATERIAL}
+        onClick={onTap}
+      >
+        <circleGeometry args={[radius, 16]} />
+      </mesh>
+      <FindCover open={revealed} />
+    </group>
   );
 }

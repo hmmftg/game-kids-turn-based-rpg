@@ -39,7 +39,7 @@ export interface WorldSceneHandle {
   readonly cancel: () => void;
 }
 
-const TAP_ONLY_MATERIAL = new THREE.MeshBasicMaterial({ visible: false });
+export const TAP_ONLY_MATERIAL = new THREE.MeshBasicMaterial({ visible: false });
 
 /**
  * Invisible-but-generous tap surface on an interactive anchor. The visible

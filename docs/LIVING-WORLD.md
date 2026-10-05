@@ -166,6 +166,48 @@ mutates only its own mesh's scale/opacity and is a distinct consequence of
 the same tap, not a second writer on the fountain. New effects must compose
 that way, never pile extra writers onto one subject.
 
+## Micro-discoveries — the world keeps little secrets
+
+PR 3 extends the vocabulary to things that are _found_, not just touched:
+
+| reaction  | subject     | what the child sees                                                         |
+| --------- | ----------- | --------------------------------------------------------------------------- |
+| `notice`  | nearest cat | stops and looks at the arriving child (child is already beside it)          |
+| `follow`  | nearest cat | faces the child and hops one bounded step closer, then its patrol resumes   |
+| `flutter` | a bird      | leaves its perch for a deterministic alternate perch, then resumes hopping  |
+| `reveal`  | a leaf pile | the two leaf halves part once and a ladybug stays uncovered for the session |
+
+The acceptance bar for every one of these: **interesting with no text,
+reward, quest update, or marker.** The discovery is the physical change
+itself — a cat that noticed you, a bird somewhere new, a ladybug that was
+hiding — recorded only in the `__worldReactions` probe and session state.
+
+- **Cat notice** reuses the `arrivalNonce` contract exactly: one completed
+  arrival within the notice radius produces at most one cat response,
+  regardless of re-renders or dwell — and when several cats are in range
+  only the NEAREST responds (one arrival, one cat, counted globally).
+  `noticeCats` is a controller method on `useCritters` (like `dartFish`),
+  so it honors the same freeze flag; a follow never claims a patrol spot —
+  the cat lands off-route and its ordinary location-driven patrol resumes.
+- **Bird startle** is triggered by a generous invisible tap sphere inside
+  each bird's registered node (`startle?: () => void` on `CritterView`),
+  kept under the same no-`stopPropagation` rule — tapping a bird also
+  walks the child, like any world tap. The destination is picked by the
+  shared seeded LCG (`pickSpot`), so the alternate perch is deterministic
+  per session and never the perch it left — the exclusion holds both the
+  claimed destination (`spotId`) and the last settled perch (`restSpotId`),
+  which differ while the bird is mid-hop.
+- **Hidden finds** live in `HIDDEN_FINDS` (`decorations.ts`) — two authored
+  spots verified clear of decorations and beside a walkable anchor. The
+  cover (`FindCover`) is the only transform owner of its own leaf halves;
+  the ladybug is always mounted under them. The revealed set is **session
+  memory owned by `App`** (`revealedFinds`, passed down through
+  `WorldCanvas`) — it lives above the per-map scene mount, so a cave
+  round-trip keeps the find uncovered while a reload hides it again.
+  Nothing is persisted. Under reduced motion the cover renders already
+  parted: the uncovered thing is the meaning, the parting is the
+  decoration.
+
 ## Testing
 
 - `src/world/liveliness.test.ts` — deterministic cue selection, pose mapping,
@@ -176,9 +218,18 @@ that way, never pile extra writers onto one subject.
 - `src/world/reactions.test.ts` — every reaction rests at both ends of its
   curve, stays inside small physical arcs, and is deterministic;
   `useCritters.test.ts` — the fountain dart retargets every fish inside the
-  basin along the away-from-tap direction and is a no-op while frozen.
+  basin along the away-from-tap direction and is a no-op while frozen, plus
+  the cat follow/notice contract (bounded step, look-only when the child is
+  beside it, none out of range) and the deterministic bird startle;
+  `decorations.test.ts` — every `HIDDEN_FINDS` spot is decoration-clear and
+  beside a walkable anchor.
 - `e2e/reactive.spec.ts` — a prop tap reacts while keeping the world's
   ordinary tap semantics (the child still walks/selects), reactions never
   enter `__worldAnimationEvents`, `__worldReactionStats` returns to
   `active === 0` after settling, repeated taps answer again, and reduced
   motion still registers the reaction.
+- `e2e/discovery.spec.ts` — one cat response per arrival (counted globally
+  with two cats in range), a tapped bird leaves for another perch, a leaf
+  pile parts exactly once and stays revealed (a second tap is just an
+  ordinary walk), the revealed find survives a cave round-trip but not a
+  reload, and reduced motion still uncovers the find.

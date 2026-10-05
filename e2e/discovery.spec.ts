@@ -1,0 +1,200 @@
+import { expect, test } from '@playwright/test';
+import { startGame } from './harness.ts';
+import {
+  critterTransforms,
+  dismissDialogue,
+  enableWorldProbe,
+  playerAt,
+  reactionsProbe,
+  tapReactivePoint,
+  tapWorldAnchor,
+  waitForProbe,
+  waitForWalkerIdle,
+} from './npcTap.ts';
+
+/**
+ * Delight PR 3 — micro-discoveries. A discovery earns its moment with no
+ * text, reward, quest update, or marker: a cat notices the child's arrival
+ * (a look or one bounded follow step, then back to patrol), a tapped bird
+ * leaves for a deterministic alternate perch, and a leaf pile parts once
+ * to reveal what hides underneath — and stays revealed for the session.
+ */
+test.beforeEach(async ({ page }) => {
+  await enableWorldProbe(page);
+});
+
+test('a child arriving near a cat earns exactly one notice or follow', async ({ page }) => {
+  await startGame(page);
+  await waitForProbe(page);
+  // Deliberate overlap: at anchor-path-east (3,0) both cats' pockets touch
+  // the notice radius — the contract is still exactly ONE cat response per
+  // arrival, so this is the honest adversarial case. Cats roam, so wait
+  // for a moment when both are actually in range before walking.
+  await expect
+    .poll(
+      async () =>
+        (await critterTransforms(page)).filter(
+          ([key, x, , z]) => key.startsWith('cat-') && Math.hypot(3 - x, 0 - z) <= 4.0,
+        ).length,
+      { timeout: 15000 },
+    )
+    .toBe(2);
+  await tapWorldAnchor(page, 'anchor-path-east');
+  await waitForWalkerIdle(page);
+  await dismissDialogue(page);
+
+  await expect
+    .poll(
+      async () =>
+        (await reactionsProbe(page)).filter(
+          (r) => r.reaction === 'follow' || r.reaction === 'notice',
+        ).length,
+      { timeout: 8000 },
+    )
+    .toBeGreaterThanOrEqual(1);
+
+  // The arrivalNonce contract: one arrival → at most one cat response,
+  // counted globally — never one per cat.
+  const catReactions = (await reactionsProbe(page)).filter(
+    (r) => r.reaction === 'follow' || r.reaction === 'notice',
+  );
+  expect(catReactions.length).toBe(1);
+  expect(catReactions[0]!.subject.startsWith('cat-')).toBe(true);
+  expect(await playerAt(page)).toBe('anchor-path-east');
+});
+
+test('a tapped bird flutters off to another perch', async ({ page }) => {
+  await startGame(page);
+  await waitForWalkerIdle(page);
+  await waitForProbe(page);
+
+  // Birds hop on their own schedule — re-read the live transform each
+  // attempt so the tap lands where the bird actually is right now.
+  const projectOnCanvas = (x: number, z: number, y: number) =>
+    page.evaluate(
+      ({ wx, wz, wy }: { wx: number; wz: number; wy: number }) => {
+        const toScreen = (
+          window as unknown as {
+            __worldToScreen?: (x: number, z: number, y?: number) => { x: number; y: number };
+          }
+        ).__worldToScreen;
+        const pt = toScreen?.(wx, wz, wy);
+        if (!pt) return null;
+        if (pt.x < 0 || pt.y < 0 || pt.x > window.innerWidth || pt.y > window.innerHeight)
+          return null;
+        const canvas = document.querySelector<HTMLCanvasElement>(
+          '#world-canvas canvas, .world canvas',
+        );
+        const el = document.elementFromPoint(pt.x, pt.y);
+        return canvas && (el === canvas || canvas.contains(el)) ? pt : null;
+      },
+      { wx: x, wz: z, wy: y },
+    );
+
+  let tapped: string | null = null;
+  for (let attempt = 0; attempt < 8 && tapped === null; attempt += 1) {
+    const birds = (await critterTransforms(page)).filter(([key]) => key.startsWith('bird-'));
+    for (const [key, x, y, z] of birds) {
+      const pt = await projectOnCanvas(x, z, y + 0.15);
+      if (pt === null) continue;
+      await page.mouse.click(pt.x, pt.y);
+      await page.waitForTimeout(250);
+      if ((await reactionsProbe(page)).some((r) => r.reaction === 'flutter' && r.subject === key)) {
+        tapped = key;
+        break;
+      }
+      // The tap landed but the bird had just hopped — re-read and retry.
+    }
+    if (tapped === null) await page.waitForTimeout(1200);
+  }
+  test.skip(tapped === null, 'no bird was on the tappable canvas in this layout');
+
+  await page.waitForTimeout(400);
+  expect(
+    (await reactionsProbe(page)).some((r) => r.reaction === 'flutter' && r.subject === tapped),
+  ).toBe(true);
+
+  // It lands on a different perch — the transform moves and stays moved.
+  const before = (await critterTransforms(page)).find(([key]) => key === tapped)!;
+  await expect
+    .poll(
+      async () => {
+        const cur = (await critterTransforms(page)).find(([key]) => key === tapped);
+        if (!cur) return 0;
+        return Math.hypot(cur[1] - before[1], cur[3] - before[3]);
+      },
+      { timeout: 15000 },
+    )
+    .toBeGreaterThan(0.3);
+});
+
+test('a leaf pile parts once and stays revealed for the session', async ({ page }) => {
+  await startGame(page);
+  await waitForWalkerIdle(page);
+  const before = await playerAt(page);
+
+  // The park find — tucked beside the east path, off every tap surface.
+  await tapReactivePoint(page, 3.6, -1.8);
+  await page.waitForTimeout(400);
+  const reveals = (await reactionsProbe(page)).filter(
+    (r) => r.reaction === 'reveal' && r.subject === 'find-park',
+  );
+  expect(reveals.length).toBe(1);
+
+  // The touch kept its normal meaning too — the child walked toward it.
+  await expect.poll(() => playerAt(page), { timeout: 8000 }).not.toBe(before);
+
+  // A second touch on the settled find reveals nothing new — the reveal
+  // already happened; the tap is just an ordinary walk request now.
+  await dismissDialogue(page);
+  await tapReactivePoint(page, 3.6, -1.8);
+  await page.waitForTimeout(400);
+  expect(
+    (await reactionsProbe(page)).filter((r) => r.reaction === 'reveal' && r.subject === 'find-park')
+      .length,
+  ).toBe(1);
+});
+
+test('a revealed find survives a map transition but not a reload', async ({ page }) => {
+  test.setTimeout(120000);
+  await startGame(page);
+  const revealedFinds = () =>
+    page.evaluate(
+      () => (window as unknown as { __worldRevealedFinds?: string[] }).__worldRevealedFinds ?? [],
+    );
+  const mapId = () =>
+    page.evaluate(() => (window as unknown as { __worldMapId?: string }).__worldMapId);
+
+  // Uncover the park find — session memory, not persistence.
+  await tapReactivePoint(page, 3.6, -1.8);
+  await expect.poll(() => revealedFinds(), { timeout: 8000 }).toContain('find-park');
+
+  // The Hub remounts on every map transition: entrance arrival discovers
+  // the cave, the next arrival swaps in the cave scene.
+  await tapWorldAnchor(page, 'anchor-cave-entrance');
+  await expect.poll(() => playerAt(page), { timeout: 60000 }).toBe('anchor-cave-entrance');
+  await tapWorldAnchor(page, 'anchor-cave-entrance');
+  await expect.poll(() => mapId(), { timeout: 30000 }).toBe('map-cave');
+  // ...and back — town mounts fresh, yet the find must stay revealed.
+  await tapWorldAnchor(page, 'anchor-cave-mouth');
+  await expect.poll(() => mapId(), { timeout: 30000 }).toBe('map-town');
+  await expect.poll(() => revealedFinds(), { timeout: 8000 }).toContain('find-park');
+
+  // A reload is the persistence boundary: session memory clears, the pile
+  // is covered again.
+  await page.reload();
+  await expect(page.getByTestId('profile-select')).toBeVisible();
+  await page.locator('[data-testid^="profile-card-"]').first().click();
+  await expect(page.getByTestId('hud')).toBeVisible();
+  await expect.poll(() => revealedFinds(), { timeout: 8000 }).not.toContain('find-park');
+});
+
+test('reduced motion still uncovers the find — meaning without the motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await startGame(page);
+  await tapReactivePoint(page, 3.6, -1.8);
+  await page.waitForTimeout(400);
+  expect(
+    (await reactionsProbe(page)).some((r) => r.reaction === 'reveal' && r.subject === 'find-park'),
+  ).toBe(true);
+});

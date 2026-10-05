@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FOUNTAIN_BASIN, nextSeed } from './critters.ts';
+import { reactionProbeLog } from './reactions.ts';
 import { createCritterController, type Controller } from './useCritters.ts';
 
 /**
@@ -278,5 +279,133 @@ describe('critter controller lifecycle', () => {
       }
     }
     controller.setTimersEnabled(false);
+  });
+});
+
+describe('Delight PR 3 — critter reactions', () => {
+  it('a settled child in range earns a cat follow hop toward them', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const cat = controller.critters.find((c) => c.key === 'cat-0')!;
+    // Child settles 1.6u south of the cat's spot (2,-1.6) → (2,-3.2).
+    controller.noticeCats(2, -3.2);
+    expect(cat.moving).toBe(true);
+    expect(cat.mode).toBe('dash');
+    // One bounded step (≤ CAT_FOLLOW_STEP), aimed at the child.
+    const stepDist = Math.hypot(cat.to[0] - cat.x, cat.to[2] - cat.z);
+    expect(stepDist).toBeGreaterThan(0);
+    expect(stepDist).toBeLessThanOrEqual(0.8 + 1e-9);
+    expect(cat.to[0]).toBeCloseTo(2, 5);
+    expect(cat.to[2]).toBeCloseTo(-2.3, 5);
+    // The hop resolves and the normal patrol schedule resumes.
+    moveStepUntilIdle(controller);
+    expect(cat.moving).toBe(false);
+    expect(cat.timer !== null || !controller.timersEnabled).toBe(true);
+    controller.setTimersEnabled(false);
+  });
+
+  it('a cat already beside the child just looks — no step', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const cat = controller.critters.find((c) => c.key === 'cat-0')!;
+    controller.noticeCats(2, -2.4); // 0.8u away — under CAT_TOO_CLOSE
+    expect(cat.moving).toBe(false);
+    expect(cat.heading).toBeCloseTo(Math.PI, 5); // faces -z toward the child
+    controller.setTimersEnabled(false);
+  });
+
+  it('one arrival produces at most ONE cat response — the nearest cat', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const before = reactionProbeLog().length;
+    // (3,0) is anchor-path-east: cat-0 (2,-1.6) ≈1.9 and cat-1 (4.4,3) ≈3.3
+    // are BOTH inside CAT_NOTICE_RADIUS — only the nearest may respond.
+    controller.noticeCats(3, 0);
+    const cat1 = controller.critters.find((c) => c.key === 'cat-1')!;
+    expect(cat1.moving).toBe(false);
+    const logged = reactionProbeLog()
+      .slice(before)
+      .filter((r) => r.reaction === 'follow' || r.reaction === 'notice');
+    // Exactly one response globally, and it belongs to the nearer cat —
+    // whether it took a step or just looked is the path-safety detail.
+    expect(logged.map((r) => r.subject)).toEqual(['cat-0']);
+    controller.setTimersEnabled(false);
+  });
+
+  it('cats out of range ignore the arrival entirely', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    controller.noticeCats(-8, 8); // far from both patrol pockets
+    expect(controller.critters.every((c) => !c.moving)).toBe(true);
+    controller.setTimersEnabled(false);
+  });
+
+  it('a tapped bird leaves for a deterministic alternate perch', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const bird = controller.critters.find((c) => c.key === 'bird-0')!;
+    expect(bird.spotId).toBe('roof-home');
+    controller.startleBird('bird-0');
+    expect(bird.moving).toBe(true);
+    expect(bird.mode).toBe('hop');
+    expect(bird.spotId).toBeDefined();
+    expect(bird.spotId).not.toBe('roof-home');
+    const perchTarget = bird.spotId;
+    moveStepUntilIdle(controller);
+    expect(bird.restSpotId).toBe(perchTarget);
+    controller.setTimersEnabled(false);
+  });
+
+  it('startle never returns the claimed destination or the last settled perch', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    for (const bird of controller.critters.filter((c) => c.kind === 'bird')) {
+      // Sweep seeds so every deterministic candidate pool is exercised —
+      // wherever the first candidate IS the departed perch, it must lose.
+      for (let seed = 1; seed < 400; seed = nextSeed(seed)) {
+        const claimed = bird.spotId;
+        const settled = bird.restSpotId;
+        bird.seed = seed;
+        controller.startleBird(bird.key);
+        expect(bird.moving).toBe(true);
+        expect(bird.spotId).not.toBe(claimed);
+        expect(bird.spotId).not.toBe(settled);
+        // Snap back deterministically for the next seed.
+        bird.moving = false;
+        bird.x = bird.restX;
+        bird.y = bird.restY;
+        bird.z = bird.restZ;
+        bird.spotId = bird.restSpotId;
+      }
+    }
+    controller.setTimersEnabled(false);
+  });
+
+  it('the startle pick is deterministic — same state, same perch', () => {
+    const a = makeController().controller;
+    const b = makeController().controller;
+    a.setTimersEnabled(true);
+    b.setTimersEnabled(true);
+    a.startleBird('bird-1');
+    b.startleBird('bird-1');
+    expect(a.critters.find((c) => c.key === 'bird-1')!.spotId).toBe(
+      b.critters.find((c) => c.key === 'bird-1')!.spotId,
+    );
+    a.setTimersEnabled(false);
+    b.setTimersEnabled(false);
+  });
+
+  it('cat/bird reactions are no-ops while timers are disabled', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.noticeCats(2, -3.2);
+    controller.startleBird('bird-0');
+    expect(controller.critters.every((c) => !c.moving)).toBe(true);
   });
 });

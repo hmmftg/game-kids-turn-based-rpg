@@ -115,6 +115,10 @@ export interface WorldCanvasProps {
   /** Arrival identity — increments once per avatar arrival; arrival-driven
       presentation liveliness keys off it. */
   readonly arrivalNonce?: number;
+  /** Session-only find memory — owned by the caller (App) so it survives
+      this scene's remounts on map transitions. Never persisted. */
+  readonly revealedFinds?: ReadonlySet<string>;
+  readonly onRevealFind?: (findId: string) => void;
   readonly onContextLost: () => void;
   readonly handleRef?: Ref<HubHandle>;
   /** Extra scene content (World Builder overlays in edit mode). */
@@ -137,6 +141,8 @@ export function WorldCanvas({
   worldTime,
   attention,
   arrivalNonce,
+  revealedFinds,
+  onRevealFind,
   onContextLost,
   handleRef,
   overlays,
@@ -244,6 +250,8 @@ export function WorldCanvas({
               worldTime={worldTime}
               attention={attention}
               arrivalNonce={arrivalNonce}
+              revealedFinds={revealedFinds}
+              onRevealFind={onRevealFind}
               handleRef={handleRef}
             />
           )}

@@ -15,6 +15,24 @@ export interface GroundDecoration {
   readonly scale?: number;
 }
 
+/**
+ * Hidden finds — Delight Pass PR 3 micro-discoveries. Each is a physical
+ * thing tucked under a leaf pile at a fixed authored spot: a touch parts
+ * the cover once and the find stays revealed for the session. Authored
+ * with the same clearance discipline as decorations (each asserted clear
+ * in tests) so the child can actually walk up and touch it.
+ */
+export interface HiddenFindSpot {
+  readonly id: string;
+  readonly x: number;
+  readonly z: number;
+}
+
+export const HIDDEN_FINDS: readonly HiddenFindSpot[] = [
+  { id: 'find-park', x: 3.6, z: -1.8 },
+  { id: 'find-garden', x: -2.2, z: 6.3 },
+];
+
 export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: 2, z: -2.6, kind: 'flower', minDetail: 1 },
   { x: -2.2, z: -2.4, kind: 'plant', minDetail: 1 },
