@@ -64,8 +64,8 @@ roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit on
   band space can never swallow a world tap; disabled trail stops are pictures,
   not verbs (`pointer-events: none`).
 - **Pacing legibility**: every passive beat carries a perceivable cause — the
-  model is *state change → visible physical cause → short meaningful beat →
-  next state*, never *state change → timer → state change*. Beats arrive
+  model is _state change → visible physical cause → short meaningful beat →
+  next state_, never _state change → timer → state change_. Beats arrive
   physically: each `DialogueCard` remounts per phase/dialogue line
   (`key={phase}` / `key={nodeId:lineIndex}`) and plays a one-shot `card-arrive`
   entrance, so "a new thing happened" never depends on reading. The

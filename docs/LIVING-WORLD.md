@@ -208,6 +208,27 @@ hiding — recorded only in the `__worldReactions` probe and session state.
   parted: the uncovered thing is the meaning, the parting is the
   decoration.
 
+## Memory tiers — do not merge them
+
+- **Ambient** — cats, birds, fish: derived from the world, always live.
+- **Reactive** — bends, bloops, door swings: event → bounded animation →
+  settle.
+- **Session memory** — `App`-lifetime state only (`revealedFinds`, attention
+  nonces). It may remember player interaction for the current application
+  lifetime, but it must never become an alternative persistence layer: any
+  behaviour intended to survive a reload must derive from existing
+  persisted facts or a deliberate save-schema change — never a new
+  `localStorage` write, world-state bag, or event log.
+- **Persistent memory** — resolved, never stored. Completing a quest is a
+  saved fact the world already has; `resolveNpcPresentation(npcId,
+questStatuses)` (`liveliness.ts`) maps it onto presentation deltas for
+  one NPC (the baker greets the child like a friend — `greets-child` +
+  `happy` pose instead of a stranger's notice), and `FACT_DECORATIONS`
+  (`decorations.ts`) renders earned objects beside the landmark they belong
+  to (a bread crate by the bakery). The whole "world remembers" surface is
+  that one table — no persisted fields, no flags, no tracking. Probe:
+  `__worldFactDecorations`.
+
 ## Testing
 
 - `src/world/liveliness.test.ts` — deterministic cue selection, pose mapping,
@@ -233,3 +254,6 @@ hiding — recorded only in the `__worldReactions` probe and session state.
   pile parts exactly once and stays revealed (a second tap is just an
   ordinary walk), the revealed find survives a cave round-trip but not a
   reload, and reduced motion still uncovers the find.
+- `e2e/memory.spec.ts` — a completed errand resolves into a warm baker
+  (greets-child, not notices-child) and the persistent bread crate; without
+  the errand the world is the ordinary one.

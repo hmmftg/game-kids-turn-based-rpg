@@ -3,9 +3,11 @@ import {
   activityPoseFor,
   activityPoseTransform,
   idleCueFor,
+  resolveNpcPresentation,
   type NpcActivityPose,
 } from './liveliness.ts';
 import type { NpcSimState } from '../domain/world/types.ts';
+import type { QuestId, QuestStatus } from '../domain/game/types.ts';
 import { NPC_DEFINITIONS } from './registry.ts';
 
 describe('activityPoseFor', () => {
@@ -25,7 +27,7 @@ describe('activityPoseFor', () => {
 
 describe('activityPoseTransform', () => {
   it('returns a held transform for every pose — bounded deltas, no extremes', () => {
-    const poses: readonly NpcActivityPose[] = ['working', 'resting', 'talking', 'waiting'];
+    const poses: readonly NpcActivityPose[] = ['working', 'resting', 'talking', 'waiting', 'happy'];
     for (const pose of poses) {
       const t = activityPoseTransform(pose);
       expect(Math.abs(t.rotationX)).toBeLessThan(0.2);
@@ -72,5 +74,43 @@ describe('idleCueFor', () => {
     }
     expect(cues.has(null)).toBe(true);
     expect(cues.size).toBeGreaterThan(1);
+  });
+});
+
+describe('resolveNpcPresentation (Delight PR 4)', () => {
+  const statuses = (done: Partial<Record<QuestId, QuestStatus>>) =>
+    done as Record<QuestId, QuestStatus>;
+
+  it('is neutral for every NPC when no fact holds', () => {
+    for (const npc of NPC_DEFINITIONS) {
+      expect(resolveNpcPresentation(npc.id, statuses({}))).toEqual({
+        attentionContext: 'notices-child',
+      });
+    }
+  });
+
+  it('a completed errand turns the baker warm — greet + happy pose', () => {
+    expect(
+      resolveNpcPresentation('npc-baker', statuses({ 'quest-bread-errand': 'completed' })),
+    ).toEqual({ attentionContext: 'greets-child', pose: 'happy' });
+  });
+
+  it('only the exact completed fact flips the presentation', () => {
+    // The baker's quest merely active/available → still a stranger.
+    for (const status of ['locked', 'available', 'active'] as const) {
+      expect(
+        resolveNpcPresentation('npc-baker', statuses({ 'quest-bread-errand': status })),
+      ).toEqual({ attentionContext: 'notices-child' });
+    }
+    // Someone else's completion doesn't warm the baker...
+    expect(
+      resolveNpcPresentation('npc-baker', statuses({ 'quest-greeting': 'completed' })),
+    ).toEqual({ attentionContext: 'notices-child' });
+    // ...nor does the baker's fact warm anyone else.
+    for (const npc of NPC_DEFINITIONS.filter((n) => n.id !== 'npc-baker')) {
+      expect(
+        resolveNpcPresentation(npc.id, statuses({ 'quest-bread-errand': 'completed' })),
+      ).toEqual({ attentionContext: 'notices-child' });
+    }
   });
 });

@@ -1,6 +1,7 @@
 import { ANCHORS, EDGES, getAnchor } from './navigation/graph.ts';
 import { STATIC_WORLD_SOURCE } from './worldSource.ts';
 import type { DetailLevel } from './models/modelProvider.ts';
+import type { QuestId } from '../domain/game/types.ts';
 
 /**
  * Fixed authored ground decoration — NOT scatter. Every slot is hand-placed,
@@ -31,6 +32,26 @@ export interface HiddenFindSpot {
 export const HIDDEN_FINDS: readonly HiddenFindSpot[] = [
   { id: 'find-park', x: 3.6, z: -1.8 },
   { id: 'find-garden', x: -2.2, z: 6.3 },
+];
+
+/**
+ * Fact-derived decorations — Delight Pass PR 4. Each row is a permanent
+ * world change RESOLVED from an already-persisted fact: completing the
+ * quest makes the decoration exist, so the world visibly remembers without
+ * a single new saved field. Spots obey the same authored-clearance
+ * discipline as GROUND_DECORATIONS (asserted in tests).
+ */
+export interface FactDecoration {
+  readonly id: string;
+  readonly questId: QuestId;
+  readonly x: number;
+  readonly z: number;
+  readonly variant: 'basket' | 'crate' | 'planter' | 'ball';
+}
+
+export const FACT_DECORATIONS: readonly FactDecoration[] = [
+  // A bread crate by the bakery door — the errand left a mark on the shop.
+  { id: 'deco-bakery-bread', questId: 'quest-bread-errand', x: 8.8, z: -0.8, variant: 'crate' },
 ];
 
 export const GROUND_DECORATIONS: readonly GroundDecoration[] = [

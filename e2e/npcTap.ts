@@ -23,6 +23,7 @@ export interface WorldProbe {
   __worldMapId?: string;
   __worldAt?: string;
   __worldDiscoveries?: string[];
+  __worldFactDecorations?: string[];
   __worldMoving?: boolean;
   __worldHeading?: number;
   __worldReactions?: Array<{ seq: number; subject: string; reaction: string }>;
@@ -87,6 +88,11 @@ export async function playerAt(page: Page) {
 
 export async function attentionProbe(page: Page) {
   return page.evaluate(() => (window as unknown as WorldProbe).__worldAttention ?? null);
+}
+
+/** Fact-derived decorations currently resolved from persisted quests. */
+export async function factDecorationsProbe(page: Page) {
+  return page.evaluate(() => (window as unknown as WorldProbe).__worldFactDecorations ?? []);
 }
 
 /** Presentation-layer reactive-prop taps — the `__worldReactions` probe log. */
