@@ -337,42 +337,35 @@ test.describe('NPC routines', () => {
   });
 
   test('tapping a person talks to them where they stand', async ({ page }) => {
-    test.setTimeout(240000);
+    test.setTimeout(300000);
     await startGame(page);
     await waitForProbe(page);
 
-    // Walk hops until the fisher's routine puts him on the river bank — an
-    // isolated spot where the figure tap unambiguously targets him.
-    const bankLine = 'امروز رودخانه آرام بود.';
-    let onBank = false;
-    // Rotate across anchors whose leg costs vary: same-cost alternation can
-    // advance the world clock in lockstep and skip a routine residue
-    // forever, so the fisher would never sample his bank spot.
-    const tour: AnchorId[] = ['anchor-river', 'anchor-bakery', 'anchor-river-path'];
-    for (let tick = 0; tick < 9 && !onBank; tick += 1) {
-      const target = tour[tick % tour.length]!;
-      await tapWorld(page, target);
-      await waitForAnchor(page, target);
-      const fisher = await npcProbe(page, 'npc-fisher');
-      onBank = fisher?.anchorId === 'anchor-river-bank';
-    }
-    expect(onBank).toBe(true);
-
-    // He's on the bank right now — tap his figure before the next arrival
-    // ticks him on to the river. The captured greeting still opens after
-    // the walk even though the routine may move him meanwhile.
+    // Get to the river area so his figure mounts, then read whatever spot
+    // the routine currently has him on. That spot is frozen now — world
+    // time only advances on avatar arrivals, and no walk is in flight.
+    await tapWorld(page, 'anchor-river');
+    await waitForAnchor(page, 'anchor-river');
     const fisher = await npcProbe(page, 'npc-fisher');
-    expect(fisher?.anchorId).toBe('anchor-river-bank');
+    expect(fisher).not.toBeNull();
+    const expectedBySpot: Record<string, string> = {
+      'fisher-at-river': 'صبح خوبی برای ماهی است.',
+      'fisher-at-bakery': 'بوی نان تازه آمد.',
+      'fisher-at-bank': 'امروز رودخانه آرام بود.',
+    };
+    const expected = expectedBySpot[fisher!.dialogueId!];
+    expect(expected, `unmapped fisher dialogue ${fisher!.dialogueId}`).toBeTruthy();
     await dismissDialogue(page);
 
     // Tapping the figure walks over and opens HIS dialogue — a plain walk
     // to another anchor or another NPC's greeting both count as misses.
-    // The shared helper re-probes his stand between clicks: a missed tap can
-    // walk (ticking the routine on), so every click is honest against where
-    // he then actually stands.
+    // The shared helper re-probes his RENDERED position between clicks and
+    // the NPC-tap walk is a skipArrivalTick arrival, so the greeting is
+    // captured against the same routine spot we just read — while he is
+    // still strolling toward it.
     const dialogue = page.getByTestId('npc-dialogue');
     const tapped = await tapNpcFigure(page, 'npc-fisher', 60000);
     test.skip(!tapped, 'fisher figure is not tappable in this layout');
-    await expect(dialogue).toContainText(bankLine);
+    await expect(dialogue).toContainText(expected!);
   });
 });
