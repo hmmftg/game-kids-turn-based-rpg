@@ -70,18 +70,18 @@ test('the fountain bloops, fish dart, and the tap keeps its normal meaning', asy
   await startGame(page);
   await tapWorldAnchor(page, 'anchor-path-west');
   await waitForWalkerIdle(page);
-  const at = await playerAt(page);
 
-  await tapReactivePoint(page, -6, -0.6); // basin rim closest to the child
+  // Basin far rim — outside the playful mouse's talk cylinder and outside
+  // the quest hotspot zone, so the touch keeps its plain ground-tap
+  // meaning: the child walks to the fountain while it answers the touch.
+  await tapReactivePoint(page, -6, -2.0);
   await page.waitForTimeout(300);
   expect(
     (await reactionsProbe(page)).some((r) => r.reaction === 'bloop' && r.subject === 'fountain'),
   ).toBe(true);
-  // Navigation unchanged: the fountain stands inside its quest hotspot zone,
-  // so the touch keeps exactly the meaning a plain ground tap has there —
-  // the child stays put while the encounter UI may take over the canvas.
-  await waitForWalkerIdle(page);
-  expect(await playerAt(page)).toBe(at);
+  // Navigation unchanged: the touch is still an ordinary walk request —
+  // the reaction only layered on top of it.
+  await expect.poll(() => playerAt(page), { timeout: 8000 }).toBe('anchor-path-west-far');
 });
 
 test('a tapped door swings open a crack and closes', async ({ page }) => {
