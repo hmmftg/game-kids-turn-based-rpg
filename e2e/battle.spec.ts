@@ -100,6 +100,26 @@ test.describe('micro turn-based battle', () => {
     await expect(page.getByTestId('hud')).toBeVisible();
   });
 
+  // Every passive beat carries its physical cause on the opponent: hit →
+  // recoil, attack → lunge, rest → settle; victory means the mouse is gone.
+  test('the opponent physically acts out each resolution beat', async ({ page }) => {
+    await startGame(page);
+    await tapWorldAnchor(page, 'anchor-path-west');
+    expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
+    await waitForPhase(page, 'playerChoice');
+
+    const opponent = page.getByTestId('battle-opponent');
+    await page.getByTestId('battle-action-ball').click();
+    // The hit is staged on the opponent itself, not only in the heart count.
+    await expect(opponent).toHaveAttribute('data-outcome', 'opponent-hit', {
+      timeout: 5000,
+    });
+    await expect(opponent).toHaveAttribute('data-phase', 'enemyResolution', {
+      timeout: 10000,
+    });
+    await expect(opponent).toHaveAttribute('data-intent', /rest|attack/);
+  });
+
   // Input ownership: while battle !== null the overlay covers the whole HUD —
   // the pause button and quest trail sit beneath it and cannot be reached.
   test('the battle owns all child input until it is left', async ({ page }) => {

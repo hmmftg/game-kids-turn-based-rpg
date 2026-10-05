@@ -556,6 +556,9 @@ export function App() {
       <div className="hud__bottom">
         {state.mode === 'dialogue' && dialogueNode && currentLine ? (
           <DialogueCard
+            // Each line/beat remounts so the card physically arrives — the
+            // "a new thing happened" signal that never depends on reading.
+            key={`${dialogueNode.id}:${dialogueLineIndex}`}
             speakerFa={
               lineEmotion !== null
                 ? `${getNpcCopy(currentLine.speakerId)?.nameFa ?? ''} ${lineEmotion}`

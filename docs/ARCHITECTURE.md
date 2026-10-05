@@ -63,6 +63,19 @@ roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit on
   pass-through containers: only their actual controls are hit targets, so empty
   band space can never swallow a world tap; disabled trail stops are pictures,
   not verbs (`pointer-events: none`).
+- **Pacing legibility**: every passive beat carries a perceivable cause — the
+  model is *state change → visible physical cause → short meaningful beat →
+  next state*, never *state change → timer → state change*. Beats arrive
+  physically: each `DialogueCard` remounts per phase/dialogue line
+  (`key={phase}` / `key={nodeId:lineIndex}`) and plays a one-shot `card-arrive`
+  entrance, so "a new thing happened" never depends on reading. The
+  `reinforce` step-win beat keeps the consequence at its destination
+  (`ConsequenceScene settled` — the episode's static end-state, same picture
+  reduced-motion renders) instead of re-showing repeated copy: the "after"
+  persists through the celebration until the next ask begins. Battle
+  resolutions stage the opponent (`data-phase`/`data-outcome`/`data-intent`):
+  recoil on a hit, lunge on attack, settle on rest, gone on victory. No Next
+  buttons, no new taps — `usePacedAdvance` still owns all passive timing.
 - **Rendering**: `frameloop="demand"`, orthographic camera, raycast only on ground/hotspot rings,
   quality tiers, no persistent animation loops, reduced-motion freezes decoration not meaning.
 - **RTL**: all text in the DOM, never inside WebGL. No `row-reverse` on the quest trail.
