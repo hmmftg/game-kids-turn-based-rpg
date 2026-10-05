@@ -205,3 +205,28 @@ test.describe('mode B (kidtest=nocopy)', () => {
     );
   });
 });
+
+test.describe('semantic consequence identity', () => {
+  test('the consequence scene shows the same physical object the child tapped', async ({
+    page,
+  }) => {
+    await startGame(page);
+    await seedCompletedQuests(page, ['quest-greeting', 'quest-helping']);
+    await openQuestDialogue(page, 'quest-tidying');
+    await page.getByTestId('start-quest').click();
+
+    await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
+    const step = getQuestDefinition('quest-tidying').steps[0]!; // icon-pick-up → leaf
+    const chip = page.getByTestId(`scene-${step.correctIconId}`);
+    // The choice chip itself renders the filled leaf glyph.
+    await expect(chip.locator('[data-shape="leaf"]')).toBeVisible();
+    await chip.click();
+
+    // The thing that physically responds is the same leaf — not an abstract
+    // ellipse or a different object.
+    await expect(page.getByTestId('encounter-response')).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByTestId('encounter-response').locator('[data-shape="leaf"]'),
+    ).toBeVisible();
+  });
+});
