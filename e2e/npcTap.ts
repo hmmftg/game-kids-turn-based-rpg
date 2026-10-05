@@ -25,6 +25,8 @@ export interface WorldProbe {
   __worldDiscoveries?: string[];
   __worldMoving?: boolean;
   __worldHeading?: number;
+  __worldReactions?: Array<{ seq: number; subject: string; reaction: string }>;
+  __worldReactionStats?: { started: number; active: number; completed: number };
   __worldAttention?: {
     npcId: string;
     nonce: number;
@@ -50,7 +52,7 @@ export interface WorldProbe {
   }>;
   __worldAnimationStats?: { active: number; started: number; completed: number };
   __worldCamera?: { position: { x: number; z: number } };
-  __worldToScreen?: (x: number, z: number) => { x: number; y: number };
+  __worldToScreen?: (x: number, z: number, y?: number) => { x: number; y: number };
   __worldNpcs?: Record<
     string,
     { anchorId: string; activity: string; dialogueId: string | null; x: number; z: number }
@@ -84,6 +86,23 @@ export async function playerAt(page: Page) {
 
 export async function attentionProbe(page: Page) {
   return page.evaluate(() => (window as unknown as WorldProbe).__worldAttention ?? null);
+}
+
+/** Presentation-layer reactive-prop taps — the `__worldReactions` probe log. */
+export async function reactionsProbe(page: Page) {
+  return page.evaluate(() => (window as unknown as WorldProbe).__worldReactions ?? []);
+}
+
+/** Flourish lifecycle counters — `active` must return to 0 after settle. */
+export async function reactionStatsProbe(page: Page) {
+  return page.evaluate(
+    () =>
+      (window as unknown as WorldProbe).__worldReactionStats ?? {
+        started: 0,
+        active: 0,
+        completed: 0,
+      },
+  );
 }
 
 /** Walks have finished once the walker's own `moving` flag settles. */
@@ -246,7 +265,7 @@ export async function waitForCameraSettle(page: Page) {
 }
 
 /** Arriving near an NPC opens their dialogue — close it so taps resume. */
-async function dismissDialogue(page: Page) {
+export async function dismissDialogue(page: Page) {
   const dialogue = page.getByTestId('npc-dialogue');
   for (let i = 0; i < 6; i += 1) {
     if (!(await dialogue.isVisible().catch(() => false))) break;
@@ -344,15 +363,45 @@ async function waitForArrival(
  * arrival itself is under test (a locked hotspot's tap zone intentionally
  * swallows clicks, so anchor centers are not always safe tap points).
  */
-export async function tapWorldGround(page: Page, x: number, z: number) {
+export async function tapWorldGround(page: Page, x: number, z: number, y = 0) {
   await waitForProbe(page);
   const point = await page.evaluate(
-    ({ wx, wz }: { wx: number; wz: number }) =>
-      (window as unknown as WorldProbe).__worldToScreen?.(wx, wz) ?? null,
-    { wx: x, wz: z },
+    ({ wx, wz, wy }: { wx: number; wz: number; wy: number }) =>
+      (window as unknown as WorldProbe).__worldToScreen?.(wx, wz, wy) ?? null,
+    { wx: x, wz: z, wy: y },
   );
   if (!point) throw new Error(`worldToScreen missing for (${x}, ${z})`);
   await page.mouse.click(point.x, point.y);
+}
+
+/**
+ * Taps a reactive prop's world point, elevated `y` units when the prop's
+ * surface stands above the ground (a door panel). Follows the same layout
+ * rule as `tapWorldAnchor`: a prop cropped by this viewport can't be tapped
+ * like a kid's finger would, so the spec skips instead of tapping a HUD
+ * pixel by accident.
+ */
+export async function tapReactivePoint(page: Page, x: number, z: number, y = 0) {
+  await waitForProbe(page);
+  const ok = await page.evaluate(
+    ({ wx, wz, wy }: { wx: number; wz: number; wy: number }) => {
+      const pt = (window as unknown as WorldProbe).__worldToScreen?.(wx, wz, wy);
+      if (!pt) return null;
+      if (pt.x < 0 || pt.y < 0 || pt.x > window.innerWidth || pt.y > window.innerHeight)
+        return null;
+      const canvas = document.querySelector<HTMLCanvasElement>(
+        '#world-canvas canvas, .world canvas',
+      );
+      const el = document.elementFromPoint(pt.x, pt.y);
+      return canvas && (el === canvas || canvas.contains(el)) ? pt : null;
+    },
+    { wx: x, wz: z, wy: y },
+  );
+  test.skip(
+    ok === null,
+    `prop at (${x}, ${z}, ${y}) is outside the tappable canvas in this layout`,
+  );
+  await page.mouse.click(ok!.x, ok!.y);
 }
 
 /**

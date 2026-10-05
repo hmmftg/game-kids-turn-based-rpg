@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
@@ -39,6 +39,8 @@ import { noRaycast } from './models/raycast.ts';
 import { caveEntranceRockPosition, landmarkPosition, NPC_STAND_OFFSET } from './placement.ts';
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
+import { FOUNTAIN_BASIN } from './critters.ts';
+import { ReactionRipple, ReactiveProp } from './reactionBits.tsx';
 import { AvatarLiveliness, IdleFlourish } from './livelinessBits.tsx';
 import { activityPoseFor, idleCueFor } from './liveliness.ts';
 import { resolveNpcActivity } from './registry.ts';
@@ -388,7 +390,10 @@ export function Hub({
   });
   // Ambient critters: motion only while the world is interactive and motion
   // is allowed; on low tier they render as static silhouettes.
-  const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel);
+  // Fountain tap: a bloop + ripple, and the fish dart away from the touch —
+  // the micro-story "the fish noticed me". Nonce-keyed: one dart per tap.
+  const [fishDart, setFishDart] = useState({ nonce: 0, x: 0, z: 0 });
+  const critters = useCritters(interactive && !prefersReducedMotion(), detailLevel, fishDart);
 
   // Area-based activation: the area the avatar currently stands in plus the
   // areas one waypoint-hop away are "visible". NPCs outside this set are data
@@ -548,15 +553,46 @@ export function Hub({
           visible only while its area participates in rendering. */}
       {world.anchors
         .filter((anchor) => anchor.landmarkId !== null && visibleAreas.includes(anchor.areaId))
-        .map((anchor) => (
-          <models.Landmark
-            key={anchor.landmarkId}
-            position={landmarkPosition(anchor)}
-            palette={LANDMARK_PALETTE}
-            detailLevel={detailLevel}
-            variant={landmarkVariant(anchor.landmarkId)}
-          />
-        ))}
+        .map((anchor) => {
+          const pos = landmarkPosition(anchor);
+          return anchor.landmarkId === 'landmark-fountain' ? (
+            /* The reactive tap surface sits ON the landmark's derived
+               position — the drawn basin and the fish's FOUNTAIN_BASIN are
+               the same disc — so one touch answers with bloop + ripple +
+               fish dart. */
+            <ReactiveProp
+              key={anchor.landmarkId}
+              reaction="bloop"
+              subject="fountain"
+              enabled={interactive}
+              position={[pos.x, 0, pos.z]}
+              radius={1.0}
+              onReact={(point) =>
+                setFishDart((dart) => ({ nonce: dart.nonce + 1, x: point.x, z: point.z }))
+              }
+            >
+              {(nonce) => (
+                <>
+                  <models.Landmark
+                    position={{ x: 0, z: 0 }}
+                    palette={LANDMARK_PALETTE}
+                    detailLevel={detailLevel}
+                    variant={landmarkVariant(anchor.landmarkId)}
+                  />
+                  <ReactionRipple nonce={nonce} y={FOUNTAIN_BASIN.waterY} />
+                </>
+              )}
+            </ReactiveProp>
+          ) : (
+            <models.Landmark
+              key={anchor.landmarkId}
+              position={pos}
+              palette={LANDMARK_PALETTE}
+              detailLevel={detailLevel}
+              variant={landmarkVariant(anchor.landmarkId)}
+            />
+          );
+        })}
 
       {/* Quest hotspots follow the same activation rule as NPCs: outside the
           visible areas nothing mounts — no Hotspot subtree, no useFrame pulse —
@@ -746,11 +782,29 @@ export function Hub({
         {GROUND_DECORATIONS.map((slot, i) =>
           detailLevel >= slot.minDetail && inVisibleArea(slot.x, slot.z) ? (
             slot.kind === 'flower' ? (
-              <FlowerPatch key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+              <ReactiveProp
+                key={i}
+                reaction="bend"
+                subject={`flower-${i}`}
+                enabled={interactive}
+                position={[slot.x, 0, slot.z]}
+                radius={0.55}
+              >
+                <FlowerPatch position={[0, 0, 0]} scale={slot.scale} />
+              </ReactiveProp>
             ) : slot.kind === 'stone' ? (
               <StoneCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
             ) : slot.kind === 'plant' ? (
-              <PlantCluster key={i} position={[slot.x, 0, slot.z]} scale={slot.scale} />
+              <ReactiveProp
+                key={i}
+                reaction="sway"
+                subject={`plant-${i}`}
+                enabled={interactive}
+                position={[slot.x, 0, slot.z]}
+                radius={0.55}
+              >
+                <PlantCluster position={[0, 0, 0]} scale={slot.scale} />
+              </ReactiveProp>
             ) : (
               <mesh
                 key={i}
