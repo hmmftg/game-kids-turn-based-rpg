@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ANCHORS } from './navigation/graph.ts';
 import {
+  FACT_DECORATIONS,
   GROUND_DECORATIONS,
   HIDDEN_FINDS,
   decorationFootprint,
   isDecorationClear,
 } from './decorations.ts';
+import { getQuestDefinition } from '../domain/quests/definitions.ts';
 
 describe('GROUND_DECORATIONS', () => {
   it('every authored footprint clears anchors, NPCs, landmarks, props and path corridors', () => {
@@ -73,6 +75,36 @@ describe('HIDDEN_FINDS (Delight PR 3)', () => {
       const nearest = Math.min(...walkable.map((a) => Math.hypot(a.x - find.x, a.z - find.z)));
       expect(nearest).toBeLessThan(2.5);
       expect(nearest).toBeGreaterThan(0.9); // not sitting ON a tap surface
+    }
+  });
+});
+
+describe('FACT_DECORATIONS (Delight PR 4)', () => {
+  it('each row derives from a real quest — world memory is never a bare flag', () => {
+    for (const deco of FACT_DECORATIONS) {
+      expect(getQuestDefinition(deco.questId)).toBeDefined();
+    }
+  });
+
+  it('every earned decoration spot is genuinely clear of decor, hotspots, and corridors', () => {
+    for (const deco of FACT_DECORATIONS) {
+      expect(isDecorationClear(deco.x, deco.z, 0.5), `deco ${deco.id}`).toBe(true);
+      for (const decor of GROUND_DECORATIONS) {
+        const overlap =
+          Math.hypot(deco.x - decor.x, deco.z - decor.z) < decorationFootprint(decor) + 0.5;
+        expect(overlap, `deco ${deco.id} overlaps decor at ${decor.x},${decor.z}`).toBe(false);
+      }
+    }
+  });
+
+  it('every decoration sits near the quest anchor it belongs to', () => {
+    for (const deco of FACT_DECORATIONS) {
+      const quest = getQuestDefinition(deco.questId);
+      const anchor = ANCHORS.find((a) => a.id === quest.anchorId);
+      expect(anchor).toBeDefined();
+      // Beside the landmark it commemorates — readable as belonging to the
+      // quest's place, not floating somewhere unrelated.
+      expect(Math.hypot(anchor!.x - deco.x, anchor!.z - deco.z)).toBeLessThan(2.6);
     }
   });
 });

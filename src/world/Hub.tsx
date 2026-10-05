@@ -46,10 +46,10 @@ import { caveEntranceRockPosition, landmarkPosition, NPC_STAND_OFFSET } from './
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
 import { FOUNTAIN_BASIN } from './critters.ts';
-import { HIDDEN_FINDS } from './decorations.ts';
+import { FACT_DECORATIONS, HIDDEN_FINDS } from './decorations.ts';
 import { HiddenFind, ReactionRipple, ReactiveProp } from './reactionBits.tsx';
 import { AvatarLiveliness, IdleFlourish } from './livelinessBits.tsx';
-import { activityPoseFor, idleCueFor } from './liveliness.ts';
+import { activityPoseFor, idleCueFor, resolveNpcPresentation } from './liveliness.ts';
 import { resolveNpcActivity } from './registry.ts';
 import { publishCameraFocus } from './CameraRig.tsx';
 import {
@@ -466,7 +466,11 @@ export function Hub({
         // Critters have no face-eye meshes — a head-dip reads as the same
         // beat; the flourish falls back automatically.
         cue,
-        pose: activityPoseFor(resolveNpcActivity(npc, worldTime)),
+        // Fact-derived warmth overrides the routine pose — a friend
+        // stands brighter than the schedule asks (docs/LIVING-WORLD.md).
+        pose:
+          resolveNpcPresentation(npc.id, questStatuses).pose ??
+          activityPoseFor(resolveNpcActivity(npc, worldTime)),
       },
     ];
   });
@@ -749,6 +753,21 @@ export function Hub({
         variant="crate"
         detailLevel={detailLevel}
       />
+
+      {/* Fact-derived decorations: the world remembers a completed errand
+          as a real object that was always earned, never a marker. Resolved
+          from saved quests — no persisted flag of its own. */}
+      {FACT_DECORATIONS.filter((deco) => questStatuses[deco.questId] === 'completed').map(
+        (deco) => (
+          <models.Prop
+            key={deco.id}
+            position={{ x: deco.x, z: deco.z }}
+            palette={PROP_PALETTE}
+            variant={deco.variant}
+            detailLevel={detailLevel}
+          />
+        ),
+      )}
 
       {/* The park's secret: an ordinary rock with a thin warm crack. Once the
           child has reached it the crack becomes a lit doorway — a persisted

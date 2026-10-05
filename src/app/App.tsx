@@ -12,6 +12,8 @@ import {
 } from '../world/registry.ts';
 import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
 import { reactionProbeLog, reactionStatsProbe } from '../world/reactions.ts';
+import { resolveNpcPresentation } from '../world/liveliness.ts';
+import { FACT_DECORATIONS } from '../world/decorations.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
@@ -224,6 +226,11 @@ export function App() {
       // Session-only find memory — probe-visible so e2e can assert it
       // survives scene remounts and clears on reload.
       w['__worldRevealedFinds'] = [...revealedFinds];
+      // Fact-derived decorations — probe-visible so e2e can assert the
+      // persistent world change resolves from the saved fact alone.
+      w['__worldFactDecorations'] = FACT_DECORATIONS.filter(
+        (d) => statuses[d.questId] === 'completed',
+      ).map((d) => d.id);
       w['__worldReactions'] = reactionProbeLog();
       w['__worldReactionStats'] = reactionStatsProbe();
       w['__worldDialogueNpc'] = state.dialogue?.npcId ?? null;
@@ -262,6 +269,7 @@ export function App() {
     worldTime,
     attention,
     revealedFinds,
+    statuses,
   ]);
   const onArrive = useCallback(
     (anchor: AnchorId) => {
@@ -305,14 +313,17 @@ export function App() {
         setAttention({
           npcId: present.id,
           nonce: attentionNonceRef.current,
-          context: 'notices-child',
+          // Fact-derived warmth: a friend waves hello (greets-child) where a
+          // stranger only notices — resolved from persisted quests, never
+          // stored separately (docs/LIVING-WORLD.md).
+          context: resolveNpcPresentation(present.id, statuses).attentionContext,
           // The noticing belongs to THIS arrival — at most one
           // notices-child per (arrival, npc), provable in e2e.
           arrivalNonce: arrivalNonceRef.current,
         });
       }
     },
-    [playSfx, discoveries, dispatch],
+    [playSfx, discoveries, dispatch, statuses],
   );
 
   // Tapping a person (not just a place) talks to them where they stand:
