@@ -45,6 +45,14 @@ roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit on
   UI overlay _and_ the domain. Full contract: `docs/BATTLE-MODEL.md`.
 - **Persistence**: versioned schema, corrupt → fresh state (never deletes payload), checkpoint
   watermarks prevent celebration replays on hydration.
+- **Spatial visibility**: the camera never frames outside `map.bounds − cameraPadding`,
+  so that inset rect is the _guaranteed-visible region_. `placement.ts` is the single
+  source for anchor-derived positions (`landmarkPosition`, `NPC_STAND_OFFSET`,
+  `CAVE_MOUSE_OFFSET`, `caveEntranceRockPosition`, `FOUNTAIN_BASIN` in `critters.ts`)
+  — derived visuals never carry independent coordinates. `visibility.test.ts` enforces:
+  every interactive anchor, landmark render position, NPC figure position
+  (anchor + stand offset + jitter) and the cave rock stays inside the guaranteed
+  rect with `INTERACTION_CLEARANCE`, and fish rest/swim inside the water disc.
 - **Rendering**: `frameloop="demand"`, orthographic camera, raycast only on ground/hotspot rings,
   quality tiers, no persistent animation loops, reduced-motion freezes decoration not meaning.
 - **RTL**: all text in the DOM, never inside WebGL. No `row-reverse` on the quest trail.

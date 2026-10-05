@@ -1,5 +1,7 @@
 import type { Xyz } from './models/details.tsx';
 import { isDecorationClear, isDecorationClearPath } from './decorations.ts';
+import { ANCHORS } from './navigation/graph.ts';
+import { landmarkPosition } from './placement.ts';
 
 /**
  * Ambient animal data — authored, deterministic, presentation-only.
@@ -59,13 +61,31 @@ const CAT_PATROL_SE: readonly GroundSpot[] = [
 /** Each cat roams one corridor-bounded pocket; pairwise paths are test-verified. */
 export const CAT_PATROLS: readonly (readonly GroundSpot[])[] = [CAT_PATROL_NE, CAT_PATROL_SE];
 
+const FOUNTAIN_ANCHOR = ANCHORS.find((anchor) => anchor.id === 'anchor-fountain');
+
+/**
+ * Fountain basin: water disc centre + radius, derived from the fountain
+ * anchor's landmark placement — fish can never drift away from the water
+ * the landmark actually renders, and neither can a rim perch.
+ */
+export const FOUNTAIN_BASIN = {
+  ...(FOUNTAIN_ANCHOR ? landmarkPosition(FOUNTAIN_ANCHOR) : { x: -6, z: -1.2 }),
+  waterY: 0.36,
+  radius: 0.45,
+} as const;
+
 export const BIRD_PERCHES: readonly PerchSpot[] = [
   { id: 'roof-home', position: [-0.75, 1.95, -7.2], host: 'roof', allowed: ['bird'] },
   { id: 'roof-garden', position: [0, 1.95, 4.8], host: 'roof', allowed: ['bird'] },
   { id: 'roof-square', position: [0.75, 1.95, -1.2], host: 'roof', allowed: ['bird'] },
   { id: 'awning-shop', position: [6, 1.05, -0.45], host: 'awning', allowed: ['bird'] },
   { id: 'fence-garden', position: [0, 0.32, 5.5], host: 'fence', allowed: ['bird'] },
-  { id: 'rim-fountain', position: [-6, 0.45, 0.85], host: 'rim', allowed: ['bird'] },
+  {
+    id: 'rim-fountain',
+    position: [-6, 0.45, FOUNTAIN_BASIN.z + 0.8],
+    host: 'rim',
+    allowed: ['bird'],
+  },
   { id: 'ground-ne', position: [2.0, 0, -1.6], host: 'ground', allowed: ['bird'] },
   { id: 'ground-nw', position: [-2.2, 0, -2.4], host: 'ground', allowed: ['bird'] },
   { id: 'ground-nw2', position: [-3.8, 0, -3.0], host: 'ground', allowed: ['bird'] },
@@ -77,9 +97,6 @@ export const EAGLE_PERCHES: readonly PerchSpot[] = [
   { id: 'dome-square', position: [0, 2.3, -1.2], host: 'dome', allowed: ['eagle'] },
   { id: 'roof-shop', position: [6, 2.0, -1.2], host: 'roof', allowed: ['eagle'] },
 ];
-
-/** Fountain basin (landmark anchor at -6,0): water disc centre + radius. */
-export const FOUNTAIN_BASIN = { x: -6, z: 0, waterY: 0.36, radius: 0.45 } as const;
 
 /** Eagle soar loop — ellipse above the hub, inside CRITTER_BOUNDS. */
 export const EAGLE_ORBIT = { rx: 4.0, rz: 3.0, minY: 2.4, maxY: 3.0 } as const;

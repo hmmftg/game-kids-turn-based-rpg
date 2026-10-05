@@ -3,6 +3,7 @@ import { ANCHORS, getAnchor } from '../src/world/navigation/graph.ts';
 import { STATIC_WORLD_SOURCE } from '../src/world/worldSource.ts';
 import { findPath } from '../src/world/navigation/pathfinding.ts';
 import type { AnchorId } from '../src/domain/game/types.ts';
+import { tapNpcFigure } from './npcTap.ts';
 
 // NPC routines: authored spots cycle with world time (one tick per arrival),
 // each spot carries its own greeting, and tapping a figure walks over and
@@ -143,10 +144,14 @@ async function groundPointsBetween(
 
 /** Polls until the walker anchor changes (or the target is reached). */
 async function waitForArrival(page: Page, from: AnchorId | undefined, to: AnchorId) {
-  for (let i = 0; i < 60; i += 1) {
+  const dialogue = page.getByTestId('npc-dialogue');
+  for (let i = 0; i < 16; i += 1) {
     const cur = (await playerAt(page)) as AnchorId | undefined;
     if (cur === to) return 'arrived';
     if (cur !== from) return 'moved';
+    // A figure tap is feedback too — the click found a person, so the walk
+    // outcome is settled; don't sit the full poll window on it.
+    if (await dialogue.isVisible().catch(() => false)) return 'dialogue';
     await page.waitForTimeout(500);
   }
   return 'stuck';
@@ -191,6 +196,8 @@ async function tapWorld(page: Page, anchorId: AnchorId) {
         progressed = true;
         break;
       }
+      // 'dialogue'/'stuck': the click landed on a figure or nothing — try the
+      // next candidate point rather than re-clicking the same spot.
     }
     if (progressed) continue;
     const path = at ? findPath(STATIC_WORLD_SOURCE, at, anchorId) : [];
@@ -338,8 +345,12 @@ test.describe('NPC routines', () => {
     // isolated spot where the figure tap unambiguously targets him.
     const bankLine = 'امروز رودخانه آرام بود.';
     let onBank = false;
-    for (let tick = 0; tick < 6 && !onBank; tick += 1) {
-      const target = tick % 2 === 0 ? 'anchor-river' : 'anchor-river-path';
+    // Rotate across anchors whose leg costs vary: same-cost alternation can
+    // advance the world clock in lockstep and skip a routine residue
+    // forever, so the fisher would never sample his bank spot.
+    const tour: AnchorId[] = ['anchor-river', 'anchor-bakery', 'anchor-river-path'];
+    for (let tick = 0; tick < 9 && !onBank; tick += 1) {
+      const target = tour[tick % tour.length]!;
       await tapWorld(page, target);
       await waitForAnchor(page, target);
       const fisher = await npcProbe(page, 'npc-fisher');
@@ -353,30 +364,15 @@ test.describe('NPC routines', () => {
     const fisher = await npcProbe(page, 'npc-fisher');
     expect(fisher?.anchorId).toBe('anchor-river-bank');
     await dismissDialogue(page);
-    const points = await worldPoints(page, fisher!.x, fisher!.z);
-    test.skip(points.length === 0, 'fisher is outside the tappable canvas in this layout');
 
     // Tapping the figure walks over and opens HIS dialogue — a plain walk
     // to another anchor or another NPC's greeting both count as misses.
+    // The shared helper re-probes his stand between clicks: a missed tap can
+    // walk (ticking the routine on), so every click is honest against where
+    // he then actually stands.
     const dialogue = page.getByTestId('npc-dialogue');
-    let opened = false;
-    for (const pt of points) {
-      await dismissDialogue(page);
-      await page.mouse.click(pt.x, pt.y);
-      opened = await expect
-        .poll(
-          async () => (await dialogue.textContent().catch(() => ''))?.includes(bankLine) ?? false,
-          { timeout: 15000 },
-        )
-        .toBe(true)
-        .then(() => true)
-        .catch(() => false);
-      if (opened) break;
-    }
-    if (!opened) {
-      // Narrow viewports can crop the bank entirely — the landscape project
-      // covers this assertion.
-      test.skip(true, 'fisher figure is not tappable in this layout');
-    }
+    const tapped = await tapNpcFigure(page, 'npc-fisher', 60000);
+    test.skip(!tapped, 'fisher figure is not tappable in this layout');
+    await expect(dialogue).toContainText(bankLine);
   });
 });

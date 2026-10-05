@@ -1,8 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ANCHORS, getAnchor } from '../src/world/navigation/graph.ts';
+import { getAnchor } from '../src/world/navigation/graph.ts';
 import { STATIC_WORLD_SOURCE } from '../src/world/worldSource.ts';
-import { findPath } from '../src/world/navigation/pathfinding.ts';
-import type { AnchorId } from '../src/domain/game/types.ts';
+import { tapWorldAnchor } from './npcTap.ts';
 import { CAMERA_PADDING } from '../src/world/camera.ts';
 import { getMap } from '../src/world/maps.ts';
 
@@ -74,212 +73,6 @@ async function waitForCameraSettle(page: Page) {
     .toBeLessThan(0.01);
 }
 
-/** Screen pixels for a world anchor — every offset that lands on the canvas. */
-async function screenPoints(page: Page, anchorId: AnchorId) {
-  const anchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
-  return page.evaluate(
-    ({ ax, az }: { ax: number; az: number }) => {
-      const toScreen = (window as unknown as WorldProbe).__worldToScreen!;
-      const canvas = document.querySelector<HTMLCanvasElement>(
-        '#world-canvas canvas, .world canvas',
-      );
-      if (!canvas) return [];
-      const offsets: Array<[number, number]> = [
-        [0.4, -1.2],
-        [0, -0.8],
-        [0.8, -0.4],
-        [-0.8, -0.4],
-        [0, 0],
-        [0.6, 0.6],
-        [-0.6, 0.6],
-        [0, 1.2],
-        [1.2, -0.8],
-        [-1.2, -0.8],
-      ];
-      const points: Array<{ x: number; y: number }> = [];
-      for (const [ox, oz] of offsets) {
-        const pt = toScreen(ax + ox, az + oz);
-        if (pt.x < 0 || pt.y < 0 || pt.x > window.innerWidth || pt.y > window.innerHeight) {
-          continue;
-        }
-        const el = document.elementFromPoint(pt.x, pt.y);
-        if (el === canvas || canvas.contains(el)) points.push(pt);
-      }
-      return points;
-    },
-    { ax: anchor.x, az: anchor.z },
-  );
-}
-
-/** On-canvas pixels for ground points between two anchors (stride taps). */
-async function groundPointsBetween(
-  page: Page,
-  from: { x: number; z: number },
-  to: { x: number; z: number },
-) {
-  return page.evaluate(
-    ({ mx, mz, tx, tz }: { mx: number; mz: number; tx: number; tz: number }) => {
-      const toScreen = (window as unknown as WorldProbe).__worldToScreen!;
-      const canvas = document.querySelector<HTMLCanvasElement>(
-        '#world-canvas canvas, .world canvas',
-      );
-      const out: Array<{ x: number; y: number }> = [];
-      for (const t of [0.5, 0.75]) {
-        const pt = toScreen(mx + (tx - mx) * t, mz + (tz - mz) * t);
-        if (pt.x < 0 || pt.y < 0 || pt.x > window.innerWidth || pt.y > window.innerHeight) {
-          continue;
-        }
-        const el = document.elementFromPoint(pt.x, pt.y);
-        if (canvas && (el === canvas || canvas.contains(el))) out.push(pt);
-      }
-      return out;
-    },
-    { mx: from.x, mz: from.z, tx: to.x, tz: to.z },
-  );
-}
-
-/** Polls until the walker anchor changes (or the target is reached). */
-async function waitForArrival(
-  page: Page,
-  from: AnchorId | undefined,
-  to: AnchorId,
-  mapId: string | undefined,
-) {
-  for (let i = 0; i < 60; i += 1) {
-    const [cur, curMap] = await page.evaluate(() => [
-      (window as unknown as WorldProbe).__worldAt,
-      (window as unknown as WorldProbe).__worldMapId,
-    ]);
-    // Crossing a map transition counts: transition anchors (cave door) change
-    // the map instead of landing on the tapped anchor.
-    if (mapId !== undefined && curMap !== mapId) return 'arrived';
-    if (cur === to) return 'arrived';
-    if (cur !== from) return 'moved';
-    await page.waitForTimeout(500);
-  }
-  return 'stuck';
-}
-
-/**
- * Taps a world anchor like a child's finger. The follow camera means a far
- * anchor may sit outside the viewport — exactly like a kid, the helper then
- * walks hop-by-hop along the authored path until the target is in view.
- */
-/** Arriving near an NPC opens their dialogue — close it so taps resume. */
-async function dismissDialogue(page: Page) {
-  const dialogue = page.getByTestId('npc-dialogue');
-  for (let i = 0; i < 6; i += 1) {
-    if (!(await dialogue.isVisible().catch(() => false))) return;
-    const close = page.getByTestId('close-dialogue');
-    if (await close.isVisible().catch(() => false)) await close.click();
-    await dialogue.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
-  }
-}
-
-async function tapWorld(page: Page, anchorId: AnchorId) {
-  await waitForProbe(page);
-  await dismissDialogue(page);
-  const startMapId = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
-  const tried = new Set<AnchorId>();
-  for (let attempt = 0; attempt < 14; attempt += 1) {
-    await dismissDialogue(page);
-    // The camera eases after each hop — tapping before it settles resolves
-    // the pixel against a different world point than the one projected.
-    await waitForCameraSettle(page);
-    // Arrival dialogue opens a beat after the walker stops — dismiss it
-    // after settling so world taps are interactive again.
-    await dismissDialogue(page);
-    const at = (await page.evaluate(() => (window as unknown as WorldProbe).__worldAt)) as
-      AnchorId | undefined;
-    const nowMap = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
-    if (startMapId !== undefined && nowMap !== startMapId) return;
-    // Tap each candidate pixel until one actually moves the walker — props
-    // can swallow the anchor's own projection while ground beside it walks.
-    let progressed = false;
-    // Candidate pixels: ground between the walker and the target first (a
-    // child taps visible ground toward the thing, not the anchor itself),
-    // then the ring of offsets around the anchor.
-    const goalAnchor = getAnchor(STATIC_WORLD_SOURCE, anchorId);
-    const atPos = at ? getAnchor(STATIC_WORLD_SOURCE, at) : undefined;
-    const midPts = atPos ? await groundPointsBetween(page, atPos, goalAnchor) : [];
-    const pts = [...midPts, ...(await screenPoints(page, anchorId))];
-    for (const point of pts) {
-      await dismissDialogue(page);
-      await page.mouse.click(point.x, point.y);
-      const result = await waitForArrival(page, at, anchorId, startMapId);
-      if (result === 'arrived') {
-        await dismissDialogue(page);
-        return;
-      }
-      if (result === 'moved') {
-        progressed = true;
-        break;
-      }
-    }
-    if (progressed) continue;
-    // Path hop: the child follows the visible path — walk to the next anchor
-    // on the authored route toward the target.
-    const goal = getAnchor(STATIC_WORLD_SOURCE, anchorId);
-    const path = at ? findPath(STATIC_WORLD_SOURCE, at, anchorId) : [];
-    const nextHopId = path.length > 1 ? path[1] : undefined;
-    const nextHop = nextHopId ? getAnchor(STATIC_WORLD_SOURCE, nextHopId) : null;
-    if (!nextHop) break;
-    let hopped = false;
-    const hopPts = await screenPoints(page, nextHop.id);
-    // Midpoints along the path segment first — the ground between anchors
-    // resolves to the nearer one, which is exactly the child's stride.
-    const stride = atPos ? await groundPointsBetween(page, atPos, nextHop) : [];
-    for (const pt of [...stride, ...hopPts]) {
-      await dismissDialogue(page);
-      await page.mouse.click(pt.x, pt.y);
-      hopped = await expect
-        .poll(() => page.evaluate(() => (window as unknown as WorldProbe).__worldAt), {
-          timeout: 12000,
-        })
-        .not.toBe(at)
-        .then(() => true)
-        .catch(() => false);
-      if (hopped) break;
-      tried.add(nextHop.id);
-    }
-    if (hopped) continue;
-    // Greedy fallback: the authored route may detour around a corner — tap
-    // the visible walkable anchor nearest the goal and re-evaluate there.
-    const mapId = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
-    const visible: Array<{ a: (typeof ANCHORS)[number]; d: number }> = [];
-    for (const candidate of ANCHORS) {
-      if (!candidate.walkable) continue;
-      if (mapId !== undefined && candidate.mapId !== mapId) continue;
-      if (candidate.id === at || tried.has(candidate.id)) continue;
-      visible.push({
-        a: candidate,
-        d: Math.hypot(candidate.x - goal.x, candidate.z - goal.z),
-      });
-    }
-    visible.sort((p, q) => p.d - q.d);
-    let explored = false;
-    for (const { a } of visible.slice(0, 4)) {
-      const pts2 = await screenPoints(page, a.id);
-      if (pts2.length === 0) continue;
-      await dismissDialogue(page);
-      const pt2 = pts2[0];
-      if (!pt2) continue;
-      await page.mouse.click(pt2.x, pt2.y);
-      explored = await expect
-        .poll(() => page.evaluate(() => (window as unknown as WorldProbe).__worldAt), {
-          timeout: 12000,
-        })
-        .not.toBe(at)
-        .then(() => true)
-        .catch(() => false);
-      if (explored) break;
-      tried.add(a.id);
-    }
-    if (!explored) break;
-  }
-  test.skip(true, `${anchorId} is outside the tappable canvas in this layout`);
-}
-
 async function waitForMap(page: Page, mapId: string) {
   await expect
     .poll(() => page.evaluate(() => (window as unknown as WorldProbe).__worldMapId), {
@@ -310,7 +103,7 @@ test.describe('follow camera', () => {
 
     // 3) Follow: walking west pulls the camera toward the walker and lets
     // it settle on the new position.
-    await tapWorld(page, 'anchor-path-west');
+    await tapWorldAnchor(page, 'anchor-path-west');
     await waitForAnchor(page, 'anchor-path-west');
     const west = getAnchor(STATIC_WORLD_SOURCE, 'anchor-path-west');
     await waitForCamera(page, west.x, west.z, 1.5);
@@ -320,7 +113,7 @@ test.describe('follow camera', () => {
     // 4) Boundary clamp: far-west walk — the target stays inside the padded
     // bounds, so the viewport never shows outside-map space. The park hill
     // sits at the west edge without touching the cave transition.
-    await tapWorld(page, 'anchor-park-hill');
+    await tapWorldAnchor(page, 'anchor-park-hill');
     await waitForAnchor(page, 'anchor-park-hill');
     const edgeAnchor = getAnchor(STATIC_WORLD_SOURCE, 'anchor-park-hill');
     await waitForCamera(page, edgeAnchor.x, edgeAnchor.z, 12);
@@ -364,7 +157,7 @@ test.describe('follow camera', () => {
     expect(panned.z).toBeLessThanOrEqual(town.bounds.maxZ + 0.5);
 
     // Walking anywhere snaps the pan back: the child is the focus again.
-    await tapWorld(page, 'anchor-path-west');
+    await tapWorldAnchor(page, 'anchor-path-west');
     await waitForAnchor(page, 'anchor-path-west');
     const west = getAnchor(STATIC_WORLD_SOURCE, 'anchor-path-west');
     await waitForCamera(page, west.x, west.z, 1.5);
@@ -380,8 +173,8 @@ test.describe('follow camera', () => {
     // Reveal the entrance, then walk in — real taps with the camera already
     // displaced from spawn prove raycast stays correct after camera motion.
     // The first arrival discovers the rock; the second walk crosses the door.
-    await tapWorld(page, 'anchor-cave-entrance');
-    await tapWorld(page, 'anchor-cave-entrance');
+    await tapWorldAnchor(page, 'anchor-cave-entrance');
+    await tapWorldAnchor(page, 'anchor-cave-entrance');
     await waitForMap(page, 'map-cave');
 
     // Cave spawns focused inside its own bounds (never stale town target):
@@ -396,7 +189,7 @@ test.describe('follow camera', () => {
     expect(inside.x).toBeLessThanOrEqual(cave.bounds.maxX + 0.5);
 
     // Leaving refocuses on the town side of the transition.
-    await tapWorld(page, 'anchor-cave-mouth');
+    await tapWorldAnchor(page, 'anchor-cave-mouth');
     await waitForMap(page, 'map-town');
     const entrance = getAnchor(STATIC_WORLD_SOURCE, 'anchor-cave-entrance');
     await waitForCamera(page, entrance.x, entrance.z, 12);
