@@ -37,6 +37,7 @@ export function ParentArea({
   onDeleteProfile,
   onQualityChange,
   onOpenWorldBuilder,
+  onOpenDiagnostics,
   updateReady,
   onApplyUpdate,
   installReady,
@@ -55,6 +56,8 @@ export function ParentArea({
   readonly onQualityChange: (tier: QualityTier) => void;
   /** Navigates to the `?worldbuilder=1` authoring tool. */
   readonly onOpenWorldBuilder: () => void;
+  /** Navigates to the `?diagnostics=1` live technical readout. */
+  readonly onOpenDiagnostics: () => void;
   readonly updateReady: boolean;
   readonly onApplyUpdate: () => void;
   readonly installReady: boolean;
@@ -129,6 +132,14 @@ export function ParentArea({
             data-testid="open-worldbuilder"
           >
             {FA.worldBuilderOpen}
+          </button>{' '}
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={onOpenDiagnostics}
+            data-testid="open-diagnostics"
+          >
+            {FA.diagnosticsOpen}
           </button>
         </section>
 
