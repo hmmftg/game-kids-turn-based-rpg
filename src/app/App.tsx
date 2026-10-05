@@ -24,6 +24,7 @@ import { emotionEmoji, npcEmoji } from '../ui/child/emoji.ts';
 import { EncounterPanel } from '../ui/child/EncounterPanel.tsx';
 import { InteractionHint } from '../ui/child/InteractionHint.tsx';
 import { ObjectiveChip } from '../ui/child/ObjectiveChip.tsx';
+import { NearbySheet } from '../ui/child/NearbySheet.tsx';
 import { PauseMenu } from '../ui/child/PauseMenu.tsx';
 import { ProfileSelectScreen } from '../ui/child/ProfileSelectScreen.tsx';
 import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
@@ -45,6 +46,7 @@ import type { NpcAttention } from '../world/sceneBits.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
 import { getAnchorOrNull } from '../world/navigation/graph.ts';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
+import { nearbyNpcs } from '../world/nearby.ts';
 import { useGame } from './gameContext.ts';
 
 // The shipped world: gameplay resolves every anchor/NPC/transition through
@@ -141,6 +143,10 @@ export function App() {
   // Who noticed the child arriving — the figure gives a brief non-verbal
   // attention cue. `nonce` replays the cue on repeat arrivals.
   const [attention, setAttention] = useState<NpcAttention | null>(null);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
+  // Avatar position snapshot taken when the sheet opens — "who is near me"
+  // is answered at the moment the child asks, not per render.
+  const [nearbyPos, setNearbyPos] = useState({ x: 0, z: 0 });
   const attentionNonceRef = useRef(0);
   // Arrival identity: increments exactly once per avatar arrival. Every
   // arrival-triggered behaviour (avatar flourish, NPC idle cue via the
@@ -559,6 +565,39 @@ export function App() {
           onGo={goToQuest}
         />
       </div>
+
+      {/* Accessibility route for figure taps (PR N1): the people a child
+          could tap in the world, as large DOM buttons. A row dispatches the
+          same onNpcTap as the 3D figure — one meaning, two routes. */}
+      {state.mode === 'hub' && state.battle === null && state.webglAvailable ? (
+        <div className="hud__nearby">
+          <button
+            type="button"
+            className="btn btn--secondary"
+            data-testid="nearby-button"
+            aria-label={FA.nearby}
+            onClick={() => {
+              playSfx('sfx-choice');
+              setNearbyPos(hubRef.current?.playerPosition() ?? { x: 0, z: 0 });
+              setNearbyOpen(true);
+            }}
+          >
+            <span className="emoji" aria-hidden="true">
+              👥
+            </span>{' '}
+            {FA.nearby}
+          </button>
+        </div>
+      ) : null}
+
+      {nearbyOpen ? (
+        <NearbySheet
+          entries={nearbyNpcs(WORLD, state.mapId, nearbyPos, worldTime)}
+          title={FA.nearbyTitle}
+          onPick={onNpcTap}
+          onDismiss={() => setNearbyOpen(false)}
+        />
+      ) : null}
 
       {/* Every child modal obeys one rule: a tap outside the card leaves it
           and never reaches the world beneath — no confirmation, no lost

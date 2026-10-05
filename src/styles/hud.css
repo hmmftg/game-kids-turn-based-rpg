@@ -1066,3 +1066,82 @@
   background: var(--color-surface-strong);
   color: var(--color-ink);
 }
+
+/* Accessibility route for figure taps (PR N1): the Nearby sheet lives at the
+   bottom inline-end, opposite the quest trail so the two never compete. The
+   corner slot is chrome — its gaps pass world taps through. */
+.hud__nearby {
+  position: absolute;
+  z-index: 10;
+  inset-block-end: calc(var(--safe-bottom) + var(--space-3));
+  inset-inline-end: calc(var(--safe-right) + var(--space-3));
+}
+
+/* Same modal contract as every child surface: the sheet is a card over the
+   shared backdrop; a tap outside leaves. Rows are oversized — the whole
+   point is a target a small finger cannot miss. */
+.nearby-sheet {
+  position: absolute;
+  inset-block-end: calc(var(--safe-bottom) + var(--space-6));
+  inset-inline-end: calc(var(--safe-right) + var(--space-3));
+  inline-size: min(320px, 86vw);
+  max-block-size: 70vh;
+  overflow-y: auto;
+  background: var(--color-surface-strong);
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3);
+}
+
+.nearby-sheet__title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0 0 var(--space-2);
+  text-align: center;
+}
+
+.nearby-sheet__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nearby__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--touch-min) + 12px);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  text-align: start;
+  cursor: pointer;
+}
+
+.nearby__row:active {
+  transform: scale(0.97);
+}
+
+.nearby__row:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.nearby__emoji {
+  font-size: 34px;
+  flex-shrink: 0;
+}
+
+.nearby__name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.nearby__role {
+  margin-inline-start: auto;
+  font-size: var(--font-size-sm);
+  opacity: 0.75;
+}

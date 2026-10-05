@@ -305,6 +305,7 @@ export function CaveWorld({
       cancel: () => {
         walker.cancel();
       },
+      playerPosition: () => ({ x: walker.position.x, z: walker.position.z }),
     }),
     [walker, onArrive],
   );

@@ -86,6 +86,27 @@ stays physically where it is. One-shot CSS (`scene-exec-*` keyframes), frozen un
   an icon row anywhere.
 - Instructional text stays minimal (step text ≤9 words, prompts ≤6 — enforced by kidUx tests).
 
+## Accessibility routes (PR N1)
+
+One domain action, one world meaning, multiple presentation routes — never a
+second interaction system:
+
+- **Nearby sheet** (`NearbySheet` + `nearby-button`, bottom inline-end): the
+  people and critters a figure tap would reach, as large DOM rows
+  (`min-block-size` = `--touch-min` + 12). `nearbyNpcs()` resolves who stands
+  where through the same `resolveNpcStand` + `NPC_STAND_OFFSET` the world
+  renders; a row dispatches the exact same `onNpcTap` (walk + greet +
+  dialogue, or `START_BATTLE` for the mouse). Outside-tap dismisses, same as
+  every child modal.
+- **Locked hotspots are not silent**: an inactive `Hotspot` no longer
+  `stopPropagation`s — the tap falls through to the ground's normal
+  walk/glance semantics. Silent dead zones are a comprehension failure.
+- **Touch volumes (audit)**: humanoid figure cylinders r=0.9u (~115px at
+  `DEFAULT_ZOOM`), hotspots r=0.9u, DOM controls ≥ `--touch-min` (64px). The
+  critter cylinder stays r=0.45u (~58px) _deliberately_ — enlarging it
+  reintroduces swallowed path taps near the fountain; its accessible route
+  is the Nearby sheet instead of a bigger invisible volume.
+
 ## Battle ownership (PR I)
 
 A battle is a self-contained interaction owner: while `GameState.battle !== null`
