@@ -287,7 +287,7 @@ export function CaveWorld({
   // The follow-camera reads the avatar's live position from this shared
   // store — same useWalker source of truth, never a second copy.
   useEffect(() => {
-    publishCameraFocus(walker.position.x, walker.position.z);
+    publishCameraFocus(walker.focus.x, walker.focus.z);
   });
   const activeAreaId: AreaId = areaForAnchor(world, walker.at);
   const visibleAreas = visibleAreaIds(world, activeAreaId);
@@ -337,6 +337,7 @@ export function CaveWorld({
           event.stopPropagation();
           const anchor = nearestWalkableAnchor(world, event.point.x, event.point.z, 4, MAP_ID);
           if (anchor) walkHere(anchor);
+          else walker.faceToward(event.point.x, event.point.z);
         }}
       />
 
@@ -408,7 +409,10 @@ export function CaveWorld({
             onNpcTap('npc-cave-mouse');
           }}
         >
-          <cylinderGeometry args={[0.7, 0.7, 1.4, 8]} />
+          {/* Critter-sized tap cylinder: sized to the little body, not the
+              humanoid 0.9 — a wide invisible zone eats neighbouring ground
+              taps and the child can't tell what they aimed at. */}
+          <cylinderGeometry args={[0.45, 0.45, 1.4, 8]} />
           <meshBasicMaterial visible={false} />
         </mesh>
         <CharacterReact
