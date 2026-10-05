@@ -141,7 +141,10 @@ export function useWalker(
 
   const faceToward = useCallback(
     (x: number, z: number) => {
-      if (!enabled) return;
+      // Ignored mid-walk: a glance stored now would fire on arrival, which
+      // reads as the avatar randomly looking somewhere it never meant to.
+      // While walking the child's destination is already claimed.
+      if (!enabled || moving) return;
       if (reduced) {
         setHeading(Math.atan2(x - position.x, z - position.z));
         invalidate();
@@ -150,7 +153,7 @@ export function useWalker(
       glance.current = { x, z, until: performance.now() + GLANCE_S * 1000 };
       invalidate();
     },
-    [enabled, reduced, position, invalidate],
+    [enabled, moving, reduced, position, invalidate],
   );
 
   useEffect(() => {
