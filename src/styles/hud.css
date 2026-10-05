@@ -344,6 +344,10 @@
 }
 
 .dialogue-card {
+  /* Every beat card physically arrives — the "a new thing happened" signal
+     that never depends on reading the words inside. Call sites key the
+     card per beat/line so each transition re-runs this once. */
+  animation: card-arrive 0.28s ease-out backwards;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -880,6 +884,81 @@
   }
 }
 
+@keyframes card-arrive {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Reinforce beat: the consequence rests at its destination — the episode's
+   static end-state, so the "after" persists instead of replaying. */
+.scene-consequence--settled [class*='scene-exec'] {
+  animation: none;
+}
+
+/* Battle opponent beats — the physical cause for each passive phase:
+   recoil when the ball lands, a lunge when it attacks, a settle when it
+   rests; victory means the mouse is simply gone (persistent). */
+.battle__opponent[data-outcome='opponent-hit'] svg {
+  animation: scene-exec-bounce 0.55s ease-out backwards;
+}
+
+.battle__opponent[data-phase='enemyResolution'][data-intent='attack'] svg {
+  animation: battle-lunge 0.5s ease-out backwards;
+}
+
+.battle__opponent[data-phase='enemyResolution'][data-intent='rest'] svg {
+  animation: battle-settle 0.6s ease-out backwards;
+}
+
+.battle__opponent[data-phase='victory'] svg {
+  animation: battle-flee 0.6s ease-in forwards;
+}
+
+.battle__opponent[data-phase='defeat'] svg {
+  animation: scene-exec-bounce 0.55s ease-out backwards;
+}
+
+@keyframes battle-lunge {
+  0% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(9px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes battle-settle {
+  0% {
+    transform: translateY(-2px);
+  }
+  60% {
+    transform: translateY(1.5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes battle-flee {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-110px);
+    opacity: 0;
+  }
+}
+
 @keyframes scene-arrive {
   from {
     transform: translateY(10px);
@@ -892,6 +971,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .dialogue-card,
+  .battle__opponent svg,
   .scene-el,
   .scene-exec-fly-arc,
   .scene-exec-fly-give,

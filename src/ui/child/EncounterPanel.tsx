@@ -73,6 +73,7 @@ export function EncounterPanel({
     case 'intro':
       return (
         <DialogueCard
+          key="intro"
           textFa={stepCopy.introFa}
           testId="encounter-intro"
           onTap={onAdvance}
@@ -87,6 +88,7 @@ export function EncounterPanel({
       const element = sceneElementFor(step.correctIconId);
       return (
         <DialogueCard
+          key="demonstrate"
           textFa={stepCopy.demonstrateFa}
           testId="encounter-demonstrate"
           onTap={onAdvance}
@@ -128,6 +130,7 @@ export function EncounterPanel({
         );
       return (
         <DialogueCard
+          key="playerChoice"
           textFa={stepCopy.promptFa}
           testId="encounter-choice"
           hideText={hideCopy}
@@ -162,6 +165,7 @@ export function EncounterPanel({
       const correct = encounter.lastChoiceCorrect === true;
       return (
         <DialogueCard
+          key="worldResponse"
           textFa={correct ? stepCopy.successFa : stepCopy.retryFa}
           testId="encounter-response"
           variant={correct ? undefined : 'retry'}
@@ -179,18 +183,28 @@ export function EncounterPanel({
     }
 
     case 'reinforce':
+      // The step-win beat: the consequence rests at its destination — the
+      // persistent "after" the child just caused (shell is IN the basket
+      // now) — instead of re-showing the same card with nothing new.
       return (
         <DialogueCard
+          key="reinforce"
           textFa={stepCopy.successFa}
           testId="encounter-reinforce"
           onTap={onAdvance}
           hideText={hideCopy}
+          scene={
+            encounter.lastChoiceIconId ? (
+              <ConsequenceScene iconId={encounter.lastChoiceIconId} settled />
+            ) : undefined
+          }
         />
       );
 
     case 'complete':
       return (
         <DialogueCard
+          key="complete"
           textFa={copy.completionFa}
           testId="encounter-complete"
           onTap={onAdvance}

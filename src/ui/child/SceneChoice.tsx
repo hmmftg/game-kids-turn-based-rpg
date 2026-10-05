@@ -428,14 +428,23 @@ function consequenceEpisode(iconId: IconId): readonly EpisodeStep[] {
  *  to the person and the person receives it, the asked thing opens/bounces
  *  while the teacher reacts. One-shot CSS motion; the state change is
  *  perceivable statically under reduced motion. */
-export function ConsequenceScene({ iconId }: { readonly iconId: IconId }) {
+export function ConsequenceScene({
+  iconId,
+  settled = false,
+}: {
+  readonly iconId: IconId;
+  /** The episode's static end-state, no motion: the object rests at its
+   *  destination — the persistent "after" of the state change (reinforce
+   *  beat and reduced-motion render the same picture). */
+  readonly settled?: boolean | undefined;
+}) {
   const icon = getIcon(iconId);
   useEffect(() => {
-    recordEpisode(consequenceEpisode(iconId));
-  }, [iconId]);
+    if (!settled) recordEpisode(consequenceEpisode(iconId));
+  }, [iconId, settled]);
   return (
     <svg
-      className="scene-consequence"
+      className={`scene-consequence${settled ? ' scene-consequence--settled' : ''}`}
       width="104"
       height="104"
       viewBox="0 0 48 48"

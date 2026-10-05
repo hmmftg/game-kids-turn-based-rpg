@@ -116,13 +116,21 @@ export function BattleScene({
           </button>
         </header>
 
-        {/* The opponent is a physical presence, not a portrait icon. */}
-        <div className="battle__opponent" data-testid="battle-opponent" data-phase={battle.phase}>
+        {/* The opponent is a physical presence, not a portrait icon: it
+            recoils when hit, lunges when it attacks, settles when it rests
+            — the physical cause for every beat, not just swapped words. */}
+        <div
+          className="battle__opponent"
+          data-testid="battle-opponent"
+          data-phase={battle.phase}
+          data-outcome={battle.lastOutcome ?? 'none'}
+          data-intent={battle.enemyIntent}
+        >
           <SceneGlyph element="mouse" size={96} />
         </div>
 
         {battle.phase === 'playerChoice' ? (
-          <DialogueCard textFa={lineFa} testId="battle-card" hideText={hideCopy}>
+          <DialogueCard key={battle.phase} textFa={lineFa} testId="battle-card" hideText={hideCopy}>
             {battle.definition.availableActions.map((action) => (
               <button
                 key={action}
@@ -140,6 +148,7 @@ export function BattleScene({
           </DialogueCard>
         ) : (
           <DialogueCard
+            key={battle.phase}
             textFa={lineFa}
             testId="battle-card"
             hideText={hideCopy}

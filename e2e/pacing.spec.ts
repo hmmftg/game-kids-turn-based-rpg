@@ -39,6 +39,24 @@ test.describe('encounter pacing', () => {
     await playQuest(page, 'quest-greeting');
   });
 
+  test('the step-win beat shows the settled consequence, not a repeated card', async ({ page }) => {
+    await startGame(page);
+    await openQuestDialogue(page, 'quest-greeting');
+    await page.getByTestId('start-quest').click();
+
+    await expect(page.getByTestId('encounter-choice')).toBeVisible({ timeout: 15000 });
+    const step = getQuestDefinition('quest-greeting').steps[0]!;
+    await page.getByTestId(`scene-${step.correctIconId}`).click();
+
+    // The step-win beat keeps the consequence visibly at its destination —
+    // the persistent "after" the child just caused — instead of re-showing
+    // the same words with nothing new on screen.
+    await expect(page.getByTestId('encounter-reinforce')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('encounter-reinforce').locator('[data-consequence]')).toHaveClass(
+      /scene-consequence--settled/,
+    );
+  });
+
   test('a hidden tab pauses pacing; restoring resumes the current beat', async ({ page }) => {
     await startGame(page);
     await openQuestDialogue(page, 'quest-greeting');
