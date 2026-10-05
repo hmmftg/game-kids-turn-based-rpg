@@ -37,6 +37,9 @@ export interface WorldSceneHandle {
    */
   readonly goTo: (anchor: AnchorId, onArrive?: () => void) => boolean;
   readonly cancel: () => void;
+  /** Live avatar ground position — the DOM accessibility routes (e.g. the
+      Nearby sheet) resolve "who is near me" against it. */
+  readonly playerPosition: () => { readonly x: number; readonly z: number };
 }
 
 export const TAP_ONLY_MATERIAL = new THREE.MeshBasicMaterial({ visible: false });
@@ -66,9 +69,9 @@ export function Hotspot({
       rotation={[-Math.PI / 2, 0, 0]}
       material={TAP_ONLY_MATERIAL}
       onClick={(event: ThreeEvent<MouseEvent>) => {
-        if (event.delta > 6) return;
+        if (event.delta > 6 || !active) return;
         event.stopPropagation();
-        if (active) onSelect();
+        onSelect();
       }}
     >
       <circleGeometry args={[0.9, 20]} />

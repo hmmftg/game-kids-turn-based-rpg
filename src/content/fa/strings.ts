@@ -53,6 +53,8 @@ export const FA = {
   questTrail: 'کارهای من',
   stickers: 'برچسب‌ها',
   noStickers: 'هنوز برچسبی نداری',
+  nearby: 'دوستان',
+  nearbyTitle: 'کی اینجاست؟',
   questLocked: 'هنوز باز نشده',
   questAvailable: 'آماده',
   questCompleted: 'انجام شد',
