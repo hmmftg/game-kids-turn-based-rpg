@@ -3,6 +3,7 @@ import { startGame } from './harness.ts';
 import {
   playerAt,
   reactionsProbe,
+  reactionStatsProbe,
   tapReactivePoint,
   tapWorldAnchor,
   waitForWalkerIdle,
@@ -38,6 +39,10 @@ test('a tapped flower bends once and the child still approaches', async ({ page 
 test('every reaction stays out of the semantic stream and settles', async ({ page }) => {
   await startGame(page);
   await tapReactivePoint(page, -2.2, -2.4); // plant → sway
+  // The flourish is actually running — the lifecycle probe saw it start.
+  await expect
+    .poll(async () => (await reactionStatsProbe(page)).started, { timeout: 5000 })
+    .toBeGreaterThanOrEqual(1);
   await waitForWalkerIdle(page);
   await tapReactivePoint(page, 2, -2.6); // flower → bend
   await page.waitForTimeout(1100); // longer than any flourish
@@ -53,6 +58,12 @@ test('every reaction stays out of the semantic stream and settles', async ({ pag
     expect(event.context === undefined || !propReactions.has(event.context)).toBe(true);
   }
   expect((await activeSemantic(page)) ?? 0).toBe(0);
+  // The reaction layer itself went idle — started flourishes all completed
+  // and `active` returned to 0; nothing still calls invalidate().
+  const stats = await reactionStatsProbe(page);
+  expect(stats.started).toBeGreaterThanOrEqual(2);
+  expect(stats.active).toBe(0);
+  expect(stats.completed).toBeGreaterThanOrEqual(1);
 });
 
 test('the fountain bloops, fish dart, and the tap keeps its normal meaning', async ({ page }) => {

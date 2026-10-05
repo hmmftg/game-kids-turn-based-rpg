@@ -25,6 +25,7 @@ export interface WorldProbe {
   __worldDiscoveries?: string[];
   __worldMoving?: boolean;
   __worldReactions?: Array<{ seq: number; subject: string; reaction: string }>;
+  __worldReactionStats?: { started: number; active: number; completed: number };
   __worldAttention?: {
     npcId: string;
     nonce: number;
@@ -89,6 +90,18 @@ export async function attentionProbe(page: Page) {
 /** Presentation-layer reactive-prop taps — the `__worldReactions` probe log. */
 export async function reactionsProbe(page: Page) {
   return page.evaluate(() => (window as unknown as WorldProbe).__worldReactions ?? []);
+}
+
+/** Flourish lifecycle counters — `active` must return to 0 after settle. */
+export async function reactionStatsProbe(page: Page) {
+  return page.evaluate(
+    () =>
+      (window as unknown as WorldProbe).__worldReactionStats ?? {
+        started: 0,
+        active: 0,
+        completed: 0,
+      },
+  );
 }
 
 /** Walks have finished once the walker's own `moving` flag settles. */

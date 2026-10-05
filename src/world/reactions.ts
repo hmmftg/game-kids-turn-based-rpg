@@ -78,13 +78,50 @@ export interface ReactionProbeEntry {
 }
 
 const reactionLog: ReactionProbeEntry[] = [];
+let nextReactionSeq = 0;
 
 export function recordReactionProbe(subject: string, reaction: PropReaction): void {
-  reactionLog.push({ seq: reactionLog.length, subject, reaction });
+  reactionLog.push({ seq: nextReactionSeq++, subject, reaction });
   if (reactionLog.length > 20) reactionLog.shift();
 }
 
 /** The live log array — callers publish the reference, not a snapshot. */
 export function reactionProbeLog(): readonly ReactionProbeEntry[] {
   return reactionLog;
+}
+
+/**
+ * Lifecycle counters for the reactive presentation layer — the counterpart
+ * to `__worldAnimationStats`, kept deliberately separate: `active` counts
+ * flourishes currently transforming, and must return to 0 once every
+ * reaction settles. Session-local, published as `__worldReactionStats` only
+ * when the world probe is enabled.
+ */
+export interface ReactionStats {
+  started: number;
+  active: number;
+  completed: number;
+}
+
+const reactionStats: ReactionStats = { started: 0, active: 0, completed: 0 };
+
+export function reactionStarted(): void {
+  reactionStats.started += 1;
+  reactionStats.active += 1;
+}
+
+/** A flourish ended early (a new tap retargeted it) without reaching rest. */
+export function reactionAborted(): void {
+  reactionStats.active -= 1;
+}
+
+/** A flourish reached its rest pose — the demand renderer goes idle again. */
+export function reactionCompleted(): void {
+  reactionStats.active -= 1;
+  reactionStats.completed += 1;
+}
+
+/** The live stats object — callers publish the reference, not a snapshot. */
+export function reactionStatsProbe(): ReactionStats {
+  return reactionStats;
 }

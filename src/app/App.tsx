@@ -11,7 +11,7 @@ import {
   resolveNpcStand,
 } from '../world/registry.ts';
 import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
-import { reactionProbeLog } from '../world/reactions.ts';
+import { reactionProbeLog, reactionStatsProbe } from '../world/reactions.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
@@ -211,6 +211,7 @@ export function App() {
       // raycasting the scene graph.
       w['__worldAttention'] = attention;
       w['__worldReactions'] = reactionProbeLog();
+      w['__worldReactionStats'] = reactionStatsProbe();
       w['__worldDialogueNpc'] = state.dialogue?.npcId ?? null;
       w['__worldBattleState'] = state.battle;
       // Phase history for e2e: one row per phase entry (and battle end).

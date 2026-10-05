@@ -64,4 +64,13 @@ describe('reaction probe log', () => {
     expect(log[log.length - 1]).toMatchObject({ subject: 'probe-fountain', reaction: 'bloop' });
     expect(log[log.length - 1]!.seq).toBe(log[log.length - 2]!.seq + 1);
   });
+
+  it('keeps seq monotonic past the 20-entry cap', () => {
+    for (let i = 0; i < 30; i += 1) recordReactionProbe(`overflow-${i}`, 'bend');
+    const log = reactionProbeLog();
+    expect(log.length).toBe(20);
+    for (let i = 1; i < log.length; i += 1) {
+      expect(log[i]!.seq).toBe(log[i - 1]!.seq + 1);
+    }
+  });
 });

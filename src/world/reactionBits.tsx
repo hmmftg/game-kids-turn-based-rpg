@@ -4,6 +4,9 @@ import * as THREE from 'three';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
 import type { Xyz } from './models/details.tsx';
 import {
+  reactionAborted,
+  reactionCompleted,
+  reactionStarted,
   recordReactionProbe,
   reactionTransform,
   REACTION_SECONDS,
@@ -16,8 +19,10 @@ import {
  * A `ReactiveProp` is a physical thing the child can tap for one bounded
  * physical response: an invisible generous tap surface (the visible
  * affordance is the object itself — never a ring or pulse) plus ONE nested
- * flourish group whose transform the reaction owns outright. The tap stops
- * propagation: touching a flower is a decision, not a walk waypoint.
+ * flourish group whose transform the reaction owns outright. The tap does
+ * NOT stop propagation: the reaction layers on the world's ordinary tap
+ * semantics, so the touch still walks/selects like a ground tap — a prop
+ * tap is never a dead touch or a stolen walk waypoint.
  *
  * Same contract as `livelinessBits`: presentation only, never recorded to
  * `__worldAnimationEvents`, event-triggered (one flourish per tap), and the
@@ -119,10 +124,16 @@ function PropFlourish({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const startedAt = useRef<number | null>(null);
+  const wasActive = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
   const reduced = prefersReducedMotion();
 
   useEffect(() => {
+    // A retap while still flourishing aborts the old flourish's clock.
+    if (wasActive.current) {
+      wasActive.current = false;
+      reactionAborted();
+    }
     startedAt.current = null;
     if (nonce > 0) invalidate();
   }, [nonce, invalidate]);
@@ -131,15 +142,27 @@ function PropFlourish({
     const group = groupRef.current;
     if (!group) return;
     if (nonce === 0 || reduced) {
+      if (wasActive.current) {
+        wasActive.current = false;
+        reactionAborted();
+      }
       if (group.rotation.x !== 0 || group.scale.y !== 1) {
         group.rotation.set(0, 0, 0);
         group.scale.set(1, 1, 1);
       }
       return;
     }
-    if (startedAt.current === null) startedAt.current = clock.elapsedTime;
+    if (startedAt.current === null) {
+      startedAt.current = clock.elapsedTime;
+      wasActive.current = true;
+      reactionStarted();
+    }
     const t = (clock.elapsedTime - startedAt.current) / REACTION_SECONDS[reaction];
     if (t >= 1) {
+      if (wasActive.current) {
+        wasActive.current = false;
+        reactionCompleted();
+      }
       group.rotation.set(0, 0, 0);
       group.scale.set(1, 1, 1);
       return;
@@ -175,10 +198,15 @@ export function ReactionRipple({
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const startedAt = useRef<number | null>(null);
+  const wasActive = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
   const reduced = prefersReducedMotion();
 
   useEffect(() => {
+    if (wasActive.current) {
+      wasActive.current = false;
+      reactionAborted();
+    }
     startedAt.current = null;
     if (nonce > 0) invalidate();
   }, [nonce, invalidate]);
@@ -188,12 +216,24 @@ export function ReactionRipple({
     if (!mesh) return;
     const material = mesh.material as THREE.MeshBasicMaterial;
     if (nonce === 0 || reduced) {
+      if (wasActive.current) {
+        wasActive.current = false;
+        reactionAborted();
+      }
       material.opacity = 0;
       return;
     }
-    if (startedAt.current === null) startedAt.current = clock.elapsedTime;
+    if (startedAt.current === null) {
+      startedAt.current = clock.elapsedTime;
+      wasActive.current = true;
+      reactionStarted();
+    }
     const t = (clock.elapsedTime - startedAt.current) / RIPPLE_SECONDS;
     if (t >= 1) {
+      if (wasActive.current) {
+        wasActive.current = false;
+        reactionCompleted();
+      }
       material.opacity = 0;
       return;
     }
