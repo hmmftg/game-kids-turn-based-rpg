@@ -384,7 +384,7 @@ export function Hub({
   // The follow-camera reads the avatar's live position from this shared
   // store — same useWalker source of truth, never a second copy.
   useEffect(() => {
-    publishCameraFocus(walker.position.x, walker.position.z);
+    publishCameraFocus(walker.focus.x, walker.focus.z);
   });
   // Ambient critters: motion only while the world is interactive and motion
   // is allowed; on low tier they render as static silhouettes.
@@ -515,7 +515,18 @@ export function Hub({
           if (!interactive || event.delta > 6) return;
           event.stopPropagation();
           const anchor = nearestWalkableAnchor(world, event.point.x, event.point.z, 4, 'map-town');
+          if (
+            import.meta.env.DEV ||
+            (window as unknown as Record<string, unknown>)['__WORLD_PROBE']
+          ) {
+            (window as unknown as Record<string, unknown>)['__worldLastTap'] = {
+              x: event.point.x,
+              z: event.point.z,
+              resolved: anchor,
+            };
+          }
           if (anchor) walkHere(anchor);
+          else walker.faceToward(event.point.x, event.point.z);
         }}
       />
 
@@ -579,7 +590,10 @@ export function Hub({
           <group key={npc.id}>
             {/* Invisible-but-tappable hit cylinder: a tap on the person
                 talks to them where they stand. Generous radius — small
-                fingers, and the figure itself reads as the target. */}
+                fingers, and the figure itself reads as the target. Critters
+                get a smaller cylinder sized to the little body: a humanoid
+                radius around a roaming mouse eats world taps and launches
+                battles the child never aimed at. */}
             <mesh
               position={[npcX, 0.75, npcZ]}
               onClick={(event: ThreeEvent<MouseEvent>) => {
@@ -589,7 +603,14 @@ export function Hub({
                 onNpcTap(npc.id);
               }}
             >
-              <cylinderGeometry args={[0.9, 0.9, 2.2, 8]} />
+              <cylinderGeometry
+                args={[
+                  npc.archetype === 'critter' ? 0.45 : 0.9,
+                  npc.archetype === 'critter' ? 0.45 : 0.9,
+                  2.2,
+                  8,
+                ]}
+              />
               <meshBasicMaterial visible={false} />
             </mesh>
             {/* Reaching an NPC earns CharacterReact(notices-child); tapping

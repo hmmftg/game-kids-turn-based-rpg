@@ -37,6 +37,13 @@
   inset-block-start: calc(var(--safe-top) + var(--space-3));
   inset-inline-end: calc(var(--safe-right) + var(--space-3));
   align-items: flex-start;
+  /* Same rule as .hud__bottom: the chrome row positions controls but its
+     empty gaps must not swallow world taps underneath. */
+  pointer-events: none;
+}
+
+.hud__top > * {
+  pointer-events: auto;
 }
 
 /* Persistent «what do I do now?» chip: top inline-start, opposite the pause
@@ -77,6 +84,13 @@
   inset-block-start: 50%;
   inset-inline-start: calc(var(--safe-left) + var(--space-3));
   transform: translateY(-50%);
+  /* Same rule as .hud__bottom: the rail's padding, connectors and step gaps
+     must not swallow world taps — the quest chips themselves stay verbs. */
+  pointer-events: none;
+}
+
+.hud__side .trail__item {
+  pointer-events: auto;
 }
 
 .hud__bottom {
@@ -183,6 +197,8 @@
   opacity: 0.55;
   filter: grayscale(1);
   cursor: default;
+  /* A locked stop is a picture, not a verb — taps pass through to the world. */
+  pointer-events: none;
 }
 
 /* Next stop on the journey: biggest node, accent ring, «go here» tag. */

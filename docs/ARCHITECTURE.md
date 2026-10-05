@@ -53,6 +53,16 @@ roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit on
   every interactive anchor, landmark render position, NPC figure position
   (anchor + stand offset + jitter) and the cave rock stays inside the guaranteed
   rect with `INTERACTION_CLEARANCE`, and fish rest/swim inside the water disc.
+- **Navigation legibility**: the tap→go chain reads physically. `useWalker` holds a
+  ~220ms orientation beat before a large heading change (the avatar visibly turns
+  toward the chosen spot), eases heading during the walk, and publishes `focus` —
+  position plus a ~2.4u lead toward the current hop — so the follow camera frames
+  the destination before arrival rather than only on arrival. A ground tap that
+  resolves to no anchor earns `faceToward` (an honest glance, never a silent
+  dead tap). HUD chrome rows (`hud__top`, `hud__side`, `hud__bottom`) are
+  pass-through containers: only their actual controls are hit targets, so empty
+  band space can never swallow a world tap; disabled trail stops are pictures,
+  not verbs (`pointer-events: none`).
 - **Rendering**: `frameloop="demand"`, orthographic camera, raycast only on ground/hotspot rings,
   quality tiers, no persistent animation loops, reduced-motion freezes decoration not meaning.
 - **RTL**: all text in the DOM, never inside WebGL. No `row-reverse` on the quest trail.

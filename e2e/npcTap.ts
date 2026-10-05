@@ -24,6 +24,7 @@ export interface WorldProbe {
   __worldAt?: string;
   __worldDiscoveries?: string[];
   __worldMoving?: boolean;
+  __worldHeading?: number;
   __worldAttention?: {
     npcId: string;
     nonce: number;
@@ -248,10 +249,18 @@ export async function waitForCameraSettle(page: Page) {
 async function dismissDialogue(page: Page) {
   const dialogue = page.getByTestId('npc-dialogue');
   for (let i = 0; i < 6; i += 1) {
-    if (!(await dialogue.isVisible().catch(() => false))) return;
+    if (!(await dialogue.isVisible().catch(() => false))) break;
     const close = page.getByTestId('close-dialogue');
     if (await close.isVisible().catch(() => false)) await close.click();
     await dialogue.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+  }
+  // A roaming opponent's figure cylinder can sit under a stray tap — the
+  // resulting battle overlay owns all world input until it's left, just like
+  // a dialogue. Leaving is free and changes no progression.
+  const battle = page.getByTestId('battle-scene');
+  if (await battle.isVisible().catch(() => false)) {
+    await page.getByTestId('leave-battle').click();
+    await battle.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
   }
 }
 
@@ -305,9 +314,18 @@ async function waitForArrival(
     // show (map change, dialogue, or a move).
     if (cur === to && (cur !== from || i >= 4)) return 'arrived';
     if (cur !== from) return 'moved';
-    // A figure tap is feedback too — the click found a person, so the walk
-    // outcome is settled; don't sit the full poll window on it.
+    // A figure tap is feedback too — the click found a person (or a battle
+    // opponent), so the walk outcome is settled; don't sit the full poll
+    // window on it.
     if (await dialogue.isVisible().catch(() => false)) return 'dialogue';
+    if (
+      await page
+        .getByTestId('battle-scene')
+        .isVisible()
+        .catch(() => false)
+    ) {
+      return 'dialogue';
+    }
     // Dead point: the click resolved to the anchor the child already stands
     // on (or hit dead canvas) — no walk was ever issued. Bail fast so the
     // next candidate point gets a turn instead of burning the full poll.
