@@ -1,0 +1,117 @@
+import { expect, test, type Page } from '@playwright/test';
+import { startGame } from './harness.ts';
+import {
+  playerAt,
+  reactionsProbe,
+  reactionStatsProbe,
+  tapReactivePoint,
+  tapWorldAnchor,
+  waitForWalkerIdle,
+  type WorldProbe,
+} from './npcTap.ts';
+
+// Delight PR 2 — reactive world objects. A tap on a physical thing produces
+// ONE bounded reaction layered on the world's ordinary tap semantics: the
+// object answers AND the touch still navigates like a plain ground tap
+// (discover → approach), so a prop tap is never a dead touch and never
+// steals a walk waypoint. The object stays the subject: flowers bend, the
+// fountain bloops while its fish dart, a door swings open a crack.
+
+const semanticEvents = (page: Page) =>
+  page.evaluate(() => (window as unknown as WorldProbe).__worldAnimationEvents ?? []);
+
+const activeSemantic = (page: Page) =>
+  page.evaluate(() => (window as unknown as WorldProbe).__worldAnimationStats?.active);
+
+test('a tapped flower bends once and the child still approaches', async ({ page }) => {
+  await startGame(page);
+  await waitForWalkerIdle(page);
+
+  await tapReactivePoint(page, 2, -2.6); // authored flower slot near the square
+  await page.waitForTimeout(300);
+  const reactions = await reactionsProbe(page);
+  expect(reactions.some((r) => r.reaction === 'bend' && r.subject.startsWith('flower'))).toBe(true);
+  // Not a dead touch: the tap navigates exactly like the ground tap it is —
+  // the child walks to the nearest anchor (path-north) to go see.
+  await expect.poll(() => playerAt(page)).toBe('anchor-path-north');
+});
+
+test('every reaction stays out of the semantic stream and settles', async ({ page }) => {
+  await startGame(page);
+  await tapReactivePoint(page, -2.2, -2.4); // plant → sway
+  // The flourish is actually running — the lifecycle probe saw it start.
+  await expect
+    .poll(async () => (await reactionStatsProbe(page)).started, { timeout: 5000 })
+    .toBeGreaterThanOrEqual(1);
+  await waitForWalkerIdle(page);
+  await tapReactivePoint(page, 2, -2.6); // flower → bend
+  await page.waitForTimeout(1100); // longer than any flourish
+  const reactions = await reactionsProbe(page);
+  expect(reactions.some((r) => r.reaction === 'sway')).toBe(true);
+  expect(reactions.some((r) => r.reaction === 'bend')).toBe(true);
+  // Presentation never enters `__worldAnimationEvents` — no episode carries a
+  // prop-reaction name (the underlying taps may still walk, which can fire a
+  // normal notices-child on arrival, exactly like a plain ground tap).
+  const propReactions = new Set(['bend', 'sway', 'bloop', 'door-swing']);
+  for (const event of await semanticEvents(page)) {
+    expect(propReactions.has(event.type)).toBe(false);
+    expect(event.context === undefined || !propReactions.has(event.context)).toBe(true);
+  }
+  expect((await activeSemantic(page)) ?? 0).toBe(0);
+  // The reaction layer itself went idle — started flourishes all completed
+  // and `active` returned to 0; nothing still calls invalidate().
+  const stats = await reactionStatsProbe(page);
+  expect(stats.started).toBeGreaterThanOrEqual(2);
+  expect(stats.active).toBe(0);
+  expect(stats.completed).toBeGreaterThanOrEqual(1);
+});
+
+test('the fountain bloops, fish dart, and the tap keeps its normal meaning', async ({ page }) => {
+  await startGame(page);
+  await tapWorldAnchor(page, 'anchor-path-west');
+  await waitForWalkerIdle(page);
+
+  // Basin far rim — outside the playful mouse's talk cylinder and outside
+  // the quest hotspot zone, so the touch keeps its plain ground-tap
+  // meaning: the child walks to the fountain while it answers the touch.
+  await tapReactivePoint(page, -6, -2.0);
+  await page.waitForTimeout(300);
+  expect(
+    (await reactionsProbe(page)).some((r) => r.reaction === 'bloop' && r.subject === 'fountain'),
+  ).toBe(true);
+  // Navigation unchanged: the touch is still an ordinary walk request —
+  // the reaction only layered on top of it.
+  await expect.poll(() => playerAt(page), { timeout: 8000 }).toBe('anchor-path-west-far');
+});
+
+test('a tapped door swings open a crack and closes', async ({ page }) => {
+  await startGame(page);
+  await waitForWalkerIdle(page);
+  // The square's wide doorway — tapped on the door itself (its panel stands
+  // above the ground, so aim at its centre like a child's finger).
+  await tapReactivePoint(page, 0, -0.41, 0.4);
+  await page.waitForTimeout(300);
+  const reactions = await reactionsProbe(page);
+  expect(reactions.some((r) => r.reaction === 'door-swing' && r.subject === 'door-square')).toBe(
+    true,
+  );
+  // The tap still means "go there" — the square is already the nearest
+  // anchor, so the child stays put while the door cracks open.
+  await waitForWalkerIdle(page);
+  expect(await playerAt(page)).toBe('anchor-square');
+
+  // Repeatable: a second touch answers again.
+  await tapReactivePoint(page, 0, -0.41, 0.4);
+  await page.waitForTimeout(300);
+  const swings = (await reactionsProbe(page)).filter((r) => r.reaction === 'door-swing');
+  expect(swings.length).toBeGreaterThanOrEqual(2);
+});
+
+test('reduced motion still registers the reaction, drops the flourish', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await startGame(page);
+  await tapReactivePoint(page, 2, -2.6);
+  await page.waitForTimeout(300);
+  expect((await reactionsProbe(page)).some((r) => r.reaction === 'bend')).toBe(true);
+  expect((await activeSemantic(page)) ?? 0).toBe(0);
+});

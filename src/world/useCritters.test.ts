@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextSeed } from './critters.ts';
+import { FOUNTAIN_BASIN, nextSeed } from './critters.ts';
 import { createCritterController, type Controller } from './useCritters.ts';
 
 /**
@@ -136,6 +136,39 @@ describe('critter controller lifecycle', () => {
       moveStepUntilIdle(controller);
     }
     controller.setTimersEnabled(false);
+  });
+
+  it('a fountain tap darts every fish away from the touch, inside the basin', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const tap = { x: FOUNTAIN_BASIN.x + 0.1, z: FOUNTAIN_BASIN.z };
+    controller.dartFish(tap.x, tap.z);
+    const fish = controller.critters.filter((c) => c.kind === 'fish');
+    expect(fish.length).toBeGreaterThan(0);
+    for (const f of fish) {
+      expect(f.moving).toBe(true);
+      // Target: far edge from the tap, never outside the basin.
+      const dist = Math.hypot(f.to[0] - FOUNTAIN_BASIN.x, f.to[2] - FOUNTAIN_BASIN.z);
+      expect(dist).toBeLessThanOrEqual(FOUNTAIN_BASIN.radius + 0.001);
+      // The dart heads along the away-from-tap direction, not toward it.
+      const awayX = f.x - tap.x;
+      const awayZ = f.z - tap.z;
+      const dot = (f.to[0] - FOUNTAIN_BASIN.x) * awayX + (f.to[2] - FOUNTAIN_BASIN.z) * awayZ;
+      expect(dot).toBeGreaterThan(0);
+      expect(f.mode).toBe('swim');
+    }
+    // The dart resolves and the normal schedule resumes.
+    moveStepUntilIdle(controller);
+    expect(controller.critters.every((c) => !c.moving)).toBe(true);
+    controller.setTimersEnabled(false);
+  });
+
+  it('dartFish is a no-op while timers are disabled (frozen ambient layer)', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.dartFish(0, 0);
+    expect(controller.critters.every((c) => !c.moving)).toBe(true);
   });
 
   it('birds reject a ground perch another species is occupying', () => {

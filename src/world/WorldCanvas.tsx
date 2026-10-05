@@ -178,9 +178,9 @@ export function WorldCanvas({
             w.__worldScene = scene;
             w.__worldCamera = camera;
             w.__worldCanvasId = canvasInstanceCounter += 1;
-            w.__worldToScreen = (wx: number, wz: number) => {
+            w.__worldToScreen = (wx: number, wz: number, wy = 0) => {
               const rect = gl.domElement.getBoundingClientRect();
-              const point = new THREE.Vector3(wx, 0, wz).project(camera);
+              const point = new THREE.Vector3(wx, wy, wz).project(camera);
               return {
                 x: rect.left + ((point.x + 1) / 2) * rect.width,
                 y: rect.top + ((1 - point.y) / 2) * rect.height,
