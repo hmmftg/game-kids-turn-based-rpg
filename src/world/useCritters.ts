@@ -90,6 +90,7 @@ export interface Controller {
   arrive: (rt: RuntimeCritter) => void;
   step: (delta: number) => void;
   setTimersEnabled: (active: boolean) => void;
+  dartFish: (fromX: number, fromZ: number) => void;
 }
 
 export interface CritterView {
@@ -153,6 +154,7 @@ export function createCritterController(effects: ControllerEffects): Controller 
     arrive: () => {},
     step: () => {},
     setTimersEnabled: () => {},
+    dartFish: () => {},
   };
 
   const setMoving = (rt: RuntimeCritter, moving: boolean) => {
@@ -295,6 +297,37 @@ export function createCritterController(effects: ControllerEffects): Controller 
     controller.schedule(rt, idleDelay(rt.kind, nextSeed(rt.seed)));
   };
 
+  /**
+   * Fountain tap reaction: every fish darts away from the touch toward the
+   * far basin edge — "fish notices the child" in one bounded burst, then the
+   * normal pause/swim schedule resumes. Idle fish and swimmers both retarget;
+   * targets stay inside the basin no matter where the tap landed.
+   */
+  controller.dartFish = (fromX, fromZ) => {
+    if (!controller.timersEnabled) return;
+    for (const rt of critters) {
+      if (rt.kind !== 'fish') continue;
+      if (rt.timer) {
+        clearTimeout(rt.timer);
+        rt.timer = null;
+      }
+      const dx = rt.x - fromX;
+      const dz = rt.z - fromZ;
+      const len = Math.hypot(dx, dz) || 1;
+      const radius = FOUNTAIN_BASIN.radius * 0.85;
+      startHop(
+        rt,
+        [
+          FOUNTAIN_BASIN.x + (dx / len) * radius,
+          FOUNTAIN_BASIN.waterY,
+          FOUNTAIN_BASIN.z + (dz / len) * radius,
+        ],
+        FISH_SPEED * 2.6,
+        'swim',
+      );
+    }
+  };
+
   controller.step = (delta) => {
     const step = Math.min(delta, 0.05);
     let anyMoving = false;
@@ -388,7 +421,11 @@ export function createCritterController(effects: ControllerEffects): Controller 
   return controller;
 }
 
-export function useCritters(enabled: boolean, detailLevel: DetailLevel): CritterView[] {
+export function useCritters(
+  enabled: boolean,
+  detailLevel: DetailLevel,
+  dartFocus?: { readonly nonce: number; readonly x: number; readonly z: number },
+): CritterView[] {
   const invalidate = useThree((state) => state.invalidate);
   const controllerRef = useRef<Controller | null>(null);
   const [movingMap, setMovingMap] = useState<Record<string, boolean>>({});
@@ -415,6 +452,16 @@ export function useCritters(enabled: boolean, detailLevel: DetailLevel): Critter
     controller.setTimersEnabled(enabled && detailLevel > 0);
     return () => controller.setTimersEnabled(false);
   }, [enabled, detailLevel, getController]);
+
+  // Fountain tap → fish dart away from the touch. Nonce-keyed like the rest
+  // of the liveliness contract: one dart per tap, never per render.
+  const dartNonce = dartFocus?.nonce ?? 0;
+  const dartX = dartFocus?.x ?? 0;
+  const dartZ = dartFocus?.z ?? 0;
+  useEffect(() => {
+    if (dartNonce === 0) return;
+    getController().dartFish(dartX, dartZ);
+  }, [dartNonce, dartX, dartZ, getController]);
 
   // Dev-only QA hook: lets measure/QA scripts read critter transforms without
   // a production test hook or animation loop. Stripped from builds entirely.

@@ -610,7 +610,7 @@ function HomeGateDetails({ width, height, level }: VariantDetailProps) {
   const faceZ = LANDMARK_FACE_Z(width);
   return (
     <>
-      <DoorDetail position={[0.15, 0, faceZ]} />
+      <DoorDetail position={[0.15, 0, faceZ]} reactive subject="door-home-gate" />
       <Detail level={level} min={1}>
         <DomeRoof width={width} height={height} />
         <WindowDetail position={[-0.32, height * 0.55, faceZ]} />
@@ -680,7 +680,13 @@ function SquareDetails({ width, height, level }: VariantDetailProps) {
   const faceZ = LANDMARK_FACE_Z(width);
   return (
     <>
-      <DoorDetail position={[0, 0, faceZ]} width={0.5} height={0.8} />
+      <DoorDetail
+        position={[0, 0, faceZ]}
+        width={0.5}
+        height={0.8}
+        reactive
+        subject="door-square"
+      />
       <Detail level={level} min={1}>
         <DomeRoof width={width * 0.7} height={height} />
         {/* banner: two posts + cloth slab */}

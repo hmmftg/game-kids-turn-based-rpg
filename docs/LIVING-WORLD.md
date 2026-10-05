@@ -116,6 +116,46 @@ flourish motion is dropped; the held activity pose remains, so the schedule
 meaning ("the keeper is working") stays perceivable — decoration removed,
 meaning kept.
 
+## Reactive props — tap → one bounded reaction
+
+PR 2 adds the spec's touchable world: `ReactiveProp` (`src/world/reactionBits.tsx`)
+wraps a physical thing in an invisible generous tap surface — the visible
+affordance is the object itself, never a ring or pulse — and ONE nested
+flourish group the reaction owns. The tap does NOT `stopPropagation`: the
+reaction is layered on the world's ordinary tap semantics, so the touch
+still walks toward the thing exactly as a ground tap would (discover →
+approach) — a prop tap is never a dead touch and never steals a walk
+waypoint, which keeps arrival/world-time parity identical to a plain tap.
+
+The vocabulary is closed (`src/world/reactions.ts`):
+
+| reaction     | subject            | what the child sees                                             |
+| ------------ | ------------------ | --------------------------------------------------------------- |
+| `bend`       | flowers            | bows forward and eases back upright                             |
+| `sway`       | plants             | wiggles side to side, settles                                   |
+| `bloop`      | the fountain       | basin squash + a water ring + the fish dart away from the touch |
+| `door-swing` | house/square doors | swings open a crack on its hinge and closes                     |
+
+The fountain reaction is a micro-story, not an effect: `onReact` hands the
+tap point to `useCritters`' `dartFish`, and every fish darts toward the far
+basin edge in one bounded burst before its normal pause/swim schedule
+resumes. The reactive tap surface sits ON the landmark's derived position
+(`landmarkPosition`), and `FOUNTAIN_BASIN` derives from the same function —
+the drawn basin and the fish's swim disc are the same circle by
+construction, so the fish can never visually leave the water.
+
+Same contract as the rest of the layer: one flourish per tap, deterministic
+pure-function curves (`reactionTransform` returns the rest pose at t=0 and
+t=1), `invalidate` only while playing, and reduced motion drops the motion
+while the object's rest state — also its meaning — stays. Reactions record
+to the `__worldReactions` probe log (subject + reaction, capped at 20), the
+presentation counterpart of `__worldAttention`; they never enter
+`__worldAnimationEvents`.
+
+Transform ownership is unchanged: `ReactiveProp`'s flourish animates only its
+own nested group. A door's hinge exists because the prop's group sits at the
+slab's edge — the pivot comes from composition, not from a second writer.
+
 ## Testing
 
 - `src/world/liveliness.test.ts` — deterministic cue selection, pose mapping,
@@ -123,3 +163,10 @@ meaning kept.
 - `e2e/liveliness.spec.ts` — one-arrival-one-cue, dwell never repeats, a second
   arrival earns a second cue, presentation never enters the semantic stream,
   `active === 0` after settling, reduced motion, and no replay on reload.
+- `src/world/reactions.test.ts` — every reaction rests at both ends of its
+  curve, stays inside small physical arcs, and is deterministic;
+  `useCritters.test.ts` — the fountain dart retargets every fish inside the
+  basin along the away-from-tap direction and is a no-op while frozen.
+- `e2e/reactive.spec.ts` — a prop tap reacts without walking the child,
+  reactions never enter `__worldAnimationEvents`, repeated taps answer
+  again, and reduced motion still registers the reaction.

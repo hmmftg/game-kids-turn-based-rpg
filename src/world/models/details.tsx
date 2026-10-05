@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import type { DetailLevel } from './modelProvider.ts';
 import { noRaycast } from './raycast.ts';
+import { ReactiveProp } from '../reactionBits.tsx';
 import { BOX, CYLINDER, DETAIL_COLORS, sharedLambert } from './shared.ts';
 
 /**
@@ -57,25 +58,48 @@ export function WindowDetail({
   );
 }
 
-/** A simple door slab with a step underneath. */
+/** A simple door slab with a step underneath. `reactive` gives the slab a
+    hinge on its left edge: a tap swings it open a crack and lets it close —
+    the child's knock answered by the building (docs/LIVING-WORLD.md). */
 export function DoorDetail({
   position,
   width = 0.34,
   height = 0.62,
+  reactive = false,
+  subject = 'door',
 }: {
   readonly position: Xyz;
   readonly width?: number;
   readonly height?: number;
+  readonly reactive?: boolean;
+  readonly subject?: string;
 }) {
+  const slab = (offsetX: number) => (
+    <mesh
+      geometry={BOX}
+      material={sharedLambert(DETAIL_COLORS.door)}
+      position={[offsetX, height / 2, 0]}
+      scale={[width, height, 0.05]}
+      raycast={noRaycast}
+    />
+  );
   return (
     <group position={position} raycast={noRaycast}>
-      <mesh
-        geometry={BOX}
-        material={sharedLambert(DETAIL_COLORS.door)}
-        position={[0, height / 2, 0]}
-        scale={[width, height, 0.05]}
-        raycast={noRaycast}
-      />
+      {reactive ? (
+        <ReactiveProp
+          reaction="door-swing"
+          subject={subject}
+          tapShape="panel"
+          tapSize={[width + 0.3, height + 0.2]}
+          radius={width}
+          position={[-width / 2, 0, 0.02]}
+          tapOffset={[width / 2, height / 2, 0.06]}
+        >
+          {slab(width / 2)}
+        </ReactiveProp>
+      ) : (
+        slab(0)
+      )}
       <mesh
         geometry={BOX}
         material={sharedLambert(DETAIL_COLORS.stone)}
