@@ -266,3 +266,11 @@ Only after sessions does PR S get decided:
 The worst outcome to engineer against prematurely is the last one — it means
 the physical-vocabulary bet itself is wrong, and no amount of content fixes
 that.
+
+## 11. Turning observations into PR S
+
+After the sessions, fill in
+[docs/PR-S-DECISION-MEMO.md](./PR-S-DECISION-MEMO.md) — it maps the observed
+patterns to a verdict (content expansion vs. comprehension polish) and a
+prioritized backlog (must-fix-before-content / polish / expansion /
+deliberately-not-fixing). No expansion work starts before the memo is filled.
