@@ -50,9 +50,49 @@ test('a started session records started_game and selected_avatar', async ({ page
 
   const events = await readEvents(page);
   const types = events.map((e) => e.event);
+  expect(types).toContain('session_started');
   expect(types).toContain('started_game');
   expect(types).toContain('selected_avatar');
   // Every event carries the research context — the session's age band stamps.
   const started = events.find((e) => e.event === 'started_game')!;
   expect(started.context.ageBand).toBe('3-4');
+  // R.1 environment stamp: coarse classes only, never identity.
+  const session = events.find((e) => e.event === 'session_started')!;
+  expect(session.context.buildVersion).toBeTruthy();
+  expect(['touch', 'desktop']).toContain(session.context.deviceClass);
+  expect(session.context.locale).toBeTruthy();
+});
+
+test('observer bookmarks stamp and session end closes the session', async ({ page }) => {
+  await page.goto('/?research=1');
+  await page.getByTestId('research-age-5-7').click();
+  await page.getByTestId('research-start').click();
+  await page.getByTestId('start-button').click();
+  await page.getByTestId('avatar-aban').click();
+  await page.getByTestId('headwear-next').click();
+  await expect(page.getByTestId('hud')).toBeVisible({ timeout: 20000 });
+
+  // Parent area → bookmark row: a watched moment becomes a structured event.
+  await page.getByTestId('pause-button').click();
+  await page.getByTestId('parent-entry-pause').click();
+  const hold = await page.getByTestId('parent-gate-hold').boundingBox();
+  if (!hold) throw new Error('parent-gate-hold has no bounding box');
+  await page.mouse.move(hold.x + hold.width / 2, hold.y + hold.height / 2);
+  await page.mouse.down();
+  await page.getByTestId('parent-area').waitFor({ timeout: 8000 });
+  await page.mouse.up();
+
+  await page.getByTestId('research-bookmark-stuck').click();
+  await page.getByTestId('research-end').click();
+  // The session is over: the research section leaves the parent area.
+  await expect(page.getByTestId('parent-research')).toBeHidden();
+
+  await expect
+    .poll(async () => (await readEvents(page)).map((e) => e.event))
+    .toEqual(expect.arrayContaining(['session_started', 'observer_bookmark', 'session_ended']));
+  const events = await readEvents(page);
+  const bookmark = events.find((e) => e.event === 'observer_bookmark')!;
+  expect(bookmark.context.bookmark).toBe('stuck');
+  const ended = events.find((e) => e.event === 'session_ended')!;
+  expect(ended.context.durationMs).toBeGreaterThan(0);
 });

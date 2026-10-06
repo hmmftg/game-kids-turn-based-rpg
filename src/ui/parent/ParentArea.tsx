@@ -7,6 +7,7 @@ import type { GameState, QualityTier } from '../../domain/game/types.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
 import type { CacheStatus } from '../../services/pwa/serviceWorker.ts';
 import { researchPendingCount } from '../../services/research/recorder.ts';
+import type { ObserverBookmark } from '../../domain/research/types.ts';
 import { researchEndpointConfigured, submitParentFeedback } from '../../services/research/queue.ts';
 import { AvatarPortrait } from '../child/AvatarPortrait.tsx';
 
@@ -43,6 +44,8 @@ export function ParentArea({
   researchActive = false,
   onExportResearch,
   onUploadResearch,
+  onBookmark,
+  onEndResearch,
   updateReady,
   onApplyUpdate,
   installReady,
@@ -67,6 +70,10 @@ export function ParentArea({
   readonly researchActive?: boolean;
   readonly onExportResearch?: () => void;
   readonly onUploadResearch?: (() => Promise<void>) | undefined;
+  /** Observer bookmark row (R.1): hand-marked moments during a session. */
+  readonly onBookmark?: ((kind: ObserverBookmark) => void) | undefined;
+  /** Ends the research session — stamps `session_ended` and stops recording. */
+  readonly onEndResearch?: (() => void) | undefined;
   readonly updateReady: boolean;
   readonly onApplyUpdate: () => void;
   readonly installReady: boolean;
@@ -125,6 +132,45 @@ export function ParentArea({
                 data-testid="research-upload"
               >
                 {FA.researchUpload}
+              </button>
+            ) : null}
+            {onBookmark !== undefined ? (
+              <>
+                <p className="text text--soft">{FA.researchBookmarks}</p>
+                <div className="row" role="group" aria-label={FA.researchBookmarks}>
+                  {(
+                    [
+                      ['stuck', FA.researchBookmarkStuck],
+                      ['repeated', FA.researchBookmarkRepeated],
+                      ['discovered', FA.researchBookmarkDiscovered],
+                      ['completed_solo', FA.researchBookmarkSolo],
+                      ['asked_help', FA.researchBookmarkHelp],
+                    ] as const
+                  ).map(([kind, label]) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      className="btn btn--secondary"
+                      onClick={() => {
+                        onBookmark(kind);
+                        setResearchPending(null);
+                      }}
+                      data-testid={`research-bookmark-${kind}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            {onEndResearch !== undefined ? (
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={onEndResearch}
+                data-testid="research-end"
+              >
+                {FA.researchEnd}
               </button>
             ) : null}
           </section>

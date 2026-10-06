@@ -45,9 +45,11 @@ import { ParentArea } from '../ui/parent/ParentArea.tsx';
 import { ParentGate } from '../ui/parent/ParentGate.tsx';
 import { ResearchGate } from '../ui/parent/ResearchGate.tsx';
 import {
+  endResearchSession,
   exportResearchJson,
   isResearchActive,
   record,
+  recordBookmark,
   recordPassiveBeat,
   researchSessionId,
   startResearchSession,
@@ -481,6 +483,7 @@ export function App() {
             reducedMotion:
               typeof matchMedia !== 'undefined' &&
               matchMedia('(prefers-reduced-motion: reduce)').matches,
+            muted: state.audio.musicMuted && state.audio.sfxMuted,
           });
           setResearchConsent(true);
         }}
@@ -571,6 +574,11 @@ export function App() {
           }}
           researchActive={researchConsent && isResearchActive()}
           onExportResearch={() => void exportResearchJson()}
+          onBookmark={(kind) => recordBookmark(kind, { areaId: state.mapId })}
+          onEndResearch={() => {
+            endResearchSession();
+            setResearchConsent(false);
+          }}
           onUploadResearch={
             researchEndpointConfigured()
               ? () => {

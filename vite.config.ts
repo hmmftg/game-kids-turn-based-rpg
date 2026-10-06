@@ -1,4 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
+
+const APP_VERSION =
+  (
+    JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+      version?: string;
+    }
+  ).version ?? '0.0.0';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -18,6 +26,7 @@ const researchCspPlugin = (mode: string): Plugin => ({
 
 export default defineConfig(({ mode }) => ({
   base: './',
+  define: { __BUILD_VERSION__: JSON.stringify(APP_VERSION) },
   plugins: [
     react(),
     researchCspPlugin(mode),
