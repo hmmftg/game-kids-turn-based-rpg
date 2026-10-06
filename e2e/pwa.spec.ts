@@ -65,7 +65,7 @@ test.describe('PWA lifecycle', () => {
     await page.evaluate(
       () =>
         new Promise<void>((resolve, reject) => {
-          const open = indexedDB.open('mahalle-ye-mehrabani', 1);
+          const open = indexedDB.open('mahalle-ye-mehrabani');
           open.onupgradeneeded = () => {
             if (!open.result.objectStoreNames.contains('progress')) {
               open.result.createObjectStore('progress');

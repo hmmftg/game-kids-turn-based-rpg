@@ -44,6 +44,17 @@ import {
 } from '../ui/child/screens.tsx';
 import { ParentArea } from '../ui/parent/ParentArea.tsx';
 import { ParentGate } from '../ui/parent/ParentGate.tsx';
+import { ResearchGate } from '../ui/parent/ResearchGate.tsx';
+import {
+  exportResearchJson,
+  isResearchActive,
+  record,
+  recordPassiveBeat,
+  researchSessionId,
+  startResearchSession,
+} from '../services/research/recorder.ts';
+import { flushResearchQueue, researchEndpointConfigured } from '../services/research/queue.ts';
+import type { AgeBand } from '../domain/research/types.ts';
 import { WorldCanvas } from '../world/WorldCanvas.tsx';
 import type { NpcAttention } from '../world/sceneBits.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
@@ -143,6 +154,14 @@ export function App() {
   // `?diagnostics=1` — parent/dev gate (same pattern as ?worldbuilder=1):
   // publishes the live world handle and reveals the diagnostics HUD button.
   const diagnosticsEnabled = new URLSearchParams(window.location.search).get('diagnostics') === '1';
+  // `?research=1` / `?mode=research` — Research Session Mode (PR R+): the
+  // consent gate stands between the URL and the game; recording starts only
+  // when a parent starts a session. Never silently enabled.
+  const [researchRequested] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('research') === '1' || params.get('mode') === 'research';
+  });
+  const [researchConsent, setResearchConsent] = useState(isResearchActive());
   const noActionIcons = kidTestFlags.has('noactionicons');
   const [albumOpen, setAlbumOpen] = useState(false);
   const [celebrating, setCelebrating] = useState<QuestId | null>(null);
@@ -197,6 +216,7 @@ export function App() {
       state.checkpoint.at > seenAt
     ) {
       setCelebrating(state.checkpoint.questId);
+      record('completed_action', { questId: state.checkpoint.questId });
       playSfx('sfx-success');
       playSfx('sfx-sticker');
     }
@@ -207,6 +227,7 @@ export function App() {
       if (nodeId === null) return;
       const node = getDialogueNode(nodeId);
       if (!node) return;
+      record('found_npc', { npcId: node.npcId });
       dispatch({ type: 'OPEN_DIALOGUE', npcId: node.npcId, nodeId: node.id });
     },
     [dispatch],
@@ -382,6 +403,7 @@ export function App() {
       // Without a world to walk in (no WebGL) the trail still reaches the
       // quest — the DOM fallback opens the dialogue directly.
       if (!state.webglAvailable) {
+        record('started_quest', { questId });
         openNpc(nodeForQuest(questId));
         return;
       }
@@ -396,6 +418,31 @@ export function App() {
     },
     [openNpc, state.mapId, state.webglAvailable],
   );
+
+  // Research consent stands between the URL flag and the game: a parent
+  // starts the session (recording begins) or exits to the normal build.
+  if (researchRequested && !researchConsent) {
+    return (
+      <ResearchGate
+        onStart={(ageBand: AgeBand) => {
+          startResearchSession({
+            ageBand,
+            mode: noCopyTest ? 'nocopy' : 'normal',
+            reducedMotion:
+              typeof matchMedia !== 'undefined' &&
+              matchMedia('(prefers-reduced-motion: reduce)').matches,
+          });
+          setResearchConsent(true);
+        }}
+        onExit={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('research');
+          url.searchParams.delete('mode');
+          window.location.assign(url.toString());
+        }}
+      />
+    );
+  }
 
   switch (state.mode) {
     case 'boot':
@@ -435,6 +482,7 @@ export function App() {
         <AvatarSelectScreen
           onSelect={(avatarId, headwear) => {
             playSfx('sfx-choice');
+            record('selected_avatar', { target: avatarId });
             chooseAvatar(avatarId, headwear);
           }}
         />
@@ -471,6 +519,16 @@ export function App() {
             url.searchParams.set('diagnostics', '1');
             window.location.assign(url.toString());
           }}
+          researchActive={researchConsent && isResearchActive()}
+          onExportResearch={() => void exportResearchJson()}
+          onUploadResearch={
+            researchEndpointConfigured()
+              ? () => {
+                  const id = researchSessionId();
+                  if (id !== null) void flushResearchQueue(id).catch(() => undefined);
+                }
+              : undefined
+          }
           updateReady={updateReady}
           onApplyUpdate={applyUpdate}
           installReady={installReady}
@@ -739,6 +797,7 @@ export function App() {
                 className="btn btn--large"
                 onClick={() => {
                   playSfx('sfx-choice');
+                  record('started_quest', { questId: offeredQuest });
                   dispatch({ type: 'START_QUEST', questId: offeredQuest });
                 }}
                 data-testid="start-quest"
@@ -768,13 +827,23 @@ export function App() {
               // Only the step-completion beat chimes — passive beats auto-play
               // and a jingle per beat would read as noise.
               if (state.encounter?.phase === 'reinforce') playSfx('sfx-sticker');
+              recordPassiveBeat({
+                questId: state.encounter?.questId,
+                phase: state.encounter?.phase,
+              });
               dispatch({ type: 'ADVANCE_PHASE' });
             }}
             onChoose={(iconId: IconId, correct: boolean) => {
               playSfx(correct ? 'sfx-choice' : 'sfx-retry');
               dispatch({ type: 'CHOOSE', iconId, correct });
             }}
-            onLeave={() => dispatch({ type: 'ABANDON_ENCOUNTER' })}
+            onLeave={() => {
+              record('abandoned', {
+                questId: state.encounter?.questId,
+                phase: state.encounter?.phase,
+              });
+              dispatch({ type: 'ABANDON_ENCOUNTER' });
+            }}
           />
         ) : null}
 
@@ -791,7 +860,14 @@ export function App() {
               playSfx('sfx-choice');
               dispatch({ type: 'CHOOSE_BATTLE_ACTION', action });
             }}
-            onLeave={() => dispatch({ type: 'LEAVE_BATTLE' })}
+            onLeave={() => {
+              // A terminal battle is a completed activity, not an abandon.
+              const battle = state.battle;
+              if (battle !== null && battle.phase !== 'victory' && battle.phase !== 'defeat') {
+                record('abandoned', { battleId: battle.battleId, phase: battle.phase });
+              }
+              dispatch({ type: 'LEAVE_BATTLE' });
+            }}
           />
         ) : null}
 
