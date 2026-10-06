@@ -131,6 +131,28 @@ final-round precedence (hearts beat the round counter), terminal states, the
 reducer's blocked-commands guard, and `LEAVE_BATTLE` semantics. Probe fields:
 `__worldBattleState`, `__worldBattleEvents` (`phase@round` rows + `end`).
 
+## PWA / offline lifecycle QA
+
+`e2e/pwa.spec.ts` covers the install-to-airplane lifecycle against the production
+`preview` build (the service worker registers only outside dev):
+
+- **Cold start fully offline**: after `serviceWorker.ready` resolves (precache
+  complete), a _new page_ navigates `/` with the network off — the SW
+  `navigateFallback` must serve the app, the saved profile must be offered, and
+  a quest must be playable. Note `page.addInitScript` is per-page: the cold page
+  needs `enableWorldProbe` registered again before its `goto`.
+- **Storage fallback**: an init script that makes `indexedDB.open` reject (the
+  evicted/private-window path) must still boot — `GameProvider` retries boot on
+  `MemorySaveRepository`, progress is session-only, and a reload returns to the
+  fresh title rather than a saved profile.
+
+Update lifecycle by construction (not e2e'd): `registerType: 'prompt'`, the
+waiting worker surfaces `updateReady`, and the apply action lives only inside
+the gated parent area — a child is never interrupted mid-encounter.
+`e2e/slice.spec.ts` additionally replays a completed chapter across an offline
+reload (the wait is `serviceWorker.ready`, not `controller` — `clientsClaim` is
+off, so the registering page is never controlled).
+
 ## Kid-testing protocol (manual)
 
 The automated suites prove technical correctness, not comprehension. When validating UX changes

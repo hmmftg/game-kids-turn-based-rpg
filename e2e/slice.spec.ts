@@ -102,8 +102,10 @@ test.describe('vertical slice', () => {
   test('a completed chapter can be replayed while offline', async ({ page, context }) => {
     await startGame(page);
     await playQuest(page, 'quest-greeting');
-    // Wait for the service worker to finish precaching before cutting the network.
-    await page.waitForFunction(() => navigator.serviceWorker.controller !== null || true);
+    // Wait for the precaching service worker to become ACTIVE before cutting
+    // the network — `ready` resolves once install (precache) completes.
+    // (controller stays null on the registering page with clientsClaim off.)
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
     await context.setOffline(true);
     await page.reload();
     await resumeFromPicker(page);

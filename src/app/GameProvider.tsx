@@ -22,6 +22,7 @@ import {
   detectWebgl,
 } from '../services/device/capabilities.ts';
 import { createSaveRepository } from '../services/persistence/indexedDbRepository.ts';
+import { MemorySaveRepository } from '../services/persistence/memoryRepository.ts';
 import {
   healthFromLoadResult,
   LEGACY_SLOT_KEY,
@@ -119,10 +120,32 @@ export function GameProvider({
     dispatch({ type: 'ORIENTATION_CHANGED', orientation: currentOrientation() });
 
     void (async () => {
+      // Boot once with the real repository; on a total storage failure
+      // (private window, evicted/blocked IndexedDB) fall back to session-only
+      // memory saves so the game still boots instead of dead-ending at
+      // BOOT_FAILED. A second failure is a real defect → BOOT_FAILED.
       try {
-        let list = await repo.listProfiles();
+        await bootWithProfiles(repo);
+      } catch {
+        if (cancelled || repo instanceof MemorySaveRepository) return;
+        repositoryRef.current = new MemorySaveRepository();
+        try {
+          await bootWithProfiles(repositoryRef.current);
+        } catch (error) {
+          if (cancelled) return;
+          dispatch({
+            type: 'BOOT_FAILED',
+            reason: error instanceof Error ? error.message : 'boot failed',
+          });
+        }
+      }
+    })();
+
+    async function bootWithProfiles(repository: SaveRepository) {
+      try {
+        let list = await repository.listProfiles();
         if (list.length === 0) {
-          const legacy = await repo.load(LEGACY_SLOT_KEY);
+          const legacy = await repository.load(LEGACY_SLOT_KEY);
           const persisted = persistedFromLoadResult(legacy);
           if (persisted !== null) {
             const meta = makeProfile(
@@ -133,9 +156,9 @@ export function GameProvider({
               persisted.lastPlayedAt,
             );
             try {
-              await repo.save(persisted, profileSlotKey(meta.id));
-              await repo.writeProfiles([meta]);
-              await repo.clear(LEGACY_SLOT_KEY);
+              await repository.save(persisted, profileSlotKey(meta.id));
+              await repository.writeProfiles([meta]);
+              await repository.clear(LEGACY_SLOT_KEY);
               list = [meta];
             } catch {
               // Index write failed: run this session on the legacy slot.
@@ -159,7 +182,7 @@ export function GameProvider({
           return;
         }
         // Truly fresh device (or unreadable legacy data): classic title flow.
-        const legacy = await repo.load(LEGACY_SLOT_KEY);
+        const legacy = await repository.load(LEGACY_SLOT_KEY);
         const persisted = persistedFromLoadResult(legacy);
         dispatch({
           type: 'BOOT_LOADED',
@@ -169,12 +192,9 @@ export function GameProvider({
         if (persisted === null) dispatch({ type: 'SET_QUALITY_TIER', tier: detectQualityTier() });
       } catch (error) {
         if (cancelled) return;
-        dispatch({
-          type: 'BOOT_FAILED',
-          reason: error instanceof Error ? error.message : 'boot failed',
-        });
+        throw error instanceof Error ? error : new Error(String(error));
       }
-    })();
+    }
 
     return () => {
       cancelled = true;
