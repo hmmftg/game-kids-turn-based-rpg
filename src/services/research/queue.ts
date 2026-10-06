@@ -114,3 +114,34 @@ export async function flushResearchQueue(_sessionId: string): Promise<'skipped' 
   await clearResearchEvents();
   return 'uploaded';
 }
+
+/**
+ * A parent's typed feedback message — posted straight to the `parent_feedback`
+ * collection (anonymous create, superuser read). Not queued: a message that
+ * can't send now is shown as failed, never silently stored. The consent
+ * contract does not cover it — the parent writes it themselves.
+ */
+export async function submitParentFeedback(
+  message: string,
+  context: Record<string, unknown>,
+): Promise<void> {
+  if (endpoint === null || !navigator.onLine) throw new Error('feedback-offline');
+  const trimmed = message.trim();
+  if (trimmed.length === 0) throw new Error('feedback-empty');
+  // The research endpoint is the sole intentional network call, configured at
+  // build time; the parent triggers this send explicitly.
+  // eslint-disable-next-line no-restricted-globals
+  const response = await fetch(
+    `${endpoint.replace(/\/$/, '')}/api/collections/parent_feedback/records`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: trimmed.slice(0, 4000),
+        context,
+        timestamp: Date.now(),
+      }),
+    },
+  );
+  if (!response.ok) throw new Error(`feedback-${response.status}`);
+}
