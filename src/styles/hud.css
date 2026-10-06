@@ -917,7 +917,9 @@
 }
 
 .battle__opponent[data-phase='victory'] svg {
-  animation: battle-flee 0.6s ease-in forwards;
+  /* Friendly celebration: the playful mouse hops with you — it is a game
+     you won together, not an enemy driven off. It stays visible. */
+  animation: battle-celebrate 0.8s ease-out backwards;
 }
 
 .battle__opponent[data-phase='defeat'] svg {
@@ -948,14 +950,21 @@
   }
 }
 
-@keyframes battle-flee {
+@keyframes battle-celebrate {
   0% {
-    transform: translateX(0);
-    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
+    transform: translateY(-10px) rotate(-6deg);
+  }
+  55% {
+    transform: translateY(0) rotate(0deg);
+  }
+  80% {
+    transform: translateY(-6px) rotate(5deg);
   }
   100% {
-    transform: translateX(-110px);
-    opacity: 0;
+    transform: translateY(0) rotate(0deg);
   }
 }
 

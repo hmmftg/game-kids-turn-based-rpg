@@ -839,15 +839,15 @@ export function CubicProp({
   const material = useMaterial(palette.body);
   return (
     <group position={[position.x, 0, position.z]} dispose={null}>
-      {variant === 'ball' ? (
+      {variant === 'ball' || variant === 'shell' ? (
         <mesh
           geometry={SPHERE}
           material={material}
           position={[0, scale / 2, 0]}
-          scale={[scale, scale, scale]}
+          scale={variant === 'shell' ? [scale, scale * 0.65, scale * 0.9] : [scale, scale, scale]}
           raycast={noRaycast}
         />
-      ) : (
+      ) : variant === 'kite' ? null : (
         <mesh
           geometry={shape === 'box' ? BOX : CYLINDER}
           material={material}
@@ -906,6 +906,57 @@ export function CubicProp({
               raycast={noRaycast}
             />
             <PlantCluster position={[0, scale, 0]} scale={0.9} />
+          </>
+        ) : null}
+        {variant === 'shell' ? (
+          <>
+            {/* ridge stripe — reads as a spiral shell, not a pebble */}
+            <mesh
+              geometry={BOX}
+              material={sharedLambert(DETAIL_COLORS.sign)}
+              position={[0, scale * 0.72, 0]}
+              rotation={[0, 0, 0.4]}
+              scale={[scale * 0.2, scale * 0.5, scale * 0.9]}
+              raycast={noRaycast}
+            />
+          </>
+        ) : null}
+        {variant === 'kite' ? (
+          <>
+            {/* propped diamond: the returned kite leans on its stick */}
+            <mesh
+              geometry={BOX}
+              material={sharedLambert(DETAIL_COLORS.signPost)}
+              position={[0, scale * 0.8, 0]}
+              rotation={[0, 0, -0.25]}
+              scale={[0.04, scale * 1.7, 0.04]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={material}
+              position={[0.1, scale * 1.5, 0]}
+              rotation={[0, 0, Math.PI / 4]}
+              scale={[scale * 0.9, scale * 0.9, 0.05]}
+              raycast={noRaycast}
+            />
+            {/* tail bows down the trailing edge */}
+            <mesh
+              geometry={BOX}
+              material={sharedLambert(DETAIL_COLORS.flower)}
+              position={[0.06, scale * 0.95, 0]}
+              rotation={[0, 0, Math.PI / 4]}
+              scale={[scale * 0.18, scale * 0.18, 0.03]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert(DETAIL_COLORS.flower)}
+              position={[0.02, scale * 0.62, 0]}
+              rotation={[0, 0, Math.PI / 4]}
+              scale={[scale * 0.16, scale * 0.16, 0.03]}
+              raycast={noRaycast}
+            />
           </>
         ) : null}
       </Detail>
@@ -1093,6 +1144,52 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
   );
 }
 
+function ButterflyMesh({ tint, moving, level }: SpeciesProps) {
+  const wings = useMaterial(tint ?? '#d96f9e');
+  const body = useMaterial(DETAIL_COLORS.soil);
+  return (
+    <>
+      {/* slender body, upright — origin is the hover point */}
+      <mesh
+        geometry={BOX}
+        material={body}
+        position={[0, 0, 0]}
+        scale={[0.05, 0.05, 0.22]}
+        raycast={noRaycast}
+      />
+      {/* two flat wings; angled up while fluttering, held wider at rest so
+          the silhouette still reads as a butterfly from the fixed camera */}
+      <mesh
+        geometry={BOX}
+        material={wings}
+        position={[-0.14, moving ? 0.04 : 0.02, 0]}
+        rotation={[0, 0, moving ? 0.7 : 0.25]}
+        scale={[0.24, 0.02, 0.3]}
+        raycast={noRaycast}
+      />
+      <mesh
+        geometry={BOX}
+        material={wings}
+        position={[0.14, moving ? 0.04 : 0.02, 0]}
+        rotation={[0, 0, moving ? -0.7 : -0.25]}
+        scale={[0.24, 0.02, 0.3]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={2}>
+        {/* antennae nubs */}
+        <mesh
+          geometry={BOX}
+          material={body}
+          position={[0, 0.06, 0.13]}
+          rotation={[0.4, 0, 0]}
+          scale={[0.03, 0.08, 0.03]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
 export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: AnimalProps) {
   switch (variant) {
     case 'cat':
@@ -1103,5 +1200,7 @@ export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: 
       return <EagleMesh tint={tint} moving={moving} level={detailLevel} />;
     case 'fish':
       return <FishMesh tint={tint} moving={moving} level={detailLevel} />;
+    case 'butterfly':
+      return <ButterflyMesh tint={tint} moving={moving} level={detailLevel} />;
   }
 }
