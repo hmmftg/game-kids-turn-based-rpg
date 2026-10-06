@@ -8,9 +8,11 @@ const readEvents = (page: Page) =>
   page.evaluate(
     () =>
       new Promise<Array<{ event: string; context: Record<string, unknown> }>>((resolve, reject) => {
-        const open = indexedDB.open('mahalle-ye-mehrabani', 2);
+        const open = indexedDB.open('mahalle-ye-mehrabani');
         open.onupgradeneeded = () => {
-          open.result.createObjectStore('researchEvents', { autoIncrement: true });
+          if (!open.result.objectStoreNames.contains('researchEvents')) {
+            open.result.createObjectStore('researchEvents', { autoIncrement: true });
+          }
         };
         open.onerror = () => reject(open.error);
         open.onsuccess = () => {

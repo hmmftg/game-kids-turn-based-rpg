@@ -33,7 +33,8 @@ export async function seedCompletedQuests(page: Page, completed: QuestId[]) {
   await page.evaluate(
     async ({ done, dbName, profileId }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const open = indexedDB.open(dbName, 1);
+        // No explicit version — opens whatever the app upgraded the DB to.
+        const open = indexedDB.open(dbName);
         open.onupgradeneeded = () => {
           if (!open.result.objectStoreNames.contains('progress')) {
             open.result.createObjectStore('progress');
