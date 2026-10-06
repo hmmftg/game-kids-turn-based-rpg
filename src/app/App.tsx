@@ -525,7 +525,11 @@ export function App() {
             researchEndpointConfigured()
               ? () => {
                   const id = researchSessionId();
-                  if (id !== null) void flushResearchQueue(id).catch(() => undefined);
+                  return id === null
+                    ? Promise.resolve()
+                    : flushResearchQueue(id)
+                        .then(() => undefined)
+                        .catch(() => undefined);
                 }
               : undefined
           }

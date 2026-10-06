@@ -1,12 +1,26 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // Offline-first, same-origin only. No CDN, analytics or remote font is allowed at runtime.
-export default defineConfig({
+// The ONE sanctioned exception: the PocketBase research endpoint — when
+// VITE_RESEARCH_API_URL is set at build time its ORIGIN is added to
+// connect-src. Nothing else may reach the network.
+const researchCspPlugin = (mode: string): Plugin => ({
+  name: 'research-csp',
+  transformIndexHtml(html) {
+    const endpoint = loadEnv(mode, process.cwd(), 'VITE_RESEARCH_API_URL').VITE_RESEARCH_API_URL;
+    if (endpoint === undefined || endpoint === '') return html;
+    const origin = new URL(endpoint).origin;
+    return html.replace("connect-src 'self'", `connect-src 'self' ${origin}`);
+  },
+});
+
+export default defineConfig(({ mode }) => ({
   base: './',
   plugins: [
     react(),
+    researchCspPlugin(mode),
     VitePWA({
       registerType: 'prompt',
       injectRegister: null,
@@ -41,4 +55,4 @@ export default defineConfig({
   },
   server: { port: 5173, host: true },
   preview: { port: 4173, host: true },
-});
+}));

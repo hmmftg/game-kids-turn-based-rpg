@@ -43,9 +43,20 @@ blocks play.
 
 Parent area → 🔬 section: pending count, **export JSON** (downloads
 `research-<sessionId>.json` — the offline-session path), and **upload** shown
-only when `VITE_RESEARCH_API_URL` was set at build time (`POST
-<endpoint>/research/events`, queue cleared on success). Upload failures are
-swallowed — the queue stays put for a later export/flush.
+only when `VITE_RESEARCH_API_URL` was set at build time. The endpoint is a
+PocketBase base URL (e.g. `https://xpvemwbxjn.lexoyacloud.ir`): the flush
+posts each queued event as a `research_events` record (`POST
+<base>/api/collections/research_events/records`; `/api/batch` rejects
+anonymous requests), clearing the local queue only when every record lands —
+the unsent tail is re-queued on failure.
+
+PocketBase collection setup (once, superuser dashboard or API): a **base**
+collection `research_events` with fields `session_id` (text, required),
+`event` (text, required), `context` (json), `timestamp` (number, required);
+API rules `create` blank (anonymous write — research rows are the only
+anonymous surface), `list`/`view`/`update`/`delete` superuser-only. The
+`created`/`updated` autodate fields arrive free. Upload failures keep the
+queue for the next flush or an export.
 
 ## What it deliberately does not record
 

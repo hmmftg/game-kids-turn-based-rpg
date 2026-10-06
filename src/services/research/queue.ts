@@ -76,20 +76,41 @@ export function researchEndpointConfigured(): boolean {
   return endpoint !== null;
 }
 
-/** Upload queued events when an endpoint is configured and we're online. */
-export async function flushResearchQueue(sessionId: string): Promise<'skipped' | 'uploaded'> {
+/**
+ * Upload queued events to a PocketBase instance (anonymous-create rules).
+ * `/api/batch` is rejected for anonymous requests, so records are posted one
+ * at a time in queue order. On the first failure the not-yet-sent tail is
+ * re-enqueued — an already-committed row may duplicate on the next flush
+ * (deduplicate at analysis time on sessionId+timestamp), never lost.
+ */
+export async function flushResearchQueue(_sessionId: string): Promise<'skipped' | 'uploaded'> {
   if (endpoint === null || !navigator.onLine) return 'skipped';
   const events = await readResearchEvents();
   if (events.length === 0) return 'skipped';
-  // The research endpoint is the sole intentional network call: it exists
-  // only when configured at build time and fires only on the parent's flush.
-  // eslint-disable-next-line no-restricted-globals
-  const response = await fetch(`${endpoint.replace(/\/$/, '')}/research/events`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, events }),
-  });
-  if (!response.ok) throw new Error(`research-upload-${response.status}`);
+  const url = `${endpoint.replace(/\/$/, '')}/api/collections/research_events/records`;
+  let sent = 0;
+  for (const e of events) {
+    // The research endpoint is the sole intentional network call: it exists
+    // only when configured at build time and fires only on the parent's flush.
+    // eslint-disable-next-line no-restricted-globals
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: e.sessionId,
+        event: e.event,
+        context: e.context,
+        timestamp: e.timestamp,
+      }),
+    });
+    if (!response.ok) {
+      // Re-queue the unsent tail so nothing is lost on a partial flush.
+      await clearResearchEvents();
+      for (const rest of events.slice(sent)) await enqueueResearchEvent(rest);
+      throw new Error(`research-upload-${response.status}`);
+    }
+    sent += 1;
+  }
   await clearResearchEvents();
   return 'uploaded';
 }

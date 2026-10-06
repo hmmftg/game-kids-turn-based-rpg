@@ -65,7 +65,7 @@ export function ParentArea({
   /** Research Session Mode (PR R+): an active session shows the badge, queue count, export and optional upload. */
   readonly researchActive?: boolean;
   readonly onExportResearch?: () => void;
-  readonly onUploadResearch?: (() => void) | undefined;
+  readonly onUploadResearch?: (() => Promise<void>) | undefined;
   readonly updateReady: boolean;
   readonly onApplyUpdate: () => void;
   readonly installReady: boolean;
@@ -85,7 +85,7 @@ export function ParentArea({
     return () => {
       live = false;
     };
-  }, [researchActive]);
+  }, [researchActive, researchPending === null]);
 
   return (
     <div className="layer layer--overlay layer--parent" data-testid="parent-area">
@@ -111,7 +111,11 @@ export function ParentArea({
               <button
                 type="button"
                 className="btn btn--secondary"
-                onClick={onUploadResearch}
+                onClick={() => {
+                  // Refresh the pending count once the flush settles — the
+                  // queue only clears when every record landed.
+                  void onUploadResearch().then(() => setResearchPending(null));
+                }}
                 data-testid="research-upload"
               >
                 {FA.researchUpload}
