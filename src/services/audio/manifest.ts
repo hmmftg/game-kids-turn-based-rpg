@@ -91,3 +91,39 @@ export type AudioId = (typeof AUDIO_MANIFEST)[number]['id'];
 export function getAudioAsset(id: string): AudioAsset | null {
   return AUDIO_MANIFEST.find((asset) => asset.id === id) ?? null;
 }
+
+/**
+ * Emotional sound vocabulary — the small closed set the game needs, in
+ * semantic roles rather than file names. Keep it this small: audio
+ * reinforces an already-legible world, it never explains one (the game must
+ * stay fully understandable muted). New emotional moments pick an existing
+ * role; a new role needs the same closed-vocabulary review as a new
+ * animation primitive.
+ *
+ * role           meaning
+ * tap_soft       the world felt the touch
+ * success_small  the child did the thing — a small win, not a fanfare
+ * friend_happy   someone is glad the child is here
+ * discovery      something new appeared / a hidden thing surfaced
+ * transition     going somewhere / arriving — place changed
+ * retry_soft     wrong pick — gentle "try again", never punitive
+ * ambient        neighbourhood bed under everything
+ */
+export type SoundRole =
+  | 'tap_soft'
+  | 'success_small'
+  | 'friend_happy'
+  | 'discovery'
+  | 'transition'
+  | 'retry_soft'
+  | 'ambient';
+
+export const SOUND_VOCABULARY: Readonly<Record<SoundRole, AudioId>> = {
+  tap_soft: 'sfx-tap',
+  success_small: 'sfx-success',
+  friend_happy: 'sfx-sticker',
+  discovery: 'sfx-unlock',
+  transition: 'sfx-arrive',
+  retry_soft: 'sfx-retry',
+  ambient: 'music-hub',
+};

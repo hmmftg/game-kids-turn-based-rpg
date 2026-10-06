@@ -46,12 +46,18 @@ export interface FactDecoration {
   readonly questId: QuestId;
   readonly x: number;
   readonly z: number;
-  readonly variant: 'basket' | 'crate' | 'planter' | 'ball';
+  readonly variant: 'basket' | 'crate' | 'planter' | 'ball' | 'shell' | 'kite';
 }
 
 export const FACT_DECORATIONS: readonly FactDecoration[] = [
   // A bread crate by the bakery door — the errand left a mark on the shop.
   { id: 'deco-bakery-bread', questId: 'quest-bread-errand', x: 8.8, z: -0.8, variant: 'crate' },
+  // The shell the child carried found its home on the river bank — the
+  // after-state persists between visits because the save says so.
+  { id: 'deco-river-shell', questId: 'quest-river-shell', x: 11.8, z: 7.9, variant: 'shell' },
+  // Sara's kite leans on a stick by the park hill — the returned toy has a
+  // place in the world, not just a sticker in the HUD.
+  { id: 'deco-park-kite', questId: 'quest-park-kite', x: -9.1, z: 2.0, variant: 'kite' },
 ];
 
 export const GROUND_DECORATIONS: readonly GroundDecoration[] = [

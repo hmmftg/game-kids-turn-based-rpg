@@ -101,7 +101,8 @@ test.describe('micro turn-based battle', () => {
   });
 
   // Every passive beat carries its physical cause on the opponent: hit →
-  // recoil, attack → lunge, rest → settle; victory means the mouse is gone.
+  // recoil, attack → lunge, rest → settle; victory keeps the mouse on screen
+  // celebrating (PR Q — a friend won, not an enemy driven off).
   test('the opponent physically acts out each resolution beat', async ({ page }) => {
     await startGame(page);
     await tapWorldAnchor(page, 'anchor-path-west');

@@ -408,4 +408,44 @@ describe('Delight PR 3 — critter reactions', () => {
     controller.startleBird('bird-0');
     expect(controller.critters.every((c) => !c.moving)).toBe(true);
   });
+
+  it('a child settling by the fountain earns ONE fish notice — toward them, inside the basin', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    const before = reactionProbeLog().length;
+    // Beside the basin's south rim: basin centre ≈ (-6, -1.2), radius 0.45.
+    const cx = FOUNTAIN_BASIN.x;
+    const cz = FOUNTAIN_BASIN.z + 0.7;
+    controller.noticeCats(cx, cz);
+    const fish = controller.critters.filter((c) => c.kind === 'fish');
+    expect(fish.length).toBeGreaterThan(0);
+    for (const f of fish) {
+      expect(f.moving, f.key).toBe(true);
+      // The hop lands inside the water — never outside the basin.
+      const dr = Math.hypot(f.to[0] - FOUNTAIN_BASIN.x, f.to[2] - FOUNTAIN_BASIN.z);
+      expect(dr, f.key).toBeLessThanOrEqual(FOUNTAIN_BASIN.radius * 0.85 + 1e-9);
+      expect(f.to[1], f.key).toBeCloseTo(FOUNTAIN_BASIN.waterY, 5);
+      // Toward the child: the target sits on the child's side of the basin.
+      const dot =
+        (f.to[0] - FOUNTAIN_BASIN.x) * (cx - FOUNTAIN_BASIN.x) +
+        (f.to[2] - FOUNTAIN_BASIN.z) * (cz - FOUNTAIN_BASIN.z);
+      expect(dot, f.key).toBeGreaterThan(0);
+    }
+    // One notice per fish, no more — same one-event-per-arrival contract.
+    const logged = reactionProbeLog()
+      .slice(before)
+      .filter((r) => r.reaction === 'notice');
+    expect(logged.map((r) => r.subject).sort()).toEqual(fish.map((f) => f.key).sort());
+    controller.setTimersEnabled(false);
+  });
+
+  it('fish ignore a child who settles far from the basin', () => {
+    const { controller } = makeController();
+    attachFakeNodes(controller);
+    controller.setTimersEnabled(true);
+    controller.noticeCats(8, 8); // across the map
+    expect(controller.critters.filter((c) => c.kind === 'fish').every((f) => !f.moving)).toBe(true);
+    controller.setTimersEnabled(false);
+  });
 });

@@ -153,6 +153,32 @@ the gated parent area — a child is never interrupted mid-encounter.
 reload (the wait is `serviceWorker.ready`, not `controller` — `clientsClaim` is
 off, so the registering page is never controlled).
 
+## Emotional coverage (PR Q)
+
+The bar for "the world noticed me": every important child action or arrival
+must earn a visible, bounded, event-triggered response — verified as a
+**chain** (action → reaction → arrival/settle), not as isolated units.
+`e2e/delight.spec.ts` asserts the end-to-end chains below; unit suites
+(`useCritters.test.ts`, `critters.test.ts`, `manifest.test.ts`) pin the
+geometry and the closed audio vocabulary.
+
+| Interaction                 | Child-visible response                                                                                                        | Where proven                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Player arrives somewhere    | cats glance, fountainside fish swim over to see                                                                               | `arrivalNonce` notice → `useCritters` (unit: one notice per fish, inside the basin, toward the child) |
+| Tap a flower / plant / prop | bounded bend/sway/bloop flourish + the tap still navigates                                                                    | `e2e/delight.spec.ts` + `reactive.spec.ts`                                                            |
+| Tap an NPC figure           | attention + `notices-child` on arrival, then dialogue on the deliberate tap                                                   | `npcTap` probe + attention unit tests                                                                 |
+| Object found / errand done  | `ConsequenceScene` physical transition + fact-derived decoration persists in the world (`deco-river-shell`, `deco-park-kite`) | `factDecorationsProbe`                                                                                |
+| Quest completed             | celebration presentation + fact decorations stay                                                                              | `delight.spec.ts` (save-derived, no new flags)                                                        |
+| Battle won                  | opponent stays on screen celebrating (`data-phase='victory'`, never a flee)                                                   | `delight.spec.ts` + `battle.spec.ts`                                                                  |
+| Navigation arrival          | glance/settle beat + camera lead (PR K)                                                                                       | `navigation.spec.ts`                                                                                  |
+| Wrong tap                   | gentle confusion (`CharacterReact` questioning), nothing moves punitively                                                     | interaction-model invariants                                                                          |
+
+Audio vocabulary (Q4) is a closed role map — `SOUND_VOCABULARY` in
+`src/services/audio/manifest.ts`: `tap_soft`, `success_small`,
+`friend_happy`, `discovery`, `transition`, `retry_soft`, `ambient`. Every
+role must resolve to a real sounding slot (`manifest.test.ts`); the game
+stays fully understandable muted, audio only reinforces.
+
 ## Kid-testing protocol (manual)
 
 The automated suites prove technical correctness, not comprehension. When validating UX changes

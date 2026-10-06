@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BIRD_PERCHES,
+  BUTTERFLY_SPOTS,
   CAT_PATROLS,
   CRITTER_BOUNDS,
   EAGLE_ORBIT,
@@ -117,6 +118,12 @@ describe('INITIAL_CRITTER_PLACEMENTS', () => {
         const patrol = CAT_PATROLS[p.poolIndex];
         expect(patrol).toBeDefined();
       }
+      if (p.kind === 'butterfly') {
+        expect(
+          BUTTERFLY_SPOTS.some((s) => s.id === p.spotId),
+          p.key,
+        ).toBe(true);
+      }
     }
   });
 
@@ -126,6 +133,7 @@ describe('INITIAL_CRITTER_PLACEMENTS', () => {
     expect(kinds.filter((k) => k === 'bird')).toHaveLength(3);
     expect(kinds.filter((k) => k === 'eagle')).toHaveLength(1);
     expect(kinds.filter((k) => k === 'fish')).toHaveLength(2);
+    expect(kinds.filter((k) => k === 'butterfly')).toHaveLength(2);
   });
 
   it('fish spawn inside the fountain basin', () => {

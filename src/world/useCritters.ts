@@ -9,6 +9,7 @@ import {
   CRITTER_BOUNDS,
   EAGLE_ORBIT,
   EAGLE_PERCHES,
+  BUTTERFLY_SPOTS,
   FOUNTAIN_BASIN,
   INITIAL_CRITTER_PLACEMENTS,
   catPathIsSafe,
@@ -44,6 +45,9 @@ const EAGLE_SPEED = 3.0;
 const EAGLE_SOAR_ANGULAR = 0.55; // rad/s — a lap ≈ 11.4 s
 const EAGLE_SOAR_LAPS = 2;
 const FISH_SPEED = 0.9;
+const BUTTERFLY_SPEED = 1.6;
+/** A settled child within this radius of the basin earns the fish's attention. */
+const FISH_NOTICE_RADIUS = 3.0;
 /** A settled child within this radius earns the cat's attention. */
 const CAT_NOTICE_RADIUS = 4.0;
 /** Closer than this the cat just looks — no step needed. */
@@ -56,6 +60,7 @@ const IDLE_RANGE: Record<CritterKind, readonly [number, number]> = {
   bird: [3000, 8000],
   eagle: [8000, 14000],
   fish: [1200, 4000],
+  butterfly: [4000, 9000],
 };
 
 type MoveMode = 'idle' | 'dash' | 'hop' | 'soar' | 'swim';
@@ -258,6 +263,17 @@ export function createCritterController(effects: ControllerEffects): Controller 
         startHop(rt, perch.position, BIRD_SPEED, 'hop', perch.id);
         break;
       }
+      case 'butterfly': {
+        // Flower-to-flower glide: same deterministic pick-excluding-current
+        // as the bird, no ground-path rules — it flies over everything.
+        const perch = pickSpot(rt.seed, BUTTERFLY_SPOTS, new Set([...claimed, rt.spotId]));
+        if (!perch) {
+          controller.schedule(rt, idleDelay(rt.kind, rt.seed));
+          return;
+        }
+        startHop(rt, perch.position, BUTTERFLY_SPEED, 'hop', perch.id);
+        break;
+      }
       case 'eagle': {
         // Perch → take off to the orbit's nearest point → soar → land.
         const entry: Xyz = [
@@ -355,6 +371,34 @@ export function createCritterController(effects: ControllerEffects): Controller 
    */
   controller.noticeCats = (x, z) => {
     if (!controller.timersEnabled) return;
+    // Fish notice first — independent of the cats. A child settling within
+    // reach of the basin earns ONE bounded hop per fish toward the rim point
+    // nearest the child: "the fish swam over to see me". Same one-event-per-
+    // arrival contract as the dart; targets stay inside the basin.
+    if (Math.hypot(x - FOUNTAIN_BASIN.x, z - FOUNTAIN_BASIN.z) <= FISH_NOTICE_RADIUS) {
+      const bx = x - FOUNTAIN_BASIN.x;
+      const bz = z - FOUNTAIN_BASIN.z;
+      const bLen = Math.hypot(bx, bz) || 1;
+      const radius = FOUNTAIN_BASIN.radius * 0.85;
+      for (const rt of critters) {
+        if (rt.kind !== 'fish') continue;
+        if (rt.timer) {
+          clearTimeout(rt.timer);
+          rt.timer = null;
+        }
+        recordReactionProbe(rt.key, 'notice');
+        startHop(
+          rt,
+          [
+            FOUNTAIN_BASIN.x + (bx / bLen) * radius,
+            FOUNTAIN_BASIN.waterY,
+            FOUNTAIN_BASIN.z + (bz / bLen) * radius,
+          ],
+          FISH_SPEED * 1.4,
+          'swim',
+        );
+      }
+    }
     let nearest: RuntimeCritter | null = null;
     let nearestDist = CAT_NOTICE_RADIUS;
     for (const rt of critters) {

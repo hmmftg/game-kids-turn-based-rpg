@@ -13,7 +13,7 @@ import { landmarkPosition } from './placement.ts';
  * landmark or path corridor.
  */
 
-export type CritterKind = 'cat' | 'bird' | 'eagle' | 'fish';
+export type CritterKind = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly';
 
 export interface GroundSpot {
   readonly x: number;
@@ -24,7 +24,7 @@ export interface PerchSpot {
   readonly id: string;
   readonly position: Xyz;
   readonly host: 'roof' | 'dome' | 'awning' | 'fence' | 'rim' | 'ground';
-  readonly allowed: readonly ('bird' | 'eagle')[];
+  readonly allowed: readonly CritterKind[];
 }
 
 /**
@@ -91,6 +91,20 @@ export const BIRD_PERCHES: readonly PerchSpot[] = [
   { id: 'ground-nw2', position: [-3.8, 0, -3.0], host: 'ground', allowed: ['bird'] },
 ];
 
+/**
+ * Butterfly spots: quiet air positions a wing-beat above the flowers. Low
+ * enough to read as hovering over a plant, spread across the garden and the
+ * square so a passing butterfly is always somewhere in the neighbourhood.
+ * The flutter hop is a glide — swept-path ground rules don't apply.
+ */
+export const BUTTERFLY_SPOTS: readonly PerchSpot[] = [
+  { id: 'flutter-garden-ne', position: [2.1, 0.55, -2.5], host: 'ground', allowed: ['butterfly'] },
+  { id: 'flutter-garden-se', position: [2.7, 0.6, 2.5], host: 'ground', allowed: ['butterfly'] },
+  { id: 'flutter-garden-sw', position: [-1.1, 0.55, 3.0], host: 'ground', allowed: ['butterfly'] },
+  { id: 'flutter-square', position: [0.9, 0.65, -0.9], host: 'ground', allowed: ['butterfly'] },
+  { id: 'flutter-home-fence', position: [-0.4, 0.5, 5.0], host: 'ground', allowed: ['butterfly'] },
+];
+
 /** Eagle only lands on high, spacious perches — never a fence rail or sign. */
 export const EAGLE_PERCHES: readonly PerchSpot[] = [
   { id: 'dome-home', position: [0, 2.35, -7.2], host: 'dome', allowed: ['eagle'] },
@@ -101,8 +115,10 @@ export const EAGLE_PERCHES: readonly PerchSpot[] = [
 /** Eagle soar loop — ellipse above the hub, inside CRITTER_BOUNDS. */
 export const EAGLE_ORBIT = { rx: 4.0, rz: 3.0, minY: 2.4, maxY: 3.0 } as const;
 
-export function perchPool(kind: 'bird' | 'eagle'): readonly PerchSpot[] {
-  return kind === 'eagle' ? EAGLE_PERCHES : BIRD_PERCHES;
+export function perchPool(kind: 'bird' | 'eagle' | 'butterfly'): readonly PerchSpot[] {
+  if (kind === 'eagle') return EAGLE_PERCHES;
+  if (kind === 'butterfly') return BUTTERFLY_SPOTS;
+  return BIRD_PERCHES;
 }
 
 /** Deterministic LCG — no Math.random, stable sequences for tests/screenshots. */
@@ -224,6 +240,26 @@ export const INITIAL_CRITTER_PLACEMENTS: readonly CritterPlacement[] = [
     poolIndex: 0,
     spotId: 'fish-0',
     seed: 733,
+  },
+  {
+    key: 'butterfly-0',
+    kind: 'butterfly',
+    tint: '#d96f9e',
+    position: BUTTERFLY_SPOTS[0]!.position,
+    rotationY: 1.2,
+    poolIndex: 0,
+    spotId: BUTTERFLY_SPOTS[0]!.id,
+    seed: 977,
+  },
+  {
+    key: 'butterfly-1',
+    kind: 'butterfly',
+    tint: '#e0a03c',
+    position: BUTTERFLY_SPOTS[3]!.position,
+    rotationY: -0.6,
+    poolIndex: 0,
+    spotId: BUTTERFLY_SPOTS[3]!.id,
+    seed: 1087,
   },
   {
     key: 'fish-1',

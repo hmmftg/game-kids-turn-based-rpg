@@ -34,7 +34,7 @@ export function detailLevelFor(tier: QualityTier): DetailLevel {
 export type LandmarkVisualVariant = 'square' | 'home-gate' | 'shop' | 'garden' | 'fountain';
 export type FigureVisualRole =
   'elder' | 'neighbour' | 'shopkeeper' | 'gardener' | 'friend' | 'avatar';
-export type PropVisualVariant = 'basket' | 'crate' | 'planter' | 'ball';
+export type PropVisualVariant = 'basket' | 'crate' | 'planter' | 'ball' | 'shell' | 'kite';
 
 export interface FigureProps {
   readonly position: GroundPoint;
@@ -76,7 +76,7 @@ export interface PropProps {
   readonly variant?: PropVisualVariant | undefined;
 }
 
-export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish';
+export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly';
 
 export interface AnimalProps {
   /** Species silhouette to draw. */
