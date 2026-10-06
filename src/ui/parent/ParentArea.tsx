@@ -7,6 +7,7 @@ import type { GameState, QualityTier } from '../../domain/game/types.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
 import type { CacheStatus } from '../../services/pwa/serviceWorker.ts';
 import { researchPendingCount } from '../../services/research/recorder.ts';
+import { researchEndpointConfigured, submitParentFeedback } from '../../services/research/queue.ts';
 import { AvatarPortrait } from '../child/AvatarPortrait.tsx';
 
 const CACHE_LABEL: Record<CacheStatus, string> = {
@@ -75,7 +76,12 @@ export function ParentArea({
   const [confirmingProfileId, setConfirmingProfileId] = useState<string | null>(null);
   const [deletingProfileId, setDeletingProfileId] = useState<string | null>(null);
   const [researchPending, setResearchPending] = useState<number | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackState, setFeedbackState] = useState<
+    'idle' | 'sending' | 'sent' | 'failed' | 'empty'
+  >('idle');
 
+  const pendingNeedsRefresh = researchPending === null;
   useEffect(() => {
     if (!researchActive) return;
     let live = true;
@@ -85,7 +91,7 @@ export function ParentArea({
     return () => {
       live = false;
     };
-  }, [researchActive, researchPending === null]);
+  }, [researchActive, pendingNeedsRefresh]);
 
   return (
     <div className="layer layer--overlay layer--parent" data-testid="parent-area">
@@ -141,6 +147,67 @@ export function ParentArea({
             ))}
           </div>
         </section>
+
+        {researchEndpointConfigured() ? (
+          <section data-testid="parent-feedback">
+            <h3 className="subtitle">{FA.feedbackTitle}</h3>
+            <p className="text text--soft">{FA.feedbackHint}</p>
+            <textarea
+              className="input"
+              rows={3}
+              maxLength={4000}
+              placeholder={FA.feedbackPlaceholder}
+              value={feedbackText}
+              onChange={(e) => {
+                setFeedbackText(e.target.value);
+                if (feedbackState !== 'sending') setFeedbackState('idle');
+              }}
+              data-testid="feedback-text"
+            />
+            <button
+              type="button"
+              className="btn btn--secondary"
+              disabled={feedbackState === 'sending'}
+              onClick={() => {
+                setFeedbackState('sending');
+                submitParentFeedback(feedbackText, {
+                  mapId: state.mapId,
+                  qualityTier: state.qualityTier,
+                  researchSession: researchActive,
+                })
+                  .then(() => {
+                    setFeedbackState('sent');
+                    setFeedbackText('');
+                  })
+                  .catch((error: unknown) => {
+                    setFeedbackState(
+                      error instanceof Error && error.message === 'feedback-empty'
+                        ? 'empty'
+                        : 'failed',
+                    );
+                  });
+              }}
+              data-testid="feedback-send"
+            >
+              {feedbackState === 'sending' ? FA.feedbackSending : FA.feedbackSend}
+            </button>{' '}
+            {feedbackState === 'sent' ? (
+              <span className="text" data-testid="feedback-status">
+                {FA.feedbackSent}
+              </span>
+            ) : null}
+            {feedbackState === 'failed' ? (
+              <span className="text" data-testid="feedback-status">
+                {FA.feedbackFailed}
+              </span>
+            ) : null}
+            {feedbackState === 'empty' ? (
+              <span className="text" data-testid="feedback-status">
+                {FA.feedbackEmpty}
+              </span>
+            ) : null}
+          </section>
+        ) : null}
 
         <section>
           <h3 className="subtitle">{FA.parentSources}</h3>

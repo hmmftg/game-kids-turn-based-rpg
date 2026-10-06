@@ -73,3 +73,12 @@ identifiers, IP, names, accounts. Repeated-action detection compares
 
 Feeds `docs/PR-S-DECISION-MEMO.md` evidence rows; observation sheets stay
 manual (delight signals can't be inferred from events).
+
+## Parent feedback
+
+The same PocketBase endpoint hosts a `parent_feedback` collection (anonymous
+create, superuser read; provisioned alongside `research_events`). The parent
+area shows a «ارسال بازخورد» textarea whenever the endpoint is configured —
+the message posts immediately (`submitParentFeedback`), never queued, and
+shows sent/failed status. Consent note: this is parent-authored free text,
+not recorded gameplay data — no consent gate applies.
