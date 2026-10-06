@@ -22,6 +22,7 @@ export interface WorldProbe {
   __worldBattleEvents?: Array<{ mark: string; battle: unknown }>;
   __worldMapId?: string;
   __worldAt?: string;
+  __worldTime?: number;
   __worldDiscoveries?: string[];
   __worldFactDecorations?: string[];
   __worldMoving?: boolean;
@@ -84,6 +85,11 @@ export async function npcProbe(page: Page, id: string) {
 
 export async function playerAt(page: Page) {
   return page.evaluate(() => (window as unknown as WorldProbe).__worldAt);
+}
+
+/** The coarse world clock — ticks once per completed avatar arrival. */
+export async function worldTime(page: Page) {
+  return page.evaluate(() => (window as unknown as WorldProbe).__worldTime ?? -1);
 }
 
 export async function attentionProbe(page: Page) {
@@ -197,7 +203,29 @@ export async function tapNpcFigure(page: Page, npcId: string, timeout = 60000): 
       await dialogue.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
     }
     const npc = await npcProbe(page, npcId);
-    const points = npc !== null ? await worldPoints(page, npc.x, npc.z) : [];
+    // Tap the figure where it VISIBLY stands — a scheduled NPC physically
+    // strolls between stands (NpcTransit), and its tap cylinder travels
+    // with the body, not the resolved spot. Children tap the person they
+    // see; falling back to the probe covers non-transit mounts.
+    const rendered = await page.evaluate((id) => {
+      const w = window as unknown as {
+        __worldScene?: {
+          getObjectByName(n: string):
+            | {
+                position: { clone(): { x: number; z: number } };
+                getWorldPosition(v: { x: number; z: number }): void;
+              }
+            | undefined;
+        };
+      };
+      const group = w.__worldScene?.getObjectByName(`npc-transit-${id}`);
+      if (!group) return null;
+      const v = group.position.clone();
+      group.getWorldPosition(v);
+      return { x: v.x, z: v.z };
+    }, npcId);
+    const spot = rendered ?? npc;
+    const points = spot !== null ? await worldPoints(page, spot.x, spot.z) : [];
     attempt += 1;
     // One fresh click per iteration: a missed tap can start a walk, which
     // moves the camera — every remaining stale pixel would then land on a

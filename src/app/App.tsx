@@ -254,6 +254,7 @@ export function App() {
       if (mark !== last?.mark && (state.battle !== null || last?.mark !== 'end')) {
         events.push({ mark, battle: state.battle });
       }
+      w['__worldTime'] = worldTime;
       w['__worldNpcs'] = Object.fromEntries(
         WORLD.npcDefinitions.map((npc) => {
           const stand = resolveNpcStand(WORLD, npc, worldTime);

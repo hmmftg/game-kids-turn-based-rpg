@@ -48,7 +48,7 @@ import { useCritters } from './useCritters.ts';
 import { FOUNTAIN_BASIN } from './critters.ts';
 import { FACT_DECORATIONS, HIDDEN_FINDS } from './decorations.ts';
 import { HiddenFind, ReactionRipple, ReactiveProp } from './reactionBits.tsx';
-import { AvatarLiveliness, IdleFlourish } from './livelinessBits.tsx';
+import { AvatarLiveliness, IdleFlourish, NpcTransit } from './livelinessBits.tsx';
 import { activityPoseFor, idleCueFor, resolveNpcPresentation } from './liveliness.ts';
 import { resolveNpcActivity } from './registry.ts';
 import { publishCameraFocus } from './CameraRig.tsx';
@@ -654,72 +654,78 @@ export function Hub({
       {npcFigures.map(({ npc, spot, npcX, npcZ, facing, look, cue, pose }) => {
         return (
           <group key={npc.id}>
-            {/* Invisible-but-tappable hit cylinder: a tap on the person
+            {/* Routine relocations are walked, never teleported (a tick that
+                jumps the figure reads to a child as "they ran away"). The
+                tap cylinder travels inside the transit group so the person
+                stays tappable mid-walk. */}
+            <NpcTransit x={npcX} z={npcZ} facing={facing} name={`npc-transit-${npc.id}`}>
+              {/* Invisible-but-tappable hit cylinder: a tap on the person
                 talks to them where they stand. Generous radius — small
                 fingers, and the figure itself reads as the target. Critters
                 get a smaller cylinder sized to the little body: a humanoid
                 radius around a roaming mouse eats world taps and launches
                 battles the child never aimed at. */}
-            <mesh
-              position={[npcX, 0.75, npcZ]}
-              onClick={(event: ThreeEvent<MouseEvent>) => {
-                if (!interactive || event.delta > 6) return;
-                if (!onNpcTap) return;
-                event.stopPropagation();
-                onNpcTap(npc.id);
-              }}
-            >
-              <cylinderGeometry
-                args={[
-                  npc.archetype === 'critter' ? 0.45 : 0.9,
-                  npc.archetype === 'critter' ? 0.45 : 0.9,
-                  2.2,
-                  8,
-                ]}
-              />
-              <meshBasicMaterial visible={false} />
-            </mesh>
-            {/* Reaching an NPC earns CharacterReact(notices-child); tapping
+              <mesh
+                position={[0, 0.75, 0]}
+                onClick={(event: ThreeEvent<MouseEvent>) => {
+                  if (!interactive || event.delta > 6) return;
+                  if (!onNpcTap) return;
+                  event.stopPropagation();
+                  onNpcTap(npc.id);
+                }}
+              >
+                <cylinderGeometry
+                  args={[
+                    npc.archetype === 'critter' ? 0.45 : 0.9,
+                    npc.archetype === 'critter' ? 0.45 : 0.9,
+                    2.2,
+                    8,
+                  ]}
+                />
+                <meshBasicMaterial visible={false} />
+              </mesh>
+              {/* Reaching an NPC earns CharacterReact(notices-child); tapping
                 the figure earns CharacterReact(greets-child) in parallel with
                 the walk/dialogue — never a marker or a gated sequence. */}
-            <group position={[npcX, 0, npcZ]}>
-              <CharacterReact
-                npcId={npc.id}
-                nonce={attention?.npcId === npc.id ? attention.nonce : 0}
-                context={attention?.context ?? 'notices-child'}
-                armColor={look.palette.limb}
-              >
-                {/* Presentation liveliness lives inside the semantic wrapper
+              <group>
+                <CharacterReact
+                  npcId={npc.id}
+                  nonce={attention?.npcId === npc.id ? attention.nonce : 0}
+                  context={attention?.context ?? 'notices-child'}
+                  armColor={look.palette.limb}
+                >
+                  {/* Presentation liveliness lives inside the semantic wrapper
                     deliberately: idle cues and the held activity pose are
                     uninstrumented polish — `worldTime` is the tick trigger,
                     never a permanent loop. */}
-                <IdleFlourish nonce={worldTime} cue={cue} pose={pose}>
-                  {/* Critters (the fountain mouse) take the animal slot like the
+                  <IdleFlourish nonce={worldTime} cue={cue} pose={pose}>
+                    {/* Critters (the fountain mouse) take the animal slot like the
                       cave mouse; people take the humanoid figure. Same tap,
                       same attention cue — only the body differs. */}
-                  {npc.archetype === 'critter' ? (
-                    <group rotation={[0, facing, 0]}>
-                      <models.Animal
-                        variant="cat"
-                        tint={look.palette.body}
+                    {npc.archetype === 'critter' ? (
+                      <group rotation={[0, facing, 0]}>
+                        <models.Animal
+                          variant="cat"
+                          tint={look.palette.body}
+                          detailLevel={detailLevel}
+                        />
+                      </group>
+                    ) : (
+                      <models.Figure
+                        position={{ x: 0, z: 0 }}
+                        rotationY={facing}
+                        palette={look.palette}
+                        hairStyle={look.hairStyle}
+                        hairColor={look.hairColor}
+                        label={npc.id}
                         detailLevel={detailLevel}
+                        role={look.role}
                       />
-                    </group>
-                  ) : (
-                    <models.Figure
-                      position={{ x: 0, z: 0 }}
-                      rotationY={facing}
-                      palette={look.palette}
-                      hairStyle={look.hairStyle}
-                      hairColor={look.hairColor}
-                      label={npc.id}
-                      detailLevel={detailLevel}
-                      role={look.role}
-                    />
-                  )}
-                </IdleFlourish>
-              </CharacterReact>
-            </group>
+                    )}
+                  </IdleFlourish>
+                </CharacterReact>
+              </group>
+            </NpcTransit>
             {spot?.prop ? (
               <models.Prop
                 position={{
