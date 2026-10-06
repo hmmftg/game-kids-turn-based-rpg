@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run validate:content && tsc -b && vite build && npm run check:budgets",
+    "build": "npm run validate:content && npm run validate:assets && tsc -b && vite build && npm run check:budgets && npm run check:deploy",
     "preview": "vite preview --port 4173",
     "typecheck": "tsc -b --force",
     "lint": "eslint .",
@@ -23,7 +23,10 @@
     "test:e2e": "playwright test",
     "validate:content": "node --experimental-strip-types scripts/validate-content.ts",
     "validate:content:release": "node --experimental-strip-types scripts/validate-content.ts --release",
+    "validate:assets": "node --experimental-strip-types scripts/validate-assets.ts",
+    "validate:assets:release": "node --experimental-strip-types scripts/validate-assets.ts --release",
     "check:budgets": "node --experimental-strip-types scripts/check-budgets.ts",
+    "check:deploy": "node --experimental-strip-types scripts/check-deploy.ts",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
