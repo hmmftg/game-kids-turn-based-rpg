@@ -115,6 +115,22 @@ export const FA = {
   updateLater: 'بعداً',
 
   corruptSave: 'پیشرفت قبلی خوانده نشد. می‌توانی از اول شروع کنی.',
+
+  researchTitle: 'نسخه‌ی پژوهشی',
+  researchBody:
+    'این نسخه برای آزمون با کودک ساخته شده و ثبت می‌کند که کجای بازی لمس می‌شود و چه اتفاقی می‌افتد. نام، عکس، صدا یا هیچ اطلاعات شخصی ذخیره نمی‌شود. همه‌ی داده‌ها روی همین دستگاه می‌ماند و فقط بزرگ‌ترها می‌توانند آن را بیرون ببرند.',
+  researchOperator: 'اجراکننده: خانواده و سازندگان بازی',
+  researchAgeLabel: 'رده‌ی سنی کودک',
+  researchAge34: '۳ تا ۴ سال',
+  researchAge57: '۵ تا ۷ سال',
+  researchContinue: 'شروع جلسه‌ی پژوهشی',
+  researchExit: 'خروج — نسخه‌ی معمولی',
+  researchBadge: 'جلسه‌ی پژوهشی فعال',
+  researchPending: 'رویداد در صف',
+  researchExport: 'دریافت پرونده‌ی JSON',
+  researchExported: 'پرونده دریافت شد',
+  researchUpload: 'ارسال به پژوهش',
+  researchUploaded: 'ارسال شد',
   finaleTitle: 'جشن محله',
   finaleBody: 'با هم محله را آماده کردیم.',
 } as const;

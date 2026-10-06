@@ -11,8 +11,10 @@ import {
 } from './repository.ts';
 
 const DB_NAME = 'mahalle-ye-mehrabani';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'progress';
+/** Research Session Mode (PR R+) — see src/services/research/queue.ts. */
+export const RESEARCH_STORE = 'researchEvents';
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -21,11 +23,16 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-function openDatabase(): Promise<IDBDatabase> {
+export function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const open = indexedDB.open(DB_NAME, DB_VERSION);
     open.onupgradeneeded = () => {
       if (!open.result.objectStoreNames.contains(STORE)) open.result.createObjectStore(STORE);
+      // Idempotent on both upgrade paths (1→2 and fresh) — the research queue
+      // and the save repository open the same database.
+      if (!open.result.objectStoreNames.contains(RESEARCH_STORE)) {
+        open.result.createObjectStore(RESEARCH_STORE, { autoIncrement: true });
+      }
     };
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error ?? new Error('indexeddb-open-failed'));

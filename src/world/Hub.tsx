@@ -14,6 +14,7 @@ import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import type { WorldSource } from '../domain/world/source.ts';
 import type { AreaId } from '../domain/world/types.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
+import { recordWorldTap } from '../services/research/recorder.ts';
 import { getAnchor, getAnchorOrNull } from './navigation/graph.ts';
 import {
   areaAt,
@@ -560,6 +561,9 @@ export function Hub({
               resolved: anchor,
             };
           }
+          // Research Session Mode (PR R+): semantic target only, never raw
+          // coordinates in the stored event.
+          recordWorldTap(event.point.x, event.point.z, anchor);
           if (anchor) walkHere(anchor);
           else walker.faceToward(event.point.x, event.point.z);
         }}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { SOURCE_RECORDS } from '../../content/sources/records.ts';
@@ -6,6 +6,7 @@ import { AUDIO_MANIFEST } from '../../services/audio/manifest.ts';
 import type { GameState, QualityTier } from '../../domain/game/types.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
 import type { CacheStatus } from '../../services/pwa/serviceWorker.ts';
+import { researchPendingCount } from '../../services/research/recorder.ts';
 import { AvatarPortrait } from '../child/AvatarPortrait.tsx';
 
 const CACHE_LABEL: Record<CacheStatus, string> = {
@@ -38,6 +39,9 @@ export function ParentArea({
   onQualityChange,
   onOpenWorldBuilder,
   onOpenDiagnostics,
+  researchActive = false,
+  onExportResearch,
+  onUploadResearch,
   updateReady,
   onApplyUpdate,
   installReady,
@@ -58,6 +62,10 @@ export function ParentArea({
   readonly onOpenWorldBuilder: () => void;
   /** Navigates to the `?diagnostics=1` live technical readout. */
   readonly onOpenDiagnostics: () => void;
+  /** Research Session Mode (PR R+): an active session shows the badge, queue count, export and optional upload. */
+  readonly researchActive?: boolean;
+  readonly onExportResearch?: () => void;
+  readonly onUploadResearch?: (() => void) | undefined;
   readonly updateReady: boolean;
   readonly onApplyUpdate: () => void;
   readonly installReady: boolean;
@@ -66,11 +74,51 @@ export function ParentArea({
   const [confirming, setConfirming] = useState(false);
   const [confirmingProfileId, setConfirmingProfileId] = useState<string | null>(null);
   const [deletingProfileId, setDeletingProfileId] = useState<string | null>(null);
+  const [researchPending, setResearchPending] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!researchActive) return;
+    let live = true;
+    void researchPendingCount().then((count) => {
+      if (live) setResearchPending(count);
+    });
+    return () => {
+      live = false;
+    };
+  }, [researchActive]);
 
   return (
     <div className="layer layer--overlay layer--parent" data-testid="parent-area">
       <div className="panel panel--parent column" dir="rtl">
         <h2 className="subtitle">{FA.parentArea}</h2>
+
+        {researchActive ? (
+          <section data-testid="parent-research">
+            <h3 className="subtitle">🔬 {FA.researchBadge}</h3>
+            <p className="text text--soft">
+              {FA.researchPending}:{' '}
+              <span data-testid="research-pending-count">{researchPending ?? '…'}</span>
+            </p>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={onExportResearch}
+              data-testid="research-export"
+            >
+              {FA.researchExport}
+            </button>{' '}
+            {onUploadResearch !== undefined ? (
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={onUploadResearch}
+                data-testid="research-upload"
+              >
+                {FA.researchUpload}
+              </button>
+            ) : null}
+          </section>
+        ) : null}
 
         <section data-testid="parent-quality">
           <h3 className="subtitle">{FA.quality}</h3>
