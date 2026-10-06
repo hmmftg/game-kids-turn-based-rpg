@@ -206,3 +206,9 @@ proves nothing about discoverability.
 
 Simulated pre-reader passes (an agent ignoring all text and judging visuals only) are a useful
 cheap proxy, but they measure legibility, not cognition — they do not replace the real session.
+
+For full session-based validation (two age bands, intervention ladder, Mode-B and silent
+passes, observation sheet, finding classification), run
+[docs/USABILITY-PROTOCOL.md](./USABILITY-PROTOCOL.md) with the printable
+[observation sheet](./usability-observation-sheet.md) — that is the PR R evidence phase;
+this quick protocol above stays for validating individual UX changes.
