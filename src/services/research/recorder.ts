@@ -1,5 +1,6 @@
 import type {
   AgeBand,
+  ObserverBookmark,
   ResearchContext,
   ResearchEvent,
   ResearchEventType,
@@ -48,10 +49,28 @@ export function researchSession(): ResearchSession | null {
   };
 }
 
+/**
+ * session_started environment — coarse classes only (R.1): build version,
+ * touch-vs-desktop, locale, mute state. Never a name, exact age, location,
+ * or anything identifying the device.
+ */
+function environmentContext(input: { muted?: boolean }): ResearchContext {
+  return {
+    buildVersion: typeof __BUILD_VERSION__ === 'string' ? __BUILD_VERSION__ : 'dev',
+    deviceClass:
+      typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+        ? 'touch'
+        : 'desktop',
+    locale: typeof navigator !== 'undefined' ? navigator.language : 'unknown',
+    muted: input.muted,
+  };
+}
+
 export function startResearchSession(input: {
   ageBand: AgeBand;
   mode: 'normal' | 'nocopy';
   reducedMotion: boolean;
+  muted?: boolean;
 }): ResearchSession {
   config = {
     sessionId:
@@ -63,8 +82,26 @@ export function startResearchSession(input: {
   };
   lastTap = null;
   const session = researchSession();
+  record('session_started', environmentContext(input));
   record('started_game');
   return session!;
+}
+
+/**
+ * Explicit session end (R.1): stamps duration into `session_ended`, then
+ * stops recording. Queued events keep their sessionId — analysis groups
+ * sessions by the started/ended boundary pair.
+ */
+export function endResearchSession(): void {
+  if (config === null) return;
+  record('session_ended', { durationMs: Date.now() - config.startedAt });
+  config = null;
+  lastTap = null;
+}
+
+/** A parent's observer bookmark — a hand-marked moment that matters. */
+export function recordBookmark(bookmark: ObserverBookmark, context: ResearchContext = {}): void {
+  record('observer_bookmark', { bookmark, ...context });
 }
 
 export function record(type: ResearchEventType, context: ResearchContext = {}): void {

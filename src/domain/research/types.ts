@@ -9,7 +9,18 @@
 
 export type AgeBand = '3-4' | '5-7';
 
+/**
+ * Observer bookmarks (R.1): the watching parent marks a moment that matters
+ * — worth more than raw taps. These are entered by hand during a session,
+ * never auto-detected.
+ */
+export type ObserverBookmark =
+  'stuck' | 'repeated' | 'discovered' | 'completed_solo' | 'asked_help';
+
 export type ResearchEventType =
+  | 'session_started'
+  | 'session_ended'
+  | 'observer_bookmark'
   | 'started_game'
   | 'selected_avatar'
   | 'tapped_wrong_place'
@@ -31,6 +42,15 @@ export interface ResearchContext {
   readonly ageBand?: AgeBand | undefined;
   readonly mode?: 'normal' | 'nocopy' | undefined;
   readonly reducedMotion?: boolean | undefined;
+  /** session_started environment — coarse classes only, never identity. */
+  readonly buildVersion?: string | undefined;
+  readonly deviceClass?: string | undefined;
+  readonly locale?: string | undefined;
+  readonly muted?: boolean | undefined;
+  /** session_ended */
+  readonly durationMs?: number | undefined;
+  /** observer_bookmark */
+  readonly bookmark?: ObserverBookmark | undefined;
 }
 
 export interface ResearchEvent {

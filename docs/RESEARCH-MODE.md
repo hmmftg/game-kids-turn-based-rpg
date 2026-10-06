@@ -16,21 +16,38 @@ page reloads).
 
 Closed set — extend only when a protocol question requires it:
 
-| Event                | Emitted when                                                   |
-| -------------------- | -------------------------------------------------------------- |
-| `started_game`       | consent passed, session begins                                 |
-| `selected_avatar`    | avatar chosen (target = avatar id)                             |
-| `tapped_wrong_place` | ground tap resolved to no anchor (target = `none`)             |
-| `found_npc`          | a dialogue opens (npcId)                                       |
-| `started_quest`      | `START_QUEST` dispatched, or quest dialogue opened (no-WebGL)  |
-| `completed_action`   | fresh `questCompleted` checkpoint                              |
-| `waited`             | a passive beat auto-advanced (questId + phase)                 |
-| `repeated_action`    | same target/spot tapped again within 1.5 s                     |
-| `abandoned`          | encounter left mid-quest / battle left before a terminal phase |
+| Event                | Emitted when                                                                           |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| `session_started`    | consent passed — carries the environment stamp below                                   |
+| `session_ended`      | parent taps «پایان جلسه» — carries `durationMs`                                        |
+| `observer_bookmark`  | parent taps a bookmark (`stuck`/`repeated`/`discovered`/`completed_solo`/`asked_help`) |
+| `started_game`       | consent passed, session begins                                                         |
+| `selected_avatar`    | avatar chosen (target = avatar id)                                                     |
+| `tapped_wrong_place` | ground tap resolved to no anchor (target = `none`)                                     |
+| `found_npc`          | a dialogue opens (npcId)                                                               |
+| `started_quest`      | `START_QUEST` dispatched, or quest dialogue opened (no-WebGL)                          |
+| `completed_action`   | fresh `questCompleted` checkpoint                                                      |
+| `waited`             | a passive beat auto-advanced (questId + phase)                                         |
+| `repeated_action`    | same target/spot tapped again within 1.5 s                                             |
+| `abandoned`          | encounter left mid-quest / battle left before a terminal phase                         |
 
 Context stamps on every event: `ageBand`, `mode` (`normal`/`nocopy`),
 `reducedMotion`, plus event-specific `questId`/`npcId`/`battleId`/`phase`/
 `target`. **Coordinates are never stored** — only the semantic target.
+
+`session_started` additionally stamps the coarse environment (R.1):
+`buildVersion` (package version injected at build time), `deviceClass`
+(`touch`/`desktop`), `locale`, `muted`. `session_ended` stamps `durationMs`.
+The started/ended pair delimits clean sessions for analysis — a session's
+events are the rows between its boundary pair.
+
+Observer bookmarks (R.1) are the protocol's highest-signal rows: the
+watching parent marks `stuck`, `repeated`, `discovered`, `completed_solo`,
+or `asked_help` from the parent area's bookmark row. They hand the PR T
+synthesis exactly the "meaning" rows the review asked for — the
+`observations` and `sessions` collections in the data model collapse into
+`research_events` (a session row IS its started/ended pair; an observation
+row IS a bookmark event), so no extra collections are needed.
 
 ## Storage
 

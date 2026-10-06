@@ -30,19 +30,21 @@ describe('research recorder (PR R+)', () => {
     expect(isResearchActive()).toBe(false);
   });
 
-  it('starting a session emits started_game and stamps context defaults', async () => {
+  it('starting a session emits the boundary + started_game, stamps context', async () => {
     const session = start();
     expect(isResearchActive()).toBe(true);
     expect(session.sessionId).toBe(researchSessionId());
     const events = await readResearchEvents();
-    expect(events).toHaveLength(1);
-    expect(events[0]!.event).toBe('started_game');
-    expect(events[0]!.sessionId).toBe(session.sessionId);
-    expect(events[0]!.context).toMatchObject({
+    expect(events.map((e) => e.event)).toEqual(['session_started', 'started_game']);
+    expect(events[1]!.sessionId).toBe(session.sessionId);
+    expect(events[1]!.context).toMatchObject({
       ageBand: '5-7',
       mode: 'normal',
       reducedMotion: false,
     });
+    // R.1 environment stamp — coarse classes, never identity.
+    expect(events[0]!.context.deviceClass).toMatch(/touch|desktop/);
+    expect(events[0]!.context.locale).toBeTruthy();
   });
 
   it('a dead tap records tapped_wrong_place with a semantic target, not coords', async () => {
