@@ -262,17 +262,15 @@ test.describe('NPC routines', () => {
     await startGame(page);
     await waitForProbe(page);
 
-    // Every arrival ticks the world clock, so the fisher moves through his
-    // routine river → bakery → river bank — deterministic, not per-frame.
+    // Arrivals on EMPTY ground tick the world clock — arrivals beside a
+    // person are "visiting" and intentionally do not (an approach must never
+    // chase the person away). These two anchors sit >3u from every figure
+    // stand at every tick, so each leg is exactly one tick.
+    const TICK_ANCHORS = ['anchor-river-path', 'anchor-path-north-east'] as const;
     const seenSpots = new Set<string>();
-    let greetings = 0;
 
-    // Alternate between the two river-side anchors the fisher visits so each
-    // leg is one world tick; 4 visits still sample multiple routine spots
-    // (the assertion needs >=2, incl. the river) while keeping portrait runs
-    // inside the timeout — every visit is a full tap-to-walk leg.
     for (let visit = 0; visit < 4; visit += 1) {
-      const target = visit % 2 === 0 ? 'anchor-river' : 'anchor-river-bank';
+      const target = TICK_ANCHORS[visit % TICK_ANCHORS.length]!;
       await tapWorld(page, target);
       await waitForAnchor(page, target);
       // __worldNpcs republishes after the worldTime re-render — wait until
@@ -291,49 +289,55 @@ test.describe('NPC routines', () => {
       const fisher = await npcProbe(page, 'npc-fisher');
       expect(fisher).not.toBeNull();
       seenSpots.add(fisher!.anchorId);
-
-      // Sharing his anchor? Tap his figure — the captured greeting opens
-      // after the walk, matching exactly what he's doing at this tick.
-      if (fisher!.anchorId === target) {
-        await dismissDialogue(page);
-        const points = await worldPoints(page, fisher!.x, fisher!.z);
-        // A cropped viewport puts him outside the canvas — landscape covers.
-        test.skip(points.length === 0, 'fisher is outside the tappable canvas');
-        const expected =
-          target === 'anchor-river' ? 'صبح خوبی برای ماهی است.' : 'امروز رودخانه آرام بود.';
-        let greeted = false;
-        for (const pt of points) {
-          await dismissDialogue(page);
-          await page.mouse.click(pt.x, pt.y);
-          greeted = await expect
-            .poll(
-              async () =>
-                (
-                  await page
-                    .getByTestId('npc-dialogue')
-                    .textContent()
-                    .catch(() => '')
-                )?.includes(expected) ?? false,
-              { timeout: 12000 },
-            )
-            .toBe(true)
-            .then(() => true)
-            .catch(() => false);
-          if (greeted) break;
-        }
-        if (!greeted) {
-          // Cropped viewport: his tappable pixels aren't reachable here.
-          test.skip(true, 'fisher figure is not tappable in this layout');
-        }
-        greetings += 1;
-      }
       await dismissDialogue(page);
     }
 
     // The routine must actually move him through at least two authored spots.
     expect(seenSpots.size).toBeGreaterThanOrEqual(2);
     expect(seenSpots.has('anchor-river')).toBe(true);
-    expect(greetings).toBeGreaterThanOrEqual(1);
+
+    // Now walk TO where he stands — a visit, so the clock holds and he stays
+    // — then tap his figure; the greeting matches the spot he's on.
+    const fisher = await npcProbe(page, 'npc-fisher');
+    const visitAnchor = fisher!.anchorId as 'anchor-river' | 'anchor-river-bank' | 'anchor-bakery';
+    await tapWorld(page, visitAnchor);
+    await waitForAnchor(page, visitAnchor);
+    await dismissDialogue(page);
+    const standing = await npcProbe(page, 'npc-fisher');
+    expect(standing!.anchorId).toBe(visitAnchor);
+    const points = await worldPoints(page, standing!.x, standing!.z);
+    // A cropped viewport puts him outside the canvas — landscape covers.
+    test.skip(points.length === 0, 'fisher is outside the tappable canvas');
+    const expected = {
+      'anchor-river': 'صبح خوبی برای ماهی است.',
+      'anchor-river-bank': 'امروز رودخانه آرام بود.',
+      'anchor-bakery': 'بوی نان تازه آمد.',
+    }[visitAnchor];
+    let greeted = false;
+    for (const pt of points) {
+      await dismissDialogue(page);
+      await page.mouse.click(pt.x, pt.y);
+      greeted = await expect
+        .poll(
+          async () =>
+            (
+              await page
+                .getByTestId('npc-dialogue')
+                .textContent()
+                .catch(() => '')
+            )?.includes(expected) ?? false,
+          { timeout: 12000 },
+        )
+        .toBe(true)
+        .then(() => true)
+        .catch(() => false);
+      if (greeted) break;
+    }
+    if (!greeted) {
+      // Cropped viewport: his tappable pixels aren't reachable here.
+      test.skip(true, 'fisher figure is not tappable in this layout');
+    }
+    await dismissDialogue(page);
   });
 
   test('tapping a person talks to them where they stand', async ({ page }) => {

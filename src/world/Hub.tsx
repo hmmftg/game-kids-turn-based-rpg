@@ -84,6 +84,9 @@ export interface HubProps {
   readonly onNpcTap?: ((npcId: string) => void) | undefined;
   /** Coarse world clock driving NPC routines (ticks once per arrival). */
   readonly worldTime?: number | undefined;
+  /** Per-NPC routine holds: figures the child stands beside keep this
+      frozen tick instead of `worldTime` (same resolveNpcStand truth). */
+  readonly npcStandTicks?: ReadonlyMap<string, number> | undefined;
   /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
   readonly attention?: NpcAttention | null | undefined;
   /**
@@ -390,6 +393,7 @@ export function Hub({
   onArrive,
   onNpcTap,
   worldTime = 0,
+  npcStandTicks,
   attention,
   arrivalNonce = 0,
   revealedFinds,
@@ -440,7 +444,11 @@ export function Hub({
   // Mounted NPC figures, resolved once per render — the glance target lookup
   // reads this same list (one pass, no per-frame nearest-NPC search).
   const npcFigures = world.npcDefinitions.flatMap((npc, index) => {
-    const stand = resolveNpcStand(world, npc, worldTime);
+    // A figure the child stands beside resolves at its held tick — the
+    // world keeps ticking around it, but it never strolls away from a
+    // visitor (docs/LIVING-WORLD.md).
+    const npcTick = npcStandTicks?.get(npc.id) ?? worldTime;
+    const stand = resolveNpcStand(world, npc, npcTick);
     const spot = stand.spot;
     const anchor = getAnchorOrNull(world, stand.anchorId);
     if (!anchor) return [];
@@ -471,7 +479,7 @@ export function Hub({
         // stands brighter than the schedule asks (docs/LIVING-WORLD.md).
         pose:
           resolveNpcPresentation(npc.id, questStatuses).pose ??
-          activityPoseFor(resolveNpcActivity(npc, worldTime)),
+          activityPoseFor(resolveNpcActivity(npc, npcTick)),
       },
     ];
   });
