@@ -5,7 +5,6 @@ import type { NpcDefinition } from '../domain/world/types.ts';
 import {
   getNpcOrNull,
   npcFigureJitter,
-  npcStandingAt,
   resolveNpcActivity,
   resolveNpcSpot,
   resolveNpcStand,
@@ -59,6 +58,7 @@ import { WorldCanvas } from '../world/WorldCanvas.tsx';
 import type { NpcAttention } from '../world/sceneBits.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
 import { getAnchorOrNull } from '../world/navigation/graph.ts';
+import { NPC_STAND_OFFSET } from '../world/placement.ts';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { nearbyNpcs } from '../world/nearby.ts';
 import { useGame } from './gameContext.ts';
@@ -66,6 +66,11 @@ import { useGame } from './gameContext.ts';
 // The shipped world: gameplay resolves every anchor/NPC/transition through
 // this one source — the same seam the World Builder swaps for a document.
 const WORLD = STATIC_WORLD_SOURCE;
+
+/** How close an arrival can land to a figure's stand before that figure is
+ *  "held" — it keeps its current routine spot while the child is beside it
+ *  and resumes its schedule when the child next lands out of reach. */
+const APPROACH_RADIUS = 3.0;
 
 function nodeForQuest(questId: QuestId): string | null {
   return DIALOGUE_NODES.find((node) => node.offersQuestId === questId)?.id ?? null;
@@ -242,6 +247,11 @@ export function App() {
   // otherwise the arrival relocates the very NPC the child is walking to
   // (an endless chase). Exploration ticks; conversation does not.
   const skipArrivalTick = useRef(false);
+  // Per-NPC routine holds: npcId → the tick its stand is frozen at while
+  // the child stands beside it. Session-only presentation memory, like
+  // worldTime — never persisted. `npcStandTicks` is the render-prop copy.
+  const heldTicks = useRef(new Map<string, number>());
+  const [npcStandTicks, setNpcStandTicks] = useState<ReadonlyMap<string, number>>(new Map());
 
   const discoveries = state.discoveries;
 
@@ -278,14 +288,15 @@ export function App() {
       w['__worldTime'] = worldTime;
       w['__worldNpcs'] = Object.fromEntries(
         WORLD.npcDefinitions.map((npc) => {
-          const stand = resolveNpcStand(WORLD, npc, worldTime);
+          const npcTick = npcStandTicks.get(npc.id) ?? worldTime;
+          const stand = resolveNpcStand(WORLD, npc, npcTick);
           const anchor = getAnchorOrNull(WORLD, stand.anchorId);
           const jitter = npcFigureJitter(WORLD, npc.id);
           return [
             npc.id,
             {
               anchorId: stand.anchorId,
-              activity: resolveNpcActivity(npc, worldTime),
+              activity: resolveNpcActivity(npc, npcTick),
               dialogueId: stand.spot?.dialogueId ?? npc.dialogueIds[0] ?? null,
               x: (anchor?.x ?? 0) + 0.9 + stand.offsetX + jitter.x,
               z: (anchor?.z ?? 0) - 0.4 + stand.offsetZ + jitter.z,
@@ -303,6 +314,7 @@ export function App() {
     attention,
     revealedFinds,
     statuses,
+    npcStandTicks,
   ]);
   const onArrive = useCallback(
     (anchor: AnchorId) => {
@@ -328,6 +340,33 @@ export function App() {
       }
       const skipTick = skipArrivalTick.current;
       skipArrivalTick.current = false;
+      // People hold their ground while the child is beside them: an arrival
+      // near a figure freezes THAT figure at its current routine tick —
+      // the hold feeds the frozen tick back into the same resolveNpcStand
+      // truth, so the tick below can still move the rest of the world but
+      // never chases away the person the child just walked toward ("they
+      // ran away from my tap" was the bug). A hold releases when a later
+      // arrival lands out of reach. Distances use the figure-position
+      // truth the renderer draws (stand anchor + NPC_STAND_OFFSET + spot
+      // offset + jitter).
+      const arrivalPos = getAnchorOrNull(WORLD, anchor);
+      if (arrivalPos !== null) {
+        const t = worldTimeRef.current;
+        for (const npc of WORLD.npcDefinitions) {
+          const stand = resolveNpcStand(WORLD, npc, heldTicks.current.get(npc.id) ?? t);
+          const standAnchor = getAnchorOrNull(WORLD, stand.anchorId);
+          if (standAnchor === null) continue;
+          const jitter = npcFigureJitter(WORLD, npc.id);
+          const dx = standAnchor.x + NPC_STAND_OFFSET.x + stand.offsetX + jitter.x - arrivalPos.x;
+          const dz = standAnchor.z + NPC_STAND_OFFSET.z + stand.offsetZ + jitter.z - arrivalPos.z;
+          if (dx * dx + dz * dz <= APPROACH_RADIUS * APPROACH_RADIUS) {
+            if (!heldTicks.current.has(npc.id)) heldTicks.current.set(npc.id, t);
+          } else {
+            heldTicks.current.delete(npc.id);
+          }
+        }
+        setNpcStandTicks(new Map(heldTicks.current));
+      }
       if (!skipTick) {
         worldTimeRef.current += 1;
         setWorldTime(worldTimeRef.current);
@@ -335,7 +374,12 @@ export function App() {
       // Arriving never opens dialogue — walking and talking are separate
       // actions. Whoever stands at the anchor just notices the child: a
       // brief non-verbal cue (turn/bounce), no card.
-      const present = npcStandingAt(WORLD, anchor, worldTimeRef.current);
+      const present =
+        WORLD.npcDefinitions.find(
+          (npc) =>
+            resolveNpcStand(WORLD, npc, heldTicks.current.get(npc.id) ?? worldTimeRef.current)
+              .anchorId === anchor,
+        ) ?? null;
       // A walk the child started by tapping that same NPC already got its
       // acknowledgement — the greet IS the arrival cue; a notices-child on
       // top would be a competing second reaction.
@@ -378,10 +422,13 @@ export function App() {
       }
       const npc = getNpcOrNull(WORLD, npcId);
       if (!npc) return;
-      const anchor = resolveNpcStand(WORLD, npc, worldTimeRef.current).anchorId;
+      // Resolve the stand at the figure's own effective tick — a held NPC
+      // is talked to at the spot the child sees it on.
+      const npcTick = heldTicks.current.get(npc.id) ?? worldTimeRef.current;
+      const anchor = resolveNpcStand(WORLD, npc, npcTick).anchorId;
       // Capture the right entry now (quest offer outranks routine flavour)
       // so the walk itself cannot change which line the child hears.
-      const node = nodeForNpc(npc, worldTimeRef.current, statuses);
+      const node = nodeForNpc(npc, npcTick, statuses);
       const open = () => {
         skipArrivalTick.current = false;
         openNpc(node);
@@ -411,7 +458,10 @@ export function App() {
       const npc = getNpcOrNull(WORLD, definition.steps[0]?.npcId ?? 'npc-elder');
       // Walk to where the NPC actually stands now (their routine spot), not
       // their home anchor — the camera lands on them, not an empty spot.
-      const anchorId = npc ? resolveNpcStand(WORLD, npc, worldTimeRef.current).anchorId : null;
+      const anchorId = npc
+        ? resolveNpcStand(WORLD, npc, heldTicks.current.get(npc.id) ?? worldTimeRef.current)
+            .anchorId
+        : null;
       // A quest chip is navigation, not conversation: walk there and stop.
       // Talking stays the child's choice — a tap on the person opens it.
       if (anchorId) hubRef.current?.goTo(anchorId);
@@ -601,6 +651,7 @@ export function App() {
           onArrive={onArrive}
           onNpcTap={onNpcTap}
           worldTime={worldTime}
+          npcStandTicks={npcStandTicks}
           arrivalNonce={arrivalNonce}
           onContextLost={() => dispatch({ type: 'WEBGL_AVAILABILITY_CHANGED', available: false })}
           handleRef={hubRef}

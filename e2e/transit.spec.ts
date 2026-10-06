@@ -7,9 +7,11 @@ import { npcProbe, tapWorldAnchor, waitForProbe } from './npcTap.ts';
  * Routine relocations must be walked, never teleported: an arrival ticks
  * the world clock and an NPC whose resolved stand moves must physically
  * travel the difference — "she is going over there", not "she vanished".
- * Sara cycles [hill, park, hill-offsets] around the park; her resolved
- * *position* moves on EVERY tick (the two hill spots differ by ~1.5 u of
- * stand offset), so any one arrival while she is mounted relocates her.
+ * The teacher cycles [class, yard, class-turned] between two anchors ~2.7u
+ * apart; the school/home tick anchors all sit >3u from every one of her
+ * stands, so arrivals there tick the clock without ever holding her
+ * (figures hold their spot while the child is beside them — that hold is
+ * why Sara can't be the subject here: every park anchor is beside her).
  *
  * The trail recorder runs inside the page at 30 ms and tags each sample
  * with the resolved position — a post-hoc read races the ~1 s stroll, and
@@ -70,7 +72,12 @@ function dist(a: { x: number; z: number }, b: { x: number; z: number }) {
  * retry the hop until the resolved spot provably moved.
  */
 async function tickUntilMoved(page: Page, npcId: string, before: { x: number; z: number }) {
-  const destinations: AnchorId[] = ['anchor-path-west-far', 'anchor-park'];
+  // Ticks must come from arrivals OUT of the teacher's reach: landing
+  // within ~3u of her stand holds her in place (people don't stroll away
+  // from a visitor — that hold is the regression fix this file co-exists
+  // with). Both anchors stay >3u from every teacher stand and keep the
+  // school mounted, so each hop ticks the clock and she relocates.
+  const destinations: AnchorId[] = ['anchor-path-north-east', 'anchor-home-gate'];
   for (let i = 0; i < 6; i += 1) {
     await tapWorldAnchor(page, destinations[i % destinations.length]!);
     const moved = await expect
@@ -95,16 +102,16 @@ test.describe('NPC transit — relocations walk, never teleport', () => {
     await startGame(page);
     await waitForProbe(page);
 
-    // Walk into the park — Sara mounts at her current-tick stand.
-    await tapWorldAnchor(page, 'anchor-park');
-    const saraBefore = await npcProbe(page, 'npc-child-sara');
-    expect(saraBefore).not.toBeNull();
-    const before = { x: saraBefore!.x, z: saraBefore!.z };
+    // Walk into the school — the teacher mounts at her current-tick stand.
+    await tapWorldAnchor(page, 'anchor-path-north-east');
+    const teacherBefore = await npcProbe(page, 'npc-teacher');
+    expect(teacherBefore).not.toBeNull();
+    const before = { x: teacherBefore!.x, z: teacherBefore!.z };
 
-    await startTrail(page, 'npc-child-sara');
-    await tickUntilMoved(page, 'npc-child-sara', before);
-    const saraAfter = await npcProbe(page, 'npc-child-sara');
-    const resolved = { x: saraAfter!.x, z: saraAfter!.z };
+    await startTrail(page, 'npc-teacher');
+    await tickUntilMoved(page, 'npc-teacher', before);
+    const teacherAfter = await npcProbe(page, 'npc-teacher');
+    const resolved = { x: teacherAfter!.x, z: teacherAfter!.z };
 
     // Let the stroll finish, then read the trail. Post-flip samples are
     // the ones recorded after the resolved spot moved.
@@ -129,13 +136,13 @@ test.describe('NPC transit — relocations walk, never teleport', () => {
     await startGame(page);
     await waitForProbe(page);
 
-    await tapWorldAnchor(page, 'anchor-park');
-    const saraBefore = await npcProbe(page, 'npc-child-sara');
-    const before = { x: saraBefore!.x, z: saraBefore!.z };
-    await startTrail(page, 'npc-child-sara');
-    await tickUntilMoved(page, 'npc-child-sara', before);
-    const saraAfter = await npcProbe(page, 'npc-child-sara');
-    const resolved = { x: saraAfter!.x, z: saraAfter!.z };
+    await tapWorldAnchor(page, 'anchor-path-north-east');
+    const teacherBefore = await npcProbe(page, 'npc-teacher');
+    const before = { x: teacherBefore!.x, z: teacherBefore!.z };
+    await startTrail(page, 'npc-teacher');
+    await tickUntilMoved(page, 'npc-teacher', before);
+    const teacherAfter = await npcProbe(page, 'npc-teacher');
+    const resolved = { x: teacherAfter!.x, z: teacherAfter!.z };
     await page.waitForTimeout(500);
     const trail = await stopTrail(page);
     const postFlip = trail.filter(

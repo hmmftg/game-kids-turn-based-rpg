@@ -134,6 +134,9 @@ export interface WorldCanvasProps {
   readonly onNpcTap?: (npcId: string) => void;
   /** Coarse world clock driving NPC routines (ticks once per arrival). */
   readonly worldTime?: number;
+  /** Per-NPC routine holds: figures the child is standing beside keep this
+      frozen tick instead of `worldTime` (same resolveNpcStand truth). */
+  readonly npcStandTicks?: ReadonlyMap<string, number>;
   /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
   readonly attention?: NpcAttention | null;
   /** Arrival identity — increments once per avatar arrival; arrival-driven
@@ -165,6 +168,7 @@ export function WorldCanvas({
   onArrive,
   onNpcTap,
   worldTime,
+  npcStandTicks,
   attention,
   arrivalNonce,
   revealedFinds,
@@ -276,6 +280,7 @@ export function WorldCanvas({
               onArrive={onArrive}
               onNpcTap={onNpcTap}
               worldTime={worldTime}
+              npcStandTicks={npcStandTicks}
               attention={attention}
               arrivalNonce={arrivalNonce}
               revealedFinds={revealedFinds}
