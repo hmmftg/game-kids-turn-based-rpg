@@ -27,7 +27,10 @@ export default defineConfig({
   ],
   build: {
     target: 'es2022',
-    sourcemap: false,
+    // Hidden sourcemaps: emitted for error-reporting tooling but not
+    // advertised via sourceMappingURL — no accidental prod exposure,
+    // and check-budgets already excludes .map from the transfer count.
+    sourcemap: 'hidden',
     assetsInlineLimit: 0,
     rollupOptions: {
       output: {

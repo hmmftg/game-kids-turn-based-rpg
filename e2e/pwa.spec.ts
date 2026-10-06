@@ -55,4 +55,39 @@ test.describe('PWA lifecycle', () => {
     await page.reload();
     await expect(page.getByTestId('start-button')).toBeVisible();
   });
+
+  test('a corrupted save is quarantined and boot continues', async ({ page }) => {
+    test.setTimeout(120000);
+    // Seed garbage into the legacy save slot before first boot. parseSave
+    // must classify it as corrupt → health 'recovered' → title shows the
+    // parent-facing notice instead of crashing on the parse.
+    await page.goto('/');
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('mahalle-ye-mehrabani', 1);
+          open.onupgradeneeded = () => {
+            if (!open.result.objectStoreNames.contains('progress')) {
+              open.result.createObjectStore('progress');
+            }
+          };
+          open.onsuccess = () => {
+            const tx = open.result.transaction('progress', 'readwrite');
+            tx.objectStore('progress').put({ notASave: true, junk: '{{{' }, 'save');
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(new Error('seed failed'));
+          };
+          open.onerror = () => reject(new Error('open failed'));
+        }),
+    );
+    await page.reload();
+    // Boot must continue to a playable title with the corrupt-save notice —
+    // parents will not debug storage errors.
+    await expect(page.getByTestId('start-button')).toBeVisible();
+    await expect(page.getByText('پیشرفت قبلی خوانده نشد. می‌توانی از اول شروع کنی.')).toBeVisible();
+    await page.getByTestId('start-button').click();
+    await page.getByTestId('avatar-aban').click();
+    await page.getByTestId('headwear-next').click();
+    await expect(page.getByTestId('hud')).toBeVisible();
+  });
 });
