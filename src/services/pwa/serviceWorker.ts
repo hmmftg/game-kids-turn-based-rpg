@@ -1,8 +1,8 @@
 /**
  * Service-worker lifecycle.
  *
- * The update prompt is *offered* here but only *applied* by the UI from the
- * title or pause screen, so a child is never interrupted mid-encounter.
+ * The update prompt is *offered* here but only *applied* by the UI inside the
+ * gated parent area, so a child is never interrupted mid-encounter.
  */
 export type CacheStatus = 'unsupported' | 'caching' | 'ready' | 'failed';
 
