@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Ref, type RefObject } from 'react';
+import { useEffect, useRef, useState, type Ref, type RefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
@@ -21,9 +21,10 @@ import { noRaycast } from './models/raycast.ts';
 import { getMap } from './maps.ts';
 import { CaveWorld } from './CaveWorld.tsx';
 import { CameraRig } from './CameraRig.tsx';
-import { zoomForMap } from './camera.ts';
+import { clampUserZoom, USER_ZOOM_MAX, USER_ZOOM_MIN, zoomForMap } from './camera.ts';
 import type { NpcAttention } from './sceneBits.tsx';
 import type { WorldDiag } from './diagnostics.ts';
+import { FA } from '../content/fa/strings.ts';
 
 /** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
 let canvasInstanceCounter = 0;
@@ -181,6 +182,9 @@ export function WorldCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneAlive = useRef(false);
   const zoom = zoomForMap(world, mapId);
+  // Child-facing zoom factor (PR T): session-only presentation state — a
+  // projection multiplier on the camera, never persisted, never world state.
+  const [zoomFactor, setZoomFactor] = useState(1);
   // The quality tier is the only quality system; the world only derives how
   // much decoration it draws from it, never a different render pipeline.
   const detailLevel = detailLevelFor(qualityTier);
@@ -236,7 +240,13 @@ export function WorldCanvas({
         {/* Follow-camera: tracks the avatar, clamped to this map's bounds.
             `key` remounts it per map so a transition snaps to the new
             spawn instead of easing from stale cross-map coordinates. */}
-        <CameraRig key={mapId} world={world} mapId={mapId} />
+        <CameraRig
+          key={mapId}
+          world={world}
+          mapId={mapId}
+          zoomFactor={zoomFactor}
+          onZoomFactor={(factor) => setZoomFactor(clampUserZoom(factor))}
+        />
         {/* Atmosphere comes from the map's EnvironmentDefinition — a cave
             swaps the sky+haze for a closed dark look without new code. */}
         {env.fog ? <fog attach="fog" args={[env.fog.color, env.fog.near, env.fog.far]} /> : null}
@@ -291,6 +301,35 @@ export function WorldCanvas({
         </ModelContext.Provider>
         {overlays}
       </Canvas>
+      {/* Zoom controls (PR T): DOM chrome inside .world so RTL/order stays
+        in the DOM layer. Buttons clamp at the 0.75–1.35 band — at a limit
+        the button reads as a picture, not a verb. */}
+      <div className="world__zoom">
+        <button
+          type="button"
+          className="btn btn--secondary world__zoom-btn"
+          data-testid="zoom-out"
+          aria-label={FA.zoomOut}
+          disabled={zoomFactor <= USER_ZOOM_MIN}
+          onClick={() => setZoomFactor((f) => clampUserZoom(f - 0.1))}
+        >
+          <span className="emoji" aria-hidden="true">
+            🔍➖
+          </span>
+        </button>
+        <button
+          type="button"
+          className="btn btn--secondary world__zoom-btn"
+          data-testid="zoom-in"
+          aria-label={FA.zoomIn}
+          disabled={zoomFactor >= USER_ZOOM_MAX}
+          onClick={() => setZoomFactor((f) => clampUserZoom(f + 0.1))}
+        >
+          <span className="emoji" aria-hidden="true">
+            🔍➕
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
