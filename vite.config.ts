@@ -9,20 +9,18 @@ const APP_VERSION =
   ).version ?? '0.0.0';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { DEFAULT_RESEARCH_API_URL } from './src/services/research/defaultEndpoint.ts';
 
 // Offline-first, same-origin only. No CDN, analytics or remote font is allowed at runtime.
-// The ONE sanctioned exception: the PocketBase research endpoint — when
-// VITE_RESEARCH_API_URL is set at build time its ORIGIN is added to
-// connect-src. Nothing else may reach the network.
+// The ONE sanctioned exception: the PocketBase research endpoint — its
+// ORIGIN (VITE_RESEARCH_API_URL at build time, else the built-in default)
+// is added to connect-src. Nothing else may reach the network.
 const researchCspPlugin = (mode: string): Plugin => ({
   name: 'research-csp',
   transformIndexHtml(html) {
-    const endpoint = loadEnv(
-      mode,
-      process.cwd(),
-      'VITE_RESEARCH_API_URL',
-    ).VITE_RESEARCH_API_URL?.trim();
-    if (endpoint === undefined || endpoint === '') return html;
+    const endpoint =
+      loadEnv(mode, process.cwd(), 'VITE_RESEARCH_API_URL').VITE_RESEARCH_API_URL?.trim() ||
+      DEFAULT_RESEARCH_API_URL;
     // A bare host is a common Actions-Variable typo — assume https. Anything
     // still malformed fails the build loudly, with the value quoted.
     const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`;

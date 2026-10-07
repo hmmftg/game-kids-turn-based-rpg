@@ -14,7 +14,7 @@ import {
 
 async function startGame(page: Page) {
   await enableWorldProbe(page);
-  await page.goto('/');
+  await page.goto('/?research=0');
   await page.getByTestId('start-button').click();
   await page.getByTestId('avatar-aban').click();
   await page.getByTestId('headwear-next').click();

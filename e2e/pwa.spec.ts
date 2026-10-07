@@ -21,7 +21,7 @@ test.describe('PWA lifecycle', () => {
     // must offer the saved profile, and the world must be playable.
     const fresh = await context.newPage();
     await enableWorldProbe(fresh); // init scripts are per-page, not per-context
-    await fresh.goto('/');
+    await fresh.goto('/?research=0');
     await resumeFromPicker(fresh);
     await expect(fresh.getByTestId('hud')).toBeVisible();
     await playQuest(fresh, 'quest-greeting');
@@ -44,7 +44,7 @@ test.describe('PWA lifecycle', () => {
       };
       Object.defineProperty(window, 'indexedDB', { value: broken });
     });
-    await page.goto('/');
+    await page.goto('/?research=0');
     await page.getByTestId('start-button').click();
     await page.getByTestId('avatar-aban').click();
     await page.getByTestId('headwear-next').click();
@@ -61,7 +61,7 @@ test.describe('PWA lifecycle', () => {
     // Seed garbage into the legacy save slot before first boot. parseSave
     // must classify it as corrupt → health 'recovered' → title shows the
     // parent-facing notice instead of crashing on the parse.
-    await page.goto('/');
+    await page.goto('/?research=0');
     await page.evaluate(
       () =>
         new Promise<void>((resolve, reject) => {

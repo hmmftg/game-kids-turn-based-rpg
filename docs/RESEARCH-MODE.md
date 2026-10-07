@@ -6,11 +6,12 @@ no names, photos, audio, raw touch coordinates, IP addresses, or accounts.
 
 ## Enabling
 
-`/?research=1` or `/?mode=research` — both equivalent. The flag alone records
-**nothing**: `ResearchGate` renders in place of the game until a parent reads
-the consent copy, picks the child's age band (`3-4` / `5-7`), and taps
-`research-start`, or exits to the normal build (the flag is stripped and the
-page reloads).
+**Default-on**: every fresh launch presents `ResearchGate` in place of the
+game — a parent reads the consent copy, picks the child's age band
+(`3-4` / `5-7`), and taps `research-start`, or exits to the normal build
+(`?research=0` is set and the page reloads — the session opt-out).
+`?research=1` / `?mode=research` remain accepted spellings. The gate itself
+records **nothing**; recording starts only on consent.
 
 ## Event vocabulary (`src/domain/research/types.ts`)
 
@@ -59,9 +60,11 @@ blocks play.
 ## Evidence export
 
 Parent area → 🔬 section: pending count, **export JSON** (downloads
-`research-<sessionId>.json` — the offline-session path), and **upload** shown
-only when `VITE_RESEARCH_API_URL` was set at build time. The endpoint is a
-PocketBase base URL (e.g. `https://xpvemwbxjn.lexoyacloud.ir`): the flush
+`research-<sessionId>.json` — the offline-session path), and **upload**. The
+endpoint is a PocketBase base URL — `VITE_RESEARCH_API_URL` at build time
+overrides the built-in `DEFAULT_RESEARCH_API_URL`
+(`src/services/research/defaultEndpoint.ts`, currently
+`https://xpvemwbxjn.lexoyacloud.ir`): the flush
 posts each queued event as a `research_events` record (`POST
 <base>/api/collections/research_events/records`; `/api/batch` rejects
 anonymous requests), clearing the local queue only when every record lands —
@@ -85,8 +88,11 @@ identifiers, IP, names, accounts. Repeated-action detection compares
 
 - `src/services/research/recorder.test.ts` — inert-before-consent, context
   stamping, dead-tap semantics, repeat window.
-- `e2e/research.spec.ts` — gate blocks recording, exit strips the flag,
-  started session emits `started_game` + `selected_avatar` into IndexedDB.
+- `e2e/research.spec.ts` — a plain launch shows the gate (default-on), exit
+  sets `?research=0` and records nothing, a started session emits
+  `started_game` + `selected_avatar` into IndexedDB.
+- Every other e2e spec opts out via `withoutResearch()` in `e2e/harness.ts`
+  (`?research=0` injected unless the URL already carries `research=`).
 
 Feeds `docs/PR-S-DECISION-MEMO.md` evidence rows; observation sheets stay
 manual (delight signals can't be inferred from events).
@@ -95,7 +101,6 @@ manual (delight signals can't be inferred from events).
 
 The same PocketBase endpoint hosts a `parent_feedback` collection (anonymous
 create, superuser read; provisioned alongside `research_events`). The parent
-area shows a «ارسال بازخورد» textarea whenever the endpoint is configured —
-the message posts immediately (`submitParentFeedback`), never queued, and
-shows sent/failed status. Consent note: this is parent-authored free text,
+area shows a «ارسال بازخورد» textarea — the message posts immediately
+(`submitParentFeedback`), never queued, and shows sent/failed status. Consent note: this is parent-authored free text,
 not recorded gameplay data — no consent gate applies.

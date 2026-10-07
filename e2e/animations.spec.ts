@@ -34,7 +34,7 @@ const TOWN_QUESTS: readonly QuestId[] = [
   'quest-bread-errand',
 ];
 
-const MODE_B_URL = '/?kidtest=nocopy,noactionicons';
+const MODE_B_URL = '/?kidtest=nocopy,noactionicons&research=0';
 
 async function resetAnimations(page: Page) {
   await page.evaluate(() => {

@@ -1,11 +1,12 @@
 import type { ResearchEvent } from '../../domain/research/types.ts';
 import { openDatabase, RESEARCH_STORE } from '../persistence/indexedDbRepository.ts';
+import { DEFAULT_RESEARCH_API_URL } from './defaultEndpoint.ts';
 
 /**
  * Local-first research event queue (PR R+). Same IndexedDB database as the
  * save store, its own `researchEvents` object store — offline by default,
- * exported by the parent as JSON, optionally uploaded when an endpoint is
- * configured via `VITE_RESEARCH_API_URL` at build time.
+ * exported by the parent as JSON, uploaded to the PocketBase endpoint —
+ * `VITE_RESEARCH_API_URL` at build time, else DEFAULT_RESEARCH_API_URL.
  *
  * Failure posture mirrors the save layer: when IndexedDB is unavailable the
  * queue degrades to session-only memory — research never blocks play.
@@ -69,7 +70,8 @@ export async function clearResearchEvents(): Promise<void> {
   await request(tx.objectStore(RESEARCH_STORE).clear());
 }
 
-const rawEndpoint = (import.meta.env.VITE_RESEARCH_API_URL as string | undefined)?.trim() ?? null;
+const rawEndpoint =
+  (import.meta.env.VITE_RESEARCH_API_URL as string | undefined)?.trim() ?? DEFAULT_RESEARCH_API_URL;
 // A bare host is a common Actions-Variable typo — assume https (the CSP
 // plugin in vite.config.ts applies the same normalization); anything still
 // malformed disables the endpoint rather than emitting broken requests.
