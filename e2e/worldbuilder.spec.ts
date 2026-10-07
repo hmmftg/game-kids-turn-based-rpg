@@ -27,7 +27,7 @@ import {
  * against the production preview build like every other spec.
  */
 
-const BUILDER_URL = '/?worldbuilder=1';
+const BUILDER_URL = '/?worldbuilder=1&research=0';
 
 async function currentMap(page: Page) {
   return page.evaluate(() => (window as unknown as Record<string, unknown>).__worldMapId);

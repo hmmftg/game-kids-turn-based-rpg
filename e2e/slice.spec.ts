@@ -10,7 +10,7 @@ const QUESTS = QUEST_DEFINITIONS.filter((quest) => (quest.mapId ?? 'map-town') =
 
 async function startGame(page: Page, avatar: 'avatar-aban' | 'avatar-arta' = 'avatar-aban') {
   await enableWorldProbe(page);
-  await page.goto('/');
+  await page.goto('/?research=0');
   await page.getByTestId('start-button').click();
   await page.getByTestId(avatar).click();
   await page.getByTestId('headwear-next').click();

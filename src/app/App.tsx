@@ -161,12 +161,16 @@ export function App() {
   // `?diagnostics=1` — parent/dev gate (same pattern as ?worldbuilder=1):
   // publishes the live world handle and reveals the diagnostics HUD button.
   const diagnosticsEnabled = new URLSearchParams(window.location.search).get('diagnostics') === '1';
-  // `?research=1` / `?mode=research` — Research Session Mode (PR R+): the
-  // consent gate stands between the URL and the game; recording starts only
-  // when a parent starts a session. Never silently enabled.
+  // Research Session Mode (PR R+) is ON by default: every fresh launch
+  // presents the consent gate — recording still starts only when a parent
+  // starts a session, never silently. `?research=0` / `?mode=game` opts the
+  // session out (what the gate's exit button sets). Unit tests opt out via
+  // the test-mode build flag — the gate's e2e coverage lives in
+  // e2e/research.spec.ts.
   const [researchRequested] = useState(() => {
+    if (import.meta.env.MODE === 'test') return false;
     const params = new URLSearchParams(window.location.search);
-    return params.get('research') === '1' || params.get('mode') === 'research';
+    return params.get('research') !== '0' && params.get('mode') !== 'game';
   });
   const [researchConsent, setResearchConsent] = useState(isResearchActive());
   const noActionIcons = kidTestFlags.has('noactionicons');
@@ -488,8 +492,9 @@ export function App() {
           setResearchConsent(true);
         }}
         onExit={() => {
+          // Research is default-on — exiting marks this session opted out.
           const url = new URL(window.location.href);
-          url.searchParams.delete('research');
+          url.searchParams.set('research', '0');
           url.searchParams.delete('mode');
           window.location.assign(url.toString());
         }}

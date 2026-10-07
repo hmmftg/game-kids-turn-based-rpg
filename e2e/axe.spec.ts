@@ -29,7 +29,7 @@ async function expectNoViolations(page: Page, surface: string, scope?: string) {
 test.describe('axe — DOM surfaces', () => {
   test('profile picker and avatar creation', async ({ page }) => {
     await enableWorldProbe(page);
-    await page.goto('/');
+    await page.goto('/?research=0');
     await expectNoViolations(page, 'landing');
 
     await page.getByTestId('start-button').click();
@@ -41,7 +41,7 @@ test.describe('axe — DOM surfaces', () => {
 
   test('hub HUD, nearby sheet, and dialogue card', async ({ page }) => {
     await enableWorldProbe(page);
-    await page.goto('/');
+    await page.goto('/?research=0');
     await page.getByTestId('start-button').click();
     await page.getByTestId('avatar-aban').click();
     await page.getByTestId('headwear-next').click();
@@ -62,7 +62,7 @@ test.describe('axe — DOM surfaces', () => {
 
   test('pause menu and parent area gate', async ({ page }) => {
     await enableWorldProbe(page);
-    await page.goto('/');
+    await page.goto('/?research=0');
     await page.getByTestId('start-button').click();
     await page.getByTestId('avatar-aban').click();
     await page.getByTestId('headwear-next').click();

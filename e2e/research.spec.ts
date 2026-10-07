@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// PR R+ — Research Session Mode. The consent gate is the entry contract:
-// ?research=1 never records silently — a parent starts the session (or exits),
-// then ordinary play lands structured events in the researchEvents store.
+// PR R+ — Research Session Mode. Research is default-on: every fresh launch
+// presents the consent gate — never a silent record — and `?research=0`
+// (set by the gate's exit) opts the session out. Ordinary play after
+// consent lands structured events in the researchEvents store.
 
 const readEvents = (page: Page) =>
   page.evaluate(
@@ -24,14 +25,15 @@ const readEvents = (page: Page) =>
       }),
   );
 
-test('the consent gate stands between the flag and the game', async ({ page }) => {
-  await page.goto('/?research=1');
-  // No silent start: the gate explains collection before anything records.
+test('the consent gate stands between the launch and the game', async ({ page }) => {
+  // Default-on: a plain launch shows the gate before anything records.
+  await page.goto('/');
   await expect(page.getByTestId('research-gate')).toBeVisible();
   await expect(page.getByTestId('research-age-3-4')).toBeVisible();
   await expect(page.getByTestId('research-age-5-7')).toBeVisible();
-  // Exit strips the flag and lands on the normal build.
+  // Exit opts the session out (?research=0) and lands on the normal build.
   await page.getByTestId('research-exit').click();
+  expect(page.url()).toContain('research=0');
   await expect(page.getByTestId('start-button').or(page.getByTestId('profile-select'))).toBeVisible(
     { timeout: 20000 },
   );

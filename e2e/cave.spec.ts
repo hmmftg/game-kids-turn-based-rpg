@@ -10,7 +10,7 @@ async function startGame(page: Page) {
   await page.addInitScript(() => {
     (window as unknown as Record<string, unknown>)['__WORLD_PROBE'] = true;
   });
-  await page.goto('/');
+  await page.goto('/?research=0');
   await page.getByTestId('start-button').click();
   await page.getByTestId('avatar-aban').click();
   await page.getByTestId('headwear-next').click();

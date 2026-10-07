@@ -131,7 +131,7 @@ test.describe('mode B (kidtest=nocopy)', () => {
       'quest-finale',
     ]);
     // Seeded profile is now active; swap into Mode B without losing it.
-    await page.goto('/?kidtest=nocopy');
+    await page.goto('/?kidtest=nocopy&research=0');
     await resumeFromPicker(page);
 
     await playQuest(page, 'quest-park-kite');
@@ -154,7 +154,7 @@ test.describe('mode B (kidtest=nocopy)', () => {
       'quest-river-shell',
       'quest-bread-errand',
     ]);
-    await page.goto('/?kidtest=nocopy');
+    await page.goto('/?kidtest=nocopy&research=0');
     await resumeFromPicker(page);
 
     await openQuestDialogue(page, 'quest-school-answer');

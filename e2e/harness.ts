@@ -9,9 +9,14 @@ import { enableWorldProbe, openQuestDialogue } from './npcTap.ts';
 const DB_NAME = 'mahalle-ye-mehrabani';
 const SEEDED_PROFILE_ID = 'kid-seeded';
 
+/** Research Session Mode is default-on — e2e opts out unless the spec is
+ *  itself about research (an explicit research= in the URL wins). */
+export const withoutResearch = (url: string): string =>
+  url.includes('research=') ? url : `${url}${url.includes('?') ? '&' : '?'}research=0`;
+
 export async function startGame(page: Page, url = '/') {
   await enableWorldProbe(page);
-  await page.goto(url);
+  await page.goto(withoutResearch(url));
   await page.getByTestId('start-button').click();
   await page.getByTestId('avatar-aban').click();
   await page.getByTestId('headwear-next').click();
@@ -29,7 +34,7 @@ export async function resumeFromPicker(page: Page) {
  * reloads so the picker offers it — Mode-B prototypes skip the whole chain.
  */
 export async function seedCompletedQuests(page: Page, completed: QuestId[]) {
-  await page.goto('/');
+  await page.goto('/?research=0');
   await page.evaluate(
     async ({ done, dbName, profileId }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {

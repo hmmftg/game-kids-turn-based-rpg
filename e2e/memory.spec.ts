@@ -28,7 +28,7 @@ test.describe('fact-derived world memory', () => {
   }) => {
     await enableWorldProbe(page);
     await seedCompletedQuests(page, ['quest-bread-errand']);
-    await page.goto('/');
+    await page.goto('/?research=0');
     await resumeFromPicker(page);
 
     // The crate was earned before this session even began — already there.
