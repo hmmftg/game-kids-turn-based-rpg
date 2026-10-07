@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
 import { activityPoseTransform, type NpcActivityPose, type NpcIdleCue } from './liveliness.ts';
 
@@ -45,6 +45,16 @@ function findEyes(root: THREE.Object3D): THREE.Mesh[] {
   });
   return eyes;
 }
+
+/** The named neck-pivot group `CubicFigure` wraps the head in — the glance
+    turns this node, never the body. */
+function findHead(root: THREE.Object3D): THREE.Object3D | null {
+  return root.getObjectByName('figure-head') ?? null;
+}
+
+/** Max head turn during a glance — past this the body should walk, not the
+    neck crane. */
+const MAX_HEAD_TURN = 0.85;
 
 /**
  * NPC idle cue + held activity pose. The inner pose group carries the static
@@ -143,28 +153,33 @@ export function AvatarLiveliness({
   const groupRef = useRef<THREE.Group>(null);
   const startedAt = useRef<number | null>(null);
   const eyesRef = useRef<THREE.Mesh[] | null>(null);
-  const heading = useRef(0);
+  const headRef = useRef<THREE.Object3D | null>(null);
+  const figureRef = useRef<THREE.Object3D | null>(null);
   const invalidate = useThree((state) => state.invalidate);
   const reduced = prefersReducedMotion();
 
   useEffect(() => {
     startedAt.current = null;
     if (arrivalNonce === 0 || reduced) return;
-    // Capture the rotation the wrapper currently holds so the glance eases
-    // from there toward the resolved heading, not from a snapped zero.
-    heading.current = groupRef.current?.rotation.y ?? 0;
     invalidate();
   }, [arrivalNonce, reduced, invalidate]);
 
   useFrame((frameState) => {
     const group = groupRef.current;
     if (!group) return;
-    if (eyesRef.current === null) eyesRef.current = findEyes(group);
+    if (eyesRef.current === null) {
+      eyesRef.current = findEyes(group);
+      headRef.current = findHead(group);
+      // The figure root carries the walker's yaw — the glance delta is
+      // measured against it, never against this wrapper (which stays put).
+      figureRef.current = group.getObjectByName('avatar') ?? null;
+    }
     const eyes = eyesRef.current;
+    const head = headRef.current;
 
     if (arrivalNonce === 0 || reduced) {
-      group.rotation.y = 0;
       group.scale.y = 1;
+      if (head) head.rotation.y = 0;
       for (const eye of eyes) eye.scale.y = 0.07;
       return;
     }
@@ -174,8 +189,8 @@ export function AvatarLiveliness({
       (SETTLE_SECONDS + GLANCE_SECONDS + BLINK_SECONDS);
     if (t >= 1) {
       startedAt.current = null;
-      group.rotation.y = 0;
       group.scale.y = 1;
+      if (head) head.rotation.y = 0;
       for (const eye of eyes) eye.scale.y = 0.07;
       return;
     }
@@ -185,20 +200,27 @@ export function AvatarLiveliness({
       // Arrival settle: a soft squash that recovers — landing, not bouncing.
       const s = Math.sin((elapsed / SETTLE_SECONDS) * Math.PI);
       group.scale.y = 1 - s * 0.12;
-      group.rotation.y = 0;
-    } else if (elapsed < SETTLE_SECONDS + GLANCE_SECONDS && glanceHeading !== null) {
-      // Glance out and back toward the resolved heading — the look self-restores.
+      if (head) head.rotation.y = 0;
+    } else if (elapsed < SETTLE_SECONDS + GLANCE_SECONDS && glanceHeading !== null && head) {
+      // Glance out and back — the HEAD turns toward the resolved heading
+      // (clamped to a believable neck angle), the body keeps its walk yaw.
       const s = Math.sin(((elapsed - SETTLE_SECONDS) / GLANCE_SECONDS) * Math.PI);
       group.scale.y = 1;
-      group.rotation.y = angleDelta(heading.current, glanceHeading) * s * 0.7;
+      const figureYaw = figureRef.current?.rotation.y ?? 0;
+      const delta = THREE.MathUtils.clamp(
+        angleDelta(figureYaw, glanceHeading),
+        -MAX_HEAD_TURN,
+        MAX_HEAD_TURN,
+      );
+      head.rotation.y = delta * s;
     } else if (elapsed < SETTLE_SECONDS + GLANCE_SECONDS) {
       group.scale.y = 1;
-      group.rotation.y = 0;
+      if (head) head.rotation.y = 0;
     } else {
       // Blink close: eyes dip once as the flourish ends.
       const s = Math.sin(((elapsed - SETTLE_SECONDS - GLANCE_SECONDS) / BLINK_SECONDS) * Math.PI);
       group.scale.y = 1;
-      group.rotation.y = 0;
+      if (head) head.rotation.y = 0;
       for (const eye of eyes) eye.scale.y = 0.07 * (1 - s * 0.9);
     }
     invalidate();
