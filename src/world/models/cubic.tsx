@@ -462,8 +462,9 @@ function RoleDetails({
       );
     case 'avatar':
       return (
+        // The face lives inside `figure-head` so the glance turns it with
+        // the head — body-level details stay on the body.
         <>
-          <Face lift={lift} level={level} />
           <Detail level={level} min={2}>
             {/* shoes */}
             <mesh
@@ -485,6 +486,9 @@ function RoleDetails({
       );
   }
 }
+
+/** Neck height the `figure-head` group pivots around (avatar glance). */
+const HEAD_PIVOT_Y = 0.95;
 
 /**
  * A cubic character: body, head and two legs built from the shared box and
@@ -541,19 +545,27 @@ export function CubicFigure({
         scale={[0.56, 0.46, 0.4]}
         raycast={noRaycast}
       />
-      <mesh
-        geometry={detailLevel >= 2 ? SPHERE : BOX}
-        material={head}
-        position={[0, 1.14 + lift, 0]}
-        scale={[0.42, 0.38, 0.38]}
-        raycast={noRaycast}
-      />
+      {/* The head pivots as one unit at the neck — the avatar's arrival
+        glance turns this group, not the body. The inner offset group keeps
+        every head part's authored absolute height unchanged. */}
+      <group name="figure-head" position={[0, HEAD_PIVOT_Y, 0]}>
+        <group position={[0, -HEAD_PIVOT_Y, 0]}>
+          <mesh
+            geometry={detailLevel >= 2 ? SPHERE : BOX}
+            material={head}
+            position={[0, 1.14 + lift, 0]}
+            scale={[0.42, 0.38, 0.38]}
+            raycast={noRaycast}
+          />
+          {role === 'avatar' ? <Face lift={lift} level={detailLevel} /> : null}
+          <Headwear id={headwear} lift={lift} />
+          {/* Covered heads skip hair entirely — headwear replaces the silhouette. */}
+          {role === 'avatar' && headwear === 'none' && hairStyle ? (
+            <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
+          ) : null}
+        </group>
+      </group>
       {role !== undefined ? <RoleDetails role={role} lift={lift} level={detailLevel} /> : null}
-      <Headwear id={headwear} lift={lift} />
-      {/* Covered heads skip hair entirely — headwear replaces the silhouette. */}
-      {role === 'avatar' && headwear === 'none' && hairStyle ? (
-        <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
-      ) : null}
     </group>
   );
 }
