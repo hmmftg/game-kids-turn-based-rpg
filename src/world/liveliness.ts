@@ -1,4 +1,4 @@
-import type { NpcSimState } from '../domain/world/types.ts';
+import type { DiscoveryId, NpcSimState } from '../domain/world/types.ts';
 import type { QuestId, QuestStatus } from '../domain/game/types.ts';
 import { nextSeed, seedUnit } from './critters.ts';
 
@@ -90,7 +90,9 @@ export interface NpcPresentation {
 
 interface FactPresentation {
   readonly npcId: string;
-  readonly questId: QuestId;
+  /** The persisted world fact this row answers to: a completed quest or a
+      recorded discovery — one fact source, one table. */
+  readonly fact: QuestId | DiscoveryId;
   readonly attentionContext: 'greets-child';
   readonly pose: NpcActivityPose;
 }
@@ -102,7 +104,27 @@ const NPC_FACT_PRESENTATION: readonly FactPresentation[] = [
   // friend now (wave on approach + a brighter bearing).
   {
     npcId: 'npc-baker',
-    questId: 'quest-bread-errand',
+    fact: 'quest-bread-errand',
+    attentionContext: 'greets-child',
+    pose: 'happy',
+  },
+  // Solved Challenge Zone opponents greet the child warmly and settle into
+  // a relaxed pose — the battle was a game they enjoyed, not a defeat.
+  {
+    npcId: 'npc-challenge-bird',
+    fact: 'discovery-challenge-bird',
+    attentionContext: 'greets-child',
+    pose: 'happy',
+  },
+  {
+    npcId: 'npc-challenge-eagle',
+    fact: 'discovery-challenge-eagle',
+    attentionContext: 'greets-child',
+    pose: 'resting',
+  },
+  {
+    npcId: 'npc-challenge-butterfly',
+    fact: 'discovery-challenge-butterfly',
     attentionContext: 'greets-child',
     pose: 'happy',
   },
@@ -110,14 +132,24 @@ const NPC_FACT_PRESENTATION: readonly FactPresentation[] = [
 
 const NEUTRAL_PRESENTATION: NpcPresentation = { attentionContext: 'notices-child' };
 
-/** Resolve one NPC's presentation from persisted facts. Pure and total:
-    unknown NPCs and unmet facts always yield the neutral presentation. */
+/**
+ * Resolve one NPC's presentation from persisted facts. Pure and total:
+ * unknown NPCs and unmet facts always yield the neutral presentation.
+ * Every consumer (arrival attention in App, figure pose in Hub and
+ * ChallengeWorld) resolves through THIS function — no component tests
+ * `discoveries.includes(...)` itself to derive an NPC's emotional state.
+ */
 export function resolveNpcPresentation(
   npcId: string,
   statuses: Record<QuestId, QuestStatus>,
+  discoveries: readonly DiscoveryId[],
 ): NpcPresentation {
   for (const row of NPC_FACT_PRESENTATION) {
-    if (row.npcId === npcId && statuses[row.questId] === 'completed') {
+    if (row.npcId !== npcId) continue;
+    const met = row.fact.startsWith('quest-')
+      ? statuses[row.fact as QuestId] === 'completed'
+      : discoveries.includes(row.fact as DiscoveryId);
+    if (met) {
       return { attentionContext: row.attentionContext, pose: row.pose };
     }
   }

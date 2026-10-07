@@ -478,7 +478,7 @@ export function Hub({
         // Fact-derived warmth overrides the routine pose — a friend
         // stands brighter than the schedule asks (docs/LIVING-WORLD.md).
         pose:
-          resolveNpcPresentation(npc.id, questStatuses).pose ??
+          resolveNpcPresentation(npc.id, questStatuses, discoveries).pose ??
           activityPoseFor(resolveNpcActivity(npc, npcTick)),
       },
     ];

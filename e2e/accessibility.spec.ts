@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { startGame } from './harness.ts';
-import { tapWorldAnchor, worldPoints, playerAt, waitForWalkerIdle } from './npcTap.ts';
+import {
+  tapWorldAnchor,
+  worldPoints,
+  playerAt,
+  waitForWalkerIdle,
+  walkToChallengeZone,
+} from './npcTap.ts';
 
 /**
  * PR N1 — the DOM accessibility route for world interactions: the same
@@ -29,9 +35,12 @@ test.describe('nearby sheet — DOM route for figure taps', () => {
   });
 
   test('the same route reaches the battle critter — same command path', async ({ page }) => {
+    test.setTimeout(240000);
     await startGame(page);
 
-    // The playful mouse stands ~5u from spawn — inside the sheet's cap.
+    // The playful mouse lives in the Challenge Zone — walk in, then the
+    // sheet lists it like any other friend on the map.
+    await walkToChallengeZone(page);
     await page.getByTestId('nearby-button').click();
     const mouseRow = page.getByTestId('nearby-npc-playful-mouse');
     await expect(mouseRow).toBeVisible();

@@ -221,7 +221,8 @@ hiding — recorded only in the `__worldReactions` probe and session state.
   `localStorage` write, world-state bag, or event log.
 - **Persistent memory** — resolved, never stored. Completing a quest is a
   saved fact the world already has; `resolveNpcPresentation(npcId,
-questStatuses)` (`liveliness.ts`) maps it onto presentation deltas for
+questStatuses, discoveries)` (`liveliness.ts`) maps any persisted fact —
+  quest status or discovery — onto presentation deltas for
   one NPC (the baker greets the child like a friend — `greets-child` +
   `happy` pose instead of a stranger's notice), and `FACT_DECORATIONS`
   (`decorations.ts`) renders earned objects beside the landmark they belong

@@ -445,6 +445,21 @@ export async function tapReactivePoint(page: Page, x: number, z: number, y = 0) 
 }
 
 /**
+ * The Challenge Zone journey, taps only: town → cave entrance (reveal →
+ * enter) → deep tunnel (reveal → cross). Ends on map-challenge.
+ */
+export async function walkToChallengeZone(page: Page) {
+  const mapId = () => page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
+  const waitMap = (id: string) => expect.poll(mapId, { timeout: 30000 }).toBe(id);
+  await tapWorldAnchor(page, 'anchor-cave-entrance'); // reveal the rock
+  await tapWorldAnchor(page, 'anchor-cave-entrance'); // step inside
+  await waitMap('map-cave');
+  await tapWorldAnchor(page, 'anchor-cave-tunnel'); // reveal the tunnel
+  await tapWorldAnchor(page, 'anchor-cave-tunnel'); // walk through
+  await waitMap('map-challenge');
+}
+
+/**
  * Taps a world anchor like a child's finger. The follow camera means a far
  * anchor may sit outside the viewport — exactly like a kid, the helper then
  * walks hop-by-hop along the authored path until the target is in view.

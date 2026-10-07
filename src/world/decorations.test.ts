@@ -70,7 +70,9 @@ describe('HIDDEN_FINDS (Delight PR 3)', () => {
   });
 
   it('every find sits near a walkable anchor — a child can actually get to it', () => {
-    const walkable = ANCHORS.filter((a) => a.walkable);
+    // Finds live on map-town — nearby-anchor distance is per-map: an anchor
+    // on another map sharing local coordinates is not "reachable ground".
+    const walkable = ANCHORS.filter((a) => a.walkable && a.mapId === 'map-town');
     for (const find of HIDDEN_FINDS) {
       const nearest = Math.min(...walkable.map((a) => Math.hypot(a.x - find.x, a.z - find.z)));
       expect(nearest).toBeLessThan(2.5);

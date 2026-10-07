@@ -51,6 +51,11 @@ Dependency rules (enforced by review, keep them true):
 - The placement table is 1↔1: every `NpcDefinition` has exactly one
   placement, every anchor has at most one home placement. Omission is an
   invalid document — never "delete the NPC" or "use the runtime default".
+- Optional challenge-zone fields (`edge.requiresDiscoveryId`,
+  `transition.discoveryId`, `battle.victoryDiscoveryId`) are runtime content
+  the builder does not author; `parseDocument` tolerates their absence, so no
+  document-version bump is required. Discovery references validate against
+  `DISCOVERY_IDS` in the shipped-content validator.
 
 ## Validation
 

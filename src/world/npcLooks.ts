@@ -95,6 +95,23 @@ export const NPC_LOOKS: Readonly<Record<string, NpcLook>> = {
     hairStyle: 'short',
     hairColor: '#6e563e',
   },
+  // Challenge Zone opponents — truthful Animal variants, distinct palettes
+  // so the three never read as the same character.
+  'npc-challenge-bird': {
+    palette: { body: '#5d9bd4', head: '#8fbfe8', limb: '#3d6e9e' },
+    hairStyle: 'short',
+    hairColor: '#2f5a80',
+  },
+  'npc-challenge-eagle': {
+    palette: { body: '#8a5a3a', head: '#e8e0d4', limb: '#6b4230' },
+    hairStyle: 'short',
+    hairColor: '#4e3226',
+  },
+  'npc-challenge-butterfly': {
+    palette: { body: '#c98ae8', head: '#f0c8f8', limb: '#9a5ab8' },
+    hairStyle: 'short',
+    hairColor: '#7a4a94',
+  },
 };
 
 export function npcLook(npcId: NpcId): NpcLook {

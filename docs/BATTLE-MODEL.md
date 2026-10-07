@@ -71,12 +71,24 @@ failure — defeat only when the round limit expires.
   (`battleReducer` over `BattleState | null`) is the seam the game reducer
   delegates `START_BATTLE`/`CHOOSE_BATTLE_ACTION`/`ADVANCE_BATTLE_PHASE`/
   `LEAVE_BATTLE` to — same shape as the encounter delegation.
-- The playful mouse (`npc-playful-mouse`, fountain) is the MVP opponent —
-  `archetype: 'critter'`, rendered through the animal slot in `Hub.tsx`
-  like the cave mouse (a separate, untouched character). Its pattern is
-  all-`rest`: with 3 hearts in 3 rounds an `attack` round is mathematically
-  unwinnable, so the first battle teaches the ball; the `attack`/`shield`
-  rows stay in the model for future definitions.
+- The playful mouse (`npc-playful-mouse`) is the MVP opponent —
+  `archetype: 'critter'`, rendered through the animal slot in
+  `ChallengeWorld.tsx` (it moved to the Challenge Zone with the zone PR).
+  Its pattern is all-`rest`: with 3 hearts in 3 rounds an `attack` round is
+  mathematically unwinnable, so the first battle teaches the ball; the
+  `attack`/`shield` rows stay in the model for future definitions.
+- **Hearts ≤ 3 is a budget, not a constant.** Later opponents may run fewer
+  hearts to free pattern rounds: the three Challenge Zone opponents
+  (bird/eagle/butterfly) each take 2 hearts in 3 rounds with distinct intent
+  patterns (`[rest,attack,rest]`, `[attack,rest,rest]`, `[rest,rest,attack]`),
+  and the winnability validator still guarantees every definition is beatable.
+- **`victoryDiscoveryId`** on `BattleDefinition` turns a win into a persisted
+  world fact: `LEAVE_BATTLE` on a terminal victory is always a `stable()`
+  transition (autosave fires); when the definition carries a
+  `victoryDiscoveryId` not yet in `state.discoveries`, it is appended in the
+  same transition — one reducer pass, one save. Defeat and mid-battle leaves
+  keep the existing non-stable path. The recorded fact drives presentation
+  (`resolveNpcPresentation`) and gated edges, nothing else.
 
 ## UI surface (`src/ui/child/BattleScene.tsx`)
 

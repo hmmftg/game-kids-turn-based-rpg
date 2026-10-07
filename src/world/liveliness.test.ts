@@ -6,7 +6,7 @@ import {
   resolveNpcPresentation,
   type NpcActivityPose,
 } from './liveliness.ts';
-import type { NpcSimState } from '../domain/world/types.ts';
+import type { DiscoveryId, NpcSimState } from '../domain/world/types.ts';
 import type { QuestId, QuestStatus } from '../domain/game/types.ts';
 import { NPC_DEFINITIONS } from './registry.ts';
 
@@ -80,10 +80,11 @@ describe('idleCueFor', () => {
 describe('resolveNpcPresentation (Delight PR 4)', () => {
   const statuses = (done: Partial<Record<QuestId, QuestStatus>>) =>
     done as Record<QuestId, QuestStatus>;
+  const noDiscoveries: readonly DiscoveryId[] = [];
 
   it('is neutral for every NPC when no fact holds', () => {
     for (const npc of NPC_DEFINITIONS) {
-      expect(resolveNpcPresentation(npc.id, statuses({}))).toEqual({
+      expect(resolveNpcPresentation(npc.id, statuses({}), noDiscoveries)).toEqual({
         attentionContext: 'notices-child',
       });
     }
@@ -91,7 +92,11 @@ describe('resolveNpcPresentation (Delight PR 4)', () => {
 
   it('a completed errand turns the baker warm — greet + happy pose', () => {
     expect(
-      resolveNpcPresentation('npc-baker', statuses({ 'quest-bread-errand': 'completed' })),
+      resolveNpcPresentation(
+        'npc-baker',
+        statuses({ 'quest-bread-errand': 'completed' }),
+        noDiscoveries,
+      ),
     ).toEqual({ attentionContext: 'greets-child', pose: 'happy' });
   });
 
@@ -99,18 +104,60 @@ describe('resolveNpcPresentation (Delight PR 4)', () => {
     // The baker's quest merely active/available → still a stranger.
     for (const status of ['locked', 'available', 'active'] as const) {
       expect(
-        resolveNpcPresentation('npc-baker', statuses({ 'quest-bread-errand': status })),
+        resolveNpcPresentation(
+          'npc-baker',
+          statuses({ 'quest-bread-errand': status }),
+          noDiscoveries,
+        ),
       ).toEqual({ attentionContext: 'notices-child' });
     }
     // Someone else's completion doesn't warm the baker...
     expect(
-      resolveNpcPresentation('npc-baker', statuses({ 'quest-greeting': 'completed' })),
+      resolveNpcPresentation(
+        'npc-baker',
+        statuses({ 'quest-greeting': 'completed' }),
+        noDiscoveries,
+      ),
     ).toEqual({ attentionContext: 'notices-child' });
     // ...nor does the baker's fact warm anyone else.
     for (const npc of NPC_DEFINITIONS.filter((n) => n.id !== 'npc-baker')) {
       expect(
-        resolveNpcPresentation(npc.id, statuses({ 'quest-bread-errand': 'completed' })),
+        resolveNpcPresentation(
+          npc.id,
+          statuses({ 'quest-bread-errand': 'completed' }),
+          noDiscoveries,
+        ),
       ).toEqual({ attentionContext: 'notices-child' });
     }
+  });
+
+  it('fact precedence: quest fact → baker, discovery fact → opponent, neither/unknown → neutral', () => {
+    // The quest fact still works while discoveries carry the opponent fact —
+    // generalizing to `QuestId | DiscoveryId` must not drop quest
+    // presentation.
+    expect(
+      resolveNpcPresentation('npc-baker', statuses({ 'quest-bread-errand': 'completed' }), [
+        'discovery-challenge-bird',
+      ]),
+    ).toEqual({ attentionContext: 'greets-child', pose: 'happy' });
+    // A recorded challenge victory warms its opponent.
+    expect(
+      resolveNpcPresentation('npc-challenge-bird', statuses({}), ['discovery-challenge-bird']),
+    ).toEqual({ attentionContext: 'greets-child', pose: 'happy' });
+    // Before any fact: the opponent is a stranger, like everyone else.
+    expect(resolveNpcPresentation('npc-challenge-bird', statuses({}), noDiscoveries)).toEqual({
+      attentionContext: 'notices-child',
+    });
+    // A discovery belonging to nobody resolves neutral — an unknown fact
+    // must never warm anyone.
+    for (const npc of NPC_DEFINITIONS) {
+      expect(resolveNpcPresentation(npc.id, statuses({}), ['discovery-challenge-tunnel'])).toEqual({
+        attentionContext: 'notices-child',
+      });
+    }
+    // And the bird's victory does not warm a different opponent.
+    expect(
+      resolveNpcPresentation('npc-challenge-eagle', statuses({}), ['discovery-challenge-bird']),
+    ).toEqual({ attentionContext: 'notices-child' });
   });
 });

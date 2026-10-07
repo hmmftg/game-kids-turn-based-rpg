@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { nearbyNpcs } from './nearby.ts';
 import { getAnchor } from './navigation/graph.ts';
+import { NPC_DEFINITIONS, resolveNpcStand } from './registry.ts';
 import { STATIC_WORLD_SOURCE } from './worldSource.ts';
 
 const square = getAnchor(STATIC_WORLD_SOURCE, 'anchor-square');
 const school = getAnchor(STATIC_WORLD_SOURCE, 'anchor-school');
-const fountain = getAnchor(STATIC_WORLD_SOURCE, 'anchor-fountain');
+const mouse = NPC_DEFINITIONS.find((n) => n.id === 'npc-playful-mouse')!;
 
 describe('nearbyNpcs — the DOM accessibility route for figure taps', () => {
   it('returns on-map people nearest-first', () => {
@@ -25,12 +26,19 @@ describe('nearbyNpcs — the DOM accessibility route for figure taps', () => {
   });
 
   it('follows schedule stands, not just home anchors', () => {
-    // The playful mouse anchors at the fountain — nearest from there.
+    // The playful mouse strolls its Challenge Zone schedule — at a tick where
+    // it rests at the den, querying there finds it (its HOME anchor is the
+    // mouse spot, so this only passes if stands follow the schedule).
+    const den = getAnchor(STATIC_WORLD_SOURCE, 'anchor-challenge-mouse-den');
+    const tick = [0, 1, 2, 3].find(
+      (t) =>
+        resolveNpcStand(STATIC_WORLD_SOURCE, mouse, t).anchorId === 'anchor-challenge-mouse-den',
+    )!;
     const entries = nearbyNpcs(
       STATIC_WORLD_SOURCE,
-      'map-town',
-      { x: fountain.x, z: fountain.z },
-      0,
+      'map-challenge',
+      { x: den.x, z: den.z },
+      tick,
       3,
     );
     expect(entries[0]!.npc.id).toBe('npc-playful-mouse');

@@ -55,6 +55,27 @@ export const WORLD_MAPS: readonly WorldMapDefinition[] = [
       ],
     },
   },
+  {
+    id: 'map-challenge',
+    labelFa: 'سرزمین چالش',
+    bounds: { minX: -8, maxX: 8, minZ: -8, maxZ: 7 },
+    spawnAnchorId: 'anchor-challenge-entry',
+    environment: {
+      // Adventure-playground atmosphere: a warm, saturated late-day sky and
+      // soft haze — dramatic contrast against town and cave without ever
+      // going dark or frightening.
+      clearColor: '#ffd9b0',
+      fog: { color: '#f6cfa6', near: 18, far: 55 },
+      skyDome: true,
+      hemisphere: { sky: '#fff3dd', ground: '#c98f6b', intensity: 1.0 },
+      directionals: [
+        // Strong warm sun — the "big adventure" key light.
+        { color: '#ffbe7a', position: [8, 9, 3], intensity: 1.0 },
+        // Cool violet bounce for contrast.
+        { color: '#b9a8f0', position: [-6, 7, -5], intensity: 0.4 },
+      ],
+    },
+  },
 ];
 
 export const MAP_TRANSITIONS: readonly MapTransition[] = [
@@ -72,6 +93,25 @@ export const MAP_TRANSITIONS: readonly MapTransition[] = [
     fromAnchor: 'anchor-cave-mouth',
     toMap: 'map-town',
     toAnchor: 'anchor-cave-entrance',
+  },
+  {
+    // The deep tunnel at the back of the cave: first arrival reveals it,
+    // later arrivals travel into the Challenge Zone.
+    id: 'transition-cave-challenge',
+    fromMap: 'map-cave',
+    fromAnchor: 'anchor-cave-tunnel',
+    toMap: 'map-challenge',
+    toAnchor: 'anchor-challenge-entry',
+    discoveryId: 'discovery-challenge-tunnel',
+  },
+  {
+    // The way back: the challenge gate returns to the tunnel's cave-side
+    // anchor, never a generic spawn.
+    id: 'transition-challenge-exit',
+    fromMap: 'map-challenge',
+    fromAnchor: 'anchor-challenge-entry',
+    toMap: 'map-cave',
+    toAnchor: 'anchor-cave-tunnel',
   },
 ];
 
