@@ -40,6 +40,8 @@ export const FA = {
   errorAction: 'شروع دوباره',
 
   pause: 'توقف',
+  zoomIn: 'نزدیک‌تر',
+  zoomOut: 'دورتر',
   resumePlay: 'برگرد به بازی',
   music: 'آهنگ',
   sfx: 'صداها',

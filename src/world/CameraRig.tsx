@@ -8,6 +8,7 @@ import { getMap } from './maps.ts';
 import { getAnchor } from './navigation/graph.ts';
 import {
   clampCameraTarget,
+  clampUserZoom,
   cameraPaddingForMap,
   ISO_OFFSET,
   zoomForMap,
@@ -84,9 +85,17 @@ interface DragGesture {
 export function CameraRig({
   world,
   mapId,
+  zoomFactor = 1,
+  onZoomFactor,
 }: {
   readonly world: WorldSource;
   readonly mapId: MapId;
+  /** Child-facing multiplier on the map zoom (PR T) — a projection-only
+      input: it rescales the ortho camera and the bounds clamp, nothing
+      else in the world. Session state, owned by the caller. */
+  readonly zoomFactor?: number;
+  /** Wheel/pinch asks the caller for a new factor (already clamped). */
+  readonly onZoomFactor?: ((factor: number) => void) | undefined;
 }) {
   const size = useThree((state) => state.size);
   const invalidate = useThree((state) => state.invalidate);
@@ -94,7 +103,7 @@ export function CameraRig({
   const camera = useThree((state) => state.camera);
   const reduced = prefersReducedMotion();
   const map = getMap(world, mapId);
-  const zoom = zoomForMap(world, mapId);
+  const zoom = zoomForMap(world, mapId) * clampUserZoom(zoomFactor);
   const padding = cameraPaddingForMap(world, mapId);
 
   // Single reusable vectors — no per-frame allocation while settling.
@@ -106,6 +115,17 @@ export function CameraRig({
   const pan = useRef<PanOffset>({ x: 0, z: 0 });
   const prevFocus = useRef<MutableTarget>({ x: 0, z: 0 });
   const gesture = useRef<DragGesture | null>(null);
+  // The eased ortho zoom: eases toward `zoom` (map zoom × child factor)
+  // exactly like the target eases toward its clamp — bounded frames only.
+  const zoomCurrent = useRef(zoom);
+  // Latest zoomFactor for the gesture listeners (their closure is stale
+  // across renders; a ref isn't).
+  const zoomFactorRef = useRef(zoomFactor);
+  const onZoomFactorRef = useRef(onZoomFactor);
+  useEffect(() => {
+    zoomFactorRef.current = zoomFactor;
+    onZoomFactorRef.current = onZoomFactor;
+  }, [zoomFactor, onZoomFactor]);
 
   const desired = useCallback(
     (x: number, z: number): CameraTarget =>
@@ -129,6 +149,13 @@ export function CameraRig({
     };
   }, [invalidate]);
 
+  // A zoom-factor change (button, wheel, pinch) is a pure prop update under
+  // frameloop="demand" — wake the loop so the rig eases to the new zoom and
+  // re-clamps the target for the changed footprint.
+  useEffect(() => {
+    invalidate();
+  }, [zoom, invalidate]);
+
   // Drag-to-pan: holding and pulling slides the camera's look target along
   // the ground under the finger (grab-the-map feel), still inside the map
   // bounds. Taps stay taps — under ~8px of movement nothing pans.
@@ -147,8 +174,24 @@ export function CameraRig({
       raycaster.setFromCamera(ndc, camera);
       return raycaster.ray.intersectPlane(ground, hit) !== null ? { x: hit.x, z: hit.z } : null;
     };
+    // Two pointers = pinch zoom: the second finger cancels any pan gesture
+    // and scales the child zoom factor by relative finger distance.
+    const pointers = new Map<number, { x: number; y: number }>();
+    const pinch = { active: false, d0: 0, f0: 1 };
+    const pinchDistance = (): number => {
+      const [a, b] = [...pointers.values()];
+      return a === undefined || b === undefined ? 0 : Math.hypot(a.x - b.x, a.y - b.y);
+    };
     const onDown = (event: PointerEvent) => {
       if (event.pointerType === 'mouse' && event.button !== 0) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size === 2 && onZoomFactorRef.current !== undefined) {
+        gesture.current = null;
+        pinch.active = true;
+        pinch.d0 = pinchDistance();
+        pinch.f0 = zoomFactorRef.current;
+        return;
+      }
       const probe = window as unknown as Record<string, unknown>;
       if (import.meta.env.DEV || probe['__WORLD_PROBE']) probe['__worldPanDown'] = true;
       const at = groundAt(event.clientX, event.clientY);
@@ -163,6 +206,16 @@ export function CameraRig({
       };
     };
     const onMove = (event: PointerEvent) => {
+      if (pointers.has(event.pointerId)) {
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
+      if (pinch.active) {
+        const d = pinchDistance();
+        if (pinch.d0 > 0 && d > 0) {
+          onZoomFactorRef.current?.(clampUserZoom((d / pinch.d0) * pinch.f0));
+        }
+        return;
+      }
       const g = gesture.current;
       if (
         g === null ||
@@ -196,17 +249,27 @@ export function CameraRig({
       invalidate();
     };
     const onUp = (event: PointerEvent) => {
+      pointers.delete(event.pointerId);
+      if (pointers.size < 2) pinch.active = false;
       if (gesture.current?.id === event.pointerId) gesture.current = null;
+    };
+    const onWheel = (event: WheelEvent) => {
+      const apply = onZoomFactorRef.current;
+      if (apply === undefined) return;
+      event.preventDefault();
+      apply(clampUserZoom(zoomFactorRef.current * Math.exp(-event.deltaY * 0.0012)));
     };
     el.addEventListener('pointerdown', onDown);
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointercancel', onUp);
+    el.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       el.removeEventListener('pointerdown', onDown);
       el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerup', onUp);
       el.removeEventListener('pointercancel', onUp);
+      el.removeEventListener('wheel', onWheel);
     };
   }, [gl, camera, invalidate, desired]);
 
@@ -224,6 +287,7 @@ export function CameraRig({
         cameraFocus.x === 0 && cameraFocus.z === 0 ? spawn.z : cameraFocus.z,
       );
       target.current = start;
+      zoomCurrent.current = zoom;
       camera.zoom = zoom;
       camera.position.set(start.x + ISO_OFFSET.x, ISO_OFFSET.y, start.z + ISO_OFFSET.z);
       look.current.set(start.x, 0, start.z);
@@ -243,6 +307,18 @@ export function CameraRig({
       pan.current.z *= 1 - k;
       if (Math.abs(pan.current.x) < 0.02) pan.current.x = 0;
       if (Math.abs(pan.current.z) < 0.02) pan.current.z = 0;
+      settled.current = false;
+      invalidate();
+    }
+    // Zoom eases like the target: a factor change (button, wheel, pinch)
+    // keeps asking for frames only until the projection settles.
+    const zd = zoom - zoomCurrent.current;
+    if (Math.abs(zd) > 0.0005) {
+      const k = reduced ? 1 : Math.min(1, delta * 5.2);
+      zoomCurrent.current += zd * k;
+      if (Math.abs(zoom - zoomCurrent.current) <= 0.0005) zoomCurrent.current = zoom;
+      camera.zoom = zoomCurrent.current;
+      camera.updateProjectionMatrix();
       settled.current = false;
       invalidate();
     }

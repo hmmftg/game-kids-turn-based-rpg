@@ -21,6 +21,14 @@ export const MIN_ZOOM = 20;
 export const MAX_ZOOM = 96;
 export const DEFAULT_ZOOM = 64;
 
+/** Child-facing zoom factor applied on top of a map's zoom (PR T): a
+    multiplicative band around 1.0 — zoomed out enough to read the area,
+    zoomed in enough to read a figure, never far enough to lose context. */
+export const USER_ZOOM_MIN = 0.75;
+export const USER_ZOOM_MAX = 1.35;
+export const clampUserZoom = (factor: number): number =>
+  Math.min(USER_ZOOM_MAX, Math.max(USER_ZOOM_MIN, factor));
+
 const SQRT6 = Math.sqrt(6);
 
 export interface CameraBounds {
