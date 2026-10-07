@@ -69,7 +69,21 @@ export async function clearResearchEvents(): Promise<void> {
   await request(tx.objectStore(RESEARCH_STORE).clear());
 }
 
-const endpoint = (import.meta.env.VITE_RESEARCH_API_URL as string | undefined) ?? null;
+const rawEndpoint = (import.meta.env.VITE_RESEARCH_API_URL as string | undefined)?.trim() ?? null;
+// A bare host is a common Actions-Variable typo — assume https (the CSP
+// plugin in vite.config.ts applies the same normalization); anything still
+// malformed disables the endpoint rather than emitting broken requests.
+const endpoint = (() => {
+  if (rawEndpoint === null || rawEndpoint === '') return null;
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(rawEndpoint)
+    ? rawEndpoint
+    : `https://${rawEndpoint}`;
+  try {
+    return new URL(candidate).origin === 'null' ? null : candidate;
+  } catch {
+    return null;
+  }
+})();
 
 /** Whether an upload endpoint was configured at build time. */
 export function researchEndpointConfigured(): boolean {
