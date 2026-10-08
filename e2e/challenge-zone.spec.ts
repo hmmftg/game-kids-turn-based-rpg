@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import type { AnchorId } from '../src/domain/game/types.ts';
 import { resumeFromPicker, startGame } from './harness.ts';
 import {
   attentionProbe,
@@ -151,7 +152,7 @@ async function leaveTheGate(page: Page) {
 }
 
 /** Hop-walks to an opponent's anchor, then stands beside the figure. */
-async function walkToOpponent(page: Page, npcId: string, anchorId: string) {
+async function walkToOpponent(page: Page, npcId: string, anchorId: AnchorId) {
   const at = await probe(page).at();
   if (at === 'anchor-challenge-entry') await leaveTheGate(page);
   if ((await probe(page).at()) !== anchorId) {
@@ -235,7 +236,7 @@ test.describe('the Challenge Zone', () => {
     await page.getByTestId('zoom-out').click();
     await page.getByTestId('zoom-out').click();
 
-    const opponents: readonly { npcId: string; battleId: string; anchorId: string }[] = [
+    const opponents: readonly { npcId: string; battleId: string; anchorId: AnchorId }[] = [
       {
         npcId: 'npc-playful-mouse',
         battleId: 'battle-playful-mouse',
