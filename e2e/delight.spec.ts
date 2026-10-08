@@ -10,6 +10,7 @@ import {
   tapReactivePoint,
   tapWorldAnchor,
   waitForProbe,
+  walkToChallengeZone,
   waitForWalkerIdle,
   worldPoints,
   type WorldProbe,
@@ -89,9 +90,10 @@ test.describe('the world noticed me', () => {
   });
 
   test('winning the ball game earns a celebrating friend — he stays', async ({ page }) => {
-    test.setTimeout(120000);
+    test.setTimeout(240000);
     await startGame(page);
-    await tapWorldAnchor(page, 'anchor-path-west');
+    // The playful mouse lives in the Challenge Zone now — the child walks in.
+    await walkToChallengeZone(page);
     expect(await tapMouseForBattle(page)).toBe(true);
     await waitForBattlePhase(page, 'playerChoice');
     for (let i = 0; i < 3; i++) {

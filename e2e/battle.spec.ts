@@ -3,8 +3,8 @@ import { resumeFromPicker } from './harness.ts';
 import {
   enableWorldProbe,
   npcProbe,
-  tapWorldAnchor,
   waitForProbe,
+  walkToChallengeZone,
   worldPoints,
   type WorldProbe,
 } from './npcTap.ts';
@@ -68,8 +68,8 @@ test.describe('micro turn-based battle', () => {
     page,
   }) => {
     await startGame(page);
-    // Walk near the fountain first — the figure must be on-screen to tap.
-    await tapWorldAnchor(page, 'anchor-path-west');
+    // The mouse lives in the Challenge Zone now — walk the child's route.
+    await walkToChallengeZone(page);
     expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
     await expect(page.getByTestId('battle-scene')).toBeVisible();
 
@@ -105,7 +105,7 @@ test.describe('micro turn-based battle', () => {
   // celebrating (PR Q — a friend won, not an enemy driven off).
   test('the opponent physically acts out each resolution beat', async ({ page }) => {
     await startGame(page);
-    await tapWorldAnchor(page, 'anchor-path-west');
+    await walkToChallengeZone(page);
     expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
     await waitForPhase(page, 'playerChoice');
 
@@ -125,7 +125,7 @@ test.describe('micro turn-based battle', () => {
   // the pause button and quest trail sit beneath it and cannot be reached.
   test('the battle owns all child input until it is left', async ({ page }) => {
     await startGame(page);
-    await tapWorldAnchor(page, 'anchor-path-west');
+    await walkToChallengeZone(page);
     expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
     await waitForPhase(page, 'playerChoice');
 
@@ -154,7 +154,7 @@ test.describe('micro turn-based battle', () => {
   // entirely — the child lands back in the hub, never inside a battle.
   test('a reload during the battle returns to the hub with no battle state', async ({ page }) => {
     await startGame(page);
-    await tapWorldAnchor(page, 'anchor-path-west');
+    await walkToChallengeZone(page);
     expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
     await waitForPhase(page, 'playerChoice');
 
@@ -169,7 +169,7 @@ test.describe('micro turn-based battle', () => {
   // a burst of taps on the ball still costs the mouse exactly one heart.
   test('repeated taps on the ball still resolve exactly one action', async ({ page }) => {
     await startGame(page);
-    await tapWorldAnchor(page, 'anchor-path-west');
+    await walkToChallengeZone(page);
     expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
     await waitForPhase(page, 'playerChoice');
 
@@ -194,7 +194,7 @@ test.describe('micro turn-based battle', () => {
   test('the battle resolves the same under reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await startGame(page);
-    await tapWorldAnchor(page, 'anchor-path-west');
+    await walkToChallengeZone(page);
     expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
     await waitForPhase(page, 'playerChoice');
 

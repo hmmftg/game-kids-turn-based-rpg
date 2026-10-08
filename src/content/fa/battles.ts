@@ -29,6 +29,40 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     // do nothing. `attack` rows stay in the model for future definitions.
     enemyIntentPattern: ['rest', 'rest', 'rest'],
   },
+  // Challenge Zone opponents: same machine, same actions — 3 rounds is the
+  // hard maximum and hearts are a per-opponent authored budget ≤3, so each
+  // challenger gets a different deterministic rhythm (2 hearts means one
+  // `attack` round fits inside the budget and the battle stays winnable).
+  // Each carries a `victoryDiscoveryId`: winning records the world fact
+  // that drives the opponent's happy/resting presentation and opens a
+  // gated path.
+  {
+    battleId: 'battle-challenge-bird',
+    opponentId: 'npc-challenge-bird',
+    hearts: 2,
+    maxRounds: 3,
+    availableActions: ['action-ball', 'action-shield'],
+    enemyIntentPattern: ['rest', 'attack', 'rest'],
+    victoryDiscoveryId: 'discovery-challenge-bird',
+  },
+  {
+    battleId: 'battle-challenge-eagle',
+    opponentId: 'npc-challenge-eagle',
+    hearts: 2,
+    maxRounds: 3,
+    availableActions: ['action-ball', 'action-shield'],
+    enemyIntentPattern: ['attack', 'rest', 'rest'],
+    victoryDiscoveryId: 'discovery-challenge-eagle',
+  },
+  {
+    battleId: 'battle-challenge-butterfly',
+    opponentId: 'npc-challenge-butterfly',
+    hearts: 2,
+    maxRounds: 3,
+    availableActions: ['action-ball', 'action-shield'],
+    enemyIntentPattern: ['rest', 'rest', 'attack'],
+    victoryDiscoveryId: 'discovery-challenge-butterfly',
+  },
 ];
 
 /** Child-facing copy for one battle — short iconic lines, like dialogue. */
@@ -61,6 +95,60 @@ export const BATTLE_COPY: readonly BattleCopy[] = [
     },
     victoryFa: 'هورا! بازی را بردی.',
     defeatFa: 'موش این دور برد. باز هم بازی؟',
+    review: DRAFT_REVIEW,
+  },
+  {
+    battleId: 'battle-challenge-bird',
+    introFa: 'پرنده‌ی چالش بازی می‌خواهد.',
+    promptFa: 'توپ یا بالش؟',
+    outcomeFa: {
+      'opponent-hit': 'توپ نرم به پرنده رسید!',
+      blocked: 'بالش جلوی بازی را گرفت.',
+      whiffed: 'توپ از کنار پرنده رد شد.',
+      'no-effect': 'پرنده فقط نگاه کرد.',
+    },
+    intentFa: {
+      rest: 'پرنده روی تکیه‌گاهش صبر می‌کند.',
+      attack: 'پرنده به سمت توپ پرواز می‌کند!',
+    },
+    victoryFa: 'هورا! پرنده خوشحال شد و راه را نشان داد.',
+    defeatFa: 'پرنده این دور برد. باز هم بازی؟',
+    review: DRAFT_REVIEW,
+  },
+  {
+    battleId: 'battle-challenge-eagle',
+    introFa: 'عقاب چالش با غرور بازی می‌خواهد.',
+    promptFa: 'توپ یا بالش؟',
+    outcomeFa: {
+      'opponent-hit': 'توپ نرم به عقاب رسید!',
+      blocked: 'بالش جلوی بازی را گرفت.',
+      whiffed: 'توپ از کنار عقاب رد شد.',
+      'no-effect': 'عقاب فقط نگاه کرد.',
+    },
+    intentFa: {
+      rest: 'عقاب آرام نشسته و نگاه می‌کند.',
+      attack: 'عقاب به سمت توپ پرواز می‌کند!',
+    },
+    victoryFa: 'هورا! عقاب لبخند زد و پل باز شد.',
+    defeatFa: 'عقاب این دور برد. باز هم بازی؟',
+    review: DRAFT_REVIEW,
+  },
+  {
+    battleId: 'battle-challenge-butterfly',
+    introFa: 'پروانه‌ی چالش بازی می‌خواهد.',
+    promptFa: 'توپ یا بالش؟',
+    outcomeFa: {
+      'opponent-hit': 'توپ نرم به پروانه رسید!',
+      blocked: 'بالش جلوی بازی را گرفت.',
+      whiffed: 'توپ از کنار پروانه رد شد.',
+      'no-effect': 'پروانه فقط نگاه کرد.',
+    },
+    intentFa: {
+      rest: 'پروانه کنار گل آرام است.',
+      attack: 'پروانه دور توپ می‌چرخد!',
+    },
+    victoryFa: 'هورا! پروانه شاد شد و راه نشان داد.',
+    defeatFa: 'پروانه این دور برد. باز هم بازی؟',
     review: DRAFT_REVIEW,
   },
 ];

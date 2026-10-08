@@ -1,4 +1,5 @@
 import type { NpcId } from '../game/types.ts';
+import type { DiscoveryId } from '../world/types.ts';
 
 /**
  * Micro turn-based battle — the standalone toy contract (PR I).
@@ -72,4 +73,12 @@ export interface BattleDefinition {
   readonly maxRounds: number;
   readonly availableActions: readonly BattleActionId[];
   readonly enemyIntentPattern: readonly BattleIntent[];
+  /**
+   * World fact recorded once when the child leaves a *victorious* battle —
+   * the "world remembers the challenge was solved" primitive behind
+   * post-victory presentation and gated paths. Optional: battles without it
+   * (the existing playful mouse) persist nothing on victory. Must reference
+   * `DISCOVERY_IDS`.
+   */
+  readonly victoryDiscoveryId?: DiscoveryId;
 }

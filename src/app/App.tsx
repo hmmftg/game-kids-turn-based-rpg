@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { battleForOpponent, getBattleCopy } from '../content/fa/battles.ts';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import type { NpcDefinition } from '../domain/world/types.ts';
@@ -9,7 +9,7 @@ import {
   resolveNpcSpot,
   resolveNpcStand,
 } from '../world/registry.ts';
-import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
+import { STATIC_WORLD_SOURCE, worldForDiscoveries } from '../world/worldSource.ts';
 import { reactionProbeLog, reactionStatsProbe } from '../world/reactions.ts';
 import { resolveNpcPresentation } from '../world/liveliness.ts';
 import { FACT_DECORATIONS } from '../world/decorations.ts';
@@ -261,6 +261,11 @@ export function App() {
 
   const discoveries = state.discoveries;
 
+  // The walkable world the child sees right now: the static source minus
+  // edges whose `requiresDiscoveryId` fact isn't recorded yet — a pure edge
+  // filter, so every other world table stays shared (worldForDiscoveries).
+  const walkableWorld = useMemo(() => worldForDiscoveries(WORLD, discoveries), [discoveries]);
+
   // E2E/QA probe: the authoritative map + found facts. Lets tests wait for
   // discoveries/transitions instead of guessing walk durations.
   useEffect(() => {
@@ -399,7 +404,7 @@ export function App() {
           // Fact-derived warmth: a friend waves hello (greets-child) where a
           // stranger only notices — resolved from persisted quests, never
           // stored separately (docs/LIVING-WORLD.md).
-          context: resolveNpcPresentation(present.id, statuses).attentionContext,
+          context: resolveNpcPresentation(present.id, statuses, discoveries).attentionContext,
           // The noticing belongs to THIS arrival — at most one
           // notices-child per (arrival, npc), provable in e2e.
           arrivalNonce: arrivalNonceRef.current,
@@ -654,7 +659,7 @@ export function App() {
     <div className="hud" data-testid="hud">
       {state.webglAvailable ? (
         <WorldCanvas
-          world={WORLD}
+          world={walkableWorld}
           avatarId={state.avatarId}
           headwear={state.headwear}
           questStatuses={statuses}

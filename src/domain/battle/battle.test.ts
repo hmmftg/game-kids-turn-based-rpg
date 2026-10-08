@@ -211,3 +211,72 @@ describe('game reducer battle boundary', () => {
     expect(state.battle?.opponentHearts).toBe(0);
   });
 });
+
+describe('LEAVE_BATTLE discovery recording', () => {
+  const FACT_DEFINITION: BattleDefinition = {
+    ...DEFINITION,
+    victoryDiscoveryId: 'discovery-challenge-bird',
+  };
+
+  /** Drives a started battle to victory and back to hub via LEAVE_BATTLE. */
+  function winAndLeave(definition: BattleDefinition, from: GameState): GameState {
+    let state = gameReducer(from, { type: 'START_BATTLE', definition });
+    state = gameReducer(state, { type: 'ADVANCE_BATTLE_PHASE' }); // → playerChoice
+    for (let i = 0; i < 3; i += 1) {
+      state = gameReducer(state, { type: 'CHOOSE_BATTLE_ACTION', action: 'action-ball' });
+      while (state.battle !== null && state.battle.phase !== 'playerChoice') {
+        const next = gameReducer(state, { type: 'ADVANCE_BATTLE_PHASE' });
+        if (next === state) break;
+        state = next;
+      }
+    }
+    expect(state.battle?.phase).toBe('victory');
+    return gameReducer(state, { type: 'LEAVE_BATTLE' });
+  }
+
+  it('victory + fact absent → appended to discoveries', () => {
+    const left = winAndLeave(FACT_DEFINITION, hubState());
+    expect(left.battle).toBeNull();
+    expect(left.mode).toBe('hub');
+    expect(left.discoveries).toContain('discovery-challenge-bird');
+  });
+
+  it('victory + fact already present → no duplicate', () => {
+    const first = winAndLeave(FACT_DEFINITION, hubState());
+    const second = winAndLeave(FACT_DEFINITION, first);
+    expect(second.discoveries.filter((d) => d === 'discovery-challenge-bird')).toHaveLength(1);
+  });
+
+  it('victory without victoryDiscoveryId → stable leave, records nothing', () => {
+    const before = hubState().discoveries;
+    const left = winAndLeave(DEFINITION, hubState());
+    expect(left.battle).toBeNull();
+    expect(left.discoveries).toEqual(before);
+  });
+
+  it('defeat → battle clears and nothing is recorded', () => {
+    // Shield every round: never scores, round limit expires → defeat.
+    let state = gameReducer(hubState(), { type: 'START_BATTLE', definition: FACT_DEFINITION });
+    state = gameReducer(state, { type: 'ADVANCE_BATTLE_PHASE' });
+    for (let i = 0; i < 3; i += 1) {
+      state = gameReducer(state, { type: 'CHOOSE_BATTLE_ACTION', action: 'action-shield' });
+      while (state.battle !== null && state.battle.phase !== 'playerChoice') {
+        const next = gameReducer(state, { type: 'ADVANCE_BATTLE_PHASE' });
+        if (next === state) break;
+        state = next;
+      }
+    }
+    expect(state.battle?.phase).toBe('defeat');
+    const left = gameReducer(state, { type: 'LEAVE_BATTLE' });
+    expect(left.battle).toBeNull();
+    expect(left.discoveries).not.toContain('discovery-challenge-bird');
+  });
+
+  it('leaving mid-battle records nothing', () => {
+    let state = gameReducer(hubState(), { type: 'START_BATTLE', definition: FACT_DEFINITION });
+    state = gameReducer(state, { type: 'ADVANCE_BATTLE_PHASE' });
+    const left = gameReducer(state, { type: 'LEAVE_BATTLE' });
+    expect(left.battle).toBeNull();
+    expect(left.discoveries).not.toContain('discovery-challenge-bird');
+  });
+});

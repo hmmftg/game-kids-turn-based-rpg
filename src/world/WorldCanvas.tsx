@@ -20,6 +20,7 @@ import { skyDomeResources } from './models/shared.ts';
 import { noRaycast } from './models/raycast.ts';
 import { getMap } from './maps.ts';
 import { CaveWorld } from './CaveWorld.tsx';
+import { ChallengeWorld } from './ChallengeWorld.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { clampUserZoom, USER_ZOOM_MAX, USER_ZOOM_MIN, zoomForMap } from './camera.ts';
 import type { NpcAttention } from './sceneBits.tsx';
@@ -259,7 +260,26 @@ export function WorldCanvas({
           {/* Only the current map's scene mounts — the other side carries
               zero mounted content and zero callbacks. `key` remounts the
               scene so the walker restarts at the map's spawn anchor. */}
-          {mapId === 'map-cave' ? (
+          {mapId === 'map-challenge' ? (
+            <ChallengeWorld
+              key="map-challenge"
+              world={world}
+              avatarId={avatarId}
+              headwear={headwear}
+              questStatuses={questStatuses}
+              interactive={interactive}
+              detailLevel={detailLevel}
+              startAnchorId={startAnchorId}
+              environment={env}
+              onArrive={onArrive}
+              onNpcTap={onNpcTap}
+              worldTime={worldTime}
+              npcStandTicks={npcStandTicks}
+              attention={attention}
+              discoveries={discoveries}
+              handleRef={handleRef}
+            />
+          ) : mapId === 'map-cave' ? (
             <CaveWorld
               key="map-cave"
               world={world}
@@ -273,6 +293,7 @@ export function WorldCanvas({
               onArrive={onArrive}
               onNpcTap={onNpcTap}
               attention={attention}
+              discoveries={discoveries}
               handleRef={handleRef}
             />
           ) : (

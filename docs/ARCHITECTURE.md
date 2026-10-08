@@ -167,14 +167,27 @@ spawnAnchorId}`. Every anchor — and therefore every NPC, landmark, hotspot and
   taps anywhere on the ground — near or far — walk there.
 - **Maps** (`world/maps.ts`): `WorldMapDefinition {id, bounds, spawnAnchorId, environment}` —
   the outdoor town (`map-town`) plus secondary scenes with a local coordinate system and their
-  own environment (`map-cave`). Only the current map's scene mounts (`WorldCanvas` keys
-  `Hub`/`CaveWorld` by map). Every anchor carries `mapId`; navigation edges never cross maps
+  own environment (`map-cave`, `map-challenge` — the discovery-gated Challenge Zone). Only
+  the current map's scene mounts (`WorldCanvas` keys
+  `Hub`/`CaveWorld`/`ChallengeWorld` by map). Every anchor carries `mapId`; navigation edges never cross maps
   (validated), so `findPath` can't wander across scenes. Travel between maps is **data**: an
   anchor's `transitionId` → a `MapTransition {fromMap, fromAnchor, toMap, toAnchor,
 discoveryId?}` row that `App.onArrive` resolves into `DISCOVER` (once — a persisted world
   fact in `state.discoveries`) then `CHANGE_MAP`. Quests declare `mapId` so a secondary-map
   quest never mounts or trails on the wrong map. Adding another interior is a data task:
   map row + anchors + transition rows + optional scene component.
+- **Discovery-gated walking**: an `Edge` may carry `requiresDiscoveryId` —
+  the path exists only once that fact is in `state.discoveries`. App computes
+  `worldForDiscoveries(source, discoveries)` (`worldSource.ts`), a pure edge
+  filter that returns the identical source object when nothing is gated and
+  shares every other collection by reference, and hands that world to
+  `WorldCanvas` — navigation, anchors and transitions are untouched. The
+  challenge-map gated edges open the Depths crossing after its two opponents
+  are beaten; the blocked state is physical (a rockfall prop on the authored
+  anchor), never a UI lock.
+- **Discovery registry**: `domain/world/discoveries.ts` owns `DISCOVERY_IDS` +
+  `isKnownDiscovery()`; `transition.discoveryId`, `Edge.requiresDiscoveryId`
+  and `BattleDefinition.victoryDiscoveryId` all validate against it.
 - **Persistence — maps/discoveries**: `PersistedState` gained additive, tolerant fields
   (`discoveries`, `mapId`, `mapAnchorId`) — no schema bump; old saves parse to town defaults.
   `mapAnchorId` is the _spawn_ on the active map (set only by `CHANGE_MAP`, not by walking),

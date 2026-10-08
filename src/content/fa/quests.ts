@@ -31,7 +31,10 @@ export const NPCS: readonly NpcCopy[] = [
   { npcId: 'npc-child-sara', nameFa: 'سارا', roleFa: 'هم‌بازی پارک' },
   { npcId: 'npc-fisher', nameFa: 'ماهیگیر', roleFa: 'کنار رودخانه' },
   { npcId: 'npc-cave-mouse', nameFa: 'موش غار', roleFa: 'ته غار' },
-  { npcId: 'npc-playful-mouse', nameFa: 'موش بازیگوش', roleFa: 'کنار حوض' },
+  { npcId: 'npc-playful-mouse', nameFa: 'موش بازیگوش', roleFa: 'سرزمین چالش' },
+  { npcId: 'npc-challenge-bird', nameFa: 'پرنده‌ی چالش', roleFa: 'سرزمین چالش' },
+  { npcId: 'npc-challenge-eagle', nameFa: 'عقاب چالش', roleFa: 'سرزمین چالش' },
+  { npcId: 'npc-challenge-butterfly', nameFa: 'پروانه‌ی چالش', roleFa: 'سرزمین چالش' },
 ];
 
 export const QUEST_COPY: readonly QuestCopy[] = [

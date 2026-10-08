@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { AnchorId } from '../domain/game/types.ts';
+import type { EnvironmentDefinition } from '../domain/world/types.ts';
 import { prefersReducedMotion } from '../services/device/capabilities.ts';
 import { recordEpisode, type SemanticAnimationEvent } from '../services/animationEvents.ts';
 import { noRaycast } from './models/raycast.ts';
@@ -43,6 +44,25 @@ export interface WorldSceneHandle {
 }
 
 export const TAP_ONLY_MATERIAL = new THREE.MeshBasicMaterial({ visible: false });
+
+/** Lights defined by the map's EnvironmentDefinition — data, not per-scene code. */
+export function EnvironmentLights({ env }: { readonly env: EnvironmentDefinition }) {
+  return (
+    <>
+      <hemisphereLight
+        args={[env.hemisphere.sky, env.hemisphere.ground, env.hemisphere.intensity]}
+      />
+      {env.directionals.map((light, i) => (
+        <directionalLight
+          key={i}
+          color={light.color}
+          position={[light.position[0], light.position[1], light.position[2]]}
+          intensity={light.intensity}
+        />
+      ))}
+    </>
+  );
+}
 
 /**
  * Invisible-but-generous tap surface on an interactive anchor. The visible

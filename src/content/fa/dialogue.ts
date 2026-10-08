@@ -248,13 +248,61 @@ export const DIALOGUE_NODES: readonly DialogueNode[] = [
     // figure tap starts the battle instead of opening dialogue.
     id: 'playfulmouse-intro',
     npcId: 'npc-playful-mouse',
-    textFa: 'موش بازیگوش کنار حوض منتظر بازی است.',
+    textFa: 'موش بازیگوش در سرزمین چالش منتظر بازی است.',
     iconId: 'icon-tap-ball',
     offersQuestId: null,
     lines: [
       {
         speakerId: 'npc-playful-mouse',
-        textFa: 'موش بازیگوش کنار حوض منتظر بازی است.',
+        textFa: 'موش بازیگوش در سرزمین چالش منتظر بازی است.',
+        emotion: 'happy',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
+  {
+    // Challenge opponents are battle figures, not talkers — these nodes
+    // exist only for the content contract (every NPC has dialogueIds); the
+    // figure tap starts the battle instead of opening dialogue.
+    id: 'challengebird-intro',
+    npcId: 'npc-challenge-bird',
+    textFa: 'پرنده‌ی چالش از تکیه‌گاهش نگاه می‌کند.',
+    iconId: 'icon-tap-ball',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-challenge-bird',
+        textFa: 'پرنده‌ی چالش از تکیه‌گاهش نگاه می‌کند.',
+        emotion: 'calm',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'challengeeagle-intro',
+    npcId: 'npc-challenge-eagle',
+    textFa: 'عقاب چالش با غرور نشسته و منتظر است.',
+    iconId: 'icon-tap-ball',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-challenge-eagle',
+        textFa: 'عقاب چالش با غرور نشسته و منتظر است.',
+        emotion: 'calm',
+      },
+    ],
+    review: DRAFT_REVIEW,
+  },
+  {
+    id: 'challengebutterfly-intro',
+    npcId: 'npc-challenge-butterfly',
+    textFa: 'پروانه‌ی چالش کنار گل آرام است.',
+    iconId: 'icon-tap-ball',
+    offersQuestId: null,
+    lines: [
+      {
+        speakerId: 'npc-challenge-butterfly',
+        textFa: 'پروانه‌ی چالش کنار گل آرام است.',
         emotion: 'happy',
       },
     ],

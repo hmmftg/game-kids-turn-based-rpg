@@ -65,7 +65,7 @@ Key rules the code enforces:
 - **Encounter machine.** `intro → demonstrate → playerChoice → worldResponse → reinforce → complete`.
   A wrong pick returns to `demonstrate`, increments a retry counter and never fails, shames or blocks.
 - **Persistence.** Only schema version, avatar id, quest progress, checkpoint, stickers, audio
-  settings, quality tier and a timestamp are stored. React/Three objects and device identifiers are
+  settings, quality tier, the current map/anchor and discovered world facts, and a timestamp are stored. React/Three objects and device identifiers are
   never persisted. Corrupt saves fall back to a fresh state without deleting the bad payload; reset
   is only reachable from the parent area.
 - **Rendering.** `frameloop="demand"` with explicit `invalidate()` during movement, a locked

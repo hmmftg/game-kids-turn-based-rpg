@@ -81,6 +81,26 @@ export const WORLD_AREAS: readonly WorldArea[] = [
     bounds: { minX: -4, maxX: 4, minZ: -3.5, maxZ: 4.5 },
     spawnAnchorId: 'anchor-cave-mouth',
   },
+  // The Challenge Zone's three areas — all on map-challenge, so like the
+  // cave they never count as visible/adjacent on the outdoor maps.
+  {
+    id: 'area-challenge-entry',
+    labelFa: 'دروازه‌ی چالش',
+    bounds: { minX: -3, maxX: 3, minZ: 3, maxZ: 6 },
+    spawnAnchorId: 'anchor-challenge-entry',
+  },
+  {
+    id: 'area-challenge-field',
+    labelFa: 'دشت چالش',
+    bounds: { minX: -4.5, maxX: 4.5, minZ: -4, maxZ: 3 },
+    spawnAnchorId: 'anchor-challenge-path-1',
+  },
+  {
+    id: 'area-challenge-depths',
+    labelFa: 'اعماق چالش',
+    bounds: { minX: -3, maxX: 3, minZ: -7, maxZ: -4 },
+    spawnAnchorId: 'anchor-challenge-depths',
+  },
 ];
 
 export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
@@ -261,14 +281,69 @@ export const NPC_DEFINITIONS: readonly NpcDefinition[] = [
     dialogueIds: ['cavemouse-intro'],
   },
   {
-    // The playful mouse by the fountain is the micro-battle opponent: a tap
-    // on its figure starts the standalone battle activity (PR I) — it never
-    // offers a quest and never changes the world.
+    // The playful mouse is the micro-battle opponent — now a Challenge Zone
+    // resident (it wandered off from the fountain): a tap on its figure
+    // starts the unchanged `battle-playful-mouse` activity. It wanders a
+    // tiny radius between its spot and its den.
     id: 'npc-playful-mouse',
     archetype: 'critter',
-    anchorId: 'anchor-fountain',
-    homeAreaId: 'area-fountain',
+    anchorId: 'anchor-challenge-mouse',
+    homeAreaId: 'area-challenge-field',
+    schedule: {
+      spots: [
+        { anchorId: 'anchor-challenge-mouse', activity: 'at-home' },
+        { anchorId: 'anchor-challenge-mouse-den', activity: 'at-home' },
+      ],
+    },
     dialogueIds: ['playfulmouse-intro'],
+  },
+  {
+    // Challenge opponent: the bird changes perch as world time passes.
+    id: 'npc-challenge-bird',
+    archetype: 'critter',
+    anchorId: 'anchor-challenge-bird',
+    homeAreaId: 'area-challenge-field',
+    schedule: {
+      spots: [
+        { anchorId: 'anchor-challenge-bird', activity: 'at-home' },
+        { anchorId: 'anchor-challenge-bird-perch', activity: 'waiting' },
+      ],
+    },
+    dialogueIds: ['challengebird-intro'],
+  },
+  {
+    // Challenge opponent: the proud eagle sits and watches the child
+    // approach — one authored facing spot, proximity-facing does the rest.
+    id: 'npc-challenge-eagle',
+    archetype: 'critter',
+    anchorId: 'anchor-challenge-eagle',
+    homeAreaId: 'area-challenge-field',
+    schedule: {
+      spots: [
+        {
+          anchorId: 'anchor-challenge-eagle',
+          activity: 'waiting',
+          // Faces the path spine (path-2) from its perch.
+          facing: Math.atan2(3.2, 1.6),
+        },
+      ],
+    },
+    dialogueIds: ['challengeeagle-intro'],
+  },
+  {
+    // Challenge opponent: the gentlest one — drifts between the meadow spot
+    // and the flower.
+    id: 'npc-challenge-butterfly',
+    archetype: 'critter',
+    anchorId: 'anchor-challenge-butterfly',
+    homeAreaId: 'area-challenge-field',
+    schedule: {
+      spots: [
+        { anchorId: 'anchor-challenge-butterfly', activity: 'at-home' },
+        { anchorId: 'anchor-challenge-flower', activity: 'at-home' },
+      ],
+    },
+    dialogueIds: ['challengebutterfly-intro'],
   },
 ];
 

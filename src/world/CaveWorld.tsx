@@ -2,14 +2,27 @@ import { useEffect, useImperativeHandle, type Ref } from 'react';
 import { publishCameraFocus } from './CameraRig.tsx';
 import { type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { AnchorId, AvatarId, HeadwearId, QuestId, QuestStatus } from '../domain/game/types.ts';
+import type {
+  AnchorId,
+  AvatarId,
+  DiscoveryId,
+  HeadwearId,
+  QuestId,
+  QuestStatus,
+} from '../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import type { WorldSource } from '../domain/world/source.ts';
 import type { AreaId, EnvironmentDefinition } from '../domain/world/types.ts';
 import { getAnchor, getAnchorOrNull } from './navigation/graph.ts';
 import { areaForAnchor, visibleAreaIds } from './registry.ts';
 import { CIRCLE, BOX, CYLINDER, SPHERE, sharedLambert } from './models/shared.ts';
-import { CharacterReact, Hotspot, type NpcAttention, type WorldSceneHandle } from './sceneBits.tsx';
+import {
+  CharacterReact,
+  EnvironmentLights,
+  Hotspot,
+  type NpcAttention,
+  type WorldSceneHandle,
+} from './sceneBits.tsx';
 import { CAVE_MOUSE_OFFSET } from './placement.ts';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
@@ -34,30 +47,14 @@ export interface CaveWorldProps {
   readonly onNpcTap?: ((npcId: string) => void) | undefined;
   /** Who noticed the latest arrival — replays a one-shot cue per nonce. */
   readonly attention?: NpcAttention | null | undefined;
+  /** Persisted world facts — the challenge tunnel reads open once
+      `discovery-challenge-tunnel` is recorded. */
+  readonly discoveries?: readonly DiscoveryId[] | undefined;
   readonly handleRef: Ref<CaveHandle> | undefined;
 }
 
 const MAP_ID = 'map-cave';
 const FLOOR = new THREE.CircleGeometry(6, 36);
-
-/** Lights defined by the map's EnvironmentDefinition — data, not per-scene code. */
-function EnvironmentLights({ env }: { readonly env: EnvironmentDefinition }) {
-  return (
-    <>
-      <hemisphereLight
-        args={[env.hemisphere.sky, env.hemisphere.ground, env.hemisphere.intensity]}
-      />
-      {env.directionals.map((light, i) => (
-        <directionalLight
-          key={i}
-          color={light.color}
-          position={[light.position[0], light.position[1], light.position[2]]}
-          intensity={light.intensity}
-        />
-      ))}
-    </>
-  );
-}
 
 /**
  * A ring of rough rock walls around the cave bounds, with a dark cap so the
@@ -262,6 +259,78 @@ function ExitArchway({ world }: { readonly world: WorldSource }) {
 }
 
 /**
+ * The deep tunnel mouth at the cave's back — the Challenge Zone doorway.
+ * Before the child first reaches it the mouth reads sealed by fallen rocks;
+ * once `discovery-challenge-tunnel` is recorded it reads open — a dark arch
+ * with a warm glimmer inside, the same physical-state rule as the cave
+ * mouth. Reaching the anchor resolves `transition-cave-challenge` through
+ * the shared arrival handler.
+ */
+function ChallengeTunnel({ discoveries }: { readonly discoveries: readonly DiscoveryId[] }) {
+  const opened = discoveries.includes('discovery-challenge-tunnel');
+  return (
+    <group position={[1.4, 0, -2.4]} name="challenge-tunnel" dispose={null}>
+      {/* tunnel frame */}
+      <mesh
+        geometry={BOX}
+        material={sharedLambert('#6a4a3a')}
+        position={[-0.75, 0.9, -0.5]}
+        scale={[0.45, 1.8, 0.45]}
+        raycast={noRaycast}
+      />
+      <mesh
+        geometry={BOX}
+        material={sharedLambert('#6a4a3a')}
+        position={[0.75, 0.9, -0.5]}
+        scale={[0.45, 1.8, 0.45]}
+        raycast={noRaycast}
+      />
+      <mesh
+        geometry={BOX}
+        material={sharedLambert('#6a4a3a')}
+        position={[0, 1.9, -0.5]}
+        scale={[2, 0.4, 0.45]}
+        raycast={noRaycast}
+      />
+      {/* dark opening */}
+      <mesh
+        geometry={BOX}
+        material={sharedLambert('#241a26')}
+        position={[0, 0.85, -0.52]}
+        scale={[1.1, 1.7, 0.18]}
+        raycast={noRaycast}
+      />
+      {!opened && (
+        <group>
+          {/* fallen rocks sealing the way — the sealed physical state */}
+          {[-0.4, 0.05, 0.45].map((x, i) => (
+            <mesh
+              key={i}
+              geometry={BOX}
+              material={sharedLambert('#7a6a5e')}
+              position={[x, 0.25 + i * 0.12, -0.45]}
+              scale={[0.42, 0.5, 0.4]}
+              rotation={[0, (i * 0.7) % 1.1, 0]}
+              raycast={noRaycast}
+            />
+          ))}
+        </group>
+      )}
+      {opened && (
+        /* a warm glimmer inside — somewhere worth going */
+        <mesh
+          geometry={CYLINDER}
+          material={sharedLambert('#e8b25e')}
+          position={[0.55, 0.5, -0.4]}
+          scale={[0.08, 0.3, 0.08]}
+          raycast={noRaycast}
+        />
+      )}
+    </group>
+  );
+}
+
+/**
  * The cave: a compact secondary map with its own local coordinate system.
  * Renders only while `map-cave` is the current map — the town scene is fully
  * unmounted by the parent, and nothing here touches outdoor state. Movement,
@@ -280,6 +349,7 @@ export function CaveWorld({
   onArrive,
   onNpcTap,
   attention,
+  discoveries = [],
   handleRef,
 }: CaveWorldProps) {
   const models = useModels();
@@ -361,6 +431,17 @@ export function CaveWorld({
       <CrystalCluster />
       <ExitArchway world={world} />
       <CaveProps detailLevel={detailLevel} />
+      <ChallengeTunnel discoveries={discoveries} />
+
+      {/* The deep tunnel to the Challenge Zone — a walkable anchor; first
+          arrival reveals it and records the discovery. */}
+      <Hotspot
+        x={1.4}
+        z={-2.4}
+        active={interactive}
+        label="hotspot-challenge-tunnel"
+        onSelect={() => walkHere('anchor-cave-tunnel')}
+      />
 
       {/* The way out: a tappable hotspot on the mouth anchor — arriving there
           resolves `transition-cave-exit` via the shared arrival handler. */}

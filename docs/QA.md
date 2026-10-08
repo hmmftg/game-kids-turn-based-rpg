@@ -121,7 +121,9 @@ viewport can leave the rock outside the tappable canvas, which `tapWorld` skips 
 
 ## Battle QA (PR I)
 
-`e2e/battle.spec.ts` drives the micro battle end to end: tap the playful mouse's
+`e2e/battle.spec.ts` drives the micro battle end to end (the mouse lives in
+the Challenge Zone — `walkToChallengeZone` in `e2e/npcTap.ts` replays the
+cave → tunnel route first): tap the playful mouse's
 figure → `battle-scene` mounts → intro auto-plays to `playerChoice` → ball taps
 take one heart per round → terminal `victory` → `battle-continue` returns to a
 plain hub with `__worldBattleState === null`. A second test asserts input
@@ -130,6 +132,19 @@ mid-battle leave. `src/domain/battle/battle.test.ts` covers the outcome matrix,
 final-round precedence (hearts beat the round counter), terminal states, the
 reducer's blocked-commands guard, and `LEAVE_BATTLE` semantics. Probe fields:
 `__worldBattleState`, `__worldBattleEvents` (`phase@round` rows + `end`).
+
+## Challenge Zone QA
+
+`e2e/challenge-zone.spec.ts` drives `map-challenge` end to end: cave → tunnel
+reveal → entry/exit transitions and spawn anchor, portrait + landscape
+navigation, the strict opponents chain (arrival → no dialogue + `battle ===
+null`, ground tap → no battle, figure tap → exactly one `START_BATTLE` with the
+correct `battleId`), a full victory → `battle-continue` → discovery persists
+across reload, the Depths gated path before/after victory, an input burst, and
+reduced motion. Unit coverage: `battle.test.ts` LEAVE_BATTLE discovery cases,
+`pathfinding.test.ts` `worldForDiscoveries` gating, `liveliness.test.ts`
+quest-vs-discovery presentation precedence, `visibility.test.ts` extended to
+the challenge map, `maps.test.ts`/`reducer.test.ts` map + transition invariants.
 
 ## PWA / offline lifecycle QA
 

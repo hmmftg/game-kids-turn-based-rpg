@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ANCHORS, getAnchor, neighboursOf } from './graph.ts';
 import { findPath, nearestWalkableAnchor, pathToPoints } from './pathfinding.ts';
-import { STATIC_WORLD_SOURCE } from '../worldSource.ts';
+import { STATIC_WORLD_SOURCE, worldForDiscoveries } from '../worldSource.ts';
 
 describe('waypoint graph', () => {
   it('exposes only walkable neighbours', () => {
@@ -63,12 +63,43 @@ describe('nearestWalkableAnchor', () => {
 
   it('never resolves to an unwalkable anchor', () => {
     const fountain = getAnchor(STATIC_WORLD_SOURCE, 'anchor-fountain');
-    expect(nearestWalkableAnchor(STATIC_WORLD_SOURCE, fountain.x, fountain.z)).toBe(
+    expect(nearestWalkableAnchor(STATIC_WORLD_SOURCE, fountain.x, fountain.z, 4, 'map-town')).toBe(
       'anchor-path-west',
     );
   });
 
   it('returns null when the tap is outside the allowed radius', () => {
     expect(nearestWalkableAnchor(STATIC_WORLD_SOURCE, 100, 100, 2)).toBeNull();
+  });
+});
+
+describe('worldForDiscoveries gated edges', () => {
+  it('a gated path is unreachable before its fact and reachable after', () => {
+    // The depths sit behind edges that require a challenge victory fact —
+    // the static (unfiltered) world always contains them; the fact-filtered
+    // world is what the child actually walks.
+    const closed = worldForDiscoveries(STATIC_WORLD_SOURCE, []);
+    expect(findPath(closed, 'anchor-challenge-path-2', 'anchor-challenge-depths')).toEqual([]);
+    const opened = worldForDiscoveries(STATIC_WORLD_SOURCE, ['discovery-challenge-butterfly']);
+    expect(
+      findPath(opened, 'anchor-challenge-path-2', 'anchor-challenge-depths').length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('the filter changes only edges — every other table is shared by reference', () => {
+    const filtered = worldForDiscoveries(STATIC_WORLD_SOURCE, []);
+    expect(filtered.maps).toBe(STATIC_WORLD_SOURCE.maps);
+    expect(filtered.areas).toBe(STATIC_WORLD_SOURCE.areas);
+    expect(filtered.anchors).toBe(STATIC_WORLD_SOURCE.anchors);
+    expect(filtered.transitions).toBe(STATIC_WORLD_SOURCE.transitions);
+    expect(filtered.npcDefinitions).toBe(STATIC_WORLD_SOURCE.npcDefinitions);
+    expect(filtered.npcPlacements).toBe(STATIC_WORLD_SOURCE.npcPlacements);
+    // With every fact recorded the source comes back identical (no copy).
+    expect(
+      worldForDiscoveries(STATIC_WORLD_SOURCE, [
+        'discovery-challenge-butterfly',
+        'discovery-challenge-eagle',
+      ]),
+    ).toBe(STATIC_WORLD_SOURCE);
   });
 });

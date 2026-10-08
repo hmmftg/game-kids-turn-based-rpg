@@ -6,6 +6,7 @@ import {
   INTERACTION_LIMITS,
 } from '../domain/quests/interactionSteps.ts';
 import type { AreaId } from '../domain/world/types.ts';
+import { isKnownDiscovery } from '../domain/world/discoveries.ts';
 import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from '../world/registry.ts';
 import { ANCHORS, EDGES, getAnchorOrNull } from '../world/navigation/graph.ts';
 import { MAP_TRANSITIONS, WORLD_MAPS } from '../world/maps.ts';
@@ -379,6 +380,14 @@ function validateWorld(issues: ValidationIssue[]): void {
         message: 'Transition toAnchor must be a walkable anchor on toMap.',
       });
     }
+    if (transition.discoveryId !== undefined && !isKnownDiscovery(transition.discoveryId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-discovery',
+        where: transition.id,
+        message: `Transition discoveryId ${transition.discoveryId} is not in DISCOVERY_IDS.`,
+      });
+    }
   }
   // Edges must never cross maps — cross-map travel is transitions only.
   for (const edge of EDGES) {
@@ -390,6 +399,48 @@ function validateWorld(issues: ValidationIssue[]): void {
         code: 'cross-map-edge',
         where: `${edge.from}->${edge.to}`,
         message: 'Walk edge crosses maps; use a MapTransition instead.',
+      });
+    }
+    if (edge.requiresDiscoveryId !== undefined && !isKnownDiscovery(edge.requiresDiscoveryId)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-discovery',
+        where: `${edge.from}->${edge.to}`,
+        message: `Edge requiresDiscoveryId ${edge.requiresDiscoveryId} is not in DISCOVERY_IDS.`,
+      });
+    }
+  }
+
+  // Anchor.npcId ↔ NpcDefinition.anchorId: the two placements must agree over
+  // the static registries. (The World Builder validates its own document's
+  // NpcPlacement rows separately — this check is scoped to what ships.)
+  for (const anchor of ANCHORS) {
+    if (anchor.npcId === undefined || anchor.npcId === null) continue;
+    const npc = NPC_DEFINITIONS.find((row) => row.id === anchor.npcId);
+    if (npc === undefined) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-npc',
+        where: anchor.id,
+        message: `Anchor npcId ${anchor.npcId} has no NPC definition.`,
+      });
+    } else if (npc.anchorId !== anchor.id) {
+      issues.push({
+        severity: 'error',
+        code: 'npc-anchor-mismatch',
+        where: anchor.id,
+        message: `Anchor claims ${npc.id} but its home anchor is ${npc.anchorId}.`,
+      });
+    }
+  }
+  for (const npc of NPC_DEFINITIONS) {
+    const home = getAnchorOrNull(STATIC_WORLD_SOURCE, npc.anchorId);
+    if (home && home.npcId !== npc.id) {
+      issues.push({
+        severity: 'error',
+        code: 'npc-anchor-mismatch',
+        where: npc.id,
+        message: `NPC home anchor ${npc.anchorId} does not point back at ${npc.id}.`,
       });
     }
   }
@@ -536,6 +587,31 @@ function validateBattles(issues: ValidationIssue[]): void {
         code: 'unknown-opponent',
         where: definition.battleId,
         message: `Battle opponent ${definition.opponentId} has no NPC definition.`,
+      });
+    } else {
+      // The opponent must stand somewhere the child can reach it — its home
+      // anchor must exist, be walkable, and sit on a real map.
+      const opponent = NPC_DEFINITIONS.find((npc) => npc.id === definition.opponentId)!;
+      const home = getAnchorOrNull(STATIC_WORLD_SOURCE, opponent.anchorId);
+      const onMap = home !== null && WORLD_MAPS.some((map) => map.id === home.mapId);
+      if (!home || !home.walkable || !onMap) {
+        issues.push({
+          severity: 'error',
+          code: 'opponent-unreachable',
+          where: definition.battleId,
+          message: `Battle opponent ${definition.opponentId} has no walkable home anchor on a playable map.`,
+        });
+      }
+    }
+    if (
+      definition.victoryDiscoveryId !== undefined &&
+      !isKnownDiscovery(definition.victoryDiscoveryId)
+    ) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-discovery',
+        where: definition.battleId,
+        message: `victoryDiscoveryId ${definition.victoryDiscoveryId} is not in DISCOVERY_IDS.`,
       });
     }
     // Definition-level rules (budget, actions, pattern, winnability over the

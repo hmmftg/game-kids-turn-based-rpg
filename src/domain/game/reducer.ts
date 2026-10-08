@@ -339,8 +339,29 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
 
     case 'LEAVE_BATTLE': {
       // The only exit — victory/defeat are terminal battle states, leaving
-      // returns to a plain hub with nothing persisted and nothing replayed.
+      // returns to a plain hub. Leaving a victory is a stable transition:
+      // a battle whose definition carries `victoryDiscoveryId` records the
+      // world fact ("the challenge was solved") into the persisted
+      // discoveries — conditionally, never duplicated. Defeat and
+      // non-terminal leaves persist nothing.
       if (state.battle === null) return state;
+      if (state.battle.phase === 'victory') {
+        const fact = state.battle.definition.victoryDiscoveryId;
+        const discoveries =
+          fact !== undefined && !state.discoveries.includes(fact)
+            ? [...state.discoveries, fact]
+            : state.discoveries;
+        return stable(
+          state,
+          {
+            battle: battleReducer(state.battle, command),
+            mode: 'hub',
+            resumeMode: 'hub',
+            discoveries,
+          },
+          now,
+        );
+      }
       return {
         ...state,
         battle: battleReducer(state.battle, command),

@@ -141,6 +141,13 @@ export interface Anchor {
 export interface Edge {
   readonly from: AnchorId;
   readonly to: AnchorId;
+  /**
+   * World fact gating this edge: the edge only exists in the fact-filtered
+   * world (`worldForDiscoveries`) once the discovery is recorded — the
+   * mechanic behind "solved challenge → the bridge/path opens". Optional;
+   * omitted means always passable. Must reference `DISCOVERY_IDS`.
+   */
+  readonly requiresDiscoveryId?: DiscoveryId;
 }
 
 /**
