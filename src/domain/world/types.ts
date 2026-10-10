@@ -1,30 +1,31 @@
-import type { AnchorId, LandmarkId, NpcId } from '../game/types.ts';
+import type {
+  Anchor as CoreAnchor,
+  WorldArea as CoreWorldArea,
+  WorldMap as CoreWorldMap,
+} from '../../framework/index.ts';
 
 /**
- * World-structure types: logical areas layered over the single world
- * coordinate system, data-driven NPCs, and coarse NPC simulation states.
- * Pure data — no React, Three.js or DOM.
+ * This game's world-structure types: the framework's generic world primitives
+ * (`src/framework/core/world.ts`) extended with application content — Persian
+ * labels, the environment presentation model, NPC archetypes/schedules and
+ * dialogue references. Pure data — no React, Three.js or DOM.
+ *
+ * Generic primitives (identifiers, bounds, anchors, edges, areas, maps,
+ * transitions, placements) live in the framework; they are re-exported here
+ * so existing `domain/world/types.ts` imports keep working.
  */
+export type {
+  AnchorId,
+  AreaId,
+  Bounds,
+  DiscoveryId,
+  Edge,
+  MapId,
+  MapTransition,
+  NpcPlacement,
+} from '../../framework/index.ts';
 
-export type AreaId = `area-${string}`;
-
-/**
- * A playable map/scene with its own local coordinate system, bounds, anchors
- * and environment. The outdoor neighbourhood is `map-town`; secondary maps
- * (interiors, hidden places) are their own entries — never another area on
- * the town plane.
- */
-export type MapId = `map-${string}`;
-
-/** A persistent world fact the child can find — e.g. a hidden entrance. */
-export type DiscoveryId = `discovery-${string}`;
-
-export interface Bounds {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minZ: number;
-  readonly maxZ: number;
-}
+import type { AnchorId, AreaId, MapId, NpcId } from '../../framework/index.ts';
 
 /** Data-driven environment for one map — presentation data, no components. */
 export interface EnvironmentDefinition {
@@ -47,56 +48,21 @@ export interface EnvironmentDefinition {
 }
 
 /**
- * One map: local bounds, its spawn anchor and how it looks. Adding a map is
- * data — the renderer reads the environment generically.
+ * This game's logical area: the framework `WorldArea` plus its authored
+ * Persian label.
  */
-export interface WorldMapDefinition {
+export interface WorldArea extends CoreWorldArea {
+  readonly labelFa: string;
+}
+
+/**
+ * This game's map: the framework `WorldMap` plus its label and environment.
+ * Adding a map is data — the renderer reads the environment generically.
+ */
+export interface WorldMapDefinition extends CoreWorldMap {
   readonly id: MapId;
   readonly labelFa: string;
-  readonly bounds: Bounds;
-  /** Anchor the avatar appears at when entering without a specific spawn. */
-  readonly spawnAnchorId: AnchorId;
   readonly environment: EnvironmentDefinition;
-  /**
-   * Optional presentation tweaks for the shared follow-camera: a tighter
-   * default zoom (e.g. an intimate interior) or wider clamp padding. The
-   * camera logic itself is never per-map.
-   */
-  readonly cameraZoom?: number;
-  readonly cameraPadding?: number;
-}
-
-/**
- * A deterministic door between two maps. `fromAnchor` is where the player
- * triggers it (walk-to + tap), `toAnchor` is where they appear on the other
- * side — an exit always returns to the exact outdoor entrance, never to a
- * generic spawn.
- */
-export interface MapTransition {
-  readonly id: `transition-${string}`;
-  readonly fromMap: MapId;
-  readonly fromAnchor: AnchorId;
-  readonly toMap: MapId;
-  readonly toAnchor: AnchorId;
-  /**
-   * World fact gating this transition: the first arrival at `fromAnchor`
-   * reveals the entrance (records the discovery); later arrivals travel.
-   * Transitions without one are always passable.
-   */
-  readonly discoveryId?: DiscoveryId | undefined;
-}
-
-/**
- * A logical region of the one shared world coordinate system. All world
- * content (anchors, NPCs, landmarks, decorations) belongs to exactly one area,
- * so the map can grow by adding areas instead of one giant coordinate file.
- */
-export interface WorldArea {
-  readonly id: AreaId;
-  readonly labelFa: string;
-  readonly bounds: Bounds;
-  /** Anchor the avatar is placed at when spawning directly into this area. */
-  readonly spawnAnchorId: AnchorId;
 }
 
 /** Visual/behavioural family — never a unique model per NPC. */
@@ -113,54 +79,9 @@ export type NpcArchetype =
   | 'critter'
   | 'child';
 
-/**
- * A waypoint in the data-defined navigation graph. Movement is restricted to
- * anchors, so the child can never walk into geometry and no physics engine is
- * needed. Every anchor declares its `areaId` and `mapId`: areas connect through
- * normal edges that cross area bounds; cross-map travel uses transitions.
- */
-export interface Anchor {
-  readonly id: AnchorId;
-  /** World position on the ground plane (metres). */
-  readonly x: number;
-  readonly z: number;
-  readonly walkable: boolean;
-  /** The world area this anchor belongs to — world content owns an area. */
-  readonly areaId: AreaId;
-  /** The map this anchor lives on; cross-map travel uses transitions, not edges. */
-  readonly mapId: MapId;
-  /** Interaction the anchor stands in front of, if any. */
-  readonly npcId: NpcId | null;
-  readonly landmarkId: LandmarkId | null;
-  /** Map transition triggered by arriving here (doors, hidden entrances). */
-  readonly transitionId?: `transition-${string}` | undefined;
+/** This game's anchor: the framework waypoint plus its authored label. */
+export interface Anchor extends CoreAnchor {
   readonly labelFa: string;
-}
-
-/** An undirected walking edge between two anchors on the same map. */
-export interface Edge {
-  readonly from: AnchorId;
-  readonly to: AnchorId;
-  /**
-   * World fact gating this edge: the edge only exists in the fact-filtered
-   * world (`worldForDiscoveries`) once the discovery is recorded — the
-   * mechanic behind "solved challenge → the bridge/path opens". Optional;
-   * omitted means always passable. Must reference `DISCOVERY_IDS`.
-   */
-  readonly requiresDiscoveryId?: DiscoveryId;
-}
-
-/**
- * The home/resident spot of one NPC, as authored world structure. Builder
- * documents carry placements rather than `NpcDefinition`s: archetype,
- * schedule and dialogue stay content-owned. A placement overrides the NPC's
- * `anchorId`/home location for preview; schedule spot anchors are unaffected.
- */
-export interface NpcPlacement {
-  readonly npcId: NpcId;
-  readonly anchorId: AnchorId;
-  readonly offsetX?: number;
-  readonly offsetZ?: number;
 }
 
 /** Coarse schedule states — enough for routines, cheap enough for many NPCs. */

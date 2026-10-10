@@ -38,6 +38,46 @@ export default tseslint.config(
     },
   },
   {
+    // Framework boundary (docs/framework-extraction.md): every application
+    // import of framework code — including type-only imports — goes through
+    // `src/framework/index.ts`. Internal framework paths are forbidden.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/framework/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: 'framework/(core|three|modules)/',
+              message:
+                'Import framework APIs via src/framework/index.ts (see docs/framework-extraction.md).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Framework files never import application code — the boundary is
+    // one-directional (app → framework index).
+    files: ['src/framework/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '/(app|content|domain|services|ui|world|worldbuilder)/',
+              message:
+                'Framework code must not import application modules (see docs/framework-extraction.md).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['e2e/**/*.ts', 'scripts/**/*.ts', '*.config.{ts,js}'],
     rules: { 'no-restricted-globals': 'off' },
   },

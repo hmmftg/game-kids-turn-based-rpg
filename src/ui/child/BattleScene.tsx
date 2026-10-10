@@ -1,5 +1,5 @@
 import { useEffect, useRef, type MouseEvent } from 'react';
-import type { BattleActionId, BattlePhase, BattleState } from '../../domain/battle/types.ts';
+import type { BattleActionId, BattlePhase, BattleState } from '../../framework/index.ts';
 import type { BattleCopy } from '../../content/fa/battles.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { DialogueCard } from './DialogueCard.tsx';

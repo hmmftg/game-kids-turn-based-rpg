@@ -1,4 +1,4 @@
-import { battleReducer } from '../battle/reducer.ts';
+import { battleReducer } from '../../framework/index.ts';
 import { advancePhase, applyChoice, createEncounter } from '../quests/encounter.ts';
 import { getQuestDefinition } from '../quests/definitions.ts';
 import { canStartQuest } from '../quests/prerequisites.ts';

@@ -1,4 +1,4 @@
-import type { BattlePhase } from '../domain/battle/types.ts';
+import type { BattlePhase } from '../framework/index.ts';
 import type { CameraTarget } from './camera.ts';
 
 /**

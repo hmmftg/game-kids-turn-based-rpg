@@ -1,5 +1,4 @@
-import type { NpcId } from '../game/types.ts';
-import type { DiscoveryId } from '../world/types.ts';
+import type { DiscoveryId, NpcId } from '../../core/identifiers.ts';
 
 /**
  * Micro turn-based battle — the standalone toy contract (PR I).

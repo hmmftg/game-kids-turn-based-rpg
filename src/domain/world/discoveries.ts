@@ -1,4 +1,4 @@
-import type { DiscoveryId } from './types.ts';
+import type { DiscoveryId } from '../../framework/index.ts';
 
 /**
  * The canonical registry of persistent world facts. A `DiscoveryId` is the
