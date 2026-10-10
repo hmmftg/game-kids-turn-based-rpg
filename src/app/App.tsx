@@ -66,6 +66,7 @@ import {
   cameraFocus,
   clearCameraFocusOverride,
   setCameraFocusOverride,
+  updateCameraFocusOverride,
 } from '../world/CameraRig.tsx';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { nearbyNpcs } from '../world/nearby.ts';
@@ -358,31 +359,54 @@ export function App() {
   }, [state.dialogue?.npcId, state.mapId]);
 
   // Battle camera staging: the SAME token-owned override, now driven by the
-  // battle lifecycle instead of dialogue. START_BATTLE → the override is
-  // acquired aimed at the phase's subject (the opponent's figure, the
-  // midpoint between the figures, or the child); each phase transition
-  // re-frames through a fresh set (the previous token's clear is a no-op
-  // once superseded); terminal victory/defeat simply keep their subject
-  // until LEAVE_BATTLE clears `state.battle`, which is the only exit and
-  // runs the cleanup that releases the override. Phases, the reducer, and
-  // game logic are untouched — pure presentation.
+  // battle lifecycle instead of dialogue. ONE token owns the battle's frame
+  // for the whole fight — START_BATTLE acquires it aimed at `intro`'s
+  // subject, every phase transition re-targets it in place through
+  // updateCameraFocusOverride (never a clear→reacquire gap), and the only
+  // release is `state.battle` going null (LEAVE_BATTLE — the state
+  // machine's only exit) or this owner unmounting. Phases, the reducer,
+  // and game logic are untouched — pure presentation.
+  const battleCameraToken = useRef<number | null>(null);
   useEffect(() => {
     const battle = state.battle;
-    if (battle === null) return;
+    if (battle === null) {
+      if (battleCameraToken.current !== null) {
+        clearCameraFocusOverride(battleCameraToken.current);
+        battleCameraToken.current = null;
+      }
+      return;
+    }
     const npc = getNpcOrNull(WORLD, battle.opponentId);
     if (npc === null) return;
     const at = npcFigurePosition(WORLD, npc, heldTicks.current.get(npc.id) ?? worldTimeRef.current);
     if (at === null) return;
     const target = battleFrameTarget(battle.phase, at, cameraFocus);
-    const token = setCameraFocusOverride({
-      x: target.x,
-      z: target.z,
-      zoom: zoomForMap(WORLD, state.mapId),
-    });
-    return () => {
-      clearCameraFocusOverride(token);
-    };
+    if (battleCameraToken.current === null) {
+      battleCameraToken.current = setCameraFocusOverride({
+        x: target.x,
+        z: target.z,
+        zoom: zoomForMap(WORLD, state.mapId),
+      });
+    } else {
+      updateCameraFocusOverride(battleCameraToken.current, {
+        x: target.x,
+        z: target.z,
+        zoom: zoomForMap(WORLD, state.mapId),
+      });
+    }
   }, [state.battle, state.mapId]);
+
+  // Owner safety net: if this component unmounts mid-battle the token is
+  // released so the module store never leaks a dead owner's frame.
+  useEffect(
+    () => () => {
+      if (battleCameraToken.current !== null) {
+        clearCameraFocusOverride(battleCameraToken.current);
+        battleCameraToken.current = null;
+      }
+    },
+    [],
+  );
 
   const onArrive = useCallback(
     (anchor: AnchorId) => {

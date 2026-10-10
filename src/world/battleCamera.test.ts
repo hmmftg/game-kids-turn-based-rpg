@@ -5,6 +5,7 @@ import {
   clearCameraFocusOverride,
   getCameraFocusOverride,
   setCameraFocusOverride,
+  updateCameraFocusOverride,
 } from './CameraRig.tsx';
 
 // The override store is module-level — reset via the owning token.
@@ -16,13 +17,28 @@ beforeEach(() => {
 const OPPONENT = { x: 2.5, z: -1.5 };
 const PLAYER = { x: 0.5, z: 0.5 };
 
-// Mirrors the App effect's call pattern: set on each phase, cleanup clears
-// the token the run created.
-const setForPhase = (phase: (typeof BATTLE_PHASES)[number], zoom = 64) => {
-  const target = battleFrameTarget(phase, OPPONENT, PLAYER);
-  const token = setCameraFocusOverride({ x: target.x, z: target.z, zoom });
-  return { token, cleanup: () => clearCameraFocusOverride(token) };
-};
+// Mirrors the App effect's REAL ordering: ONE owner token for the whole
+// battle — set once on activation, updateCameraFocusOverride on each phase
+// transition (React runs the same effect body again, not a cleanup), and a
+// single clear when state.battle goes null (LEAVE_BATTLE) or the owner
+// unmounts.
+class BattleCameraOwner {
+  token: number | null = null;
+  applyPhase(phase: (typeof BATTLE_PHASES)[number], zoom = 64) {
+    const target = battleFrameTarget(phase, OPPONENT, PLAYER);
+    if (this.token === null) {
+      this.token = setCameraFocusOverride({ x: target.x, z: target.z, zoom });
+    } else {
+      updateCameraFocusOverride(this.token, { x: target.x, z: target.z, zoom });
+    }
+  }
+  release() {
+    if (this.token !== null) {
+      clearCameraFocusOverride(this.token);
+      this.token = null;
+    }
+  }
+}
 
 describe('battle frame subjects', () => {
   it('assigns a subject to every battle phase', () => {
@@ -48,43 +64,56 @@ describe('battle frame subjects', () => {
 });
 
 describe('battle camera lifecycle', () => {
-  it('acquires the override on activation, aimed at the intro subject', () => {
+  it('acquires one owner token on activation, aimed at the intro subject', () => {
     expect(getCameraFocusOverride()).toBeNull();
-    const { cleanup } = setForPhase('intro');
+    const owner = new BattleCameraOwner();
+    owner.applyPhase('intro');
     expect(getCameraFocusOverride()).toMatchObject({ x: OPPONENT.x, z: OPPONENT.z });
-    cleanup();
+    owner.release();
   });
 
-  it('re-frames on each phase transition; the old token cannot clear the new frame', () => {
-    const first = setForPhase('intro');
-    const second = setForPhase('playerChoice');
-    // Phase advanced: the override now aims at the midpoint, and the
-    // previous run's cleanup is a no-op against the newer owner.
-    first.cleanup();
-    expect(getCameraFocusOverride()).toMatchObject({
-      x: (OPPONENT.x + PLAYER.x) / 2,
-      token: second.token,
-    });
-    second.cleanup();
-    expect(getCameraFocusOverride()).toBeNull();
+  it('re-frames IN PLACE on each phase transition — same token, no clear→reacquire gap', () => {
+    const owner = new BattleCameraOwner();
+    owner.applyPhase('intro');
+    const token = owner.token;
+    for (const phase of ['playerChoice', 'playerResolution', 'enemyResolution'] as const) {
+      owner.applyPhase(phase);
+      // The same owner keeps the override throughout — the frame loop
+      // never observes a null override between phases.
+      expect(getCameraFocusOverride()?.token).toBe(token);
+      expect(getCameraFocusOverride()).toMatchObject(battleFrameTarget(phase, OPPONENT, PLAYER));
+    }
+    owner.release();
   });
 
   it('keeps its terminal subject — victory/defeat hold until LEAVE_BATTLE', () => {
-    const round = setForPhase('roundCheck');
-    const terminal = setForPhase('victory');
-    round.cleanup();
+    const owner = new BattleCameraOwner();
+    owner.applyPhase('roundCheck');
+    owner.applyPhase('victory');
     // Terminal phase: no further automatic transition — the override stays
     // on the victory subject until the explicit exit clears the battle.
     expect(getCameraFocusOverride()).toMatchObject({ x: OPPONENT.x, z: OPPONENT.z });
-    // LEAVE_BATTLE → battle null → the effect cleanup releases it.
-    terminal.cleanup();
+    // LEAVE_BATTLE → battle null → release.
+    owner.release();
     expect(getCameraFocusOverride()).toBeNull();
   });
 
   it('explicit LEAVE_BATTLE cleanup releases the override from any phase', () => {
-    const mid = setForPhase('enemyResolution');
+    const owner = new BattleCameraOwner();
+    owner.applyPhase('enemyResolution');
     expect(getCameraFocusOverride()).not.toBeNull();
-    mid.cleanup();
+    owner.release();
     expect(getCameraFocusOverride()).toBeNull();
+  });
+
+  it('a dialogue token that closes after battle started cannot kill the battle frame', () => {
+    // Cross-owner ordering: dialogue set its override first, the battle
+    // superseded it — the dialogue's late cleanup is a stale-token no-op.
+    const dialogueToken = setCameraFocusOverride({ x: 1, z: 1, zoom: 64 });
+    const owner = new BattleCameraOwner();
+    owner.applyPhase('intro');
+    clearCameraFocusOverride(dialogueToken);
+    expect(getCameraFocusOverride()).toMatchObject({ x: OPPONENT.x, z: OPPONENT.z });
+    owner.release();
   });
 });
