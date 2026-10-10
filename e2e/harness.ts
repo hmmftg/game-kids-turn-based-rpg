@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
 import type { QuestId } from '../src/domain/game/types.ts';
-import { enableWorldProbe, openQuestDialogue } from './npcTap.ts';
+import { enableWorldProbe, expandTrail, openQuestDialogue } from './npcTap.ts';
 
 /** Shared golden-path helpers for e2e specs — importing a .spec file would
  *  register its tests, so reusable flow code lives here instead. */
@@ -28,6 +28,8 @@ export async function resumeFromPicker(page: Page) {
   await page.locator('[data-testid^="profile-card-"]').first().click();
   await expect(page.getByTestId('hud')).toBeVisible();
 }
+
+export { expandTrail };
 
 /**
  * Writes a profile with `completed` quests marked done into IndexedDB, then

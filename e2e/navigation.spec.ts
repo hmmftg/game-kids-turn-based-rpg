@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { STATIC_WORLD_SOURCE } from '../src/world/worldSource.ts';
 import { getAnchor } from '../src/world/navigation/graph.ts';
 import { startGame } from './harness.ts';
-import { tapWorldAnchor, waitForProbe, type WorldProbe } from './npcTap.ts';
+import { expandTrail, tapWorldAnchor, waitForProbe, type WorldProbe } from './npcTap.ts';
 
 // PR K navigation legibility: the tap→go chain must read physically to a
 // child — the avatar visibly orients toward the chosen spot, the camera
@@ -110,6 +110,7 @@ test.describe('navigation legibility', () => {
 
   test('quest-trail chrome gaps pass taps through to the world', async ({ page }) => {
     await startGame(page);
+    await expandTrail(page);
     await waitForProbe(page);
     // Find a canvas point the trail band visually covers but no chip sits on:
     // it must behave exactly like open ground.

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../src/domain/quests/definitions.ts';
-import { enableWorldProbe, openQuestDialogue } from './npcTap.ts';
+import { enableWorldProbe, openQuestDialogue, expandTrail } from './npcTap.ts';
 
 // The trail plays quests that live on the mounted map; secondary maps (the
 // cave) are reached through the world, not the trail — covered by cave.spec.
@@ -44,19 +44,24 @@ async function playQuest(page: Page, questId: (typeof QUESTS)[number]) {
     () => false,
   );
   if (celebrated) await dismiss.click();
+  await expandTrail(page);
   await expect(page.getByTestId(`trail-${questId}`)).toContainText('انجام شد');
 }
 
 test.describe('vertical slice', () => {
   test('first run reaches the hub and the first chapter is the only open one', async ({ page }) => {
     await startGame(page);
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toBeEnabled();
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-helping')).toBeDisabled();
+    await expandTrail(page);
     await expect(page.getByTestId('quest-trail')).toBeVisible();
   });
 
   test('both avatars play identically', async ({ page }) => {
     await startGame(page, 'avatar-arta');
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toBeEnabled();
     await playQuest(page, 'quest-greeting');
   });
@@ -84,6 +89,7 @@ test.describe('vertical slice', () => {
     await expect(page.getByTestId('encounter-response')).toBeVisible();
     // Re-demonstration plays on its own — no retry tap to continue.
     await expect(page.getByTestId('encounter-demonstrate')).toBeVisible({ timeout: 10000 });
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toBeEnabled();
   });
 
@@ -95,7 +101,9 @@ test.describe('vertical slice', () => {
     // Hydrating the persisted 'questCompleted' checkpoint is not a fresh win:
     // the celebration must not replay after a reload.
     await expect(page.getByTestId('quest-celebration')).toHaveCount(0);
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-helping')).toBeEnabled();
   });
 
@@ -126,6 +134,7 @@ test.describe('vertical slice', () => {
     await page.getByTestId('avatar-arta').click();
     await page.getByTestId('headwear-next').click();
     await expect(page.getByTestId('hud')).toBeVisible();
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).not.toContainText('انجام شد');
 
     // Back to the picker: kid1's card restores exactly their progress.
@@ -133,6 +142,7 @@ test.describe('vertical slice', () => {
     await page.getByTestId('switch-player').click();
     await expect(page.locator('[data-testid^="profile-card-"]')).toHaveCount(2);
     await page.locator('[data-testid^="profile-card-"]').first().click();
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
   });
 
@@ -152,6 +162,7 @@ test.describe('vertical slice', () => {
     });
     await startGame(page);
     await expect(page.getByTestId('webgl-fallback')).toBeVisible();
+    await expandTrail(page);
     await expect(page.getByTestId('quest-trail')).toBeVisible();
   });
 });

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
 import type { QuestId } from '../src/domain/game/types.ts';
-import { openQuestDialogue, tapWorldAnchor } from './npcTap.ts';
+import { openQuestDialogue, tapWorldAnchor, expandTrail } from './npcTap.ts';
 
 // The cave is reached by tapping the world, not by a button — these specs tap
 // real canvas pixels via the world probe (enabled by __WORLD_PROBE before load).
@@ -74,6 +74,7 @@ async function playQuest(page: Page, questId: QuestId) {
     () => false,
   );
   if (celebrated) await dismiss.click();
+  await expandTrail(page);
   await expect(page.getByTestId(`trail-${questId}`)).toContainText('انجام شد');
 }
 
@@ -132,6 +133,7 @@ test.describe('the hidden cave', () => {
 
     // In town the cave quest is off-map (locked on the trail); the child
     // enters through the discovered entrance instead.
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-cave-crystal')).toBeDisabled();
     await tapWorldAnchor(page, 'anchor-cave-entrance'); // walk to the rock
     await waitForAnchor(page, 'anchor-cave-entrance');
@@ -149,6 +151,7 @@ test.describe('the hidden cave', () => {
     await waitForMap(page, 'map-town');
     await page.reload();
     await resumeFromPicker(page);
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-cave-crystal')).toContainText('انجام شد');
   });
 });

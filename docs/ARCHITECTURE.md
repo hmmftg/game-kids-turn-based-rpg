@@ -62,7 +62,10 @@ roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit on
   dead tap). HUD chrome rows (`hud__top`, `hud__side`, `hud__bottom`) are
   pass-through containers: only their actual controls are hit targets, so empty
   band space can never swallow a world tap; disabled trail stops are pictures,
-  not verbs (`pointer-events: none`).
+  not verbs (`pointer-events: none`). On small screens (portrait, or height
+  ≤480px) the quest journey starts collapsed behind the `trail-toggle` chip —
+  current objective object + earned stars — and the full rail opens on tap and
+  closes on quest pick or an outside tap (session-only state, never persisted).
 - **Pacing legibility**: every passive beat carries a perceivable cause — the
   model is _state change → visible physical cause → short meaningful beat →
   next state_, never _state change → timer → state change_. Beats arrive

@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
-import { enableWorldProbe, openQuestDialogue, tapNpcFigure, waitForWalkerIdle } from './npcTap.ts';
+import {
+  enableWorldProbe,
+  openQuestDialogue,
+  tapNpcFigure,
+  waitForWalkerIdle,
+  expandTrail,
+} from './npcTap.ts';
 
 const LANDSCAPE = { width: 880, height: 420 };
 const PORTRAIT = { width: 360, height: 800 };
@@ -37,6 +43,7 @@ async function expectSameCanvas(page: Page) {
 async function expectHudIntact(page: Page) {
   await expect(page.getByTestId('hud')).toBeVisible();
   await expect(page.getByTestId('pause-button')).toBeVisible();
+  await expandTrail(page);
   await expect(page.getByTestId('quest-trail')).toBeVisible();
   await expect(page.getByTestId('objective-chip')).toBeVisible();
 }
@@ -129,6 +136,7 @@ test.describe('orientation', () => {
 
     // Tapping the trail sends the avatar walking — navigation only, no
     // auto-dialogue. Rotate immediately, while the walker is travelling.
+    await expandTrail(page);
     await page.getByTestId('trail-quest-greeting').click();
     await page.setViewportSize(PORTRAIT);
     await expectSameCanvas(page);
@@ -138,6 +146,7 @@ test.describe('orientation', () => {
     // portrait frame doesn't show him, the chip navigates again (still true
     // ownership: the chip walks, the figure talks).
     if (!(await tapNpcFigure(page, 'npc-neighbour', 15000))) {
+      await expandTrail(page);
       await page.getByTestId('trail-quest-greeting').click();
       await waitForWalkerIdle(page);
       await tapNpcFigure(page, 'npc-neighbour');
@@ -147,6 +156,7 @@ test.describe('orientation', () => {
     await page.setViewportSize(LANDSCAPE);
     await expectSameCanvas(page);
     await page.getByTestId('close-dialogue').click();
+    await expandTrail(page);
     await expect(page.getByTestId('quest-trail')).toBeVisible();
   });
 
@@ -158,6 +168,7 @@ test.describe('orientation', () => {
 
     // Start the first quest: the chip walks, the NPC tap talks. Rotate
     // mid-walk, then open the offer once the avatar stops in portrait.
+    await expandTrail(page);
     await page.getByTestId('trail-quest-greeting').click();
     await page.setViewportSize(PORTRAIT);
     await expectSameCanvas(page);
@@ -191,11 +202,13 @@ test.describe('orientation', () => {
     ) {
       await dismiss.click();
     }
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
 
     // Final rotation back to portrait: completion survives the whole cycle.
     await page.setViewportSize(PORTRAIT);
     await expectSameCanvas(page);
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
     await expectHudIntact(page);
   });
@@ -218,12 +231,14 @@ test.describe('orientation', () => {
     ) {
       await dismiss.click();
     }
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
 
     await tagCanvas(page);
     await page.setViewportSize(PORTRAIT);
     await page.setViewportSize(LANDSCAPE);
     await expectSameCanvas(page);
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toContainText('انجام شد');
   });
 });
