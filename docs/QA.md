@@ -14,26 +14,38 @@ Always run `verify`, `measure-world`, `qa-screenshots`, and Playwright before a 
 
 ## Performance numbers
 
-Budget **ceilings** are enforced in `scripts/measure-world.ts`. The current **observed sampled
-maxima** (measured on this branch; `main` measures within ±1 call and −6 objects of these —
-the ceilings below are stale and already exceeded on `main`):
+Budget **ceilings** are enforced in `scripts/measure-world.ts`. Environment for all numbers
+below: **dev-server/headless-Chromium** (SwiftShader) — a regression baseline, not low-end-GPU
+proof. **Observed sampled maxima** (re-measured on `main`, 3 identical runs, October 2026 —
+the previous table was stale: both the 76/203/296 script-comment figures and the 86/227/326
+table below them were superseded by real scene growth):
 
 | Tier   | Calls | Objects | Triangles |
 | ------ | ----- | ------- | --------- |
-| low    | 86    | 178     | 4,322     |
-| medium | 227   | 404     | 7,484     |
-| high   | 326   | 546     | 9,992     |
+| low    | 116   | 260     | 5,238     |
+| medium | 262   | 493     | 8,480     |
+| high   | 368   | 648     | 11,092    |
 
-These are observed samples, **not** mathematical bounds — they may vary a little across runs. Do
-not raise ceilings to fit a feature; simplify geometry first.
+**Ceiling margin policy:** ceilings = observed maxima + documented headroom, never raised just
+to go green — draw calls and objects +~15 % rounded to 5, triangles ×1.5, geometries +~50 %,
+materials +~15 %, textures unchanged at 4. These are observed samples, **not** mathematical
+bounds — they may vary a little across runs. Do not raise ceilings to fit a feature; simplify
+geometry first.
+
+`measure-world` opts out of the default-on research consent gate (`?research=0`), the same
+way e2e does — without it `start-button` never appears.
 
 ## Lifecycle regression
 
-`qa-screenshots.ts` plays greeting + helping + tidying to completion through the scene targets,
-then remounts the canvas three ways (portrait cycle, parent-area round-trip, quality-tier cycle)
-and asserts the renderer's object count equals the post-completion baseline. Baseline must be
-captured **after** quest completion — completed quests grow keepsake blossoms and unlock markers
-(389 → 393 objects).
+`qa-screenshots.ts` plays greeting + helping + tidying to completion through the current
+interaction contract — trail chips navigate only (interaction ownership), dialogue opens via a
+deliberate figure tap driven through the `__WORLD_PROBE` hooks, and encounter beats auto-play
+on dwell timers so only the physical object taps are scripted — then remounts the canvas
+(portrait cycle, parent-area round-trip, quality-tier cycle) and asserts the renderer's object
+count equals the settled post-quest baseline. The baseline is captured **after** the first
+post-quest remount and polled until three samples a second apart agree: the world repopulates
+fully on that remount (immediately-after-encounter samples read ~484 objects vs. ~650 settled)
+so an early sample is not a valid reference.
 
 ## Reduced motion
 
