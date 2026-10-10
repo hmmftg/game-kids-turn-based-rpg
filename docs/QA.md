@@ -20,11 +20,13 @@ proof. **Observed sampled maxima** (re-measured after the three-tier geometry wo
 medium/high grew because the tiers now differentiate geometry, not just decoration count;
 low is unchanged because it reuses the exact same shared geometry objects as before):
 
-| Tier   | Calls | Objects | Triangles |
-| ------ | ----- | ------- | --------- |
-| low    | 116   | 260     | 5,238     |
-| medium | 273   | 506     | 12,280    |
-| high   | 393   | 676     | 15,464    |
+| Tier       | Calls | Objects | Triangles |
+| ---------- | ----- | ------- | --------- |
+| low        | 116   | 260     | 5,238     |
+| medium     | 273   | 506     | 12,280    |
+| high       | 393   | 676     | 15,464    |
+| very-high  | 399   | 682     | 17,920    |
+| extra-high | 419   | 704     | 20,136    |
 
 Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
 frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —

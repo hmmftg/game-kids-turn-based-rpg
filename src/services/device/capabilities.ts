@@ -37,6 +37,10 @@ export function maxPixelRatioFor(tier: QualityTier): number {
       return 1.5;
     case 'high':
       return 2;
+    case 'very-high':
+      return 2;
+    case 'extra-high':
+      return 2.5;
   }
 }
 

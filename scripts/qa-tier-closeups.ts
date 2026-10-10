@@ -31,7 +31,6 @@ interface Probe {
   __worldCritterTransforms?: () => readonly (readonly [string, number, number, number, number])[];
 }
 
-type ProbeWindow = Window & Probe;
 async function waitForWalkerIdle() {
   await page
     .waitForFunction(
@@ -104,10 +103,9 @@ const avatar = await page.evaluate(() => (window as unknown as Probe).__worldAt 
 const elder = await page.evaluate(
   () => (window as unknown as Probe).__worldNpcs?.['npc-elder'] ?? null,
 );
-const cat = await catPosition();
 if (!avatar || !elder) throw new Error('probe did not expose avatar/elder positions');
 
-for (const tier of ['low', 'medium', 'high']) {
+for (const tier of ['low', 'medium', 'high', 'very-high', 'extra-high']) {
   await setTier(page, tier);
   await page.screenshot({ path: `${out}/full-${tier}.png` });
   const pa = await screenPoint(avatar.x, avatar.z);

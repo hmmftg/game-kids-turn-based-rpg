@@ -35,7 +35,7 @@ const out = process.argv.includes('--out')
   ? process.argv[process.argv.indexOf('--out') + 1]!
   : 'docs/performance-baseline.raw.json';
 
-const TIERS = ['low', 'medium', 'high'] as const;
+const TIERS = ['low', 'medium', 'high', 'very-high', 'extra-high'] as const;
 
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 900, height: 500 } });

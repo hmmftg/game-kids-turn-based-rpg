@@ -51,6 +51,8 @@ export const FA = {
   qualityLow: 'ساده',
   qualityMedium: 'معمولی',
   qualityHigh: 'بالا',
+  qualityVeryHigh: 'خیلی بالا',
+  qualityExtraHigh: 'فوق‌العاده',
 
   questTrail: 'کارهای من',
   stickers: 'برچسب‌ها',

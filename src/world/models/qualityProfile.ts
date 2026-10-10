@@ -5,7 +5,8 @@ import type { DetailLevel } from './modelProvider.ts';
  * turned into concrete geometry parameters. Models read this instead of
  * scattering segment counts and tier checks through the scene.
  *
- * Level mapping matches `detailLevelFor` (low → 0, medium → 1, high → 2).
+ * Level mapping matches `detailLevelFor`
+ * (low → 0, medium → 1, high → 2, very-high → 3, extra-high → 4).
  * Level 0 must reproduce the previous fixed geometry exactly: the shared
  * `CYLINDER` (12 radial segments) and `SPHERE` (12×8) objects, box heads,
  * box limbs-adjacent pieces. Higher levels refine the *same* shapes — never
@@ -80,7 +81,27 @@ const HIGH: GeometryProfile = {
   animalAccents: true,
 };
 
-const PROFILES: readonly GeometryProfile[] = [LOW, MEDIUM, HIGH];
+const VERY_HIGH: GeometryProfile = {
+  level: 3,
+  radialSegments: 20,
+  sphere: { width: 18, height: 13 },
+  // Wider rounding than High at the same subdivision cost.
+  roundedBox: { radius: 0.26, segments: 2 },
+  clothingAccents: true,
+  animalAccents: true,
+};
+
+const EXTRA_HIGH: GeometryProfile = {
+  level: 4,
+  radialSegments: 24,
+  sphere: { width: 20, height: 14 },
+  // Widest rounding the head proportions still read as the authored box.
+  roundedBox: { radius: 0.3, segments: 2 },
+  clothingAccents: true,
+  animalAccents: true,
+};
+
+const PROFILES: readonly GeometryProfile[] = [LOW, MEDIUM, HIGH, VERY_HIGH, EXTRA_HIGH];
 
 /**
  * Deterministic lookup. Out-of-range levels clamp into the profile range so
@@ -88,8 +109,8 @@ const PROFILES: readonly GeometryProfile[] = [LOW, MEDIUM, HIGH];
  */
 export function profileFor(level: DetailLevel | number): GeometryProfile {
   if (level <= 0) return LOW;
-  if (level >= 2) return HIGH;
-  return MEDIUM;
+  if (level >= 4) return EXTRA_HIGH;
+  return PROFILES[level] ?? MEDIUM;
 }
 
 export { PROFILES };

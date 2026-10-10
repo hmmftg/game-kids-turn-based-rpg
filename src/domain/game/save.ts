@@ -37,7 +37,13 @@ function parseAvatarId(value: unknown): AvatarId | null {
 }
 
 function parseQualityTier(value: unknown): QualityTier {
-  return value === 'low' || value === 'medium' || value === 'high' ? value : 'medium';
+  return value === 'low' ||
+    value === 'medium' ||
+    value === 'high' ||
+    value === 'very-high' ||
+    value === 'extra-high'
+    ? value
+    : 'medium';
 }
 
 function clamp01(value: unknown, fallback: number): number {
