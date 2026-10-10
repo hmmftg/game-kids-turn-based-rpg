@@ -25,11 +25,12 @@ import {
 import {
   BOX,
   CIRCLE,
-  CYLINDER,
   DETAIL_COLORS,
   SHADOW_MATERIAL,
-  SPHERE,
+  cylinderFor,
+  roundedBoxFor,
   sharedLambert,
+  sphereFor,
 } from './shared.ts';
 
 // Materials come from the module-level registry so repeated details across the
@@ -50,9 +51,18 @@ const HEADWEAR_COLORS: Record<Exclude<HeadwearId, 'none'>, string> = {
  * open, and uses only the shared box/cylinder primitives — no extra
  * geometry, materials or per-frame work.
  */
-function Headwear({ id, lift }: { readonly id: HeadwearId; readonly lift: number }) {
+function Headwear({
+  id,
+  lift,
+  level,
+}: {
+  readonly id: HeadwearId;
+  readonly lift: number;
+  readonly level: DetailLevel;
+}) {
   const main = useMaterial(id === 'none' ? '#000000' : HEADWEAR_COLORS[id]);
   const accent = useMaterial(id === 'kufi' ? '#d9cba8' : '#e8eef4');
+  const cylinder = cylinderFor(level);
   if (id === 'none') return null;
   return (
     <group position={[0, lift, 0]} name={`headwear-${id}`}>
@@ -124,7 +134,7 @@ function Headwear({ id, lift }: { readonly id: HeadwearId; readonly lift: number
       ) : null}
       {id === 'kolah' ? (
         <mesh
-          geometry={CYLINDER}
+          geometry={cylinder}
           material={main}
           position={[0, 1.43, 0]}
           scale={[0.46, 0.2, 0.46]}
@@ -134,14 +144,14 @@ function Headwear({ id, lift }: { readonly id: HeadwearId; readonly lift: number
       {id === 'kufi' ? (
         <>
           <mesh
-            geometry={CYLINDER}
+            geometry={cylinder}
             material={main}
             position={[0, 1.39, 0]}
             scale={[0.42, 0.12, 0.42]}
             raycast={noRaycast}
           />
           <mesh
-            geometry={CYLINDER}
+            geometry={cylinder}
             material={accent}
             position={[0, 1.345, 0]}
             scale={[0.45, 0.06, 0.45]}
@@ -152,7 +162,7 @@ function Headwear({ id, lift }: { readonly id: HeadwearId; readonly lift: number
       {id === 'beanie' ? (
         <>
           <mesh
-            geometry={CYLINDER}
+            geometry={cylinder}
             material={main}
             position={[0, 1.42, 0]}
             scale={[0.5, 0.18, 0.5]}
@@ -331,6 +341,21 @@ function Face({ lift, level }: { readonly lift: number; readonly level: DetailLe
           scale={[0.09, 0.03, 0.02]}
           raycast={noRaycast}
         />
+        {/* cheek dots — tiny rounded pads, sit proud of the face plane */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#e8a090')}
+          position={[-0.14, 1.12 + lift, 0.195]}
+          scale={[0.05, 0.04, 0.02]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#e8a090')}
+          position={[0.14, 1.12 + lift, 0.195]}
+          scale={[0.05, 0.04, 0.02]}
+          raycast={noRaycast}
+        />
       </Detail>
     </Detail>
   );
@@ -349,13 +374,14 @@ function RoleDetails({
   readonly lift: number;
   readonly level: DetailLevel;
 }) {
+  const cylinder = cylinderFor(level);
   switch (role) {
     case 'elder':
       return (
         <Detail level={level} min={1}>
           {/* cane */}
           <mesh
-            geometry={CYLINDER}
+            geometry={cylinder}
             material={sharedLambert(DETAIL_COLORS.signPost)}
             position={[0.34, 0.45 + lift, 0.12]}
             scale={[0.05, 0.9, 0.05]}
@@ -387,7 +413,7 @@ function RoleDetails({
           <Detail level={level} min={2}>
             {/* flat cap */}
             <mesh
-              geometry={CYLINDER}
+              geometry={cylinder}
               material={sharedLambert(DETAIL_COLORS.door)}
               position={[0, 1.38 + lift, 0]}
               scale={[0.46, 0.07, 0.46]}
@@ -401,14 +427,14 @@ function RoleDetails({
         <Detail level={level} min={1}>
           {/* wide sun hat */}
           <mesh
-            geometry={CYLINDER}
+            geometry={cylinder}
             material={sharedLambert('#d9cba8')}
             position={[0, 1.36 + lift, 0]}
             scale={[0.72, 0.05, 0.72]}
             raycast={noRaycast}
           />
           <mesh
-            geometry={CYLINDER}
+            geometry={cylinder}
             material={sharedLambert('#d9cba8')}
             position={[0, 1.42 + lift, 0]}
             scale={[0.4, 0.1, 0.4]}
@@ -514,6 +540,12 @@ export function CubicFigure({
   const lift = Math.sin(bobbing) * 0.05;
   // Squash-and-stretch only while walking; settles rigid on arrival.
   const squash = moving ? 1 + Math.sin(bobbing * 2) * 0.05 : 1;
+  // Quality-tier geometry: level 0 resolves to the exact shared constants
+  // (BOX / 12-seg CYLINDER) so low stays identical to the original look.
+  const legGeometry = cylinderFor(detailLevel, detailLevel >= 2 ? 0.8 : 1);
+  // The torso stays the shared BOX at every tier: the tunic's angular slab
+  // is intentional stylization, and rounding its corners would cost ~300
+  // triangles per figure for a change barely visible at hub distance.
 
   return (
     <group
@@ -525,14 +557,14 @@ export function CubicFigure({
     >
       <BlobShadow radius={0.42} />
       <mesh
-        geometry={CYLINDER}
+        geometry={legGeometry}
         material={limb}
         position={[-0.16, 0.25, 0]}
         scale={[0.22, 0.5, 0.22]}
         raycast={noRaycast}
       />
       <mesh
-        geometry={CYLINDER}
+        geometry={legGeometry}
         material={limb}
         position={[0.16, 0.25, 0]}
         scale={[0.22, 0.5, 0.22]}
@@ -545,20 +577,42 @@ export function CubicFigure({
         scale={[0.56, 0.46, 0.4]}
         raycast={noRaycast}
       />
+      <Detail level={detailLevel} min={1}>
+        {/* collar: thin garment band hugging the neck/torso join */}
+        <mesh
+          geometry={cylinderFor(detailLevel)}
+          material={limb}
+          position={[0, 0.95 + lift, 0]}
+          scale={[0.3, 0.05, 0.24]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={detailLevel} min={2}>
+        {/* hem band along the bottom edge of the tunic */}
+        <mesh
+          geometry={BOX}
+          material={limb}
+          position={[0, 0.51 + lift, 0]}
+          scale={[0.6, 0.06, 0.44]}
+          raycast={noRaycast}
+        />
+      </Detail>
       {/* The head pivots as one unit at the neck — the avatar's arrival
         glance turns this group, not the body. The inner offset group keeps
         every head part's authored absolute height unchanged. */}
       <group name="figure-head" position={[0, HEAD_PIVOT_Y, 0]}>
         <group position={[0, -HEAD_PIVOT_Y, 0]}>
+          {/* Rounded box, not a sphere: keeps the authored 0.42×0.38×0.38
+            proportions and face plane while softening the cube silhouette. */}
           <mesh
-            geometry={detailLevel >= 2 ? SPHERE : BOX}
+            geometry={roundedBoxFor(detailLevel)}
             material={head}
             position={[0, 1.14 + lift, 0]}
             scale={[0.42, 0.38, 0.38]}
             raycast={noRaycast}
           />
           {role === 'avatar' ? <Face lift={lift} level={detailLevel} /> : null}
-          <Headwear id={headwear} lift={lift} />
+          <Headwear id={headwear} lift={lift} level={detailLevel} />
           {/* Covered heads skip hair entirely — headwear replaces the silhouette. */}
           {role === 'avatar' && headwear === 'none' && hairStyle ? (
             <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
@@ -582,19 +636,28 @@ export const LANDMARK_DETAIL_CLEARANCE = 0.45;
 export const LANDMARK_MAX_DETAIL_Z = 1.2 - LANDMARK_DETAIL_CLEARANCE;
 const capDetailZ = (z: number) => Math.min(z, LANDMARK_MAX_DETAIL_Z);
 
-/** Flattened dome + finial — shared SPHERE, no new geometry. */
-function DomeRoof({ width, height }: { readonly width: number; readonly height: number }) {
+/** Flattened dome + finial — shared sphere at the level's tessellation. */
+function DomeRoof({
+  width,
+  height,
+  level,
+}: {
+  readonly width: number;
+  readonly height: number;
+  readonly level: DetailLevel;
+}) {
+  const sphere = sphereFor(level);
   return (
     <>
       <mesh
-        geometry={SPHERE}
+        geometry={sphere}
         material={sharedLambert(DETAIL_COLORS.dome)}
         position={[0, height + 0.3, 0]}
         scale={[width * 0.85, 0.55, width * 0.85]}
         raycast={noRaycast}
       />
       <mesh
-        geometry={SPHERE}
+        geometry={sphere}
         material={sharedLambert(DETAIL_COLORS.domeAccent)}
         position={[0, height + 0.62, 0]}
         scale={[0.14, 0.18, 0.14]}
@@ -605,10 +668,18 @@ function DomeRoof({ width, height }: { readonly width: number; readonly height: 
 }
 
 /** Rounded arch cap over a door — half of a squashed sphere. */
-function ArchCap({ position, width = 0.34 }: { readonly position: Xyz; readonly width?: number }) {
+function ArchCap({
+  position,
+  width = 0.34,
+  level,
+}: {
+  readonly position: Xyz;
+  readonly width?: number;
+  readonly level: DetailLevel;
+}) {
   return (
     <mesh
-      geometry={SPHERE}
+      geometry={sphereFor(level)}
       material={sharedLambert(DETAIL_COLORS.door)}
       position={position}
       scale={[width, 0.16, 0.05]}
@@ -624,11 +695,11 @@ function HomeGateDetails({ width, height, level }: VariantDetailProps) {
     <>
       <DoorDetail position={[0.15, 0, faceZ]} reactive subject="door-home-gate" />
       <Detail level={level} min={1}>
-        <DomeRoof width={width} height={height} />
+        <DomeRoof width={width} height={height} level={level} />
         <WindowDetail position={[-0.32, height * 0.55, faceZ]} />
       </Detail>
       <Detail level={level} min={2}>
-        <ArchCap position={[0.15, 0.62, faceZ + 0.01]} />
+        <ArchCap position={[0.15, 0.62, faceZ + 0.01]} level={level} />
       </Detail>
       <Detail level={level} min={2}>
         <WindowDetail position={[0.4, height * 0.55, faceZ]} />
@@ -700,17 +771,17 @@ function SquareDetails({ width, height, level }: VariantDetailProps) {
         subject="door-square"
       />
       <Detail level={level} min={1}>
-        <DomeRoof width={width * 0.7} height={height} />
+        <DomeRoof width={width * 0.7} height={height} level={level} />
         {/* banner: two posts + cloth slab */}
         <mesh
-          geometry={CYLINDER}
+          geometry={cylinderFor(level)}
           material={sharedLambert(DETAIL_COLORS.signPost)}
           position={[-width * 0.8, 0.5, capDetailZ(faceZ + 0.3)]}
           scale={[0.05, 1.0, 0.05]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={CYLINDER}
+          geometry={cylinderFor(level)}
           material={sharedLambert(DETAIL_COLORS.signPost)}
           position={[width * 0.8, 0.5, capDetailZ(faceZ + 0.3)]}
           scale={[0.05, 1.0, 0.05]}
@@ -725,7 +796,7 @@ function SquareDetails({ width, height, level }: VariantDetailProps) {
         />
       </Detail>
       <Detail level={level} min={2}>
-        <ArchCap position={[0, 0.8, faceZ + 0.01]} width={0.5} />
+        <ArchCap position={[0, 0.8, faceZ + 0.01]} width={0.5} level={level} />
         <RoofTrim width={width} y={height - 0.08} />
       </Detail>
     </>
@@ -734,24 +805,25 @@ function SquareDetails({ width, height, level }: VariantDetailProps) {
 
 /** fountain: basin ring + static water disc + center pillar. No animation. */
 function FountainDetails({ level }: { readonly level: DetailLevel }) {
+  const cylinder = cylinderFor(level);
   return (
     <>
       <mesh
-        geometry={CYLINDER}
+        geometry={cylinder}
         material={sharedLambert(DETAIL_COLORS.stone)}
         position={[0, 0.16, 0]}
         scale={[1.6, 0.32, 1.6]}
         raycast={noRaycast}
       />
       <mesh
-        geometry={CYLINDER}
+        geometry={cylinder}
         material={sharedLambert(DETAIL_COLORS.water)}
         position={[0, 0.33, 0]}
         scale={[1.3, 0.04, 1.3]}
         raycast={noRaycast}
       />
       <mesh
-        geometry={CYLINDER}
+        geometry={cylinder}
         material={sharedLambert(DETAIL_COLORS.stone)}
         position={[0, 0.6, 0]}
         scale={[0.3, 0.6, 0.3]}
@@ -759,7 +831,7 @@ function FountainDetails({ level }: { readonly level: DetailLevel }) {
       />
       <Detail level={level} min={1}>
         <mesh
-          geometry={CYLINDER}
+          geometry={cylinder}
           material={sharedLambert(DETAIL_COLORS.water)}
           position={[0, 0.86, 0]}
           scale={[0.5, 0.06, 0.5]}
@@ -853,7 +925,7 @@ export function CubicProp({
     <group position={[position.x, 0, position.z]} dispose={null}>
       {variant === 'ball' || variant === 'shell' ? (
         <mesh
-          geometry={SPHERE}
+          geometry={sphereFor(detailLevel)}
           material={material}
           position={[0, scale / 2, 0]}
           scale={variant === 'shell' ? [scale, scale * 0.65, scale * 0.9] : [scale, scale, scale]}
@@ -861,7 +933,7 @@ export function CubicProp({
         />
       ) : variant === 'kite' ? null : (
         <mesh
-          geometry={shape === 'box' ? BOX : CYLINDER}
+          geometry={shape === 'box' ? BOX : cylinderFor(detailLevel)}
           material={material}
           position={[0, scale / 2, 0]}
           scale={[scale, scale, scale]}
@@ -911,7 +983,7 @@ export function CubicProp({
           <>
             {/* soil + plant */}
             <mesh
-              geometry={CYLINDER}
+              geometry={cylinderFor(detailLevel)}
               material={sharedLambert(DETAIL_COLORS.soil)}
               position={[0, scale + 0.01, 0]}
               scale={[scale * 0.85, 0.04, scale * 0.85]}
@@ -1005,11 +1077,12 @@ interface SpeciesProps {
 
 function CatMesh({ tint, moving, level }: SpeciesProps) {
   const fur = useMaterial(tint ?? '#d98a4a');
+  const sphere = sphereFor(level);
   return (
     <>
       {/* body: squashed sphere; sits upright when idle, stretched forward when running */}
       <mesh
-        geometry={SPHERE}
+        geometry={sphere}
         material={fur}
         position={[0, moving ? 0.26 : 0.3, 0]}
         rotation={[moving ? -0.25 : 0.35, 0, 0]}
@@ -1018,7 +1091,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
       />
       <Detail level={level} min={1}>
         <mesh
-          geometry={SPHERE}
+          geometry={sphere}
           material={fur}
           position={[0, 0.58, 0.22]}
           scale={[0.3, 0.28, 0.28]}
@@ -1033,8 +1106,33 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           scale={[0.07, 0.5, 0.07]}
           raycast={noRaycast}
         />
+        {/* muzzle pad on the face side of the head */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[0, 0.53, 0.42]}
+          scale={[0.14, 0.09, 0.08]}
+          raycast={noRaycast}
+        />
       </Detail>
       <Detail level={level} min={2}>
+        {/* two ear tips on top of the head */}
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[-0.09, 0.76, 0.2]}
+          rotation={[0, 0, 0.15]}
+          scale={[0.1, 0.12, 0.05]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[0.09, 0.76, 0.2]}
+          rotation={[0, 0, -0.15]}
+          scale={[0.1, 0.12, 0.05]}
+          raycast={noRaycast}
+        />
         {/* ear strip across the top of the head */}
         <mesh
           geometry={BOX}
@@ -1051,10 +1149,11 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
 function BirdMesh({ tint, moving, level }: SpeciesProps) {
   const feathers = useMaterial(tint ?? '#5b8ab5');
   const beak = useMaterial(DETAIL_COLORS.beak);
+  const sphere = sphereFor(level);
   return (
     <>
       <mesh
-        geometry={SPHERE}
+        geometry={sphere}
         material={feathers}
         position={[0, 0.22, 0]}
         rotation={[0.3, 0, 0]}
@@ -1063,19 +1162,28 @@ function BirdMesh({ tint, moving, level }: SpeciesProps) {
       />
       <Detail level={level} min={1}>
         <mesh
-          geometry={SPHERE}
+          geometry={sphere}
           material={feathers}
           position={[0, 0.4, 0.16]}
           scale={[0.2, 0.2, 0.2]}
           raycast={noRaycast}
         />
-      </Detail>
-      <Detail level={level} min={2}>
         <mesh
           geometry={BOX}
           material={beak}
           position={[0, 0.4, 0.3]}
           scale={[0.06, 0.05, 0.1]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={2}>
+        {/* tail fan */}
+        <mesh
+          geometry={BOX}
+          material={feathers}
+          position={[0, 0.2, -0.28]}
+          rotation={[0.5, 0, 0]}
+          scale={[0.14, 0.02, 0.22]}
           raycast={noRaycast}
         />
         {/* wing band: a wide flat slab — spread while flying, folded back when perched */}
@@ -1095,10 +1203,11 @@ function BirdMesh({ tint, moving, level }: SpeciesProps) {
 function EagleMesh({ tint, moving, level }: SpeciesProps) {
   const feathers = useMaterial(tint ?? DETAIL_COLORS.soil);
   const head = useMaterial('#e8eef4');
+  const sphere = sphereFor(level);
   return (
     <>
       <mesh
-        geometry={SPHERE}
+        geometry={sphere}
         material={feathers}
         position={[0, 0.32, 0]}
         rotation={[moving ? 0.6 : 0.25, 0, 0]}
@@ -1107,10 +1216,18 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
       />
       <Detail level={level} min={1}>
         <mesh
-          geometry={SPHERE}
+          geometry={sphere}
           material={head}
           position={[0, 0.62, 0.24]}
           scale={[0.28, 0.26, 0.26]}
+          raycast={noRaycast}
+        />
+        {/* hooked beak */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.beak)}
+          position={[0, 0.58, 0.42]}
+          scale={[0.07, 0.06, 0.1]}
           raycast={noRaycast}
         />
       </Detail>
@@ -1135,7 +1252,7 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
     <>
       {/* half-emerged at the waterline; origin sits on the water surface */}
       <mesh
-        geometry={SPHERE}
+        geometry={sphereFor(level)}
         material={scales}
         position={[0, 0.02, 0]}
         scale={[0.16, 0.22, 0.4]}
@@ -1149,6 +1266,17 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
           position={[0, 0.04, -0.3]}
           rotation={[0, moving ? 0.5 : 0.15, 0]}
           scale={[0.04, 0.16, 0.16]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={2}>
+        {/* dorsal fin */}
+        <mesh
+          geometry={BOX}
+          material={scales}
+          position={[0, 0.16, 0.02]}
+          rotation={[0.15, 0, 0]}
+          scale={[0.03, 0.14, 0.18]}
           raycast={noRaycast}
         />
       </Detail>

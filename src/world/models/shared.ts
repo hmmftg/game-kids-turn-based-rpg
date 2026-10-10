@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import type { DetailLevel } from './modelProvider.ts';
+import { profileFor } from './qualityProfile.ts';
 
 /**
  * Shared geometries for every world model. Decorative detail reuses these
@@ -10,6 +13,83 @@ export const CYLINDER = new THREE.CylinderGeometry(0.5, 0.5, 1, 12);
 export const PLANE = new THREE.PlaneGeometry(1, 1);
 export const CIRCLE = new THREE.CircleGeometry(1, 16);
 export const SPHERE = new THREE.SphereGeometry(0.5, 12, 8);
+
+/**
+ * Quality-tier geometry variants.
+ *
+ * Same lifetime contract as `LAMBERT_CACHE` below: every geometry handed out
+ * here is module-owned, lives for the whole app session, and is shared by all
+ * meshes at that quality level — a mesh's unmount must never dispose one
+ * (the `dispose={null}` boundary described below covers them).
+ *
+ * The cache is bounded: keys are only produced by `profileFor` parameters and
+ * the explicit taper/radius options models may pass, so at most a handful of
+ * entries exist (3 tiers × few shapes). Level 0 returns the existing module
+ * constants (`BOX`/`CYLINDER`/`SPHERE`) — never a cache copy — so the low
+ * tier reuses literally the same geometry objects as before this feature.
+ */
+const GEOMETRY_CACHE = new Map<string, THREE.BufferGeometry>();
+
+/**
+ * Sphere for the given quality level. Level 0 returns the shared `SPHERE`
+ * constant; higher levels return a cached sphere at the profile's
+ * tessellation. Radius is always 0.5 — meshes scale it as today.
+ */
+export function sphereFor(level: DetailLevel): THREE.SphereGeometry {
+  if (level <= 0) return SPHERE;
+  const { width, height } = profileFor(level).sphere;
+  const key = `sphere:${width}x${height}`;
+  let geometry = GEOMETRY_CACHE.get(key);
+  if (!geometry) {
+    geometry = new THREE.SphereGeometry(0.5, width, height);
+    GEOMETRY_CACHE.set(key, geometry);
+  }
+  return geometry as THREE.SphereGeometry;
+}
+
+/**
+ * Cylinder for the given quality level.
+ *
+ * `taper` is the top-to-bottom radius ratio: bottom radius is always 0.5,
+ * top radius is `0.5 * taper`, height is always 1 (meshes scale as today).
+ * `taper = 1` (the default) is an untapered cylinder. Level 0 with
+ * `taper = 1` returns the shared `CYLINDER` constant.
+ */
+export function cylinderFor(level: DetailLevel, taper = 1): THREE.CylinderGeometry {
+  if (level <= 0 && taper === 1) return CYLINDER;
+  const radialSegments = level <= 0 ? 12 : profileFor(level).radialSegments;
+  const key = `cylinder:${radialSegments}:${taper}`;
+  let geometry = GEOMETRY_CACHE.get(key);
+  if (!geometry) {
+    geometry = new THREE.CylinderGeometry(0.5 * taper, 0.5, 1, radialSegments);
+    GEOMETRY_CACHE.set(key, geometry);
+  }
+  return geometry as THREE.CylinderGeometry;
+}
+
+/**
+ * Rounded box for the given quality level: a unit (1×1×1) rounded box that
+ * meshes scale exactly like the plain `BOX`, so authored proportions are
+ * unchanged — only the corner silhouette softens. Level 0 returns `BOX`.
+ * `radius`/`segments` come from the level's `GeometryProfile.roundedBox`,
+ * keeping every tier parameter in `qualityProfile.ts`.
+ */
+export function roundedBoxFor(level: DetailLevel): THREE.BufferGeometry {
+  if (level <= 0) return BOX;
+  const { radius, segments } = profileFor(level).roundedBox;
+  const key = `rounded-box:${radius}:${segments}`;
+  let geometry = GEOMETRY_CACHE.get(key);
+  if (!geometry) {
+    geometry = new RoundedBoxGeometry(1, 1, 1, segments, radius);
+    GEOMETRY_CACHE.set(key, geometry);
+  }
+  return geometry;
+}
+
+/** Test/perf instrumentation: geometry variants the registry holds. */
+export function sharedGeometryCount(): number {
+  return GEOMETRY_CACHE.size;
+}
 
 /**
  * Blob-shadow material shared by every figure/landmark shadow disc.
