@@ -65,6 +65,13 @@ if (existsSync(swPath)) {
   );
   must(sw.includes('manifest.webmanifest'), 'sw.js precache does not include the manifest');
   must(!sw.includes('navigateFallback"),"'), 'sw.js navigateFallback misconfigured');
+  // The ?perfprobe=1 measurement chunk is dynamically imported on demand and
+  // must never land in the precache — globIgnores keeps the profiling path at
+  // zero install cost. Verified against the generated manifest, not config.
+  must(
+    !sw.includes('perfProbe'),
+    'sw.js precache includes the perfProbe chunk — profiling must cost the PWA nothing',
+  );
 }
 
 must(existsSync(join(DIST, 'offline.html')), 'dist/offline.html missing');

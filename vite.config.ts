@@ -47,6 +47,9 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['icons/*.svg', 'offline.html'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest,json,mp3,ogg,wav}'],
+        // The ?perfprobe=1 measurement chunk must never be precached — the
+        // profiling path carries zero install cost for the ordinary PWA.
+        globIgnores: ['**/perfProbe-*.js'],
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/offline\.html$/],
         cleanupOutdatedCaches: true,
