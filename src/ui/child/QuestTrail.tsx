@@ -203,7 +203,9 @@ export function QuestTrail({
 
 /**
  * Compact HUD sticker chip. Shows earned stickers at a glance and opens the
- * full album; the album itself is an overlay in `StickerAlbum`.
+ * full album; the album itself is an overlay in `StickerAlbum`. Small screens
+ * get a ⭐-count chip instead of the inline row — the album is the expanded
+ * view, same contract as the collapsed quest trail.
  */
 export function StickerShelf({
   stickers,
@@ -212,15 +214,20 @@ export function StickerShelf({
   readonly stickers: readonly StickerId[];
   readonly onOpen: () => void;
 }) {
+  const compact = useCompactScreen();
   return (
     <button
       type="button"
-      className="btn stickers"
+      className={`btn stickers${compact ? ' stickers--compact' : ''}`}
       onClick={onOpen}
       aria-label={FA.seeStickers}
       data-testid="sticker-shelf"
     >
-      {stickers.length === 0 ? (
+      {compact ? (
+        <span className="stickers__count" aria-hidden="true">
+          ⭐ {stickers.length.toLocaleString('fa-IR')}
+        </span>
+      ) : stickers.length === 0 ? (
         <span className="text--soft">{FA.noStickers}</span>
       ) : (
         <span className="row stickers__row">

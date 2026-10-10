@@ -395,6 +395,20 @@
   color: var(--color-ink);
 }
 
+/* Small screens: the sticker row collapses to a ⭐-count chip — the album
+   overlay is the expanded view. */
+.stickers--compact {
+  min-block-size: var(--touch-min);
+  border-radius: 999px;
+  background: var(--color-surface-strong);
+  border: 3px solid var(--color-sticker);
+  font-weight: 700;
+}
+
+.stickers__count {
+  font-size: var(--font-size-md);
+}
+
 .stickers__row {
   gap: var(--space-2);
 }

@@ -75,7 +75,10 @@ test.describe('vertical slice', () => {
     for (const questId of QUESTS) {
       await playQuest(page, questId);
     }
-    await expect(page.getByTestId('sticker-sticker-finale')).toBeVisible();
+    // The shelf is a ⭐-count chip on small screens — the album is the
+    // expanded view of earned stickers.
+    await page.getByTestId('sticker-shelf').click();
+    await expect(page.getByTestId('album-sticker-finale')).toBeVisible();
   });
 
   test('a wrong choice re-demonstrates instead of failing the child', async ({ page }) => {
