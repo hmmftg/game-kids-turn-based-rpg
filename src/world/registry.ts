@@ -10,6 +10,7 @@ import type {
   WorldArea,
 } from '../domain/world/types.ts';
 import { ANCHORS, EDGES, getAnchor, getAnchorOrNull } from './navigation/graph.ts';
+import { NPC_STAND_OFFSET } from './placement.ts';
 import { insideBounds } from '../domain/world/geometry.ts';
 
 /**
@@ -516,6 +517,27 @@ export function npcFigureJitter(
   const index = source.npcDefinitions.findIndex((npc) => npc.id === npcId);
   const angle = ((index < 0 ? 0 : index) / 8) * Math.PI * 2;
   return { x: Math.cos(angle) * 0.7, z: Math.sin(angle) * 0.7 };
+}
+
+/**
+ * Where the NPC's figure actually stands at `worldTime`: the resolved stand
+ * anchor plus `NPC_STAND_OFFSET`, the spot/placement offset, and the
+ * deterministic jitter — the one spatial truth the renderer draws, probes
+ * report, and the camera frames. `null` when the anchor cannot resolve.
+ */
+export function npcFigurePosition(
+  source: WorldSource,
+  npc: NpcDefinition,
+  worldTime: number,
+): { readonly x: number; readonly z: number } | null {
+  const stand = resolveNpcStand(source, npc, worldTime);
+  const anchor = getAnchorOrNull(source, stand.anchorId);
+  if (anchor === null) return null;
+  const jitter = npcFigureJitter(source, npc.id);
+  return {
+    x: anchor.x + NPC_STAND_OFFSET.x + stand.offsetX + jitter.x,
+    z: anchor.z + NPC_STAND_OFFSET.z + stand.offsetZ + jitter.z,
+  };
 }
 
 /** Stable activity label for an NPC's current spot (schedule-aware). */
