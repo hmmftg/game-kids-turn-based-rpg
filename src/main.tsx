@@ -14,6 +14,13 @@ if (!container) throw new Error('#root missing');
 // query param alone (the lazy chunk stays out of the normal game path) so
 // the e2e acceptance run can drive it against the production preview build.
 const worldBuilderRequested = new URLSearchParams(window.location.search).has('worldbuilder');
+
+// Measurement harness: `?perfprobe=1` loads the probe via a dynamic import,
+// so the disabled path costs zero bytes parsed (and the emitted chunk is
+// excluded from the PWA precache — see globIgnores in vite.config.ts).
+if (new URLSearchParams(window.location.search).has('perfprobe')) {
+  void import('./services/device/perfProbe.ts').then((m) => m.installPerfProbe());
+}
 const BuilderApp = lazy(() =>
   import('./worldbuilder/BuilderApp.tsx').then((module) => ({ default: module.BuilderApp })),
 );

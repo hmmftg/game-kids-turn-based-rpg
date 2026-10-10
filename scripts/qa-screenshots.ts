@@ -6,8 +6,7 @@
 // Requires `npm run dev -- --port 5199` and chromium with SwiftShader.
 import { chromium, type Page } from 'playwright';
 import { mkdirSync } from 'node:fs';
-import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
-import type { QuestId } from '../src/domain/game/types.ts';
+import { enableWorldProbe, openQuestDialogue, setTier as driveSetTier } from './drive-world.ts';
 
 const base = 'http://localhost:5199';
 const out = process.argv[2] ?? '/tmp/qa-shots';
@@ -20,9 +19,7 @@ const page = await browser.newPage({ viewport: { width: 900, height: 500 } });
 // consent screen — opt out exactly like e2e does (harness.withoutResearch).
 // The figure-tap flow below needs the world probe (__worldToScreen /
 // __worldNpcs / __worldMoving) — same init flag e2e uses, before first goto.
-await page.addInitScript(() => {
-  (window as unknown as Record<string, unknown>)['__WORLD_PROBE'] = true;
-});
+await enableWorldProbe(page);
 await page.goto(`${base}?research=0`);
 await page.getByTestId('start-button').click();
 // Kid-interaction states: human avatar picker + headwear preview.
@@ -37,18 +34,7 @@ await page.getByTestId('world-canvas').waitFor();
 await page.waitForTimeout(800);
 
 async function setTier(tier: string) {
-  await page.getByTestId('pause-button').click();
-  await page.getByTestId('parent-entry-pause').click();
-  const hold = await page.getByTestId('parent-gate-hold').boundingBox();
-  if (!hold) throw new Error('parent-gate-hold has no bounding box');
-  await page.mouse.move(hold.x + hold.width / 2, hold.y + hold.height / 2);
-  await page.mouse.down();
-  await page.getByTestId('parent-area').waitFor({ timeout: 8000 });
-  await page.mouse.up();
-  await page.getByTestId(`quality-${tier}`).click();
-  await page.getByTestId('parent-close').click();
-  await page.getByTestId('hud').waitFor();
-  await page.getByTestId('world-canvas').waitFor();
+  await driveSetTier(page, tier);
   await page.waitForTimeout(500);
 }
 
@@ -66,76 +52,6 @@ async function objectCount() {
 /** Dev-only Canvas instance id (WorldCanvas.tsx) — proves no remount. */
 async function canvasId(): Promise<number | undefined> {
   return page.evaluate(() => (window as unknown as { __worldCanvasId?: number }).__worldCanvasId);
-}
-
-/**
- * Waits until the walker's own `moving` flag settles — the probe flag is
- * only published once the walker mounts, so undefined means still booting.
- */
-async function waitForWalkerIdle(page: Page, timeout = 60000) {
-  await page
-    .waitForFunction(
-      () => (window as unknown as Record<string, unknown>)['__worldMoving'] === false,
-      undefined,
-      { timeout },
-    )
-    .catch(() => {});
-}
-
-/**
- * Quest chip → walk → stop → tap the quest's NPC figure → dialogue opens.
- * The chip itself never talks (interaction-ownership contract) — the figure
- * tap is the only way in, exactly like e2e/npcTap.openQuestDialogue.
- */
-async function openQuestDialogue(page: Page, questId: QuestId) {
-  const npcId = getQuestDefinition(questId).steps[0]!.npcId;
-  await page.getByTestId(`trail-${questId}`).click();
-  await waitForWalkerIdle(page);
-  const dialogue = page.getByTestId('npc-dialogue');
-  const offsets: ReadonlyArray<readonly [number, number]> = [
-    [0, 0],
-    [0, -0.8],
-    [0.4, -1.2],
-    [0.8, -0.4],
-    [-0.8, -0.4],
-    [0.6, 0.6],
-    [-0.6, 0.6],
-    [0, 1.2],
-  ];
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const pt = await page.evaluate(
-      ({ id, ox, oz }) => {
-        const w = window as unknown as {
-          __worldNpcs?: Record<string, { x: number; z: number }>;
-          __worldToScreen?: (x: number, z: number) => { x: number; y: number };
-        };
-        const npc = w.__worldNpcs?.[id];
-        if (!npc || !w.__worldToScreen) return null;
-        const canvas = document.querySelector<HTMLCanvasElement>(
-          '#world-canvas canvas, .world canvas',
-        );
-        const p = w.__worldToScreen(npc.x + ox, npc.z + oz);
-        if (!canvas || p.x < 0 || p.y < 0 || p.x > window.innerWidth || p.y > window.innerHeight)
-          return null;
-        const el = document.elementFromPoint(p.x, p.y);
-        if (el !== canvas && !canvas.contains(el)) return null;
-        return p;
-      },
-      {
-        id: npcId,
-        ox: offsets[attempt % offsets.length]![0],
-        oz: offsets[attempt % offsets.length]![1],
-      },
-    );
-    if (pt) await page.mouse.click(pt.x, pt.y);
-    const opened = await dialogue
-      .waitFor({ state: 'visible', timeout: 3000 })
-      .then(() => true)
-      .catch(() => false);
-    if (opened) return;
-    await page.waitForTimeout(600);
-  }
-  throw new Error(`qa-screenshots: could not open dialogue for ${questId}`);
 }
 
 /**
