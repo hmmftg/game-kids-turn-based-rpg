@@ -16,15 +16,19 @@ Always run `verify`, `measure-world`, `qa-screenshots`, and Playwright before a 
 
 Budget **ceilings** are enforced in `scripts/measure-world.ts`. Environment for all numbers
 below: **dev-server/headless-Chromium** (SwiftShader) — a regression baseline, not low-end-GPU
-proof. **Observed sampled maxima** (re-measured on `main`, 3 identical runs, October 2026 —
-the previous table was stale: both the 76/203/296 script-comment figures and the 86/227/326
-table below them were superseded by real scene growth):
+proof. **Observed sampled maxima** (re-measured after the three-tier geometry work, October 2026 —
+medium/high grew because the tiers now differentiate geometry, not just decoration count;
+low is unchanged because it reuses the exact same shared geometry objects as before):
 
 | Tier   | Calls | Objects | Triangles |
 | ------ | ----- | ------- | --------- |
 | low    | 116   | 260     | 5,238     |
-| medium | 262   | 493     | 8,480     |
-| high   | 368   | 648     | 11,092    |
+| medium | 273   | 506     | 12,280    |
+| high   | 393   | 676     | 15,464    |
+
+Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
+frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —
+an expected CPU-rasterizer cost that does not reflect real-GPU performance.
 
 **Ceiling margin policy:** ceilings = observed maxima + documented headroom, never raised just
 to go green — draw calls and objects +~15 % rounded to 5, triangles ×1.5, geometries +~50 %,
