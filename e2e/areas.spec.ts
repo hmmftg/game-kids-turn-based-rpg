@@ -10,6 +10,7 @@ import {
   tapNpcFigure,
   waitForProbe,
   waitForWalkerIdle,
+  expandTrail,
 } from './npcTap.ts';
 
 async function startGame(page: Page) {
@@ -36,6 +37,7 @@ test.describe('scalable world', () => {
     expect(WORLD_AREAS.length).toBeGreaterThanOrEqual(5);
     expect(NPC_DEFINITIONS.length).toBeGreaterThanOrEqual(8);
     await startGame(page);
+    await expandTrail(page);
     await expect(page.getByTestId('quest-trail')).toBeVisible();
   });
 
@@ -72,6 +74,7 @@ test.describe('scalable world', () => {
   }) => {
     await startGame(page);
     await waitForProbe(page);
+    await expandTrail(page);
     await page.getByTestId('trail-quest-greeting').click();
     await waitForWalkerIdle(page);
 
@@ -112,7 +115,9 @@ test.describe('scalable world', () => {
 
     await page.reload();
     await resumeFromPicker(page);
+    await expandTrail(page);
     await expect(page.getByTestId('quest-trail')).toBeVisible();
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toBeEnabled();
   });
 
@@ -137,6 +142,7 @@ test.describe('scalable world', () => {
       () => false,
     );
     if (celebrated) await dismiss.click();
+    await expandTrail(page);
     await expect(page.getByTestId(`trail-${questId}`)).toContainText('انجام شد');
   }
 
@@ -149,6 +155,7 @@ test.describe('scalable world', () => {
     await startGame(page);
 
     // The new area quests stay locked until the story reaches them.
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-park-kite')).toBeDisabled();
     for (const questId of [
       'quest-greeting',
@@ -177,6 +184,7 @@ test.describe('scalable world', () => {
       'quest-bread-errand',
       'quest-school-answer',
     ] as const) {
+      await expandTrail(page);
       await expect(page.getByTestId(`trail-${questId}`)).toContainText('انجام شد');
     }
   });

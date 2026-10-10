@@ -7,6 +7,7 @@ import {
   tapNpcFigure,
   waitForWalkerIdle,
   type WorldProbe,
+  expandTrail,
 } from './npcTap.ts';
 
 /**
@@ -88,6 +89,7 @@ test.describe('semantic animation storyboard', () => {
     await resetAnimations(page);
     // Quest chip navigates only: walking to where the elder stands earns the
     // physical arrival acknowledgement — never a dialogue and never a ring.
+    await expandTrail(page);
     await page.getByTestId('trail-quest-greeting').click();
     await waitForWalkerIdle(page, 60000);
     await expectEpisode(page, [

@@ -162,7 +162,46 @@
 }
 
 /* Quest journey rail: nodes joined by a visible connector. Direction follows
-   DOM order under dir="rtl", so it always reads like a Persian page. */
+   DOM order under dir="rtl", so it always reads like a Persian page.
+   On small screens it starts collapsed behind the journey chip — `hidden`
+   must beat display:flex, and the cluster wrapper never swallows world taps. */
+.trail-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+.trail[hidden] {
+  display: none;
+}
+
+/* Collapsed journey: current objective object + earned stars + open affordance. */
+.trail-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 999px;
+  background: var(--color-surface-strong);
+  border: 3px solid var(--color-primary);
+  box-shadow: var(--shadow-card);
+  color: var(--color-ink);
+  font-size: 20px;
+  pointer-events: auto;
+}
+
+.trail-toggle__stars {
+  font-size: 16px;
+}
+
+.trail-toggle__chevron {
+  font-size: 14px;
+}
+
 .trail {
   display: flex;
   flex-direction: column;

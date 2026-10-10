@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
@@ -20,6 +20,25 @@ const STATUS_GLYPH: Record<QuestStatus, string> = {
   active: '👈',
   completed: '⭐',
 };
+
+/** Same small-screen contract as the CSS: portrait and short landscape get
+ *  the collapsed journey chip instead of the open rail. */
+const COMPACT_QUERY = '(orientation: portrait), (max-height: 480px)';
+
+function useCompactScreen(): boolean {
+  const [compact, setCompact] = useState(
+    () => typeof matchMedia === 'function' && matchMedia(COMPACT_QUERY).matches,
+  );
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const list = matchMedia(COMPACT_QUERY);
+    const onChange = () => setCompact(list.matches);
+    onChange();
+    list.addEventListener('change', onChange);
+    return () => list.removeEventListener('change', onChange);
+  }, []);
+  return compact;
+}
 
 /**
  * Visual journey of chapters. States are carried by glyph + shape + scale +
@@ -52,67 +71,133 @@ export function QuestTrail({
   readonly onGo: (questId: QuestId) => void;
 }) {
   const currentRef = useRef<HTMLButtonElement>(null);
+  const compact = useCompactScreen();
+  // The journey rail fills a big share of a phone screen, so small screens
+  // start with a one-line summary chip; the full rail is a tap away and
+  // closes again on quest pick or an outside tap. Session-only state.
+  const [expanded, setExpanded] = useState(false);
+  const collapsed = compact && !expanded;
+  const doneCount = QUEST_DEFINITIONS.filter((q) => statuses[q.id] === 'completed').length;
+  const currentQuest = QUEST_DEFINITIONS.find((q) => q.id === currentId) ?? null;
 
   useEffect(() => {
     currentRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-  }, [currentId]);
+  }, [currentId, expanded]);
+
+  // Outside-tap dismissal: a tap anywhere but the rail/chip collapses it.
+  // The tap itself is not swallowed — the world still receives it.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!(compact && expanded)) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setExpanded(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [compact, expanded]);
+
+  const goAndClose = (questId: QuestId) => {
+    setExpanded(false);
+    onGo(questId);
+  };
+
+  const currentObject = currentQuest ? questElementFor(currentQuest.id) : null;
 
   return (
-    <nav className="trail" aria-label={FA.questTrail} data-testid="quest-trail" dir="rtl">
-      {QUEST_DEFINITIONS.map((quest, index) => {
-        const status = statuses[quest.id];
-        const copy = getQuestCopy(quest.id);
-        // A quest on another map is shown but cannot be walked to from here.
-        const offMap = (quest.mapId ?? 'map-town') !== mapId;
-        const locked = status === 'locked' || offMap;
-        const current = quest.id === currentId && status !== 'completed';
-        const label = `${copy.titleFa} — ${STATUS_LABEL[status]}`;
-        const objectElement = questElementFor(quest.id);
-        return (
-          <div key={quest.id} className={`trail__step${index === 0 ? ' trail__step--first' : ''}`}>
-            <button
-              ref={current ? currentRef : undefined}
-              type="button"
-              className={`btn btn--icon trail__item trail__item--${status}${
-                current ? ' trail__item--current' : ''
-              }`}
-              onClick={() => onGo(quest.id)}
-              disabled={locked}
-              aria-disabled={locked}
-              aria-current={current ? 'step' : undefined}
-              aria-label={label}
-              data-testid={`trail-${quest.id}`}
+    <div className="trail-cluster" ref={rootRef}>
+      {compact ? (
+        <button
+          type="button"
+          className="btn trail-toggle"
+          aria-expanded={expanded}
+          aria-label={FA.questTrail}
+          data-testid="trail-toggle"
+          onClick={() => setExpanded((open) => !open)}
+        >
+          {currentObject !== null ? (
+            <span className="trail-toggle__object" aria-hidden="true">
+              <SceneGlyph element={currentObject} size={36} />
+            </span>
+          ) : hideActionIcons || currentQuest === null ? null : (
+            <span className="emoji trail-toggle__emoji" aria-hidden="true">
+              {questEmoji(currentQuest.id)}
+            </span>
+          )}
+          {doneCount > 0 ? (
+            <span className="trail-toggle__stars" aria-hidden="true">
+              {'⭐'.repeat(Math.min(doneCount, 3))}
+            </span>
+          ) : null}
+          <span className="trail-toggle__chevron" aria-hidden="true">
+            {expanded ? '▴' : '▾'}
+          </span>
+        </button>
+      ) : null}
+      <nav
+        className="trail"
+        aria-label={FA.questTrail}
+        data-testid="quest-trail"
+        dir="rtl"
+        hidden={collapsed}
+      >
+        {QUEST_DEFINITIONS.map((quest, index) => {
+          const status = statuses[quest.id];
+          const copy = getQuestCopy(quest.id);
+          // A quest on another map is shown but cannot be walked to from here.
+          const offMap = (quest.mapId ?? 'map-town') !== mapId;
+          const locked = status === 'locked' || offMap;
+          const current = quest.id === currentId && status !== 'completed';
+          const label = `${copy.titleFa} — ${STATUS_LABEL[status]}`;
+          const objectElement = questElementFor(quest.id);
+          return (
+            <div
+              key={quest.id}
+              className={`trail__step${index === 0 ? ' trail__step--first' : ''}`}
             >
-              {hideActionIcons ? null : (
-                <span className="trail__badge" aria-hidden="true">
-                  {STATUS_GLYPH[status]}
-                </span>
-              )}
-              {objectElement !== null ? (
-                <span className="trail__object" aria-hidden="true">
-                  <SceneGlyph element={objectElement} size={40} />
-                </span>
-              ) : hideActionIcons ? null : (
-                <span className="emoji trail__emoji" aria-hidden="true">
-                  {questEmoji(quest.id)}
-                </span>
-              )}
-              {hideText ? null : (
-                <>
-                  <span className="trail__title">{copy.titleFa}</span>
-                  <span className="text--soft trail__status">{STATUS_LABEL[status]}</span>
-                  {current ? (
-                    <span className="trail__here" aria-hidden="true">
-                      {FA.goThere}
-                    </span>
-                  ) : null}
-                </>
-              )}
-            </button>
-          </div>
-        );
-      })}
-    </nav>
+              <button
+                ref={current ? currentRef : undefined}
+                type="button"
+                className={`btn btn--icon trail__item trail__item--${status}${
+                  current ? ' trail__item--current' : ''
+                }`}
+                onClick={() => goAndClose(quest.id)}
+                disabled={locked}
+                aria-disabled={locked}
+                aria-current={current ? 'step' : undefined}
+                aria-label={label}
+                data-testid={`trail-${quest.id}`}
+              >
+                {hideActionIcons ? null : (
+                  <span className="trail__badge" aria-hidden="true">
+                    {STATUS_GLYPH[status]}
+                  </span>
+                )}
+                {objectElement !== null ? (
+                  <span className="trail__object" aria-hidden="true">
+                    <SceneGlyph element={objectElement} size={40} />
+                  </span>
+                ) : hideActionIcons ? null : (
+                  <span className="emoji trail__emoji" aria-hidden="true">
+                    {questEmoji(quest.id)}
+                  </span>
+                )}
+                {hideText ? null : (
+                  <>
+                    <span className="trail__title">{copy.titleFa}</span>
+                    <span className="text--soft trail__status">{STATUS_LABEL[status]}</span>
+                    {current ? (
+                      <span className="trail__here" aria-hidden="true">
+                        {FA.goThere}
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </nav>
+    </div>
   );
 }
 

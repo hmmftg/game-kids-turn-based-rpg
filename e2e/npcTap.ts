@@ -256,6 +256,20 @@ export async function tapNpcFigure(page: Page, npcId: string, timeout = 60000): 
 }
 
 /**
+ * Small screens show the quest journey collapsed behind the trail-toggle
+ * chip; large screens have no toggle at all. Idempotent — safe to call
+ * before any `trail-*` assertion or chip tap.
+ */
+export async function expandTrail(page: Page) {
+  const toggle = page.getByTestId('trail-toggle');
+  if ((await toggle.count()) === 0) return;
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') {
+    await toggle.click();
+  }
+  await expect(page.getByTestId('quest-trail')).toBeVisible();
+}
+
+/**
  * Quest chip → walk → stop → tap the quest's NPC → dialogue opens.
  * The chip itself never talks; this is the whole new interaction contract.
  */
@@ -266,6 +280,7 @@ export async function openQuestDialogue(page: Page, questId: QuestId, timeout = 
   await waitForProbe(page);
   const deadline = Date.now() + timeout;
   for (;;) {
+    await expandTrail(page);
     await page.getByTestId(`trail-${questId}`).click();
     // Navigate first: the chip is walk+camera only, so let the walk finish
     // (arrival may shift the routine — the figure is tapped where it then

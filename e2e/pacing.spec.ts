@@ -7,7 +7,7 @@ import {
   seedCompletedQuests,
   startGame,
 } from './harness.ts';
-import { enableWorldProbe, openQuestDialogue } from './npcTap.ts';
+import { enableWorldProbe, openQuestDialogue, expandTrail } from './npcTap.ts';
 
 /**
  * PR C coverage: passive encounter beats auto-play, the only mandatory child
@@ -35,6 +35,7 @@ test.describe('encounter pacing', () => {
     await page.reload();
     await resumeFromPicker(page);
     // The encounter never persisted — the quest is simply still offered.
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toBeEnabled();
     await playQuest(page, 'quest-greeting');
   });
@@ -116,6 +117,7 @@ test.describe('mode B (kidtest=nocopy)', () => {
     ) {
       await dismiss.click();
     }
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-greeting')).toHaveAttribute(
       'aria-label',
       /انجام شد/,
@@ -135,6 +137,7 @@ test.describe('mode B (kidtest=nocopy)', () => {
     await resumeFromPicker(page);
 
     await playQuest(page, 'quest-park-kite');
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-park-kite')).toHaveAttribute(
       'aria-label',
       /انجام شد/,
@@ -199,6 +202,7 @@ test.describe('mode B (kidtest=nocopy)', () => {
     ) {
       await dismiss.click();
     }
+    await expandTrail(page);
     await expect(page.getByTestId('trail-quest-school-answer')).toHaveAttribute(
       'aria-label',
       /انجام شد/,
