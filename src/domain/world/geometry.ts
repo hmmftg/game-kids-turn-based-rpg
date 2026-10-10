@@ -1,6 +1,3 @@
-import type { Bounds } from './types.ts';
-
-/** Whether a world-space point falls inside a bounds rectangle. */
-export function insideBounds(bounds: Bounds, x: number, z: number): boolean {
-  return x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ;
-}
+// `insideBounds` moved to the framework core (generic bounds math). Kept as a
+// re-export so existing `domain/world/geometry.ts` imports keep working.
+export { insideBounds } from '../../framework/index.ts';

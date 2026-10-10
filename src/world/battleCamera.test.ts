@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BATTLE_PHASES } from '../domain/battle/types.ts';
+import { BATTLE_PHASES } from '../framework/index.ts';
 import { battleFrameSubject, battleFrameTarget, BATTLE_FRAME_SUBJECT } from './battleCamera.ts';
 import {
   clearCameraFocusOverride,

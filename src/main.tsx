@@ -19,7 +19,10 @@ const worldBuilderRequested = new URLSearchParams(window.location.search).has('w
 // so the disabled path costs zero bytes parsed (and the emitted chunk is
 // excluded from the PWA precache — see globIgnores in vite.config.ts).
 if (new URLSearchParams(window.location.search).has('perfprobe')) {
-  void import('./services/device/perfProbe.ts').then((m) => m.installPerfProbe());
+  // Deliberate index bypass: the probe must stay its own lazy chunk — routing
+  // it through the public index would pull it into the eager graph and defeat
+  // the zero-cost disabled path (see framework/index.ts).
+  void import('./framework/core/perfProbe.ts').then((m) => m.installPerfProbe());
 }
 const BuilderApp = lazy(() =>
   import('./worldbuilder/BuilderApp.tsx').then((module) => ({ default: module.BuilderApp })),

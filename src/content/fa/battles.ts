@@ -1,4 +1,4 @@
-import type { BattleDefinition, BattleOutcome } from '../../domain/battle/types.ts';
+import type { BattleDefinition, BattleOutcome } from '../../framework/index.ts';
 import type { ReviewMetadata } from '../types.ts';
 
 const DRAFT_REVIEW: ReviewMetadata = {
@@ -12,7 +12,7 @@ const DRAFT_REVIEW: ReviewMetadata = {
 
 /**
  * Micro battle definitions — authored rows only. Rules live in
- * `src/domain/battle/battle.ts`; a row names the opponent NPC, the heart and
+ * the framework battle module (`src/framework/modules/battle/battle.ts`); a row names the opponent NPC, the heart and
  * round budget, the child's physical actions, and the deterministic intent
  * pattern the opponent cycles through (round 1 uses pattern[0]).
  */
