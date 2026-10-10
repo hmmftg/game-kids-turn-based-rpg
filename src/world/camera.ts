@@ -89,6 +89,60 @@ export function clampCameraTarget(
   };
 }
 
+/**
+ * A temporary presentation override of the camera focus: some overlay
+ * (e.g. a dialogue or battle stage, later stages) wants the camera to look
+ * somewhere other than the avatar. Owned by a token so a stale cleanup
+ * cannot cancel a newer owner's request. Never affects game logic.
+ */
+export interface CameraFocusOverrideRequest {
+  readonly x: number;
+  readonly z: number;
+  readonly zoom: number;
+  readonly padding?: number;
+}
+
+export interface CameraFocusOverride extends CameraFocusOverrideRequest {
+  readonly token: number;
+}
+
+/**
+ * The one place the frame loop decides where the camera should look.
+ * No override → the live base focus under the map's zoom/padding.
+ * Override → the requested point, zoom, and padding (map padding as the
+ * fallback). Returns exact targets; easing lives in the rig.
+ */
+export function resolveCameraSource(
+  base: CameraTarget,
+  override: CameraFocusOverride | null,
+  mapZoom: number,
+  mapPadding: number,
+): { x: number; z: number; zoom: number; padding: number } {
+  if (override === null) {
+    return { x: base.x, z: base.z, zoom: mapZoom, padding: mapPadding };
+  }
+  return {
+    x: override.x,
+    z: override.z,
+    zoom: override.zoom,
+    padding: override.padding ?? mapPadding,
+  };
+}
+
+/** Drag-to-pan is suspended while an override owns the camera. */
+export function shouldApplyPan(override: CameraFocusOverride | null): boolean {
+  return override === null;
+}
+
+/**
+ * Both override activation AND deactivation are gesture boundaries: a drag
+ * started before the transition cannot resume on the other side — only a
+ * fresh pointerdown may pan.
+ */
+export function shouldCancelGestureOnOverrideTransition(prev: boolean, next: boolean): boolean {
+  return prev !== next;
+}
+
 /** The zoom a map renders with: its authored override or the default. */
 export function zoomForMap(source: WorldSource, mapId: MapId): number {
   const override = getMap(source, mapId).cameraZoom;

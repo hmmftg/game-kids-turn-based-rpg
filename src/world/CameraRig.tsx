@@ -11,7 +11,12 @@ import {
   clampUserZoom,
   cameraPaddingForMap,
   ISO_OFFSET,
+  resolveCameraSource,
+  shouldApplyPan,
+  shouldCancelGestureOnOverrideTransition,
   zoomForMap,
+  type CameraFocusOverride,
+  type CameraFocusOverrideRequest,
   type CameraTarget,
 } from './camera.ts';
 
@@ -50,6 +55,56 @@ export function publishCameraFocus(x: number, z: number) {
   cameraFocus.x = x;
   cameraFocus.z = z;
   invalidateCamera?.();
+}
+
+/**
+ * Temporary presentation override of the camera focus (e.g. a stage that
+ * wants the camera on someone else for a moment). Token-owned: a caller
+ * may only update/clear the override it created — a later `set` supersedes
+ * and makes earlier tokens stale, so a late cleanup can never cancel a
+ * newer owner's request. Module-level mutable state like `cameraFocus`;
+ * the frame loop reads it, it never re-renders, and it must never touch
+ * game logic.
+ */
+let cameraFocusOverride: CameraFocusOverride | null = null;
+let nextOverrideToken = 1;
+
+/** Exposes the active override on the DEV/probe window channel for e2e. */
+function publishOverrideProbe() {
+  if (typeof window === 'undefined') return;
+  const probe = window as unknown as Record<string, unknown>;
+  if (import.meta.env.DEV || probe['__WORLD_PROBE']) {
+    probe['__worldCameraOverride'] = cameraFocusOverride;
+  }
+}
+
+export function setCameraFocusOverride(request: CameraFocusOverrideRequest): number {
+  const token = nextOverrideToken++;
+  cameraFocusOverride = { ...request, token };
+  publishOverrideProbe();
+  invalidateCamera?.();
+  return token;
+}
+
+export function clearCameraFocusOverride(token: number): void {
+  if (cameraFocusOverride?.token !== token) return;
+  cameraFocusOverride = null;
+  publishOverrideProbe();
+  invalidateCamera?.();
+}
+
+export function updateCameraFocusOverride(
+  token: number,
+  partial: Partial<CameraFocusOverrideRequest>,
+): void {
+  if (cameraFocusOverride?.token !== token) return;
+  cameraFocusOverride = { ...cameraFocusOverride, ...partial, token };
+  publishOverrideProbe();
+  invalidateCamera?.();
+}
+
+export function getCameraFocusOverride(): CameraFocusOverride | null {
+  return cameraFocusOverride;
 }
 
 /**
@@ -114,6 +169,9 @@ export function CameraRig({
   // peek farther. The offset decays to zero the moment they walk again.
   const pan = useRef<PanOffset>({ x: 0, z: 0 });
   const prevFocus = useRef<MutableTarget>({ x: 0, z: 0 });
+  // Override activation AND deactivation are both gesture boundaries: a
+  // drag held across either edge cannot resume with a stale baseline.
+  const prevOverrideActive = useRef(false);
   const gesture = useRef<DragGesture | null>(null);
   // The eased ortho zoom: eases toward `zoom` (map zoom × child factor)
   // exactly like the target eases toward its clamp — bounded frames only.
@@ -128,8 +186,8 @@ export function CameraRig({
   }, [zoomFactor, onZoomFactor]);
 
   const desired = useCallback(
-    (x: number, z: number): CameraTarget =>
-      clampCameraTarget({ x, z }, map.bounds, size.width, size.height, zoom, padding),
+    (x: number, z: number, goalZoom: number = zoom, pad: number = padding): CameraTarget =>
+      clampCameraTarget({ x, z }, map.bounds, size.width, size.height, goalZoom, pad),
     [map.bounds, size.width, size.height, zoom, padding],
   );
 
@@ -195,13 +253,16 @@ export function CameraRig({
       const probe = window as unknown as Record<string, unknown>;
       if (import.meta.env.DEV || probe['__WORLD_PROBE']) probe['__worldPanDown'] = true;
       const at = groundAt(event.clientX, event.clientY);
+      // Under a focus override a pointerdown may not establish a pannable
+      // baseline — no pan state accrues while the override owns the camera.
+      const pannable = shouldApplyPan(cameraFocusOverride);
       gesture.current = {
         id: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         panX: pan.current.x,
         panZ: pan.current.z,
-        ...(at ? { downX: at.x, downZ: at.z } : {}),
+        ...(pannable && at ? { downX: at.x, downZ: at.z } : {}),
         panning: false,
       };
     };
@@ -229,6 +290,8 @@ export function CameraRig({
         return;
       }
       g.panning = true;
+      // An override owns the camera: drag-driven pan writes are suspended.
+      if (!shouldApplyPan(cameraFocusOverride)) return;
       const at = groundAt(event.clientX, event.clientY);
       if (!at) return;
       // Ground under the finger stays put: shift the look target by how far
@@ -295,13 +358,34 @@ export function CameraRig({
       camera.updateProjectionMatrix();
       settled.current = false;
     }
+    // The single camera-source decision: live base focus, or the active
+    // override's point/zoom/padding. `cameraFocus` keeps receiving Hub's
+    // publishes untouched, so clearing restores the CURRENT base focus.
+    const src = resolveCameraSource(cameraFocus, cameraFocusOverride, zoom, padding);
+    // Override activation and deactivation both invalidate any in-flight
+    // gesture: its captured ground point and pan baseline must not be
+    // reused on the other side of the boundary. Because onMove early-
+    // returns for a null gesture or a missing downX/downZ, a physically
+    // held pointer spanning the boundary stays inert — only a fresh
+    // pointerdown (new onDown) may pan. Stale pan accumulation is dropped
+    // too so the camera cannot jump across the edge.
+    const overrideActive = cameraFocusOverride !== null;
+    if (shouldCancelGestureOnOverrideTransition(prevOverrideActive.current, overrideActive)) {
+      gesture.current = null;
+      pan.current.x = 0;
+      pan.current.z = 0;
+      settled.current = false;
+      invalidate();
+    }
+    prevOverrideActive.current = overrideActive;
     // A moving player owns the camera again: any focus change eases the
-    // child's pan offset back to zero so the view returns to them.
+    // child's pan offset back to zero so the view returns to them. Under
+    // an override the decay stays inert — the override owns the camera.
     const focusMoved =
       prevFocus.current.x !== cameraFocus.x || prevFocus.current.z !== cameraFocus.z;
     prevFocus.current.x = cameraFocus.x;
     prevFocus.current.z = cameraFocus.z;
-    if (focusMoved && (pan.current.x !== 0 || pan.current.z !== 0)) {
+    if (!overrideActive && focusMoved && (pan.current.x !== 0 || pan.current.z !== 0)) {
       const k = reduced ? 1 : Math.min(1, delta * 5.2);
       pan.current.x *= 1 - k;
       pan.current.z *= 1 - k;
@@ -311,18 +395,19 @@ export function CameraRig({
       invalidate();
     }
     // Zoom eases like the target: a factor change (button, wheel, pinch)
-    // keeps asking for frames only until the projection settles.
-    const zd = zoom - zoomCurrent.current;
+    // or an override keeps asking for frames only until the projection
+    // settles.
+    const zd = src.zoom - zoomCurrent.current;
     if (Math.abs(zd) > 0.0005) {
       const k = reduced ? 1 : Math.min(1, delta * 5.2);
       zoomCurrent.current += zd * k;
-      if (Math.abs(zoom - zoomCurrent.current) <= 0.0005) zoomCurrent.current = zoom;
+      if (Math.abs(src.zoom - zoomCurrent.current) <= 0.0005) zoomCurrent.current = src.zoom;
       camera.zoom = zoomCurrent.current;
       camera.updateProjectionMatrix();
       settled.current = false;
       invalidate();
     }
-    const want = desired(cameraFocus.x + pan.current.x, cameraFocus.z + pan.current.z);
+    const want = desired(src.x + pan.current.x, src.z + pan.current.z, src.zoom, src.padding);
     const t = target.current;
     const dx = want.x - t.x;
     const dz = want.z - t.z;
