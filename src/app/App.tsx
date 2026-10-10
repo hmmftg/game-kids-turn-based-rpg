@@ -1025,7 +1025,10 @@ export function App() {
 
         {state.mode === 'hub' ? (
           state.webglAvailable ? (
-            worldHintSeen || noActionIcons ? (
+            // The first-use cue only makes sense while there is something to
+            // do — with every quest complete there is nowhere to walk, so the
+            // hint would sit on screen forever.
+            suggestedQuestId === null ? null : worldHintSeen || noActionIcons ? (
               noCopyTest || noActionIcons ? null : (
                 <p className="text text--soft hud__hint">{FA.hotspotHint}</p>
               )
