@@ -41,6 +41,14 @@ geometry first.
 `measure-world` opts out of the default-on research consent gate (`?research=0`), the same
 way e2e does — without it `start-button` never appears.
 
+## Known flaky e2e
+
+- `e2e/routines.spec.ts:260` (landscape) can fail with `expected anchor-X, received anchor-Y`:
+  the fisher can be mid-transit between stands when the test walks to his probe-reported
+  `anchorId`; arriving at a stand nobody occupies ticks the world clock, which moves his
+  schedule to the next spot. Race between transit completion and the visit arrival — passes
+  on re-run; not a renderer/tier effect (observed under SwiftShader pacing).
+
 ## Lifecycle regression
 
 `qa-screenshots.ts` plays greeting + helping + tidying to completion through the current
