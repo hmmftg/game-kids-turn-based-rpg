@@ -15,6 +15,8 @@ describe('profileFor', () => {
     expect(profileFor(0)).toBe(profileFor(0));
     expect(profileFor(1).level).toBe(1);
     expect(profileFor(2).level).toBe(2);
+    expect(profileFor(3).level).toBe(3);
+    expect(profileFor(4).level).toBe(4);
   });
 
   it('level 0 reproduces the original fixed geometry parameters', () => {
@@ -26,25 +28,34 @@ describe('profileFor', () => {
   });
 
   it('refines monotonically: each level is at least as detailed as the one below', () => {
-    const [low, medium, high] = [profileFor(0), profileFor(1), profileFor(2)];
-    expect(medium.radialSegments).toBeGreaterThan(low.radialSegments);
-    expect(high.radialSegments).toBeGreaterThan(medium.radialSegments);
-    expect(medium.sphere.width).toBeGreaterThan(low.sphere.width);
-    expect(high.sphere.width).toBeGreaterThan(medium.sphere.width);
-    expect(medium.sphere.height).toBeGreaterThan(low.sphere.height);
-    expect(high.sphere.height).toBeGreaterThan(medium.sphere.height);
-    expect(medium.clothingAccents).toBe(true);
-    expect(medium.animalAccents).toBe(true);
-    expect(high.clothingAccents).toBe(true);
-    expect(high.animalAccents).toBe(true);
+    const levels = [0, 1, 2, 3, 4].map(profileFor);
+    for (let i = 1; i < levels.length; i += 1) {
+      const prev = levels[i - 1]!;
+      const cur = levels[i]!;
+      expect(cur.radialSegments).toBeGreaterThanOrEqual(prev.radialSegments);
+      expect(cur.sphere.width).toBeGreaterThanOrEqual(prev.sphere.width);
+      expect(cur.sphere.height).toBeGreaterThanOrEqual(prev.sphere.height);
+      expect(cur.roundedBox.radius).toBeGreaterThanOrEqual(prev.roundedBox.radius);
+      expect(cur.roundedBox.segments).toBeGreaterThanOrEqual(prev.roundedBox.segments);
+    }
+    // The refinement must actually move somewhere on every step — a tier that
+    // changes nothing is imperceptible and should not exist.
+    for (let i = 1; i < levels.length; i += 1) {
+      expect(levels[i]).not.toEqual(levels[i - 1]);
+    }
+    expect(levels[1]!.clothingAccents).toBe(true);
+    expect(levels[1]!.animalAccents).toBe(true);
     // High rounds corners wider than Medium at the same subdivision cost.
-    expect(high.roundedBox.radius).toBeGreaterThan(medium.roundedBox.radius);
-    expect(high.roundedBox.segments).toBeGreaterThanOrEqual(medium.roundedBox.segments);
+    expect(levels[2]!.roundedBox.radius).toBeGreaterThan(levels[1]!.roundedBox.radius);
+    // The two new top tiers keep refining past High.
+    expect(levels[3]!.sphere.width).toBeGreaterThan(levels[2]!.sphere.width);
+    expect(levels[4]!.sphere.width).toBeGreaterThan(levels[3]!.sphere.width);
+    expect(levels[4]!.roundedBox.radius).toBeGreaterThan(levels[3]!.roundedBox.radius);
   });
 
   it('clamps out-of-range levels instead of producing an undefined profile', () => {
     expect(profileFor(-1)).toBe(profileFor(0));
-    expect(profileFor(99)).toBe(profileFor(2));
+    expect(profileFor(99)).toBe(profileFor(4));
   });
 });
 
@@ -63,19 +74,23 @@ describe('tier-aware shared geometry', () => {
 
   it('keeps the cache bounded across levels and options', () => {
     const before = sharedGeometryCount();
-    for (const level of [0, 1, 2] as const) {
+    for (const level of [0, 1, 2, 3, 4] as const) {
       sphereFor(level);
       cylinderFor(level);
       cylinderFor(level, 0.8);
       roundedBoxFor(level);
     }
-    // sphere: 2 variants, cylinder: 2 tapered + 2 untapered, rounded box: 2.
-    expect(sharedGeometryCount()).toBeLessThanOrEqual(before + 8);
+    // sphere: 4 variants, cylinder: 4 tapered + 4 untapered, rounded box: 4.
+    expect(sharedGeometryCount()).toBeLessThanOrEqual(before + 16);
   });
 
   it('cache keys distinguish every geometry-affecting parameter', () => {
     expect(cylinderFor(2, 0.8)).not.toBe(cylinderFor(2, 1));
-    expect(cylinderFor(1, 1)).not.toBe(cylinderFor(2, 1));
+    // Same params across levels share one instance (16-seg at medium & high);
+    // distinct segment counts get distinct geometry (16 vs 20).
+    expect(cylinderFor(1, 1)).toBe(cylinderFor(2, 1));
+    expect(cylinderFor(2, 1)).not.toBe(cylinderFor(3, 1));
     expect(roundedBoxFor(1)).not.toBe(roundedBoxFor(2));
+    expect(sphereFor(3)).not.toBe(sphereFor(4));
   });
 });

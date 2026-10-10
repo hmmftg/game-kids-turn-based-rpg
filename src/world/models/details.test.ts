@@ -8,8 +8,14 @@ import { STATIC_WORLD_SOURCE } from '../worldSource.ts';
 
 describe('detailLevelFor', () => {
   it('is the single quality-tier → detail-level mapping', () => {
-    const expected: Record<QualityTier, 0 | 1 | 2> = { low: 0, medium: 1, high: 2 };
-    for (const tier of ['low', 'medium', 'high'] as const) {
+    const expected: Record<QualityTier, 0 | 1 | 2 | 3 | 4> = {
+      low: 0,
+      medium: 1,
+      high: 2,
+      'very-high': 3,
+      'extra-high': 4,
+    };
+    for (const tier of ['low', 'medium', 'high', 'very-high', 'extra-high'] as const) {
       expect(detailLevelFor(tier)).toBe(expected[tier]);
     }
   });

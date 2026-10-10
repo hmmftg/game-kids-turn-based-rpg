@@ -48,6 +48,22 @@ const BUDGET: Record<string, WorldMetrics> = {
     materials: 70,
   },
   high: { calls: 425, triangles: 17000, geometries: 55, textures: 4, objects: 750, materials: 75 },
+  'very-high': {
+    calls: 460,
+    triangles: 27000,
+    geometries: 60,
+    textures: 4,
+    objects: 785,
+    materials: 75,
+  },
+  'extra-high': {
+    calls: 485,
+    triangles: 30500,
+    geometries: 60,
+    textures: 4,
+    objects: 810,
+    materials: 80,
+  },
 };
 
 interface WorldMetrics {
@@ -144,7 +160,7 @@ function maxMetrics(a: WorldMetrics, b: WorldMetrics): WorldMetrics {
 const SAMPLES_PER_TIER = 3;
 
 let failed = false;
-for (const tier of ['low', 'medium', 'high']) {
+for (const tier of ['low', 'medium', 'high', 'very-high', 'extra-high']) {
   await setTier(page, tier);
   // let the remounted canvas settle and render
   await page.waitForTimeout(400);

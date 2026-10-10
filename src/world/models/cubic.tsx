@@ -357,6 +357,40 @@ function Face({ lift, level }: { readonly lift: number; readonly level: DetailLe
           raycast={noRaycast}
         />
       </Detail>
+      <Detail level={level} min={3}>
+        {/* eyebrows — thin dark bars directly above each eye */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#33303a')}
+          position={[-0.09, 1.3 + lift, 0.2]}
+          scale={[0.09, 0.02, 0.02]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#33303a')}
+          position={[0.09, 1.3 + lift, 0.2]}
+          scale={[0.09, 0.02, 0.02]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={4}>
+        {/* eye glints — tiny light catch in the upper-inner eye corner */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#f5f7fa')}
+          position={[-0.075, 1.22 + lift, 0.205]}
+          scale={[0.015, 0.02, 0.01]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#f5f7fa')}
+          position={[0.105, 1.22 + lift, 0.205]}
+          scale={[0.015, 0.02, 0.01]}
+          raycast={noRaycast}
+        />
+      </Detail>
     </Detail>
   );
 }
@@ -594,6 +628,23 @@ export function CubicFigure({
           material={limb}
           position={[0, 0.51 + lift, 0]}
           scale={[0.6, 0.06, 0.44]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={detailLevel} min={4}>
+        {/* shoe caps — darker tips grounded at the bottom of each leg */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#4a3f36')}
+          position={[-0.16, 0.05, 0.04]}
+          scale={[0.22, 0.1, 0.26]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#4a3f36')}
+          position={[0.16, 0.05, 0.04]}
+          scale={[0.22, 0.1, 0.26]}
           raycast={noRaycast}
         />
       </Detail>
@@ -1139,6 +1190,52 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           material={fur}
           position={[0, 0.8, 0.2]}
           scale={[0.3, 0.12, 0.06]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* forehead tabby stripes — same sign-color accent as the muzzle */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[-0.07, 0.72, 0.28]}
+          rotation={[0.3, 0, 0.1]}
+          scale={[0.04, 0.1, 0.02]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[0.07, 0.72, 0.28]}
+          rotation={[0.3, 0, -0.1]}
+          scale={[0.04, 0.1, 0.02]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={4}>
+        {/* inner-ear pads + a darker tail tip */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#e8a090')}
+          position={[-0.09, 0.77, 0.23]}
+          rotation={[0, 0, 0.15]}
+          scale={[0.05, 0.07, 0.02]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#e8a090')}
+          position={[0.09, 0.77, 0.23]}
+          rotation={[0, 0, -0.15]}
+          scale={[0.05, 0.07, 0.02]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[0, moving ? 0.62 : 0.48, -0.5]}
+          rotation={[moving ? -0.4 : 0.6, 0, 0]}
+          scale={[0.08, 0.1, 0.08]}
           raycast={noRaycast}
         />
       </Detail>

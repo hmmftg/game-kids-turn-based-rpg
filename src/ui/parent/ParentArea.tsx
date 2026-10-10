@@ -26,6 +26,8 @@ const TIER_LABEL: Record<QualityTier, string> = {
   low: FA.qualityLow,
   medium: FA.qualityMedium,
   high: FA.qualityHigh,
+  'very-high': FA.qualityVeryHigh,
+  'extra-high': FA.qualityExtraHigh,
 };
 
 export function ParentArea({
@@ -179,7 +181,7 @@ export function ParentArea({
         <section data-testid="parent-quality">
           <h3 className="subtitle">{FA.quality}</h3>
           <div className="row" role="group" aria-label={FA.quality}>
-            {(['low', 'medium', 'high'] as const).map((tier) => (
+            {(['low', 'medium', 'high', 'very-high', 'extra-high'] as const).map((tier) => (
               <button
                 key={tier}
                 type="button"

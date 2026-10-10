@@ -20,11 +20,13 @@ proof. **Observed sampled maxima** (re-measured after the three-tier geometry wo
 medium/high grew because the tiers now differentiate geometry, not just decoration count;
 low is unchanged because it reuses the exact same shared geometry objects as before):
 
-| Tier   | Calls | Objects | Triangles |
-| ------ | ----- | ------- | --------- |
-| low    | 116   | 260     | 5,238     |
-| medium | 273   | 506     | 12,280    |
-| high   | 393   | 676     | 15,464    |
+| Tier       | Calls | Objects | Triangles |
+| ---------- | ----- | ------- | --------- |
+| low        | 116   | 260     | 5,238     |
+| medium     | 273   | 506     | 12,280    |
+| high       | 393   | 676     | 15,464    |
+| very-high  | 399   | 682     | 17,920    |
+| extra-high | 419   | 704     | 20,136    |
 
 Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
 frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —
@@ -38,6 +40,14 @@ geometry first.
 
 `measure-world` opts out of the default-on research consent gate (`?research=0`), the same
 way e2e does — without it `start-button` never appears.
+
+## Known flaky e2e
+
+- `e2e/routines.spec.ts:260` (landscape) can fail with `expected anchor-X, received anchor-Y`:
+  the fisher can be mid-transit between stands when the test walks to his probe-reported
+  `anchorId`; arriving at a stand nobody occupies ticks the world clock, which moves his
+  schedule to the next spot. Race between transit completion and the visit arrival — passes
+  on re-run; not a renderer/tier effect (observed under SwiftShader pacing).
 
 ## Lifecycle regression
 
