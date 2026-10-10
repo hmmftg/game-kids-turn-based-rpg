@@ -61,7 +61,12 @@ import type { NpcAttention } from '../world/sceneBits.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
 import { getAnchorOrNull } from '../world/navigation/graph.ts';
 import { zoomForMap } from '../world/camera.ts';
-import { clearCameraFocusOverride, setCameraFocusOverride } from '../world/CameraRig.tsx';
+import { battleFrameTarget } from '../world/battleCamera.ts';
+import {
+  cameraFocus,
+  clearCameraFocusOverride,
+  setCameraFocusOverride,
+} from '../world/CameraRig.tsx';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { nearbyNpcs } from '../world/nearby.ts';
 import { useGame } from './gameContext.ts';
@@ -351,6 +356,33 @@ export function App() {
       clearCameraFocusOverride(token);
     };
   }, [state.dialogue?.npcId, state.mapId]);
+
+  // Battle camera staging: the SAME token-owned override, now driven by the
+  // battle lifecycle instead of dialogue. START_BATTLE → the override is
+  // acquired aimed at the phase's subject (the opponent's figure, the
+  // midpoint between the figures, or the child); each phase transition
+  // re-frames through a fresh set (the previous token's clear is a no-op
+  // once superseded); terminal victory/defeat simply keep their subject
+  // until LEAVE_BATTLE clears `state.battle`, which is the only exit and
+  // runs the cleanup that releases the override. Phases, the reducer, and
+  // game logic are untouched — pure presentation.
+  useEffect(() => {
+    const battle = state.battle;
+    if (battle === null) return;
+    const npc = getNpcOrNull(WORLD, battle.opponentId);
+    if (npc === null) return;
+    const at = npcFigurePosition(WORLD, npc, heldTicks.current.get(npc.id) ?? worldTimeRef.current);
+    if (at === null) return;
+    const target = battleFrameTarget(battle.phase, at, cameraFocus);
+    const token = setCameraFocusOverride({
+      x: target.x,
+      z: target.z,
+      zoom: zoomForMap(WORLD, state.mapId),
+    });
+    return () => {
+      clearCameraFocusOverride(token);
+    };
+  }, [state.battle, state.mapId]);
 
   const onArrive = useCallback(
     (anchor: AnchorId) => {
