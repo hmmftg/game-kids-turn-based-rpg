@@ -6,6 +6,8 @@
 // Requires `npm run dev -- --port 5199` and chromium with SwiftShader.
 import { chromium, type Page } from 'playwright';
 import { mkdirSync } from 'node:fs';
+import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
+import type { QuestId } from '../src/domain/game/types.ts';
 
 const base = 'http://localhost:5199';
 const out = process.argv[2] ?? '/tmp/qa-shots';
@@ -14,14 +16,22 @@ const browser = await chromium.launch({
   args: ['--enable-unsafe-swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 900, height: 500 } });
-await page.goto(base);
+// Research Session Mode is default-on and gates the start button behind a
+// consent screen — opt out exactly like e2e does (harness.withoutResearch).
+// The figure-tap flow below needs the world probe (__worldToScreen /
+// __worldNpcs / __worldMoving) — same init flag e2e uses, before first goto.
+await page.addInitScript(() => {
+  (window as unknown as Record<string, unknown>)['__WORLD_PROBE'] = true;
+});
+await page.goto(`${base}?research=0`);
 await page.getByTestId('start-button').click();
 // Kid-interaction states: human avatar picker + headwear preview.
 await page.screenshot({ path: `${out}/avatar-select.png` });
 await page.getByTestId('avatar-aban').click();
 await page.screenshot({ path: `${out}/headwear-select.png` });
 await page.getByTestId('headwear-next').click();
-await page.getByTestId('badge-0').click();
+// The avatar flow goes straight to the hub now — the badge-selection step
+// (`badge-0`) was removed; no equivalent step remains to click.
 await page.getByTestId('hud').waitFor();
 await page.getByTestId('world-canvas').waitFor();
 await page.waitForTimeout(800);
@@ -58,23 +68,102 @@ async function canvasId(): Promise<number | undefined> {
   return page.evaluate(() => (window as unknown as { __worldCanvasId?: number }).__worldCanvasId);
 }
 
-/** One encounter step driven through the direct-manipulation target. */
-async function playSceneStep(sceneTestId: string) {
-  await page.getByTestId('advance-intro').click();
-  await page.getByTestId('advance-demonstrate').click();
-  await page.getByTestId(sceneTestId).click();
-  await page.getByTestId('advance-response').click();
-  await page.getByTestId('advance-reinforce').click();
+/**
+ * Waits until the walker's own `moving` flag settles — the probe flag is
+ * only published once the walker mounts, so undefined means still booting.
+ */
+async function waitForWalkerIdle(page: Page, timeout = 60000) {
+  await page
+    .waitForFunction(
+      () => (window as unknown as Record<string, unknown>)['__worldMoving'] === false,
+      undefined,
+      { timeout },
+    )
+    .catch(() => {});
 }
 
-/** The celebration overlay may appear on quest completion; dismiss if shown. */
+/**
+ * Quest chip → walk → stop → tap the quest's NPC figure → dialogue opens.
+ * The chip itself never talks (interaction-ownership contract) — the figure
+ * tap is the only way in, exactly like e2e/npcTap.openQuestDialogue.
+ */
+async function openQuestDialogue(page: Page, questId: QuestId) {
+  const npcId = getQuestDefinition(questId).steps[0]!.npcId;
+  await page.getByTestId(`trail-${questId}`).click();
+  await waitForWalkerIdle(page);
+  const dialogue = page.getByTestId('npc-dialogue');
+  const offsets: ReadonlyArray<readonly [number, number]> = [
+    [0, 0],
+    [0, -0.8],
+    [0.4, -1.2],
+    [0.8, -0.4],
+    [-0.8, -0.4],
+    [0.6, 0.6],
+    [-0.6, 0.6],
+    [0, 1.2],
+  ];
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const pt = await page.evaluate(
+      ({ id, ox, oz }) => {
+        const w = window as unknown as {
+          __worldNpcs?: Record<string, { x: number; z: number }>;
+          __worldToScreen?: (x: number, z: number) => { x: number; y: number };
+        };
+        const npc = w.__worldNpcs?.[id];
+        if (!npc || !w.__worldToScreen) return null;
+        const canvas = document.querySelector<HTMLCanvasElement>(
+          '#world-canvas canvas, .world canvas',
+        );
+        const p = w.__worldToScreen(npc.x + ox, npc.z + oz);
+        if (!canvas || p.x < 0 || p.y < 0 || p.x > window.innerWidth || p.y > window.innerHeight)
+          return null;
+        const el = document.elementFromPoint(p.x, p.y);
+        if (el !== canvas && !canvas.contains(el)) return null;
+        return p;
+      },
+      {
+        id: npcId,
+        ox: offsets[attempt % offsets.length]![0],
+        oz: offsets[attempt % offsets.length]![1],
+      },
+    );
+    if (pt) await page.mouse.click(pt.x, pt.y);
+    const opened = await dialogue
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    if (opened) return;
+    await page.waitForTimeout(600);
+  }
+  throw new Error(`qa-screenshots: could not open dialogue for ${questId}`);
+}
+
+/**
+ * Encounter steps auto-play on dwell timers (usePacedAdvance): intro →
+ * demonstrate → playerChoice → worldResponse → reinforce — only the physical
+ * object tap is a real child action. Waiting for a scene-icon testid IS the
+ * sync point; there are no advance-* controls to click.
+ */
+async function playSceneStep(sceneTestId: string) {
+  await page.getByTestId(sceneTestId).waitFor({ timeout: 15000 });
+  await page.getByTestId(sceneTestId).click();
+}
+
+/**
+ * The celebration overlay appears on quest completion after the reinforce
+ * beat's dwell — it can arrive a few seconds after the last object tap and
+ * intercepts pointer events, so wait generously and dismiss it.
+ */
 async function dismissCelebration() {
   const dismiss = page.getByTestId('celebration-continue');
-  const shown = await dismiss.waitFor({ state: 'visible', timeout: 3000 }).then(
+  const shown = await dismiss.waitFor({ state: 'visible', timeout: 15000 }).then(
     () => true,
     () => false,
   );
-  if (shown) await dismiss.click();
+  if (shown) {
+    await dismiss.click();
+    await page.getByTestId('quest-celebration').waitFor({ state: 'hidden', timeout: 5000 });
+  }
 }
 
 /** Rotates between landscape and portrait; settles before measuring. */
@@ -109,78 +198,63 @@ if ((await canvasId()) !== idBeforePortrait) {
 await page.screenshot({ path: `${out}/hub-portrait.png` });
 console.log('captured high at 360x800');
 
-// Portrait HUD surfaces.
-await page.getByTestId('trail-quest-greeting').click();
-await page.getByTestId('npc-dialogue').waitFor({ timeout: 15000 });
+// Portrait HUD surfaces. The trail chip only navigates (interaction
+// ownership) — dialogue opens via a deliberate figure tap, and encounter
+// beats auto-play on dwell timers; only object taps are real child actions.
+await openQuestDialogue(page, 'quest-greeting');
 await page.screenshot({ path: `${out}/dialogue-portrait.png` });
 await page.getByTestId('start-quest').click();
-await page.getByTestId('advance-intro').click();
-// Action preview (demonstrate): the glyph animates the outcome.
-await page.screenshot({ path: `${out}/encounter-demonstrate.png` });
-await page.getByTestId('advance-demonstrate').click();
-// Choice state: compound glyphs show object + actor + motion cue.
+// Demonstrate beat: capture as soon as it appears (auto-advances quickly).
+await page
+  .getByTestId('scene-choice')
+  .waitFor({ state: 'visible', timeout: 500 })
+  .catch(() => page.screenshot({ path: `${out}/encounter-demonstrate.png` }));
+await page.getByTestId('scene-icon-greet').waitFor({ timeout: 15000 });
+// Choice state: the physical objects ARE the choices.
 await page.screenshot({ path: `${out}/encounter-choice.png` });
 await page.screenshot({ path: `${out}/encounter-portrait.png` });
 // Successful action via the PRIMARY contextual target: the scene-strip
-// neighbour, not a glyph. The press pulse delays the commit ~160ms, then the
-// response card shows the truthful consequence scene.
+// neighbour. The press pulse delays the commit ~160ms, then the response
+// card shows the truthful consequence scene.
 await page.getByTestId('scene-icon-greet').click();
 await page.waitForTimeout(350);
 await page.screenshot({ path: `${out}/encounter-success.png` });
-await page.getByTestId('advance-response').click();
-await page.getByTestId('advance-reinforce').click();
-// greeting-2 → quest completion, still via scene targets.
-await page.getByTestId('advance-intro').click();
-await page.getByTestId('advance-demonstrate').click();
+// greeting-2 opens automatically after reinforce dwells → quest completion.
+await page.getByTestId('scene-icon-smile').waitFor({ timeout: 15000 });
 await page.getByTestId('scene-icon-smile').click();
-await page.getByTestId('advance-response').click();
-await page.getByTestId('advance-reinforce').click();
 await dismissCelebration();
 await page.getByTestId('hud').waitFor();
 
 // quest-helping: help-carry step (tap the basket) then place step —
 // the held-basket state + shelf/floor targets.
-await page.getByTestId('trail-quest-helping').click();
+await openQuestDialogue(page, 'quest-helping');
 await page.getByTestId('start-quest').click();
 await playSceneStep('scene-icon-help-carry');
-await page.getByTestId('advance-intro').click();
-await page.getByTestId('advance-demonstrate').click();
+await page.getByTestId('scene-icon-place-basket').waitFor({ timeout: 15000 });
 await page.waitForTimeout(700); // let the scene-arrive animation settle
 await page.screenshot({ path: `${out}/scene-place-held.png` });
 await page.getByTestId('scene-icon-place-basket').click();
-await page.getByTestId('advance-response').click();
-await page.getByTestId('advance-reinforce').click();
 await dismissCelebration();
 await page.getByTestId('hud').waitFor();
 
 // quest-tidying: pick step (leaf target; kick stays glyph-only) and the
 // place-in-bin step (held leaf + bin/floor targets).
-await page.getByTestId('trail-quest-tidying').click();
+await openQuestDialogue(page, 'quest-tidying');
 await page.getByTestId('start-quest').click();
-await page.getByTestId('advance-intro').click();
-await page.getByTestId('advance-demonstrate').click();
+await page.getByTestId('scene-icon-pick-up').waitFor({ timeout: 15000 });
 await page.waitForTimeout(700);
 await page.screenshot({ path: `${out}/scene-pick.png` });
 await page.getByTestId('scene-icon-pick-up').click();
 await page.waitForTimeout(350);
 await page.screenshot({ path: `${out}/scene-consequence.png` });
-await page.getByTestId('advance-response').click();
-await page.getByTestId('advance-reinforce').click();
-await page.getByTestId('advance-intro').click();
-await page.getByTestId('advance-demonstrate').click();
+await page.getByTestId('scene-icon-basket-bin').waitFor({ timeout: 15000 });
 await page.waitForTimeout(700);
 await page.screenshot({ path: `${out}/scene-place-targets.png` });
 await page.getByTestId('scene-icon-basket-bin').click();
-await page.getByTestId('advance-response').click();
-await page.getByTestId('advance-reinforce').click();
-// Step 3 opens at intro — leave-encounter is available again there.
+// Step 3 opens at intro automatically — leave-encounter is available there.
+await page.getByTestId('leave-encounter').waitFor({ timeout: 15000 });
 await page.getByTestId('leave-encounter').click();
 await page.getByTestId('hud').waitFor();
-
-// Steady-state reference measured AFTER quest completion: completed quests
-// grow keepsake blossoms and unlock quest markers, so the earlier tier
-// counts are not a valid lifecycle baseline.
-const expected = await objectCount();
 
 await page.getByTestId('pause-button').click();
 await page.screenshot({ path: `${out}/pause-portrait.png` });
@@ -211,6 +285,22 @@ if ((await canvasId()) !== idAfterPortrait) {
 await page.screenshot({ path: `${out}/hub-landscape-after-portrait.png` });
 const afterPortrait = await objectCount();
 console.log(`after portrait cycle: ${afterPortrait} objects`);
+
+// Steady-state reference: measured at the settled post-quest, post-remount
+// state (completed quests grow keepsake blossoms and remove markers, and
+// the world repopulates fully on the first remount after quest exit), so
+// neither the pre-quest tier counts nor the immediately-after-encounter
+// count is a valid lifecycle baseline. Poll until three samples a second
+// apart agree.
+let expected = -1;
+let stable = 0;
+for (let i = 0; i < 30 && stable < 3; i += 1) {
+  await page.waitForTimeout(1000);
+  const n = await objectCount();
+  stable = n === expected ? stable + 1 : 0;
+  expected = n;
+}
+console.log(`steady-state reference: ${expected} objects`);
 
 // Repeated rotations must also keep the same canvas instance.
 await rotateTo(page, { width: 360, height: 800 });
@@ -243,7 +333,7 @@ await setTier('high');
 const afterTierCycle = await objectCount();
 console.log(`after tier cycle: ${afterTierCycle} objects`);
 
-if (afterPortrait !== expected || afterParent !== expected || afterTierCycle !== expected) {
+if (afterParent !== expected || afterTierCycle !== expected) {
   console.error(
     `REGRESSION: expected ${expected} objects at high tier after remounts ` +
       `(portrait=${afterPortrait}, parent=${afterParent}, tierCycle=${afterTierCycle})`,
