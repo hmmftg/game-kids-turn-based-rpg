@@ -4,7 +4,7 @@ import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import type { NpcDefinition } from '../domain/world/types.ts';
 import {
   getNpcOrNull,
-  npcFigureJitter,
+  npcFigurePosition,
   resolveNpcActivity,
   resolveNpcSpot,
   resolveNpcStand,
@@ -60,7 +60,8 @@ import { WorldCanvas } from '../world/WorldCanvas.tsx';
 import type { NpcAttention } from '../world/sceneBits.tsx';
 import type { HubHandle } from '../world/Hub.tsx';
 import { getAnchorOrNull } from '../world/navigation/graph.ts';
-import { NPC_STAND_OFFSET } from '../world/placement.ts';
+import { zoomForMap } from '../world/camera.ts';
+import { clearCameraFocusOverride, setCameraFocusOverride } from '../world/CameraRig.tsx';
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { nearbyNpcs } from '../world/nearby.ts';
 import { useGame } from './gameContext.ts';
@@ -301,16 +302,15 @@ export function App() {
         WORLD.npcDefinitions.map((npc) => {
           const npcTick = npcStandTicks.get(npc.id) ?? worldTime;
           const stand = resolveNpcStand(WORLD, npc, npcTick);
-          const anchor = getAnchorOrNull(WORLD, stand.anchorId);
-          const jitter = npcFigureJitter(WORLD, npc.id);
+          const at = npcFigurePosition(WORLD, npc, npcTick);
           return [
             npc.id,
             {
               anchorId: stand.anchorId,
               activity: resolveNpcActivity(npc, npcTick),
               dialogueId: stand.spot?.dialogueId ?? npc.dialogueIds[0] ?? null,
-              x: (anchor?.x ?? 0) + 0.9 + stand.offsetX + jitter.x,
-              z: (anchor?.z ?? 0) - 0.4 + stand.offsetZ + jitter.z,
+              x: at?.x ?? 0,
+              z: at?.z ?? 0,
             },
           ];
         }),
@@ -327,6 +327,31 @@ export function App() {
     statuses,
     npcStandTicks,
   ]);
+
+  // Dialogue camera: the override is acquired only once the card is open —
+  // the walk-to-talk chain (tap → walk → arrive → open) runs under the live
+  // follow camera untouched. It frames the NPC's ACTUAL figure (the same
+  // npcFigurePosition truth the renderer draws, at the figure's own held
+  // tick), then releases through the owning token when the dialogue closes
+  // or the conversation moves to someone else — the camera eases back to
+  // the current base focus on its own. Pure presentation: no game state.
+  useEffect(() => {
+    const npcId = state.dialogue?.npcId ?? null;
+    if (npcId === null) return;
+    const npc = getNpcOrNull(WORLD, npcId);
+    if (npc === null) return;
+    const at = npcFigurePosition(WORLD, npc, heldTicks.current.get(npc.id) ?? worldTimeRef.current);
+    if (at === null) return;
+    const token = setCameraFocusOverride({
+      x: at.x,
+      z: at.z,
+      zoom: zoomForMap(WORLD, state.mapId),
+    });
+    return () => {
+      clearCameraFocusOverride(token);
+    };
+  }, [state.dialogue?.npcId, state.mapId]);
+
   const onArrive = useCallback(
     (anchor: AnchorId) => {
       setWorldHintSeen(true);
@@ -364,12 +389,10 @@ export function App() {
       if (arrivalPos !== null) {
         const t = worldTimeRef.current;
         for (const npc of WORLD.npcDefinitions) {
-          const stand = resolveNpcStand(WORLD, npc, heldTicks.current.get(npc.id) ?? t);
-          const standAnchor = getAnchorOrNull(WORLD, stand.anchorId);
-          if (standAnchor === null) continue;
-          const jitter = npcFigureJitter(WORLD, npc.id);
-          const dx = standAnchor.x + NPC_STAND_OFFSET.x + stand.offsetX + jitter.x - arrivalPos.x;
-          const dz = standAnchor.z + NPC_STAND_OFFSET.z + stand.offsetZ + jitter.z - arrivalPos.z;
+          const at = npcFigurePosition(WORLD, npc, heldTicks.current.get(npc.id) ?? t);
+          if (at === null) continue;
+          const dx = at.x - arrivalPos.x;
+          const dz = at.z - arrivalPos.z;
           if (dx * dx + dz * dz <= APPROACH_RADIUS * APPROACH_RADIUS) {
             if (!heldTicks.current.has(npc.id)) heldTicks.current.set(npc.id, t);
           } else {

@@ -13,13 +13,17 @@ import {
   areaAt,
   areaForAnchor,
   insideBounds,
+  npcFigureJitter,
+  npcFigurePosition,
   npcsAtAnchor,
   npcsForArea,
   npcStandingAt,
   resolveNpcActivity,
   resolveNpcAnchor,
+  resolveNpcStand,
   visibleAreaIds,
 } from './registry.ts';
+import { NPC_STAND_OFFSET } from './placement.ts';
 import type { NpcDefinition } from '../domain/world/types.ts';
 
 const dialogueIds = new Set(DIALOGUE_NODES.map((node) => node.id));
@@ -138,6 +142,33 @@ describe('area activation and schedules', () => {
     for (const tick of [0, 1, 7, 100]) {
       expect(resolveNpcAnchor(STATIC_WORLD_SOURCE, neighbour, tick)).toBe('anchor-home-gate');
     }
+  });
+
+  it('npcFigurePosition lands the figure where the renderer draws it', () => {
+    // The one spatial truth: stand anchor + NPC_STAND_OFFSET + spot offset +
+    // jitter — what Hub/ChallengeWorld render, probes report, and the
+    // dialogue camera frames.
+    const neighbour = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-neighbour')!;
+    const at = npcFigurePosition(STATIC_WORLD_SOURCE, neighbour, 0);
+    expect(at).not.toBeNull();
+    const anchor = getAnchor(STATIC_WORLD_SOURCE, 'anchor-home-gate');
+    const jitter = npcFigureJitter(STATIC_WORLD_SOURCE, 'npc-neighbour');
+    expect(at!.x).toBeCloseTo(anchor.x + NPC_STAND_OFFSET.x + jitter.x, 5);
+    expect(at!.z).toBeCloseTo(anchor.z + NPC_STAND_OFFSET.z + jitter.z, 5);
+    // A scheduled spot's authored offset is part of the figure position.
+    const fisher = NPC_DEFINITIONS.find((npc) => npc.id === 'npc-fisher')!;
+    const atRiver = npcFigurePosition(STATIC_WORLD_SOURCE, fisher, 0);
+    const stand = resolveNpcStand(STATIC_WORLD_SOURCE, fisher, 0);
+    const riverAnchor = getAnchor(STATIC_WORLD_SOURCE, stand.anchorId);
+    const fisherJitter = npcFigureJitter(STATIC_WORLD_SOURCE, 'npc-fisher');
+    expect(atRiver!.x).toBeCloseTo(
+      riverAnchor.x + NPC_STAND_OFFSET.x + stand.offsetX + fisherJitter.x,
+      5,
+    );
+    expect(atRiver!.z).toBeCloseTo(
+      riverAnchor.z + NPC_STAND_OFFSET.z + stand.offsetZ + fisherJitter.z,
+      5,
+    );
   });
 
   it('routines resolve who stands at an anchor — resident first, then visitor', () => {
