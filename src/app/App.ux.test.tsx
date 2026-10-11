@@ -297,7 +297,7 @@ describe('UX pass', { timeout: 90000 }, () => {
     await user.pointer('[MouseLeft]');
 
     await user.click(screen.getByTestId('quality-low'));
-    expect(screen.getByTestId('quality-low')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('quality-low')).toHaveAttribute('aria-checked', 'true');
   });
 
   it('album shows earned stickers over existing data and locked slots harmlessly', async () => {
