@@ -11,9 +11,9 @@ describe('detailLevelFor', () => {
     const expected: Record<QualityTier, 0 | 1 | 2 | 3 | 4> = {
       'very-low': 0,
       low: 1,
-      normal: 2,
-      high: 3,
-      'very-high': 4,
+      normal: 4,
+      high: 5,
+      'very-high': 6,
     };
     for (const tier of ['very-low', 'low', 'normal', 'high', 'very-high'] as const) {
       expect(detailLevelFor(tier)).toBe(expected[tier]);

@@ -101,7 +101,33 @@ const EXTRA_HIGH: GeometryProfile = {
   animalAccents: true,
 };
 
-const PROFILES: readonly GeometryProfile[] = [LOW, MEDIUM, HIGH, VERY_HIGH, EXTRA_HIGH];
+const LUSH: GeometryProfile = {
+  level: 5,
+  radialSegments: 26,
+  sphere: { width: 22, height: 15 },
+  roundedBox: { radius: 0.32, segments: 2 },
+  clothingAccents: true,
+  animalAccents: true,
+};
+
+const CINEMATIC: GeometryProfile = {
+  level: 6,
+  radialSegments: 28,
+  sphere: { width: 24, height: 16 },
+  roundedBox: { radius: 0.34, segments: 2 },
+  clothingAccents: true,
+  animalAccents: true,
+};
+
+const PROFILES: readonly GeometryProfile[] = [
+  LOW,
+  MEDIUM,
+  HIGH,
+  VERY_HIGH,
+  EXTRA_HIGH,
+  LUSH,
+  CINEMATIC,
+];
 
 /**
  * Deterministic lookup. Out-of-range levels clamp into the profile range so
@@ -109,7 +135,7 @@ const PROFILES: readonly GeometryProfile[] = [LOW, MEDIUM, HIGH, VERY_HIGH, EXTR
  */
 export function profileFor(level: DetailLevel | number): GeometryProfile {
   if (level <= 0) return LOW;
-  if (level >= 4) return EXTRA_HIGH;
+  if (level >= 6) return CINEMATIC;
   return PROFILES[level] ?? MEDIUM;
 }
 

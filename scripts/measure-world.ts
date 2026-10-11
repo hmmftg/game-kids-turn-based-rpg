@@ -20,15 +20,15 @@ const url = URL.includes('research=') ? URL : `${URL}${URL.includes('?') ? '&' :
 /**
  * BUDGET = pass/fail ceilings (unchanged since the graphics pass).
  *
- * Current observed baseline (five-tier scale, 2026-10-10, dev server +
- * SwiftShader): the first three tiers reuse the old low/medium/high
- * geometry unchanged; high adds full bodies (arms, hands, feet, NPC faces,
- * animal legs) and very-high adds draped garments + coverings:
+ * Current observed baseline (2026-10-11, dev server + SwiftShader): normal
+ * now renders the full-body/clothing tier (former level-4 look); high and
+ * very-high stack the new realism refinements on top (single-mesh drapes,
+ * garment finishing, animal feather/fur detail):
  *   very-low:  calls 116 · triangles 5238  · objects 260 · materials 50 · geometries 24 · textures 1
  *   low:       calls 273 · triangles 12280 · objects 506 · materials 62 · geometries 33 · textures 1
- *   normal:    calls 393 · triangles 15464 · objects 676 · materials 65 · geometries 39 · textures 1
- *   high:      calls 514 · triangles 19300 · objects 816 · materials 65 · geometries 39 · textures 1
- *   very-high: calls 591 · triangles 22536 · objects 909 · materials 71 · geometries 39 · textures 1
+ *   normal:    calls 580 · triangles 22932 · objects 898 · materials 69 · geometries 41 · textures 1
+ *   high:      calls 606 · triangles 25196 · objects 928 · materials 69 · geometries 41 · textures 1
+ *   very-high: calls 620 · triangles 27452 · objects 944 · materials 69 · geometries 41 · textures 1
  * These are sampled maxima, not mathematical upper bounds — ambient critter
  * positions vary between environments and frustum culling follows them.
  * (Previous comments said 76/203/296 calls and docs/QA.md said 86/227/326 —
@@ -59,28 +59,28 @@ const BUDGET: Record<string, WorldMetrics> = {
     materials: 70,
   },
   normal: {
-    calls: 425,
-    triangles: 17000,
-    geometries: 55,
+    calls: 670,
+    triangles: 34500,
+    geometries: 65,
     textures: 4,
-    objects: 750,
-    materials: 75,
+    objects: 1035,
+    materials: 80,
   },
   high: {
-    calls: 590,
-    triangles: 29000,
-    geometries: 60,
+    calls: 695,
+    triangles: 38000,
+    geometries: 65,
     textures: 4,
-    objects: 940,
-    materials: 75,
+    objects: 1065,
+    materials: 80,
   },
   'very-high': {
-    calls: 680,
-    triangles: 34000,
-    geometries: 60,
+    calls: 715,
+    triangles: 41500,
+    geometries: 65,
     textures: 4,
-    objects: 1045,
-    materials: 85,
+    objects: 1085,
+    materials: 80,
   },
 };
 

@@ -16,7 +16,7 @@ describe('profileFor', () => {
     expect(profileFor(1).level).toBe(1);
     expect(profileFor(2).level).toBe(2);
     expect(profileFor(3).level).toBe(3);
-    expect(profileFor(4).level).toBe(4);
+    expect(profileFor(6).level).toBe(6);
   });
 
   it('level 0 reproduces the original fixed geometry parameters', () => {
@@ -28,7 +28,7 @@ describe('profileFor', () => {
   });
 
   it('refines monotonically: each level is at least as detailed as the one below', () => {
-    const levels = [0, 1, 2, 3, 4].map(profileFor);
+    const levels = [0, 1, 2, 3, 4, 5, 6].map(profileFor);
     for (let i = 1; i < levels.length; i += 1) {
       const prev = levels[i - 1]!;
       const cur = levels[i]!;
@@ -51,11 +51,14 @@ describe('profileFor', () => {
     expect(levels[3]!.sphere.width).toBeGreaterThan(levels[2]!.sphere.width);
     expect(levels[4]!.sphere.width).toBeGreaterThan(levels[3]!.sphere.width);
     expect(levels[4]!.roundedBox.radius).toBeGreaterThan(levels[3]!.roundedBox.radius);
+    expect(levels[5]!.sphere.width).toBeGreaterThan(levels[4]!.sphere.width);
+    expect(levels[6]!.sphere.width).toBeGreaterThan(levels[5]!.sphere.width);
+    expect(levels[6]!.roundedBox.radius).toBeGreaterThan(levels[5]!.roundedBox.radius);
   });
 
   it('clamps out-of-range levels instead of producing an undefined profile', () => {
     expect(profileFor(-1)).toBe(profileFor(0));
-    expect(profileFor(99)).toBe(profileFor(4));
+    expect(profileFor(99)).toBe(profileFor(6));
   });
 });
 
