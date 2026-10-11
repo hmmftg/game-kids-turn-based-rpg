@@ -27,20 +27,24 @@ export function ResearchGate({
         <div className="row" role="radiogroup" aria-label={FA.researchAgeLabel}>
           <button
             type="button"
-            className={`btn ${ageBand === '3-4' ? 'btn--accent' : 'btn--secondary'}`}
+            role="radio"
+            className="btn btn--secondary"
             onClick={() => setAgeBand('3-4')}
             data-testid="research-age-3-4"
-            aria-pressed={ageBand === '3-4'}
+            aria-checked={ageBand === '3-4'}
           >
+            {ageBand === '3-4' ? '✔︎ ' : ''}
             {FA.researchAge34}
           </button>
           <button
             type="button"
-            className={`btn ${ageBand === '5-7' ? 'btn--accent' : 'btn--secondary'}`}
+            role="radio"
+            className="btn btn--secondary"
             onClick={() => setAgeBand('5-7')}
             data-testid="research-age-5-7"
-            aria-pressed={ageBand === '5-7'}
+            aria-checked={ageBand === '5-7'}
           >
+            {ageBand === '5-7' ? '✔︎ ' : ''}
             {FA.researchAge57}
           </button>
         </div>

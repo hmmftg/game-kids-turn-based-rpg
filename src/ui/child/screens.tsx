@@ -71,25 +71,32 @@ export function TitleScreen({
 }) {
   return (
     <div className="layer" data-testid="title-screen">
-      <h1 className="title">
-        <span className="emoji title__emoji" aria-hidden="true">
-          🏘️
-        </span>
-        {FA.appTitle}
-      </h1>
-      {notice ? <p className="text text--soft">{notice}</p> : null}
-      <button type="button" className="btn btn--large" onClick={onStart} data-testid="start-button">
-        <Pictogram shape="play" />
-        <span>{hasProgress ? FA.resume : FA.play}</span>
-      </button>
-      <button
-        type="button"
-        className="btn btn--secondary"
-        onClick={onParent}
-        data-testid="parent-entry"
-      >
-        {FA.parentArea}
-      </button>
+      <div className="panel column">
+        <h1 className="title">
+          <span className="emoji title__emoji" aria-hidden="true">
+            🏘️
+          </span>
+          {FA.appTitle}
+        </h1>
+        {notice ? <p className="text text--soft">{notice}</p> : null}
+        <button
+          type="button"
+          className="btn btn--large"
+          onClick={onStart}
+          data-testid="start-button"
+        >
+          <Pictogram shape="play" />
+          <span>{hasProgress ? FA.resume : FA.play}</span>
+        </button>
+        <button
+          type="button"
+          className="btn btn--secondary"
+          onClick={onParent}
+          data-testid="parent-entry"
+        >
+          {FA.parentArea}
+        </button>
+      </div>
     </div>
   );
 }
@@ -110,6 +117,10 @@ export function AvatarSelectScreen({
   const [headwear, setHeadwear] = useState<HeadwearId>('none');
   return (
     <div className="layer" data-testid="avatar-select">
+      <div className="steps" dir="rtl" data-testid="avatar-steps" aria-hidden="true">
+        <span className="steps__dot" aria-current={step === 'avatar' ? 'step' : undefined} />
+        <span className="steps__dot" aria-current={step === 'headwear' ? 'step' : undefined} />
+      </div>
       {step === 'avatar' ? (
         <>
           <h1 className="subtitle">{FA.chooseAvatar}</h1>

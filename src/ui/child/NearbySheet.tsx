@@ -1,4 +1,5 @@
 import { npcEmoji } from './emoji.ts';
+import { FA } from '../../content/fa/strings.ts';
 import { getNpcCopy } from '../../content/fa/quests.ts';
 import type { NearbyNpc } from '../../world/nearby.ts';
 
@@ -38,7 +39,7 @@ export function NearbySheet({
         data-testid="nearby-sheet"
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <p className="nearby-sheet__title">{title}</p>
+        <h2 className="nearby-sheet__title">{title}</h2>
         <div className="nearby-sheet__rows">
           {entries.map(({ npc }) => {
             const copy = getNpcCopy(npc.id);
@@ -62,6 +63,9 @@ export function NearbySheet({
             );
           })}
         </div>
+        <button type="button" className="btn" onClick={onDismiss} data-testid="nearby-close">
+          {FA.backToHood}
+        </button>
       </div>
     </div>
   );

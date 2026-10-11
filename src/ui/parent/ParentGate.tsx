@@ -44,7 +44,7 @@ export function ParentGate({
         <p className="text">{FA.parentGateHint}</p>
         <button
           type="button"
-          className="btn btn--large"
+          className="btn btn--large gate-hold"
           onPointerDown={() => setHoldingSince(Date.now())}
           onPointerUp={release}
           onPointerLeave={release}
@@ -53,16 +53,16 @@ export function ParentGate({
           aria-label={FA.parentGateHint}
         >
           {holdingSince === null ? FA.parentArea : FA.parentGateHolding}
+          <span
+            className="gate-progress"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
+          >
+            <span className="gate-progress__fill" style={{ inlineSize: `${progress * 100}%` }} />
+          </span>
         </button>
-        <div
-          className="gate-progress"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(progress * 100)}
-        >
-          <span className="gate-progress__fill" style={{ inlineSize: `${progress * 100}%` }} />
-        </div>
         <button
           type="button"
           className="btn btn--secondary"
