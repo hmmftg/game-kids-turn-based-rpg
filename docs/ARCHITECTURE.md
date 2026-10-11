@@ -6,20 +6,60 @@ agents must follow see [AGENTS.md](../AGENTS.md).
 ## Layers
 
 ```
+framework (core primitives + runtime seam + optional modules)
+       ▲
 content/fa ──► domain ──► app (provider wiring) ──► ui/child + ui/parent
                     ▲              │
 services ───────────┘         world/ (R3F hub)
 ```
 
-| Layer     | Path              | Contract                                                                     |
-| --------- | ----------------- | ---------------------------------------------------------------------------- |
-| Domain    | `src/domain/`     | Pure TypeScript. No React/DOM/Three imports. Protected — see AGENTS.md §1.1. |
-| Content   | `src/content/fa/` | All child-facing copy + icon semantics; `validate:content` enforced.         |
-| World     | `src/world/`      | R3F hub: models, waypoint navigation, ambient critters.                      |
-| Child UI  | `src/ui/child/`   | DOM HUD (RTL), dialogue cards, contextual targets, quest trail.              |
-| Parent UI | `src/ui/parent/`  | Press-and-hold gated settings.                                               |
-| Services  | `src/services/`   | IndexedDB persistence, audio, capabilities, PWA.                             |
-| App       | `src/app/`        | Provider wiring domain ↔ services ↔ UI.                                      |
+| Layer     | Path              | Contract                                                                                                   |
+| --------- | ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| Framework | `src/framework/`  | Game-agnostic primitives + the `createGameRuntime` store seam. One public entry, `src/framework/index.ts`. |
+| Domain    | `src/domain/`     | Pure TypeScript. No React/DOM/Three imports. Protected — see AGENTS.md §1.1.                               |
+| Content   | `src/content/fa/` | All child-facing copy + icon semantics; `validate:content` enforced.                                       |
+| World     | `src/world/`      | R3F hub: models, waypoint navigation, ambient critters.                                                    |
+| Child UI  | `src/ui/child/`   | DOM HUD (RTL), dialogue cards, contextual targets, quest trail.                                            |
+| Parent UI | `src/ui/parent/`  | Press-and-hold gated settings.                                                                             |
+| Services  | `src/services/`   | IndexedDB persistence, audio, capabilities, PWA.                                                           |
+| App       | `src/app/`        | Provider wiring domain ↔ services ↔ UI.                                                                    |
+
+### Framework boundary
+
+`src/framework/` is the reusable half of the codebase: content-free primitives
+(`core/`: identifiers, bounds/graph/pathfinding, quality tier + capabilities,
+persistence contract, `createGameRuntime`), renderer-side pure math
+(`three/camera`), and optional gameplay modules (`modules/battle`). Rules,
+lint-enforced in `eslint.config.js`:
+
+- Application code may import framework code **only** through
+  `src/framework/index.ts` — including type-only imports. The one sanctioned
+  bypass is `main.tsx`'s dynamic `import()` of `framework/core/perfProbe.ts`,
+  which keeps the probe its own lazy chunk outside the PWA precache.
+- Framework code never imports `app|content|domain|services|ui|world|worldbuilder`.
+- Application types extend the primitives (`domain/world/types.ts` adds
+  `labelFa`/`environment`); app content never moves down unless a second
+  consumer proves it shared.
+
+### Runtime ownership
+
+`GameProvider` no longer owns the store. `createGameRuntime<S, C>`
+(`framework/core/runtime.ts`) holds the single `GameState` store, runs the
+game's own `gameReducer` with a `ReducerContext.now` clock stamp on every
+dispatch, and publishes transitions to subscribers; `GameProvider` binds it to
+React via `useSyncExternalStore`. The runtime is a state machine only — it has
+no persistence surface. Persistence lives in two application coordinators
+(`src/app/`):
+
+- `ProfileCoordinator` — repository creation + IndexedDB→memory fallback,
+  profile index, legacy-save migration, `BOOT_LOADED`/`SELECT_PROFILE`
+  dispatch, all profile lifecycle commands.
+- `SaveCoordinator` — subscribes to runtime transitions and owns save
+  eligibility (stable mode + autosave token, settings flush, never overwrite
+  a recovered save) plus the picker-card meta sync.
+
+The game reducer stays the only transition mechanism: coordinators decide
+_when_ to dispatch, never _what_ a command means.
 
 ## Key invariants
 
@@ -36,7 +76,7 @@ services ───────────┘         world/ (R3F hub)
   only a real tap on the concrete object fires `CHOOSE`.
 - **Commands**: child taps dispatch `CHOOSE(iconId, correct)` — interaction visuals are
   _implementation details on top_, never a second action system.
-- **Battle machine** (`domain/battle/`): session-only `GameState.battle` (never persisted,
+- **Battle machine** (`framework/modules/battle/`): session-only `GameState.battle` (never persisted,
   never a `Mode`). `intro → playerChoice → playerResolution → enemyResolution →
 roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit only via
   `LEAVE_BATTLE`. Deterministic outcome matrix, one child action/round. While

@@ -37,6 +37,7 @@ AI agents must not modify gameplay semantics unless the task explicitly requires
 Treat the following as protected:
 
 - `src/domain/*`
+- `src/framework/*` (see §1.1a — the boundary is one-directional)
 - quest rules
 - encounter rules
 - progression rules
@@ -48,6 +49,25 @@ Treat the following as protected:
 Do not alter gameplay merely to make UI implementation easier.
 
 Prefer adapting the presentation layer to existing game state.
+
+## 1.1a Framework boundary (lint-enforced)
+
+`src/framework/` is the reusable layer: `core/` (identifiers, world primitives,
+graph/pathfinding, quality/capabilities, persistence contract,
+`createGameRuntime`), `three/` (pure camera math), `modules/` (optional gameplay
+machines like battle).
+
+- App code imports framework code **only** via `src/framework/index.ts` —
+  including type-only imports. Never reach into `framework/core/*`,
+  `framework/three/*`, or `framework/modules/*` paths directly. Sole exception:
+  `main.tsx`'s dynamic `import()` of `perfProbe` (lazy chunk, precache-excluded).
+- Framework code must never import `src/app|content|domain|services|ui|world|
+worldbuilder` — new framework code must compile on framework imports alone.
+- The runtime is a state machine only — no persistence inside
+  `GameRuntimeAdapter`/the store. App persistence lives in `src/app/`
+  coordinators (`ProfileCoordinator` boot/migration/profiles,
+  `SaveCoordinator` save eligibility). Do not move save/boot logic into the
+  runtime or reducer.
 
 ---
 
