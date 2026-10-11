@@ -306,6 +306,7 @@ describe('UX pass', { timeout: 90000 }, () => {
     await completeFirstQuest(user);
     await user.click(await screen.findByTestId('celebration-continue'));
 
+    await user.click(screen.getByTestId('pause-button'));
     await user.click(screen.getByTestId('sticker-shelf'));
     expect(await screen.findByTestId('sticker-album')).toBeInTheDocument();
 

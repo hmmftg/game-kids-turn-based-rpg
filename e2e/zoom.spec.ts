@@ -35,29 +35,38 @@ test.describe('camera zoom (PR T)', () => {
     await startGame(page);
     const base = await baseZoom(page);
 
-    // Zoom out two steps → factor 0.8.
+    // Zoom controls live in the unified menu (W4): open, step, resume.
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('zoom-out').click();
     await page.getByTestId('zoom-out').click();
+    await page.getByTestId('resume-button').click();
     await waitForZoom(page, base * 0.8);
 
     // Zoom back to default → factor 1.0 again.
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('zoom-in').click();
     await page.getByTestId('zoom-in').click();
+    await page.getByTestId('resume-button').click();
     await waitForZoom(page, base);
   });
 
   test('buttons clamp at the 0.75–1.35 band and read as disabled at limits', async ({ page }) => {
     await startGame(page);
     const base = await baseZoom(page);
+
+    await page.getByTestId('pause-button').click();
     const zoomOut = page.getByTestId('zoom-out');
     const zoomIn = page.getByTestId('zoom-in');
 
     await clickUntilDisabled(zoomOut);
     await expect(zoomOut).toBeDisabled();
+    await page.getByTestId('resume-button').click();
     await waitForZoom(page, base * 0.75);
 
+    await page.getByTestId('pause-button').click();
     await clickUntilDisabled(zoomIn);
     await expect(zoomIn).toBeDisabled();
+    await page.getByTestId('resume-button').click();
     await waitForZoom(page, base * 1.35);
   });
 

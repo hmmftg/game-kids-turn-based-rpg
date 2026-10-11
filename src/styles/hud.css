@@ -24,31 +24,6 @@
   background: radial-gradient(ellipse at 50% 42%, transparent 58%, rgba(52, 42, 28, 0.14) 100%);
 }
 
-/* Child zoom controls (PR T): bottom inline-end corner of the world — out
-   of the walk path's center, on top of the canvas but below HUD layers.
-   The strip positions; only the buttons take input so empty space still
-   passes ground taps through. */
-.world__zoom {
-  position: absolute;
-  z-index: 5;
-  /* Stacked above the nearby-button in the same corner. */
-  inset-block-end: calc(var(--safe-bottom) + var(--touch-min) + var(--space-6));
-  inset-inline-end: calc(var(--safe-right) + var(--space-3));
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  pointer-events: none;
-}
-
-.world__zoom-btn {
-  pointer-events: auto;
-  min-width: var(--touch-min);
-  min-height: var(--touch-min);
-  font-size: 22px;
-  line-height: 1;
-  padding: var(--space-1) var(--space-2);
-}
-
 .hud__top,
 .hud__side,
 .hud__bottom {
@@ -1165,16 +1140,6 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-strong);
   color: var(--color-ink);
-}
-
-/* Accessibility route for figure taps (PR N1): the Nearby sheet lives at the
-   bottom inline-end, opposite the quest trail so the two never compete. The
-   corner slot is chrome — its gaps pass world taps through. */
-.hud__nearby {
-  position: absolute;
-  z-index: 10;
-  inset-block-end: calc(var(--safe-bottom) + var(--space-3));
-  inset-inline-end: calc(var(--safe-right) + var(--space-3));
 }
 
 /* Same modal contract as every child surface: the sheet is a card over the

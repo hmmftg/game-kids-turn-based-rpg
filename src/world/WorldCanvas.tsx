@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Ref, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type Ref, type RefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type {
@@ -22,10 +22,9 @@ import { getMap } from './maps.ts';
 import { CaveWorld } from './CaveWorld.tsx';
 import { ChallengeWorld } from './ChallengeWorld.tsx';
 import { CameraRig } from './CameraRig.tsx';
-import { clampUserZoom, USER_ZOOM_MAX, USER_ZOOM_MIN, zoomForMap } from './camera.ts';
+import { clampUserZoom, zoomForMap } from './camera.ts';
 import type { NpcAttention } from './sceneBits.tsx';
 import type { WorldDiag } from './diagnostics.ts';
-import { FA } from '../content/fa/strings.ts';
 
 /** Dev-only instance counter: QA asserts orientation changes never remount the Canvas. */
 let canvasInstanceCounter = 0;
@@ -208,6 +207,10 @@ export interface WorldCanvasProps {
   readonly overlays?: React.ReactNode;
   /** `?diagnostics=1`: publish the live world handle for the parent panel. */
   readonly diagnostics?: boolean;
+  /** Controlled zoom factor: when provided the caller owns the value so the
+      zoom controls can live outside the canvas (e.g. the pause menu). */
+  readonly zoomFactor?: number;
+  readonly onZoomFactor?: (factor: number) => void;
 }
 
 export function WorldCanvas({
@@ -233,13 +236,26 @@ export function WorldCanvas({
   handleRef,
   overlays,
   diagnostics = false,
+  zoomFactor: zoomFactorProp,
+  onZoomFactor,
 }: WorldCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneAlive = useRef(false);
   const zoom = zoomForMap(world, mapId);
   // Child-facing zoom factor (PR T): session-only presentation state — a
   // projection multiplier on the camera, never persisted, never world state.
-  const [zoomFactor, setZoomFactor] = useState(1);
+  // Uncontrolled by default (World Builder); the game passes both props so
+  // the menu's zoom buttons drive the same value.
+  const [zoomFactorInternal, setZoomFactorInternal] = useState(1);
+  const zoomFactor = zoomFactorProp ?? zoomFactorInternal;
+  const setZoomFactor = useCallback(
+    (factor: number | ((f: number) => number)) => {
+      const next = typeof factor === 'function' ? factor(zoomFactor) : factor;
+      if (onZoomFactor) onZoomFactor(next);
+      else setZoomFactorInternal(next);
+    },
+    [zoomFactor, onZoomFactor],
+  );
   // The quality tier is the only quality system; the world only derives how
   // much decoration it draws from it, never a different render pipeline.
   const detailLevel = detailLevelFor(qualityTier);
@@ -379,35 +395,8 @@ export function WorldCanvas({
         </ModelContext.Provider>
         {overlays}
       </Canvas>
-      {/* Zoom controls (PR T): DOM chrome inside .world so RTL/order stays
-        in the DOM layer. Buttons clamp at the 0.75–1.35 band — at a limit
-        the button reads as a picture, not a verb. */}
-      <div className="world__zoom">
-        <button
-          type="button"
-          className="btn btn--secondary world__zoom-btn"
-          data-testid="zoom-out"
-          aria-label={FA.zoomOut}
-          disabled={zoomFactor <= USER_ZOOM_MIN}
-          onClick={() => setZoomFactor((f) => clampUserZoom(f - 0.1))}
-        >
-          <span className="emoji" aria-hidden="true">
-            🔍➖
-          </span>
-        </button>
-        <button
-          type="button"
-          className="btn btn--secondary world__zoom-btn"
-          data-testid="zoom-in"
-          aria-label={FA.zoomIn}
-          disabled={zoomFactor >= USER_ZOOM_MAX}
-          onClick={() => setZoomFactor((f) => clampUserZoom(f + 0.1))}
-        >
-          <span className="emoji" aria-hidden="true">
-            🔍➕
-          </span>
-        </button>
-      </div>
+      {/* Zoom controls live in the unified menu (W4): the game owns the
+        factor via props; the builder keeps the uncontrolled default. */}
     </div>
   );
 }

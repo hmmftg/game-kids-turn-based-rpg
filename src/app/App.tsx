@@ -29,7 +29,7 @@ import { NearbySheet } from '../ui/child/NearbySheet.tsx';
 import { PauseMenu } from '../ui/child/PauseMenu.tsx';
 import { DiagnosticsPanel } from '../ui/parent/DiagnosticsPanel.tsx';
 import { ProfileSelectScreen } from '../ui/child/ProfileSelectScreen.tsx';
-import { QuestTrail, StickerShelf } from '../ui/child/QuestTrail.tsx';
+import { QuestTrail } from '../ui/child/QuestTrail.tsx';
 import { SceneGlyph } from '../ui/child/SceneChoice.tsx';
 import { sceneElementFor } from '../ui/child/contextInteraction.ts';
 import { StickerAlbum } from '../ui/child/StickerAlbum.tsx';
@@ -188,6 +188,9 @@ export function App() {
   const [attention, setAttention] = useState<NpcAttention | null>(null);
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [diagOpen, setDiagOpen] = useState(false);
+  // Child zoom factor (PR T → W4): session-only presentation state owned here
+  // so the unified menu's zoom buttons and the canvas share one truth.
+  const [zoomFactor, setZoomFactor] = useState(1);
   // Avatar position snapshot taken when the sheet opens — "who is near me"
   // is answered at the moment the child asks, not per render.
   const [nearbyPos, setNearbyPos] = useState({ x: 0, z: 0 });
@@ -691,10 +694,27 @@ export function App() {
       return (
         <PauseMenu
           audio={state.audio}
+          stickers={state.stickers}
+          zoomFactor={zoomFactor}
           onResume={() => dispatch({ type: 'RESUME' })}
           onAudioChange={(audio) => dispatch({ type: 'SET_AUDIO_SETTINGS', audio })}
           onParentArea={() => dispatch({ type: 'OPEN_PARENT_GATE' })}
           onSwitchPlayer={() => dispatch({ type: 'SWITCH_PLAYER' })}
+          onOpenAlbum={() => {
+            playSfx('sfx-choice');
+            setAlbumOpen(true);
+            dispatch({ type: 'RESUME' });
+          }}
+          onOpenNearby={() => {
+            playSfx('sfx-choice');
+            // The canvas is unmounted while paused — the persisted anchor
+            // is the same "where am I" truth the sheet needs.
+            const at = getAnchorOrNull(WORLD, state.mapAnchorId);
+            setNearbyPos(at !== null ? { x: at.x, z: at.z } : { x: 0, z: 0 });
+            setNearbyOpen(true);
+            dispatch({ type: 'RESUME' });
+          }}
+          onZoom={setZoomFactor}
         />
       );
 
@@ -759,6 +779,8 @@ export function App() {
           revealedFinds={revealedFinds}
           onRevealFind={revealWorldFind}
           diagnostics={diagnosticsEnabled}
+          zoomFactor={zoomFactor}
+          onZoomFactor={setZoomFactor}
         />
       ) : null}
 
@@ -775,7 +797,6 @@ export function App() {
           </span>{' '}
           {FA.pause}
         </button>
-        <StickerShelf stickers={state.stickers} onOpen={() => setAlbumOpen(true)} />
       </div>
 
       {state.mode === 'hub' || state.mode === 'dialogue' ? (
@@ -798,30 +819,6 @@ export function App() {
           onGo={goToQuest}
         />
       </div>
-
-      {/* Accessibility route for figure taps (PR N1): the people a child
-          could tap in the world, as large DOM buttons. A row dispatches the
-          same onNpcTap as the 3D figure — one meaning, two routes. */}
-      {state.mode === 'hub' && state.battle === null && state.webglAvailable ? (
-        <div className="hud__nearby">
-          <button
-            type="button"
-            className="btn btn--secondary"
-            data-testid="nearby-button"
-            aria-label={FA.nearby}
-            onClick={() => {
-              playSfx('sfx-choice');
-              setNearbyPos(hubRef.current?.playerPosition() ?? { x: 0, z: 0 });
-              setNearbyOpen(true);
-            }}
-          >
-            <span className="emoji" aria-hidden="true">
-              👥
-            </span>{' '}
-            {FA.nearby}
-          </button>
-        </div>
-      ) : null}
 
       {/* Live technical readout (?diagnostics=1, parent-facing): a HUD
           button opens the panel over the running world — the canvas has to

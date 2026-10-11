@@ -48,12 +48,14 @@ test.describe('axe — DOM surfaces', () => {
     await expect(page.getByTestId('hud')).toBeVisible();
     await expectNoViolations(page, 'hub HUD');
 
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('nearby-button').click();
     await expect(page.getByTestId('nearby-sheet')).toBeVisible();
     await expectNoViolations(page, 'nearby sheet');
     await page.mouse.click(10, 10);
 
     // A figure-route dialogue: the Nearby sheet dispatches the same command.
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('nearby-button').click();
     await page.getByTestId('nearby-npc-elder').click();
     await expect(page.getByTestId('npc-dialogue')).toBeVisible({ timeout: 90000 });

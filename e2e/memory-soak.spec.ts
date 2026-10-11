@@ -57,6 +57,7 @@ test.describe('memory soak — remount cycles stay bounded', () => {
     await page.getByTestId('resume-button').click();
     await expect(page.getByTestId('pause-menu')).toBeHidden();
     // Nearby sheet: opens and dismisses DOM + resolves stands again.
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('nearby-button').click();
     await expect(page.getByTestId('nearby-sheet')).toBeVisible();
     await page.getByTestId('nearby-backdrop').click({ position: { x: 8, y: 8 } });
@@ -117,6 +118,7 @@ test.describe('memory soak — remount cycles stay bounded', () => {
     // Within one mounted renderer, ordinary scene updates must not leak:
     // walk + a reactive tap + a full frame settle leaves disposal flat.
     const marker = await disposeEvents();
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('nearby-button').click();
     await page.getByTestId('nearby-backdrop').click({ position: { x: 8, y: 8 } });
     await page.waitForTimeout(500);

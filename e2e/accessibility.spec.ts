@@ -18,6 +18,7 @@ test.describe('nearby sheet — DOM route for figure taps', () => {
   test('lists real friends; a row talks exactly like the figure tap', async ({ page }) => {
     await startGame(page);
 
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('nearby-button').click();
     await expect(page.getByTestId('nearby-sheet')).toBeVisible();
     await expect(page.getByTestId('nearby-npc-elder')).toBeVisible();
@@ -26,6 +27,7 @@ test.describe('nearby sheet — DOM route for figure taps', () => {
     await page.mouse.click(10, 10);
     await expect(page.getByTestId('nearby-sheet')).toBeHidden();
 
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('nearby-button').click();
     await page.getByTestId('nearby-npc-elder').click();
 
@@ -41,6 +43,7 @@ test.describe('nearby sheet — DOM route for figure taps', () => {
     // The playful mouse lives in the Challenge Zone — walk in, then the
     // sheet lists it like any other friend on the map.
     await walkToChallengeZone(page);
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('nearby-button').click();
     const mouseRow = page.getByTestId('nearby-npc-playful-mouse');
     await expect(mouseRow).toBeVisible();
