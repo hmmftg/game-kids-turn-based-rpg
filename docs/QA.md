@@ -154,7 +154,7 @@ figure → `battle-scene` mounts → intro auto-plays to `playerChoice` → ball
 take one heart per round → terminal `victory` → `battle-continue` returns to a
 plain hub with `__worldBattleState === null`. A second test asserts input
 ownership (the pause button sits under the overlay), the harmless cushion, and
-mid-battle leave. `src/domain/battle/battle.test.ts` covers the outcome matrix,
+mid-battle leave. `src/framework/modules/battle/battle.test.ts` covers the outcome matrix,
 final-round precedence (hearts beat the round counter), terminal states, the
 reducer's blocked-commands guard, and `LEAVE_BATTLE` semantics. Probe fields:
 `__worldBattleState`, `__worldBattleEvents` (`phase@round` rows + `end`).

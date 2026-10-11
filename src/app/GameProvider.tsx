@@ -2,67 +2,32 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { isStableMode } from '../domain/game/checkpoints.ts';
-import {
-  createFreshPersistedState,
-  createInitialState,
-  toPersistedState,
-} from '../domain/game/initialState.ts';
-import { gameReducer } from '../domain/game/reducer.ts';
-import type { AvatarId, Command, GameState, HeadwearId } from '../domain/game/types.ts';
+import type { Command, GameState } from '../domain/game/types.ts';
+import type { GameRuntime } from '../framework/index.ts';
 import { audioService } from '../services/audio/audioService.ts';
-import {
-  currentOrientation,
-  detectQualityTier,
-  detectWebgl,
-} from '../services/device/capabilities.ts';
-import { createSaveRepository } from '../services/persistence/indexedDbRepository.ts';
-import { MemorySaveRepository } from '../services/persistence/memoryRepository.ts';
-import {
-  healthFromLoadResult,
-  LEGACY_SLOT_KEY,
-  persistedFromLoadResult,
-  profileSlotKey,
-  type ProfileMeta,
-  type SaveRepository,
-} from '../services/persistence/repository.ts';
+import { currentOrientation } from '../services/device/capabilities.ts';
+import type { SaveRepository } from '../services/persistence/repository.ts';
 import { registerServiceWorker, type CacheStatus } from '../services/pwa/serviceWorker.ts';
 import { listenForInstallPrompt } from '../services/pwa/installPrompt.ts';
-import { pickProfileBadge } from '../ui/child/emoji.ts';
+import type { ProfileMeta } from '../services/persistence/repository.ts';
 import { GameContext, type GameShell } from './gameContext.ts';
+import { createAppGameRuntime } from './gameRuntime.ts';
+import { ProfileCoordinator } from './profileCoordinator.ts';
+import { SaveCoordinator } from './saveCoordinator.ts';
 
-function reduce(state: GameState, command: Command): GameState {
-  return gameReducer(state, command, Date.now());
-}
-
-function newProfileId(): string {
-  return `profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function makeProfile(
-  avatarId: AvatarId,
-  badge: string,
-  headwear: HeadwearId,
-  stickerCount: number,
-  now: number,
-): ProfileMeta {
-  return {
-    id: newProfileId(),
-    nameFa: '',
-    avatarId,
-    badge,
-    headwear,
-    createdAt: now,
-    lastPlayedAt: now,
-    stickerCount,
-  };
-}
-
+/**
+ * Thin React binding over the game runtime. The runtime (framework) owns the
+ * single state store and dispatch plumbing; the application coordinators own
+ * everything persistence — `ProfileCoordinator` handles boot/migration and
+ * profile commands, `SaveCoordinator` handles save eligibility. This
+ * component only wires them to React: state via `useSyncExternalStore`,
+ * profile-picker fields via callbacks, and shell/app lifecycle effects.
+ */
 export function GameProvider({
   children,
   repository,
@@ -70,190 +35,61 @@ export function GameProvider({
   readonly children: ReactNode;
   readonly repository?: SaveRepository;
 }) {
-  const [state, dispatch] = useReducer(reduce, undefined, () => createInitialState(Date.now()));
+  // One runtime per provider instance, created once — it is never disposed by
+  // an effect cleanup because React StrictMode's simulated unmount would kill
+  // the store the remount still uses.
+  const [runtime] = useState<GameRuntime<GameState, Command>>(() => createAppGameRuntime());
+  const [profiles, setProfiles] = useState<readonly ProfileMeta[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  const [coordinators] = useState(() => {
+    const dispatch = (command: Command) => {
+      runtime.dispatch(command);
+    };
+    const profile = new ProfileCoordinator({
+      repository,
+      dispatch,
+      onProfiles: setProfiles,
+      onActiveProfile: setActiveProfileId,
+    });
+    const save = new SaveCoordinator({
+      repository: () => profile.saveRepository,
+      activeSlotKey: () => profile.slotKey,
+      syncActiveProfileMeta: (snapshot) => profile.syncActiveProfileMeta(snapshot),
+    });
+    return { profile, save };
+  });
   const [cacheStatus, setCacheStatus] = useState<CacheStatus>(() =>
     import.meta.env.DEV ? 'unsupported' : 'caching',
   );
   const [updateReady, setUpdateReady] = useState(false);
   const [installReady, setInstallReady] = useState(false);
   const installPromptRef = useRef<(() => void) | null>(null);
-  const [profiles, setProfiles] = useState<readonly ProfileMeta[]>([]);
-  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
-  const repositoryRef = useRef<SaveRepository | null>(repository ?? null);
-  const previousRef = useRef<GameState>(state);
-  const lastSavedTokenRef = useRef(state.autosaveToken);
   const updateRef = useRef<() => void>(() => {});
-  const profilesRef = useRef<readonly ProfileMeta[]>(profiles);
-  const activeSlotKeyRef = useRef<string | null>(null);
-  const activeProfileIdRef = useRef<string | null>(null);
 
-  const setProfileList = useCallback((next: readonly ProfileMeta[]) => {
-    profilesRef.current = next;
-    setProfiles(next);
-  }, []);
+  const subscribe = useCallback(
+    (listener: (state: GameState) => void) => runtime.subscribe(listener),
+    [runtime],
+  );
+  const state = useSyncExternalStore(subscribe, () => runtime.getState());
 
-  const writeProfileList = useCallback(
-    (next: readonly ProfileMeta[]) => {
-      setProfileList(next);
-      void repositoryRef.current?.writeProfiles(next).catch(() => {
-        /* storage may be evicted; the game stays playable */
-      });
+  const dispatch = useCallback(
+    (command: Command) => {
+      runtime.dispatch(command);
     },
-    [setProfileList],
+    [runtime],
   );
 
-  const setActiveProfile = useCallback((id: string | null) => {
-    activeProfileIdRef.current = id;
-    activeSlotKeyRef.current = id === null ? null : profileSlotKey(id);
-    setActiveProfileId(id);
-  }, []);
-
-  // Boot: capabilities first, then the profile index, so the reducer sees a
-  // coherent world. A legacy single save is folded into a first profile; if
-  // that write fails the session keeps using the legacy slot unchanged.
+  // The save coordinator observes every published state transition.
   useEffect(() => {
-    let cancelled = false;
-    const repo = repositoryRef.current ?? createSaveRepository();
-    repositoryRef.current = repo;
+    return runtime.subscribe((snapshot) => coordinators.save.handleState(snapshot));
+  }, [runtime, coordinators]);
 
-    dispatch({ type: 'WEBGL_AVAILABILITY_CHANGED', available: detectWebgl() });
-    dispatch({ type: 'ORIENTATION_CHANGED', orientation: currentOrientation() });
-
-    void (async () => {
-      // Boot once with the real repository; on a total storage failure
-      // (private window, evicted/blocked IndexedDB) fall back to session-only
-      // memory saves so the game still boots instead of dead-ending at
-      // BOOT_FAILED. A second failure is a real defect → BOOT_FAILED.
-      try {
-        await bootWithProfiles(repo);
-      } catch {
-        if (cancelled || repo instanceof MemorySaveRepository) return;
-        repositoryRef.current = new MemorySaveRepository();
-        try {
-          await bootWithProfiles(repositoryRef.current);
-        } catch (error) {
-          if (cancelled) return;
-          dispatch({
-            type: 'BOOT_FAILED',
-            reason: error instanceof Error ? error.message : 'boot failed',
-          });
-        }
-      }
-    })();
-
-    async function bootWithProfiles(repository: SaveRepository) {
-      try {
-        let list = await repository.listProfiles();
-        if (list.length === 0) {
-          const legacy = await repository.load(LEGACY_SLOT_KEY);
-          const persisted = persistedFromLoadResult(legacy);
-          if (persisted !== null) {
-            const meta = makeProfile(
-              persisted.avatarId ?? 'avatar-aban',
-              pickProfileBadge(list),
-              'none',
-              persisted.stickers.length,
-              persisted.lastPlayedAt,
-            );
-            try {
-              await repository.save(persisted, profileSlotKey(meta.id));
-              await repository.writeProfiles([meta]);
-              await repository.clear(LEGACY_SLOT_KEY);
-              list = [meta];
-            } catch {
-              // Index write failed: run this session on the legacy slot.
-              activeSlotKeyRef.current = LEGACY_SLOT_KEY;
-              if (!cancelled) {
-                dispatch({
-                  type: 'BOOT_LOADED',
-                  persisted,
-                  health: healthFromLoadResult(legacy),
-                });
-              }
-              return;
-            }
-          }
-        }
-        if (cancelled) return;
-        if (list.length > 0) {
-          profilesRef.current = list;
-          setProfiles(list);
-          dispatch({ type: 'BOOT_LOADED', persisted: null, health: 'fresh', hasProfiles: true });
-          return;
-        }
-        // Truly fresh device (or unreadable legacy data): classic title flow.
-        const legacy = await repository.load(LEGACY_SLOT_KEY);
-        const persisted = persistedFromLoadResult(legacy);
-        dispatch({
-          type: 'BOOT_LOADED',
-          persisted,
-          health: healthFromLoadResult(legacy),
-        });
-        if (persisted === null) dispatch({ type: 'SET_QUALITY_TIER', tier: detectQualityTier() });
-      } catch (error) {
-        if (cancelled) return;
-        throw error instanceof Error ? error : new Error(String(error));
-      }
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Keeps a profile's picker card (sticker count, recency) in step with saves.
-  const syncActiveProfileMeta = useCallback(
-    (snapshot: GameState) => {
-      const id = activeProfileIdRef.current;
-      if (id === null) return;
-      const current = profilesRef.current;
-      const meta = current.find((entry) => entry.id === id);
-      if (
-        !meta ||
-        (meta.stickerCount === snapshot.stickers.length &&
-          meta.lastPlayedAt === snapshot.lastPlayedAt)
-      ) {
-        return;
-      }
-      writeProfileList(
-        current.map((entry) =>
-          entry.id === id
-            ? {
-                ...entry,
-                stickerCount: snapshot.stickers.length,
-                lastPlayedAt: snapshot.lastPlayedAt,
-              }
-            : entry,
-        ),
-      );
-    },
-    [writeProfileList],
-  );
-
-  // Autosave once the game is back in a stable mode (never mid-encounter).
-  // A token bump under an overlay stays pending until then, and audio/quality
-  // changes always flush so pause-menu settings survive a reload. A corrupt or
-  // newer-version save is never overwritten; the gated reset writes fresh data.
-  // Writes go to the active profile's slot — none until a player is picked.
+  // Boot is owned by the profile coordinator; cancellation guards its async
+  // loads so a remount never dispatches into a dead session.
   useEffect(() => {
-    const previous = previousRef.current;
-    previousRef.current = state;
-    if (state.saveHealth === 'recovered') return;
-    const settingsChanged =
-      previous.audio !== state.audio || previous.qualityTier !== state.qualityTier;
-    const stableSaveDue =
-      isStableMode(state.mode) && state.autosaveToken !== lastSavedTokenRef.current;
-    if (!settingsChanged && !stableSaveDue) return;
-    const key = activeSlotKeyRef.current;
-    if (key === null) return; // no player yet: the first real save flushes later
-    lastSavedTokenRef.current = state.autosaveToken;
-    void repositoryRef.current
-      ?.save(toPersistedState(state), key)
-      .then(() => syncActiveProfileMeta(state))
-      .catch(() => {
-        /* storage may be evicted; the game stays playable */
-      });
-  }, [state, syncActiveProfileMeta]);
+    void coordinators.profile.boot();
+    return () => coordinators.profile.cancel();
+  }, [coordinators]);
 
   useEffect(() => {
     audioService.applySettings(state.audio);
@@ -281,7 +117,7 @@ export function GameProvider({
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
     };
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -291,7 +127,7 @@ export function GameProvider({
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (import.meta.env.DEV) return;
@@ -310,126 +146,9 @@ export function GameProvider({
   }, []);
 
   const selectProfile = useCallback(
-    (id: string) => {
-      const repo = repositoryRef.current;
-      if (!repo || state.mode !== 'profileSelect') return;
-      const key = profileSlotKey(id);
-      void repo
-        .load(key)
-        .then((result) => {
-          setActiveProfile(id);
-          dispatch({
-            type: 'SELECT_PROFILE',
-            persisted: persistedFromLoadResult(result),
-            health: healthFromLoadResult(result),
-          });
-          // The index card carries the cosmetic pick; the save slot doesn't.
-          const meta = profilesRef.current.find((entry) => entry.id === id);
-          dispatch({ type: 'SET_HEADWEAR', headwear: meta?.headwear ?? 'none' });
-          if (persistedFromLoadResult(result) === null) {
-            dispatch({ type: 'SET_QUALITY_TIER', tier: detectQualityTier() });
-          }
-        })
-        .catch(() => {
-          dispatch({ type: 'FATAL_ERROR', reason: 'profile-load-failed' });
-        });
-    },
-    [setActiveProfile, state.mode],
+    (id: string) => coordinators.profile.selectProfile(id, state.mode),
+    [coordinators, state.mode],
   );
-
-  const startNewPlayer = useCallback(() => {
-    setActiveProfile(null);
-    dispatch({ type: 'START_NEW_PLAYER' });
-  }, [setActiveProfile]);
-
-  const chooseAvatar = useCallback(
-    (avatarId: AvatarId, headwear: HeadwearId) => {
-      const existingId = activeProfileIdRef.current;
-      if (existingId === null) {
-        const meta = makeProfile(
-          avatarId,
-          pickProfileBadge(profilesRef.current),
-          headwear,
-          0,
-          Date.now(),
-        );
-        setActiveProfile(meta.id);
-        writeProfileList([...profilesRef.current, meta]);
-      } else {
-        writeProfileList(
-          profilesRef.current.map((entry) =>
-            entry.id === existingId ? { ...entry, avatarId, headwear } : entry,
-          ),
-        );
-      }
-      dispatch({ type: 'SET_HEADWEAR', headwear });
-      dispatch({ type: 'SELECT_AVATAR', avatarId });
-    },
-    [setActiveProfile, writeProfileList],
-  );
-
-  /** Wipes one profile's progress but keeps its card (avatar, badge, name). */
-  const resetProfile = useCallback(
-    (id: string) => {
-      const repo = repositoryRef.current;
-      const meta = profilesRef.current.find((entry) => entry.id === id);
-      if (!repo || !meta) return;
-      const now = Date.now();
-      writeProfileList(
-        profilesRef.current.map((entry) =>
-          entry.id === id ? { ...entry, stickerCount: 0, lastPlayedAt: now } : entry,
-        ),
-      );
-      void repo
-        .save({ ...createFreshPersistedState(now), avatarId: meta.avatarId }, profileSlotKey(id))
-        .catch(() => {
-          /* storage may be evicted */
-        });
-      if (activeProfileIdRef.current === id) dispatch({ type: 'RESET_PROGRESS' });
-    },
-    [writeProfileList],
-  );
-
-  /** Removes a profile card AND its save slot entirely — no undo. */
-  const deleteProfile = useCallback(
-    (id: string) => {
-      const repo = repositoryRef.current;
-      writeProfileList(profilesRef.current.filter((entry) => entry.id !== id));
-      void repo?.clear(profileSlotKey(id)).catch(() => {
-        /* storage may be evicted */
-      });
-      // Deleting the profile the child is playing drops back to the picker.
-      if (activeProfileIdRef.current === id) {
-        setActiveProfile(null);
-        dispatch({ type: 'RESET_PROGRESS' });
-      }
-    },
-    [writeProfileList, setActiveProfile],
-  );
-
-  const renameProfile = useCallback(
-    (id: string, nameFa: string) => {
-      writeProfileList(
-        profilesRef.current.map((entry) => (entry.id === id ? { ...entry, nameFa } : entry)),
-      );
-    },
-    [writeProfileList],
-  );
-
-  const resetProgress = useCallback(() => {
-    const repo = repositoryRef.current;
-    if (!repo) {
-      dispatch({ type: 'RESET_PROGRESS' });
-      return;
-    }
-    const keys = [LEGACY_SLOT_KEY, activeSlotKeyRef.current].filter(
-      (key): key is string => key !== null,
-    );
-    // Clear first so the autosave triggered by the reset cannot race it.
-    void Promise.all(keys.map((key) => repo.clear(key).catch(() => undefined))).finally(() =>
-      dispatch({ type: 'RESET_PROGRESS' }),
-    );
-  }, []);
 
   const playSfx = useCallback((id: string) => {
     void audioService.unlock().then(() => audioService.play(id));
@@ -444,32 +163,28 @@ export function GameProvider({
       applyUpdate: () => updateRef.current(),
       installReady,
       installApp: () => installPromptRef.current?.(),
-      resetProgress,
+      resetProgress: () => coordinators.profile.resetProgress(),
       playSfx,
       profiles,
       activeProfileId,
       selectProfile,
-      startNewPlayer,
-      chooseAvatar,
-      resetProfile,
-      renameProfile,
-      deleteProfile,
+      startNewPlayer: () => coordinators.profile.startNewPlayer(),
+      chooseAvatar: (avatarId, headwear) => coordinators.profile.chooseAvatar(avatarId, headwear),
+      resetProfile: (id) => coordinators.profile.resetProfile(id),
+      renameProfile: (id, nameFa) => coordinators.profile.renameProfile(id, nameFa),
+      deleteProfile: (id) => coordinators.profile.deleteProfile(id),
     }),
     [
       state,
+      dispatch,
       cacheStatus,
       updateReady,
       installReady,
-      resetProgress,
+      coordinators,
       playSfx,
       profiles,
       activeProfileId,
       selectProfile,
-      startNewPlayer,
-      chooseAvatar,
-      resetProfile,
-      renameProfile,
-      deleteProfile,
     ],
   );
 
