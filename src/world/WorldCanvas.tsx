@@ -116,6 +116,60 @@ function DiagnosticsProbe({ mapId }: { readonly mapId: MapId }) {
   return null;
 }
 
+/**
+ * Disposal evidence probe (`__WORLD_PROBE`/dev only): a fresh renderer's
+ * `gl.info` counters cannot prove the OLD scene released its resources, so
+ * this registry counts real `dispose` events on every geometry/material/
+ * texture the mounted scene owns. `dispose={null}` subtrees never fire —
+ * their shared module-level resources are session-lifetime by design — so
+ * `__worldDisposeEvents` only counts scene-unique disposables: it must grow
+ * across every remount, and stay flat while one renderer keeps rendering.
+ */
+function DisposalProbe() {
+  const scene = useThree((state) => state.scene);
+  useEffect(() => {
+    const w = window as unknown as { __worldDisposeEvents?: number };
+    w.__worldDisposeEvents = w.__worldDisposeEvents ?? 0;
+    interface Disposable {
+      addEventListener?: (type: string, fn: () => void) => void;
+      dispose?: () => void;
+    }
+    const tracked = new WeakSet<Disposable>();
+    const onDispose = () => {
+      w.__worldDisposeEvents = (w.__worldDisposeEvents ?? 0) + 1;
+    };
+    const trackResource = (resource: unknown) => {
+      const res = resource as Disposable | null | undefined;
+      if (!res?.addEventListener || tracked.has(res)) return;
+      tracked.add(res);
+      res.addEventListener('dispose', onDispose);
+    };
+    const trackObject = (object: unknown) => {
+      const node = object as {
+        geometry?: Disposable;
+        material?: Disposable | Disposable[];
+      };
+      trackResource(node.geometry);
+      for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+        trackResource(material);
+        for (const value of Object.values(material ?? {})) {
+          if ((value as { isTexture?: boolean })?.isTexture) trackResource(value);
+        }
+      }
+    };
+    scene.traverse(trackObject);
+    const onAdded = (event: { child?: unknown }) => {
+      if (event.child)
+        (event.child as { traverse: (fn: (o: unknown) => void) => void }).traverse(trackObject);
+    };
+    scene.addEventListener('childadded' as never, onAdded as never);
+    return () => {
+      scene.removeEventListener('childadded' as never, onAdded as never);
+    };
+  }, [scene]);
+  return null;
+}
+
 export interface WorldCanvasProps {
   readonly avatarId: AvatarId;
   readonly headwear: HeadwearId;
@@ -238,6 +292,9 @@ export function WorldCanvas({
         <CanvasLiveness flagRef={sceneAlive} />
         <VisibilityPause />
         {diagnostics ? <DiagnosticsProbe mapId={mapId} /> : null}
+        {import.meta.env.DEV || (window as unknown as Record<string, unknown>)['__WORLD_PROBE'] ? (
+          <DisposalProbe />
+        ) : null}
         {/* Follow-camera: tracks the avatar, clamped to this map's bounds.
             `key` remounts it per map so a transition snaps to the new
             spawn instead of easing from stale cross-map coordinates. */}

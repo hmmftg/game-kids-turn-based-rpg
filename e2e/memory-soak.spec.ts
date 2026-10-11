@@ -78,4 +78,40 @@ test.describe('memory soak — remount cycles stay bounded', () => {
     // DOM: the sheet/backdrop cycle must not strand nodes.
     expect(end.domNodes).toBeLessThanOrEqual(base.domNodes + 10);
   });
+
+  test('unmount actually releases the old scene — counted dispose events', async ({ page }) => {
+    await startGame(page);
+    const disposeEvents = () =>
+      page.evaluate(
+        () => (window as unknown as { __worldDisposeEvents?: number }).__worldDisposeEvents ?? -1,
+      );
+    const critterTimersAtUnmount = () =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __worldCritterTimersAtUnmount?: number })
+            .__worldCritterTimersAtUnmount ?? -1,
+      );
+
+    // Wait until the disposal registry is mounted before taking the baseline.
+    await page.waitForFunction(
+      () =>
+        (window as unknown as { __worldDisposeEvents?: number }).__worldDisposeEvents !== undefined,
+    );
+    const before = await disposeEvents();
+    // One remount cycle; the fresh renderer's gl.info alone cannot prove the
+    // old scene released anything — real dispose events are the evidence.
+    await cycle(page);
+    const afterOne = await disposeEvents();
+    expect(afterOne).toBeGreaterThan(before);
+    // The critter scheduler must freeze fully on unmount: no pending timers.
+    expect(await critterTimersAtUnmount()).toBe(0);
+
+    // Within one mounted renderer, ordinary scene updates must not leak:
+    // walk + a reactive tap + a full frame settle leaves disposal flat.
+    const marker = await disposeEvents();
+    await page.getByTestId('nearby-button').click();
+    await page.getByTestId('nearby-backdrop').click({ position: { x: 8, y: 8 } });
+    await page.waitForTimeout(500);
+    expect(await disposeEvents()).toBe(marker);
+  });
 });

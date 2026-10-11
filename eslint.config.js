@@ -5,7 +5,16 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'playwright-report', 'test-results', 'dev-dist'] },
+  {
+    ignores: [
+      'dist',
+      'coverage',
+      'playwright-report',
+      'test-results',
+      'dev-dist',
+      'examples/*/dist',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -41,7 +50,7 @@ export default tseslint.config(
     // Framework boundary (docs/framework-extraction.md): every application
     // import of framework code — including type-only imports — goes through
     // `src/framework/index.ts`. Internal framework paths are forbidden.
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'examples/**/*.{ts,tsx}'],
     ignores: ['src/framework/**'],
     rules: {
       'no-restricted-imports': [

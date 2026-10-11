@@ -235,5 +235,6 @@ The child's interaction language is **the physical thing**, never an action icon
 - `docs/ARCHITECTURE-REFERENCES.md` — audit of external RPG architectures (pinned SHAs) and which ideas are adopted/deferred/rejected.
 - `docs/WORLD-BUILDER.md` — `?worldbuilder=1` authoring tool: document model, validation contract, WorldSource seam, boundaries.
 - `docs/BATTLE-MODEL.md` — micro turn-based battle (PR I): state machine, outcome matrix, input ownership, content contract.
+- `docs/framework-api.md` — framework public API, runtime/persistence ownership, hello-world consumer, lifecycle probes.
 - `docs/RELEASE.md` — deployment runbook, update/source-map/CSP policy, asset provenance, ship checklist.
 - `.agents/skills/testing-kids-rpg/` — how to drive the app for UI-driven testing.
