@@ -18,15 +18,17 @@ Budget **ceilings** are enforced in `scripts/measure-world.ts`. Environment for 
 below: **dev-server/headless-Chromium** (SwiftShader) — a regression baseline, not low-end-GPU
 proof. **Observed sampled maxima** (re-measured after the realism pass, October 2026 —
 very-low/low unchanged; `normal` now renders the full-body/clothing tier, and high/very-high
-stack the single-mesh coverings, garment finishing, and animal feather/fur detail on top):
+stack the single-mesh coverings, garment finishing, and animal feather/fur detail on top.
+The coverings are cloth-deformed single meshes (not cones), and animals gain plush rounded
+parts + eyes at detail ≥3 — the added ~21 % triangles stay inside existing ceilings):
 
 | Tier      | Calls | Objects | Triangles |
 | --------- | ----- | ------- | --------- |
 | very-low  | 116   | 260     | 5,238     |
 | low       | 273   | 506     | 12,280    |
-| normal    | 580   | 898     | 24,084    |
-| high      | 606   | 928     | 26,444    |
-| very-high | 620   | 944     | 28,796    |
+| normal    | 594   | 914     | 29,212    |
+| high      | 620   | 944     | 31,572    |
+| very-high | 634   | 960     | 34,020    |
 
 Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
 frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —

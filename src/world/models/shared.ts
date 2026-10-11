@@ -48,6 +48,21 @@ export function sphereFor(level: DetailLevel): THREE.SphereGeometry {
 }
 
 /**
+ * Tiny sphere for animal eyes — renders at ~3 px at hub camera distance, so
+ * a fixed 10×8 unit sphere is plenty; the level sphere would cost ~7× the
+ * triangles for no visible difference. Shared across all levels.
+ */
+export function eyeFor(): THREE.BufferGeometry {
+  const key = 'eye:10x8';
+  let geometry = GEOMETRY_CACHE.get(key);
+  if (!geometry) {
+    geometry = new THREE.SphereGeometry(0.5, 10, 8);
+    GEOMETRY_CACHE.set(key, geometry);
+  }
+  return geometry;
+}
+
+/**
  * Cylinder for the given quality level.
  *
  * `taper` is the top-to-bottom radius ratio: bottom radius is always 0.5,
@@ -81,6 +96,40 @@ export function roundedBoxFor(level: DetailLevel): THREE.BufferGeometry {
   let geometry = GEOMETRY_CACHE.get(key);
   if (!geometry) {
     geometry = new RoundedBoxGeometry(1, 1, 1, segments, radius);
+    GEOMETRY_CACHE.set(key, geometry);
+  }
+  return geometry;
+}
+
+/**
+ * Lightly rounded unit box for small creature parts (tails, legs, ears,
+ * beaks, talons) at detail level ≥3 — a plush silhouette at a fraction of
+ * `roundedBoxFor`'s cost, since rounding is imperceptible on sub-10 px
+ * parts anyway. Below level 3 returns the shared `BOX` unchanged.
+ */
+export function softBoxFor(level: DetailLevel): THREE.BufferGeometry {
+  if (level < 3) return BOX;
+  const key = 'soft-box:3:0.45';
+  let geometry = GEOMETRY_CACHE.get(key);
+  if (!geometry) {
+    // A 3-segment box morphed partway toward a sphere — a pillow shape that
+    // reads plush at ~100 tris, vs ~550 for RoundedBoxGeometry at its
+    // lowest segment count. Meshes scale it exactly like `BOX`.
+    const box = new THREE.BoxGeometry(1, 1, 1, 3, 3, 3);
+    const position = box.attributes.position;
+    if (!position) {
+      GEOMETRY_CACHE.set(key, box);
+      return box;
+    }
+    const vertex = new THREE.Vector3();
+    for (let i = 0; i < position.count; i += 1) {
+      vertex.fromBufferAttribute(position, i);
+      const spherePoint = vertex.clone().normalize().multiplyScalar(0.5);
+      vertex.lerp(spherePoint, 0.45);
+      position.setXYZ(i, vertex.x, vertex.y, vertex.z);
+    }
+    box.computeVertexNormals();
+    geometry = box;
     GEOMETRY_CACHE.set(key, geometry);
   }
   return geometry;
