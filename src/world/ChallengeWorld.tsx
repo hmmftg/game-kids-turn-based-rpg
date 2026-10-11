@@ -495,6 +495,8 @@ export function ChallengeWorld({
         label="avatar"
         detailLevel={detailLevel}
         role="avatar"
+        female={AVATAR_VISUALS[avatarId].female === true}
+        covering={AVATAR_VISUALS[avatarId].female === true ? 'scarf' : undefined}
       />
     </group>
   );

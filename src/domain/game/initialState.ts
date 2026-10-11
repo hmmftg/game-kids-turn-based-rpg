@@ -1,7 +1,7 @@
 import { QUEST_IDS } from './types.ts';
 import type { AudioSettings, GameState, PersistedState, QuestId, QuestProgress } from './types.ts';
 
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 3;
 
 export const DEFAULT_AUDIO: AudioSettings = {
   musicMuted: false,
@@ -26,7 +26,7 @@ export function createFreshPersistedState(now = 0): PersistedState {
     checkpoint: { kind: 'title', questId: null, at: now },
     stickers: [],
     audio: DEFAULT_AUDIO,
-    qualityTier: 'medium',
+    qualityTier: 'low',
     lastPlayedAt: now,
     discoveries: [],
     mapId: 'map-town',

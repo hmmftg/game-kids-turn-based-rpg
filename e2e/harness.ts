@@ -80,7 +80,7 @@ export async function seedCompletedQuests(page: Page, completed: QuestId[]) {
           checkpoint: { kind: 'hub', questId: null, at: now },
           stickers: [],
           audio: { musicMuted: false, sfxMuted: false, musicVolume: 0.6, sfxVolume: 0.8 },
-          qualityTier: 'medium',
+          qualityTier: 'low',
           lastPlayedAt: now,
           discoveries: [],
           mapId: 'map-town',

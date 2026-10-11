@@ -23,11 +23,11 @@ const CACHE_LABEL: Record<CacheStatus, string> = {
  * confirmed reset. No external links, no network calls, no child-visible entry.
  */
 const TIER_LABEL: Record<QualityTier, string> = {
+  'very-low': FA.qualityVeryLow,
   low: FA.qualityLow,
-  medium: FA.qualityMedium,
+  normal: FA.qualityNormal,
   high: FA.qualityHigh,
   'very-high': FA.qualityVeryHigh,
-  'extra-high': FA.qualityExtraHigh,
 };
 
 export function ParentArea({
@@ -181,7 +181,7 @@ export function ParentArea({
         <section data-testid="parent-quality">
           <h3 className="subtitle">{FA.quality}</h3>
           <div className="row" role="group" aria-label={FA.quality}>
-            {(['low', 'medium', 'high', 'very-high', 'extra-high'] as const).map((tier) => (
+            {(['very-low', 'low', 'normal', 'high', 'very-high'] as const).map((tier) => (
               <button
                 key={tier}
                 type="button"

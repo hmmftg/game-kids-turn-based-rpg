@@ -105,7 +105,7 @@ const elder = await page.evaluate(
 );
 if (!avatar || !elder) throw new Error('probe did not expose avatar/elder positions');
 
-for (const tier of ['low', 'medium', 'high', 'very-high', 'extra-high']) {
+for (const tier of ['very-low', 'low', 'normal', 'high', 'very-high']) {
   await setTier(page, tier);
   await page.screenshot({ path: `${out}/full-${tier}.png` });
   const pa = await screenPoint(avatar.x, avatar.z);

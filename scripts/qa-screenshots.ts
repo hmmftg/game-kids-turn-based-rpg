@@ -91,7 +91,7 @@ async function rotateTo(p: Page, viewport: { width: number; height: number }) {
 mkdirSync(out, { recursive: true });
 
 const counts: Record<string, number> = {};
-for (const tier of ['low', 'medium', 'high', 'very-high', 'extra-high']) {
+for (const tier of ['very-low', 'low', 'normal', 'high', 'very-high']) {
   await setTier(tier);
   counts[tier] = await objectCount();
   await page.screenshot({ path: `${out}/hub-${tier}.png` });
@@ -100,11 +100,11 @@ for (const tier of ['low', 'medium', 'high', 'very-high', 'extra-high']) {
 
 // Narrow landscape viewport (smallest supported form factor) at the
 // highest covered tier.
-await setTier('extra-high');
+await setTier('very-high');
 await page.setViewportSize({ width: 640, height: 360 });
 await page.waitForTimeout(400);
-await page.screenshot({ path: `${out}/hub-extra-high-narrow.png` });
-console.log('captured extra-high at 640x360');
+await page.screenshot({ path: `${out}/hub-very-high-narrow.png` });
+console.log('captured very-high at 640x360');
 
 // Portrait viewport: the world must stay mounted and playable.
 const idBeforePortrait = await canvasId();
@@ -114,7 +114,7 @@ if ((await canvasId()) !== idBeforePortrait) {
   process.exitCode = 1;
 }
 await page.screenshot({ path: `${out}/hub-portrait.png` });
-console.log('captured extra-high at 360x800');
+console.log('captured very-high at 360x800');
 
 // Portrait HUD surfaces. The trail chip only navigates (interaction
 // ownership) — dialogue opens via a deliberate figure tap, and encounter
@@ -246,15 +246,15 @@ await page.waitForTimeout(400);
 const afterParent = await objectCount();
 console.log(`after parent area remount: ${afterParent} objects`);
 
-await setTier('low');
-await setTier('high');
-await setTier('extra-high');
+await setTier('very-low');
+await setTier('normal');
+await setTier('very-high');
 const afterTierCycle = await objectCount();
 console.log(`after tier cycle: ${afterTierCycle} objects`);
 
 if (afterParent !== expected || afterTierCycle !== expected) {
   console.error(
-    `REGRESSION: expected ${expected} objects at extra-high tier after remounts ` +
+    `REGRESSION: expected ${expected} objects at very-high tier after remounts ` +
       `(portrait=${afterPortrait}, parent=${afterParent}, tierCycle=${afterTierCycle})`,
   );
   process.exitCode = 1;

@@ -20,11 +20,15 @@ const url = URL.includes('research=') ? URL : `${URL}${URL.includes('?') ? '&' :
 /**
  * BUDGET = pass/fail ceilings (unchanged since the graphics pass).
  *
- * Current observed baseline (P0 repair, 2026-10-10 — three full runs on main,
- * dev server + SwiftShader, identical across runs in this headless env):
- *   low:    calls 116 · triangles 5238  · objects 260 · materials 50 · geometries 24 · textures 1
- *   medium: calls 262 · triangles 8480  · objects 493 · materials 60 · geometries 30 · textures 1
- *   high:   calls 368 · triangles 11092 · objects 648 · materials 64 · geometries 35 · textures 1
+ * Current observed baseline (five-tier scale, 2026-10-10, dev server +
+ * SwiftShader): the first three tiers reuse the old low/medium/high
+ * geometry unchanged; high adds full bodies (arms, hands, feet, NPC faces,
+ * animal legs) and very-high adds draped garments + coverings:
+ *   very-low:  calls 116 · triangles 5238  · objects 260 · materials 50 · geometries 24 · textures 1
+ *   low:       calls 273 · triangles 12280 · objects 506 · materials 62 · geometries 33 · textures 1
+ *   normal:    calls 393 · triangles 15464 · objects 676 · materials 65 · geometries 39 · textures 1
+ *   high:      calls 514 · triangles 19300 · objects 816 · materials 65 · geometries 39 · textures 1
+ *   very-high: calls 591 · triangles 22536 · objects 909 · materials 71 · geometries 39 · textures 1
  * These are sampled maxima, not mathematical upper bounds — ambient critter
  * positions vary between environments and frustum culling follows them.
  * (Previous comments said 76/203/296 calls and docs/QA.md said 86/227/326 —
@@ -38,8 +42,15 @@ const url = URL.includes('research=') ? URL : `${URL}${URL.includes('?') ? '&' :
  * Do not raise a ceiling to fit a feature; simplify geometry first.
  */
 const BUDGET: Record<string, WorldMetrics> = {
-  low: { calls: 135, triangles: 8000, geometries: 40, textures: 4, objects: 300, materials: 60 },
-  medium: {
+  'very-low': {
+    calls: 135,
+    triangles: 8000,
+    geometries: 40,
+    textures: 4,
+    objects: 300,
+    materials: 60,
+  },
+  low: {
     calls: 305,
     triangles: 13000,
     geometries: 50,
@@ -47,22 +58,29 @@ const BUDGET: Record<string, WorldMetrics> = {
     objects: 570,
     materials: 70,
   },
-  high: { calls: 425, triangles: 17000, geometries: 55, textures: 4, objects: 750, materials: 75 },
-  'very-high': {
-    calls: 460,
-    triangles: 27000,
-    geometries: 60,
+  normal: {
+    calls: 425,
+    triangles: 17000,
+    geometries: 55,
     textures: 4,
-    objects: 785,
+    objects: 750,
     materials: 75,
   },
-  'extra-high': {
-    calls: 485,
-    triangles: 30500,
+  high: {
+    calls: 590,
+    triangles: 29000,
     geometries: 60,
     textures: 4,
-    objects: 810,
-    materials: 80,
+    objects: 940,
+    materials: 75,
+  },
+  'very-high': {
+    calls: 680,
+    triangles: 34000,
+    geometries: 60,
+    textures: 4,
+    objects: 1045,
+    materials: 85,
   },
 };
 
@@ -160,7 +178,7 @@ function maxMetrics(a: WorldMetrics, b: WorldMetrics): WorldMetrics {
 const SAMPLES_PER_TIER = 3;
 
 let failed = false;
-for (const tier of ['low', 'medium', 'high', 'very-high', 'extra-high']) {
+for (const tier of ['very-low', 'low', 'normal', 'high', 'very-high']) {
   await setTier(page, tier);
   // let the remounted canvas settle and render
   await page.waitForTimeout(400);

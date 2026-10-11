@@ -48,11 +48,11 @@ export const FA = {
   on: 'روشن',
   off: 'خاموش',
   quality: 'کیفیت تصویر',
+  qualityVeryLow: 'خیلی ساده',
   qualityLow: 'ساده',
-  qualityMedium: 'معمولی',
+  qualityNormal: 'معمولی',
   qualityHigh: 'بالا',
   qualityVeryHigh: 'خیلی بالا',
-  qualityExtraHigh: 'فوق‌العاده',
 
   questTrail: 'کارهای من',
   stickers: 'برچسب‌ها',

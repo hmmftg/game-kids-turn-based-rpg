@@ -181,6 +181,92 @@ function Headwear({
   );
 }
 
+/**
+ * Real female covering at the very-high tier: a scarf or chador that drapes
+ * the head AND shoulders like the real garment — crown cap, long side falls,
+ * a deep back fall, and (chador only) a front chest band plus a darker hem
+ * accent. The face stays open; shared BOX only. Renders instead of the
+ * coarse `Headwear` shape at level 4 — same identity, more garment truth.
+ */
+function Covering({
+  kind,
+  lift,
+  level,
+}: {
+  readonly kind: 'scarf' | 'chador';
+  readonly lift: number;
+  readonly level: DetailLevel;
+}) {
+  const main = useMaterial(HEADWEAR_COLORS[kind]);
+  const trim = useMaterial(kind === 'chador' ? '#2e3040' : '#a85271');
+  return (
+    <Detail level={level} min={4}>
+      <group position={[0, lift, 0]}>
+        <mesh
+          geometry={BOX}
+          material={main}
+          position={[0, 1.4, -0.02]}
+          scale={[0.54, 0.15, 0.5]}
+          raycast={noRaycast}
+        />
+        {/* long side falls reaching the shoulders */}
+        <mesh
+          geometry={BOX}
+          material={main}
+          position={[-0.27, 1.0, -0.03]}
+          scale={[0.09, 0.66, 0.42]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={main}
+          position={[0.27, 1.0, -0.03]}
+          scale={[0.09, 0.66, 0.42]}
+          raycast={noRaycast}
+        />
+        {/* deep back fall */}
+        <mesh
+          geometry={BOX}
+          material={main}
+          position={[0, 0.98, -0.26]}
+          scale={[0.56, 0.72, 0.1]}
+          raycast={noRaycast}
+        />
+        {kind === 'chador' ? (
+          <>
+            {/* chador wraps the chest front too */}
+            <mesh
+              geometry={BOX}
+              material={main}
+              position={[0, 0.9, 0.22]}
+              scale={[0.44, 0.26, 0.05]}
+              raycast={noRaycast}
+            />
+            {/* darker hem accent along the back fall's bottom edge */}
+            <mesh
+              geometry={BOX}
+              material={trim}
+              position={[0, 0.64, -0.26]}
+              scale={[0.56, 0.05, 0.1]}
+              raycast={noRaycast}
+            />
+          </>
+        ) : (
+          /* scarf: a soft fold accent across the crown */
+          <mesh
+            geometry={BOX}
+            material={trim}
+            position={[0, 1.34, 0.16]}
+            rotation={[0.35, 0, 0]}
+            scale={[0.4, 0.03, 0.03]}
+            raycast={noRaycast}
+          />
+        )}
+      </group>
+    </Detail>
+  );
+}
+
 /** Soft blob shadow: one transparent disc, no shadow maps anywhere in the scene. */
 function BlobShadow({ radius = 0.5 }: { readonly radius?: number }) {
   return (
@@ -563,6 +649,8 @@ export function CubicFigure({
   moving = false,
   label,
   headwear = 'none',
+  female = false,
+  covering,
   hairStyle,
   hairColor = '#3a2a1c',
   detailLevel = 1,
@@ -648,6 +736,160 @@ export function CubicFigure({
           raycast={noRaycast}
         />
       </Detail>
+      <Detail level={detailLevel} min={3}>
+        {/* arms angled slightly out from the shoulders; hands and a
+            two-finger hint in the figure's own skin tone */}
+        <mesh
+          geometry={BOX}
+          material={limb}
+          position={[-0.335, 0.72 + lift, 0]}
+          rotation={[0, 0, 0.12]}
+          scale={[0.09, 0.36, 0.13]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={limb}
+          position={[0.335, 0.72 + lift, 0]}
+          rotation={[0, 0, -0.12]}
+          scale={[0.09, 0.36, 0.13]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={head}
+          position={[-0.375, 0.5 + lift, 0.02]}
+          scale={[0.09, 0.08, 0.1]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={head}
+          position={[0.375, 0.5 + lift, 0.02]}
+          scale={[0.09, 0.08, 0.1]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={head}
+          position={[-0.4, 0.44 + lift, 0.05]}
+          scale={[0.022, 0.05, 0.03]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={head}
+          position={[-0.35, 0.44 + lift, 0.05]}
+          scale={[0.022, 0.05, 0.03]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={head}
+          position={[0.35, 0.44 + lift, 0.05]}
+          scale={[0.022, 0.05, 0.03]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={head}
+          position={[0.4, 0.44 + lift, 0.05]}
+          scale={[0.022, 0.05, 0.03]}
+          raycast={noRaycast}
+        />
+        {role !== 'avatar' ? (
+          <>
+            {/* shoes — the avatar's own pair already lands at medium */}
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#5a4632')}
+              position={[-0.16, 0.04, 0.03]}
+              scale={[0.24, 0.08, 0.3]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#5a4632')}
+              position={[0.16, 0.04, 0.03]}
+              scale={[0.24, 0.08, 0.3]}
+              raycast={noRaycast}
+            />
+          </>
+        ) : null}
+      </Detail>
+      <Detail level={detailLevel} min={4}>
+        {female ? (
+          /* flared manteau skirt over the torso, in the figure's own outfit
+             color — garment-following, not a floating cone */
+          <mesh
+            geometry={cylinderFor(detailLevel, 0.8)}
+            material={limb}
+            position={[0, 0.56 + lift, 0]}
+            scale={[0.66, 0.46, 0.6]}
+            raycast={noRaycast}
+          />
+        ) : (
+          <>
+            {/* real clothes: trousers, belt, shirt placket + collar tips */}
+            <mesh
+              geometry={BOX}
+              material={limb}
+              position={[-0.16, 0.22, 0]}
+              scale={[0.24, 0.34, 0.24]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={limb}
+              position={[0.16, 0.22, 0]}
+              scale={[0.24, 0.34, 0.24]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#33303a')}
+              position={[0, 0.5 + lift, 0]}
+              scale={[0.58, 0.05, 0.42]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#e8eef4')}
+              position={[0, 0.76 + lift, 0.205]}
+              scale={[0.14, 0.26, 0.03]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#e8eef4')}
+              position={[-0.08, 0.93 + lift, 0.19]}
+              scale={[0.08, 0.04, 0.03]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#e8eef4')}
+              position={[0.08, 0.93 + lift, 0.19]}
+              scale={[0.08, 0.04, 0.03]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#33303a')}
+              position={[0, 0.8 + lift, 0.225]}
+              scale={[0.025, 0.025, 0.02]}
+              raycast={noRaycast}
+            />
+            <mesh
+              geometry={BOX}
+              material={sharedLambert('#33303a')}
+              position={[0, 0.7 + lift, 0.225]}
+              scale={[0.025, 0.025, 0.02]}
+              raycast={noRaycast}
+            />
+          </>
+        )}
+      </Detail>
       {/* The head pivots as one unit at the neck — the avatar's arrival
         glance turns this group, not the body. The inner offset group keeps
         every head part's authored absolute height unchanged. */}
@@ -662,8 +904,16 @@ export function CubicFigure({
             scale={[0.42, 0.38, 0.38]}
             raycast={noRaycast}
           />
-          {role === 'avatar' ? <Face lift={lift} level={detailLevel} /> : null}
-          <Headwear id={headwear} lift={lift} level={detailLevel} />
+          {role === 'avatar' || detailLevel >= 3 ? <Face lift={lift} level={detailLevel} /> : null}
+          {covering !== undefined &&
+          detailLevel >= 4 &&
+          headwear !== 'kolah' &&
+          headwear !== 'kufi' &&
+          headwear !== 'beanie' ? (
+            <Covering kind={covering} lift={lift} level={detailLevel} />
+          ) : (
+            <Headwear id={headwear} lift={lift} level={detailLevel} />
+          )}
           {/* Covered heads skip hair entirely — headwear replaces the silhouette. */}
           {role === 'avatar' && headwear === 'none' && hairStyle ? (
             <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
@@ -1194,6 +1444,49 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
         />
       </Detail>
       <Detail level={level} min={3}>
+        {/* four legs with lighter paw tips — a full body, not a floating blob */}
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[-0.12, 0.11, 0.18]}
+          scale={[0.07, 0.16, 0.08]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[0.12, 0.11, 0.18]}
+          scale={[0.07, 0.16, 0.08]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[-0.13, 0.11, -0.18]}
+          scale={[0.08, 0.16, 0.09]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={fur}
+          position={[0.13, 0.11, -0.18]}
+          scale={[0.08, 0.16, 0.09]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[-0.12, 0.035, 0.19]}
+          scale={[0.07, 0.05, 0.09]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[0.12, 0.035, 0.19]}
+          scale={[0.07, 0.05, 0.09]}
+          raycast={noRaycast}
+        />
         {/* forehead tabby stripes — same sign-color accent as the muzzle */}
         <mesh
           geometry={BOX}
@@ -1236,6 +1529,30 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           position={[0, moving ? 0.62 : 0.48, -0.5]}
           rotation={[moving ? -0.4 : 0.6, 0, 0]}
           scale={[0.08, 0.1, 0.08]}
+          raycast={noRaycast}
+        />
+        {/* whiskers + a collar: the neighbourhood cat reads cared-for */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[-0.14, 0.55, 0.44]}
+          rotation={[0, 0.3, 0]}
+          scale={[0.12, 0.012, 0.012]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[0.14, 0.55, 0.44]}
+          rotation={[0, -0.3, 0]}
+          scale={[0.12, 0.012, 0.012]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert('#b23a48')}
+          position={[0, 0.45, 0.3]}
+          scale={[0.22, 0.04, 0.14]}
           raycast={noRaycast}
         />
       </Detail>
@@ -1293,6 +1610,23 @@ function BirdMesh({ tint, moving, level }: SpeciesProps) {
           raycast={noRaycast}
         />
       </Detail>
+      <Detail level={level} min={3}>
+        {/* two perching feet */}
+        <mesh
+          geometry={BOX}
+          material={beak}
+          position={[-0.06, 0.04, 0.02]}
+          scale={[0.04, 0.08, 0.08]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={beak}
+          position={[0.06, 0.04, 0.02]}
+          scale={[0.04, 0.08, 0.08]}
+          raycast={noRaycast}
+        />
+      </Detail>
     </>
   );
 }
@@ -1339,6 +1673,23 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
           raycast={noRaycast}
         />
       </Detail>
+      <Detail level={level} min={3}>
+        {/* talons — the raptor's grip */}
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.beak)}
+          position={[-0.09, 0.05, 0.06]}
+          scale={[0.06, 0.08, 0.1]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={sharedLambert(DETAIL_COLORS.beak)}
+          position={[0.09, 0.05, 0.06]}
+          scale={[0.06, 0.08, 0.1]}
+          raycast={noRaycast}
+        />
+      </Detail>
     </>
   );
 }
@@ -1363,6 +1714,25 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
           position={[0, 0.04, -0.3]}
           rotation={[0, moving ? 0.5 : 0.15, 0]}
           scale={[0.04, 0.16, 0.16]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* pectoral fins — one on each flank */}
+        <mesh
+          geometry={BOX}
+          material={scales}
+          position={[-0.1, 0.02, 0.06]}
+          rotation={[0, 0, 0.4]}
+          scale={[0.03, 0.1, 0.12]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={BOX}
+          material={scales}
+          position={[0.1, 0.02, 0.06]}
+          rotation={[0, 0, -0.4]}
+          scale={[0.03, 0.1, 0.12]}
           raycast={noRaycast}
         />
       </Detail>

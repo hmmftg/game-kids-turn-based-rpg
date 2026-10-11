@@ -37,13 +37,36 @@ function parseAvatarId(value: unknown): AvatarId | null {
 }
 
 function parseQualityTier(value: unknown): QualityTier {
-  return value === 'low' ||
-    value === 'medium' ||
-    value === 'high' ||
-    value === 'very-high' ||
-    value === 'extra-high'
-    ? value
-    : 'medium';
+  switch (value) {
+    case 'very-low':
+    case 'low':
+    case 'normal':
+    case 'high':
+    case 'very-high':
+      return value;
+    default:
+      return 'low';
+  }
+}
+
+// v1/v2 saves use the old tier ids; map each to the new id that preserves the
+// chosen detail level (three-tier low/medium/high → very-low/low/normal,
+// the four/five-level very-high/extra-high → high/very-high).
+function migrateQualityTier(value: unknown): QualityTier {
+  switch (value) {
+    case 'low':
+      return 'very-low';
+    case 'medium':
+      return 'low';
+    case 'high':
+      return 'normal';
+    case 'very-high':
+      return 'high';
+    case 'extra-high':
+      return 'very-high';
+    default:
+      return 'low';
+  }
 }
 
 function clamp01(value: unknown, fallback: number): number {
@@ -139,7 +162,7 @@ function parseV2(raw: UnknownRecord, now: number): PersistedState {
     checkpoint: parseCheckpoint(raw['checkpoint'], now),
     stickers: asStringArray(raw['stickers']) as StickerId[],
     audio: parseAudio(raw['audio']),
-    qualityTier: parseQualityTier(raw['qualityTier']),
+    qualityTier: migrateQualityTier(raw['qualityTier']),
     lastPlayedAt: typeof raw['lastPlayedAt'] === 'number' ? raw['lastPlayedAt'] : now,
     discoveries: asStringArray(raw['discoveries']) as DiscoveryId[],
     mapId: parseMapId(raw['mapId']),
@@ -161,5 +184,10 @@ export function parseSave(raw: unknown, now = 0): SaveParseResult {
   if (version > SAVE_SCHEMA_VERSION) return { ok: false, reason: 'save-from-newer-version' };
   if (version <= 0) return { ok: false, reason: 'invalid-schema-version' };
   if (version === 1) return { ok: true, state: migrateV1(raw, now), migrated: true };
-  return { ok: true, state: parseV2(raw, now), migrated: false };
+  if (version === 2) return { ok: true, state: parseV2(raw, now), migrated: true };
+  return {
+    ok: true,
+    state: { ...parseV2(raw, now), qualityTier: parseQualityTier(raw['qualityTier']) },
+    migrated: false,
+  };
 }

@@ -792,6 +792,8 @@ export function Hub({
                     label={npc.id}
                     detailLevel={detailLevel}
                     role={look.role}
+                    female={look.female}
+                    covering={look.covering}
                   />
                 )}
               </IdleFlourish>
@@ -1037,6 +1039,8 @@ export function Hub({
           label="avatar"
           detailLevel={detailLevel}
           role="avatar"
+          female={AVATAR_VISUALS[avatarId].female === true}
+          covering={AVATAR_VISUALS[avatarId].female === true ? 'scarf' : undefined}
         />
       </AvatarLiveliness>
     </group>

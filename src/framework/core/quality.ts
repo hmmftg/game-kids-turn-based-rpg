@@ -4,4 +4,4 @@
  * application; automatic adaptation may lower the *effective* detail but
  * never silently overrides the chosen tier.
  */
-export type QualityTier = 'low' | 'medium' | 'high' | 'very-high' | 'extra-high';
+export type QualityTier = 'very-low' | 'low' | 'normal' | 'high' | 'very-high';
