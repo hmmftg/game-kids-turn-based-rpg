@@ -232,9 +232,12 @@ test.describe('the Challenge Zone', () => {
     await startGame(page);
     await reachChallengeZone(page);
     // Portrait crops the far side of the field — zoom out like a kid
-    // scanning the playground so every opponent stays on-canvas.
+    // scanning the playground so every opponent stays on-canvas. Zoom
+    // controls live in the unified menu (W4): open, step, resume.
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('zoom-out').click();
     await page.getByTestId('zoom-out').click();
+    await page.getByTestId('resume-button').click();
 
     const opponents: readonly { npcId: string; battleId: string; anchorId: AnchorId }[] = [
       {
@@ -288,8 +291,10 @@ test.describe('the Challenge Zone', () => {
 
     // Walk to the bird first — the figure must be on-canvas to tap it
     // (portrait crops the far opponents from the spawn view).
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('zoom-out').click();
     await page.getByTestId('zoom-out').click();
+    await page.getByTestId('resume-button').click();
     await walkToOpponent(page, 'npc-challenge-bird', 'anchor-challenge-bird');
     expect(await tapOpponentFigure(page, 'npc-challenge-bird')).toBe(true);
     expect((await battleState(page))?.battleId).toBe('battle-challenge-bird');
@@ -309,8 +314,10 @@ test.describe('the Challenge Zone', () => {
     // the tunnel route when the save predates the crossing.
     if ((await probe(page).mapId()) !== 'map-challenge') await reachChallengeZone(page);
     // Zoom resets with the page — widen again for the far-side figure taps.
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('zoom-out').click();
     await page.getByTestId('zoom-out').click();
+    await page.getByTestId('resume-button').click();
     await walkToOpponent(page, 'npc-challenge-bird', 'anchor-challenge-bird');
     // The bird alternates its perch stand on clock ticks — an arrival that
     // lands beside empty ground ticks the stand away before the cue checks.

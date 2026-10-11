@@ -153,12 +153,13 @@ describe('App', () => {
     expect(await screen.findByTestId('profile-select')).toBeInTheDocument();
     await user.click(screen.getByTestId('profile-card-profile-kid1'));
     await screen.findByTestId('hud');
+    // The shelf lives in the unified menu (W4): open, assert, leave via switch.
+    await user.click(screen.getByTestId('pause-button'));
     expect(screen.getByTestId('sticker-sticker-greeting')).toBeInTheDocument();
 
     // Switching back to the picker keeps kid2's card fresh, and a confirmed
     // reset wipes only kid1's slot — never kid2's. Destructive resets only
     // live behind the parent gate; child-facing profile cards can't wipe.
-    await user.click(screen.getByTestId('pause-button'));
     await user.click(await screen.findByTestId('switch-player'));
     await screen.findByTestId('profile-select');
     expect(screen.queryByTestId('profile-reset-profile-kid1')).toBeNull();

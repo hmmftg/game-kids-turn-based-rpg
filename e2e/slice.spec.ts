@@ -77,6 +77,7 @@ test.describe('vertical slice', () => {
     }
     // The shelf is a ⭐-count chip on small screens — the album is the
     // expanded view of earned stickers.
+    await page.getByTestId('pause-button').click();
     await page.getByTestId('sticker-shelf').click();
     await expect(page.getByTestId('album-sticker-finale')).toBeVisible();
   });
