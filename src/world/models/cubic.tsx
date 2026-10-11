@@ -205,7 +205,9 @@ function Covering({
   // flares over the shoulders, and leaves the face exposed. The chador is
   // taller, wider, and wraps nearly all the way around (chest covered by
   // the same cloth); the scarf stops higher and opens wider at the front.
-  const height = kind === 'chador' ? 0.95 : 0.72;
+  // Chador falls to just above the ground (hem ~0.15); the scarf stops at
+  // waist level. Crown stays put — only the hem lengthens.
+  const height = kind === 'chador' ? 1.32 : 0.72;
   const centerY = (kind === 'chador' ? 1.47 : 1.45) - height / 2;
   return (
     <Detail level={level} min={4}>
@@ -624,6 +626,12 @@ export function CubicFigure({
   // (BOX / 12-seg CYLINDER) so low stays identical to the original look.
   const legGeometry = cylinderFor(detailLevel, detailLevel >= 2 ? 0.8 : 1);
   const soft = softBoxFor(detailLevel);
+  const covered =
+    covering !== undefined &&
+    detailLevel >= 4 &&
+    headwear !== 'kolah' &&
+    headwear !== 'kufi' &&
+    headwear !== 'beanie';
   // The torso stays the shared BOX at every tier: the tunic's angular slab
   // is intentional stylization, and rounding its corners would cost ~300
   // triangles per figure for a change barely visible at hub distance.
@@ -891,17 +899,14 @@ export function CubicFigure({
             raycast={noRaycast}
           />
           {role === 'avatar' || detailLevel >= 3 ? <Face lift={lift} level={detailLevel} /> : null}
-          {covering !== undefined &&
-          detailLevel >= 4 &&
-          headwear !== 'kolah' &&
-          headwear !== 'kufi' &&
-          headwear !== 'beanie' ? (
-            <Covering kind={covering} lift={lift} level={detailLevel} />
+          {covered ? (
+            <Covering kind={covering ?? 'chador'} lift={lift} level={detailLevel} />
           ) : (
             <Headwear id={headwear} lift={lift} level={detailLevel} />
           )}
-          {/* Covered heads skip hair entirely — headwear replaces the silhouette. */}
-          {role === 'avatar' && headwear === 'none' && hairStyle ? (
+          {/* Covered heads skip hair entirely — the scarf/chador replaces
+              the silhouette and nothing may poke through the cloth. */}
+          {role === 'avatar' && headwear === 'none' && !covered && hairStyle ? (
             <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
           ) : null}
         </group>
