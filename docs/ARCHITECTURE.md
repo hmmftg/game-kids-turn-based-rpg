@@ -41,6 +41,13 @@ lint-enforced in `eslint.config.js`:
   `labelFa`/`environment`); app content never moves down unless a second
   consumer proves it shared.
 
+Why single-package-for-now: the `ARCHITECTURE-REFERENCES` audit found the
+`packages/` workspace split only pays off with real separate consumers
+(Overworld/RPG Crafter), and DI-style decoupling (RPGJS) was rejected outright.
+The boundary that matters is enforced today by lint on `index.ts`; a workspace
+can be introduced later _inside_ the same boundary if a genuinely separate
+distribution appears, without changing any import site.
+
 ### Runtime ownership
 
 `GameProvider` no longer owns the store. `createGameRuntime<S, C>`

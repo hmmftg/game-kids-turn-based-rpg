@@ -7,8 +7,29 @@ and ESLint (`no-restricted-imports`, `framework/(core|three|modules)/`)
 blocks every deeper import, including type-only ones.
 
 > The API is the smallest viable seam two consumers need — the game and
-> `examples/hello-world`. It is intentionally conservative: exports the
-> example doesn't exercise should be treated as unproven.
+> `examples/hello-world`. It is intentionally conservative and **internal**
+> (single-package, not a published package): exports the example doesn't
+> exercise are provisional, not proven.
+
+## Export status (audit — who validates what)
+
+| Export group                                                                                                                               | Game app                                                                      | hello-world | Status                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identifiers, `Anchor`/`Bounds`/`WorldArea`/`WorldMap`, `insideBounds`, `getAnchor`, `GraphSource`                                          | ✓                                                                             | ✓           | **Proven by both consumers**                                                                                                                                                                            |
+| `createGameRuntime` + runtime types, `PersistenceAdapter`/`LoadResult`/`SaveScope`/`StorageFallback`/`PersistenceFailure`                  | ✓                                                                             | ✓           | **Proven by both consumers**                                                                                                                                                                            |
+| Rest of world types (`Edge`, `MapTransition`, `NpcPlacement`, `DiscoveryId`, `NpcId`, `TransitionId`)                                      | ✓                                                                             | —           | App-consumed; not exercised by the example                                                                                                                                                              |
+| Graph helpers (`getAnchorOrNull`, `neighboursOf`, `anchorForNpc`, `anchorForLandmark`, `distanceBetween`), pathfinding                     | ✓                                                                             | —           | App-consumed; provisional for independent use                                                                                                                                                           |
+| Quality/capabilities (`QualityTier`, `detectQualityTier`, `maxPixelRatioFor`, `detectWebgl`, `currentOrientation`, `prefersReducedMotion`) | ✓                                                                             | —           | App-consumed; provisional                                                                                                                                                                               |
+| Camera math (`three/`)                                                                                                                     | ✓                                                                             | —           | App-consumed; provisional — no independent renderer consumer yet                                                                                                                                        |
+| Battle module (`createBattle`/`chooseBattleAction`/`advanceBattlePhase`/`enemyIntentFor`, `battleReducer`, `validateBattleDefinition`)     | ✓ (via `battleReducer` + `validateBattleDefinition` in the reducer/validator) | —           | **Provisional.** Module-level entry points have no external caller today — kept because they are the battle module's intended public surface for a future direct consumer, not removed on zero evidence |
+| `perfProbe`                                                                                                                                | loaded via dynamic `import()`                                                 | —           | Deliberately not re-exported — lazy chunk, precache-excluded                                                                                                                                            |
+
+Nothing in `index.ts` is orphaned enough to delete: every export is either
+consumed by the game through the boundary, proven by the example, or the
+documented public surface of an optional module. The audit deliberately did
+**not** trim battle/camera exports — `hello-world` was never expected to
+exercise every optional module, and the main app requires them through
+`index.ts`.
 
 ## Ownership model
 

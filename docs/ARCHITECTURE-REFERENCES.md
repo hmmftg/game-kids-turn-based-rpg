@@ -625,3 +625,30 @@ compatible with the interaction model and the PR F animation contract.
    "Adapt later" item a real requirement triggers first — most likely the
    `manifest`/`schemaVersion`/migration convention if content ever becomes a
    distributable package.
+
+## Mission reconciliation (framework/performance program, P0–P5)
+
+The audit above predates the framework program; this section reconciles what
+was actually built against its verdicts — no re-audit, pointers only.
+
+| Audit verdict                                         | What shipped                                                                                                                                                   |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/` split pays off only with real consumers   | **Adopted as single-package + index boundary.** `src/framework/` with lint-enforced `index.ts`; workspace deferred inside the same boundary.                   |
+| RPGJS DI / event bus — rejected                       | **Held.** `createGameRuntime` is an explicit injected adapter (`createInitialState` + reducer), no container, no events-as-decoupling.                         |
+| Overworld-style renderer/systems seam                 | **Adopted.** `framework/three/` holds pure camera math; the R3F world stays app-side behind `WorldSource`/`GraphSource` data contracts.                        |
+| RPG Crafter content contract / schema separation      | **Adopted.** `WorldMap`/`WorldArea`/anchors are declared data consumed by the world layer; the hello-world example declares its own ~30-line world.            |
+| Engine/editor separation (RPGAtlas)                   | **Partial.** `?worldbuilder=1` already separated authoring; the framework boundary now gives it a stable data contract to sit on. No editor extraction done.   |
+| Keep gameplay semantics in the reducer, not the store | **Adopted.** The runtime owns lifecycle/subscriptions only; `gameReducer` + `ReducerContext.now` remain the single authoritative transition mechanism.         |
+| Persistence belongs behind a repository seam          | **Adopted as app-side coordinators.** Generic `PersistenceAdapter<P>` + `LoadResult` contract in core; `ProfileCoordinator`/`SaveCoordinator` keep app policy. |
+
+Nothing in the audit required the rejected directions to be revisited during
+implementation; the "Adapt later" list (manifest/`schemaVersion` convention,
+distributable content package) remains open and unchanged.
+
+> Save-schema note: the reconciliation above describes the framework program
+> (P0–P5), which changed no `PersistedState` field or version — P4 preserved
+> the schema it found. The concurrently merged quality-tier evolution (PR #83)
+> did ship a justified v2 → v3 migration (`migrateQualityTier`) when tier
+> identifiers changed; that is real migration work, covered by existing tests,
+> and belongs to the "manifest/schemaVersion/migration convention" lesson —
+> the first practical instance of an "Adapt later" item being exercised.

@@ -94,3 +94,62 @@ Heap deltas: none observable above quantization.
 Non-findings: no heap growth across the full scenario; submit (CPU-side render
 call) stays ≤ ~1 ms avg at every tier — the frame interval gap lives in the
 rest of the frame, not in `render()` itself.
+
+## Historical P2 result (2026-10-10 run, three-tier names — preserved)
+
+The P2 optimization (PR #80 — `Hub` static-scenery memoization) was measured
+with the same procedure, same environment label, on the pre/post-P2 code of
+that day. These are the historical comparisons; the tier names below are the
+**old three-tier scale**. Crosswalk to current tiers: old `low` → `very-low`,
+old `medium` → `low`, old `high` → `normal`. Current `high` and `very-high`
+have **no historical frame-time baseline** — they are newer detail levels, not
+renames.
+
+| Current tier | Window                | Avg interval before → after | p95 before → after |
+| ------------ | --------------------- | --------------------------- | ------------------ |
+| very-low     | walk                  | 24.5 → 20.6                 | 35.8 → 27.1        |
+| low          | walk                  | 30.5 → 25.5                 | 46.0 → 34.7        |
+| normal       | walk                  | 35.6 → 26.2                 | 49.9 → 36.7        |
+| normal       | encounter-consequence | 30.7 → 24.0                 | 42.8 → 31.6        |
+
+Historical SwiftShader regression results — not physical-device GPU
+measurements.
+
+## Current five-tier re-baseline (2026-10-11 run, merged P0–P5 code)
+
+A fresh run of the identical procedure on current `main` (all five current
+tiers). Raw capture: `docs/performance-after.raw.json`. This is a **current-state
+measurement**, not a P2-only comparison — the codebase under it includes the
+quality-tier rename, the framework boundary, the runtime migration, and the
+lifecycle probes (dev-server mounts `DisposalProbe`). Do not subtract it from
+the P1 table to attribute a change to any single PR; the historical P2 table
+above is the attribution record.
+
+Startup: TTI ≈ **970 ms**, hub mounted ≈ **1250 ms** (dev-server module
+loading dominates; comparable only in order of magnitude). JS heap: constant
+~44.7 MB quantization bucket — flat, same non-finding as before.
+
+| Tier      | Window                | Frames | Avg interval | p95  | Provenance             | Calls avg/max | Submit avg/p95 |
+| --------- | --------------------- | ------ | ------------ | ---- | ---------------------- | ------------- | -------------- |
+| very-low  | hub-idle              | 0      | — (idle)     | —    | measured now           | —             | —              |
+| very-low  | walk                  | 130    | 20.1         | 28.2 | measured now           | 111/120       | 0.4/0.8        |
+| very-low  | encounter-beats       | 198    | 17.0         | 21.9 | measured now           | 87/89         | 0.3/0.4        |
+| very-low  | encounter-consequence | 348    | 17.0         | 20.9 | measured now           | 87/87         | 0.3/0.4        |
+| low       | walk                  | 345    | 25.0         | 34.6 | measured now           | 215/291       | 0.5/0.7        |
+| low       | encounter-beats       | 157    | 22.0         | 28.2 | measured now           | 207/214       | 0.5/0.6        |
+| low       | encounter-consequence | 301    | 22.6         | 29.7 | measured now           | 207/207       | 0.6/0.7        |
+| normal    | walk                  | 317    | 27.4         | 38.9 | measured now           | 301/410       | 0.7/1.1        |
+| normal    | encounter-beats       | 140    | 24.7         | 34.8 | measured now           | 283/291       | 0.7/0.9        |
+| normal    | encounter-consequence | 280    | 24.5         | 32.8 | measured now           | 283/283       | 0.7/0.8        |
+| high      | walk                  | 302    | 28.8         | 40.7 | new profile, no before | 393/551       | 0.9/1.2        |
+| very-high | walk                  | 288    | 30.8         | 47.7 | new profile, no before | 447/652       | 1.0/1.5        |
+
+Scenario asymmetry, unchanged from P1: `map-transition-in` exists only on the
+first cave visit (the reveal rock consumes the first entry); per-tier
+transition windows are therefore not equivalent scenarios and are not
+averaged across tiers. One long task on `map-transition-in` (first render
+after the cave remount); consequence scenes remain the longest
+continuous-render stretch; `submitMs` ≤ ~1 ms avg at every tier; no heap
+growth. Intervals still exceed the 16.7 ms budget — under SwiftShader the
+residual cost is CPU raster scaling with draw calls, a software-rasterizer
+bound, not a device verdict. Real-device performance remains **unverified**.

@@ -44,11 +44,25 @@ way e2e does — without it `start-button` never appears.
 
 ## Known flaky e2e
 
+All entries are timing races reproduced intermittently on `origin/main` under
+SwiftShader pacing — none is a renderer/tier effect. Rerun the single test in
+isolation before diagnosing. The 2026-10-11 full serial run (P6 acceptance)
+was fully green — 236 tests, every entry below passed — but the races are real
+and can recur on a loaded box.
+
 - `e2e/routines.spec.ts:260` (landscape) can fail with `expected anchor-X, received anchor-Y`:
   the fisher can be mid-transit between stands when the test walks to his probe-reported
   `anchorId`; arriving at a stand nobody occupies ticks the world clock, which moves his
   schedule to the next spot. Race between transit completion and the visit arrival — passes
-  on re-run; not a renderer/tier effect (observed under SwiftShader pacing).
+  on re-run.
+- `e2e/liveliness.spec.ts:124` (landscape) — "a reload does not replay arrival liveliness":
+  SwiftShader frame pacing can starve the probe polls around the reload boundary. Verified
+  failing intermittently on `origin/main` too; passes in isolation.
+- `e2e/slice.spec.ts:69` and `e2e/slice.spec.ts:84` (landscape): `:84` races
+  `expandTrail`'s `trail-toggle` click against the `encounter-choice` card
+  reappearing over `hud__bottom` after re-demonstration; same 1-fail/2-pass
+  pattern on `main`. `:69` is the 4-minute golden-path sweep — slowest test in
+  the suite, most exposed to box load.
 
 ## Lifecycle regression
 
