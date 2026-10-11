@@ -29,6 +29,8 @@ import {
   SHADOW_MATERIAL,
   cylinderFor,
   roundedBoxFor,
+  eyeFor,
+  softBoxFor,
   drapeFor,
   sharedLambert,
   sphereFor,
@@ -1359,6 +1361,8 @@ interface SpeciesProps {
 function CatMesh({ tint, moving, level }: SpeciesProps) {
   const fur = useMaterial(tint ?? '#d98a4a');
   const sphere = sphereFor(level);
+  const soft = softBoxFor(level);
+  const eye = eyeFor();
   return (
     <>
       {/* body: squashed sphere; sits upright when idle, stretched forward when running */}
@@ -1380,7 +1384,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
         />
         {/* tail: raised when running, curled low when sitting */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[0, moving ? 0.5 : 0.3, -0.38]}
           rotation={[moving ? -0.4 : 0.6, 0, 0]}
@@ -1389,7 +1393,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
         />
         {/* muzzle pad on the face side of the head */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.sign)}
           position={[0, 0.53, 0.42]}
           scale={[0.14, 0.09, 0.08]}
@@ -1399,7 +1403,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
       <Detail level={level} min={2}>
         {/* two ear tips on top of the head */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[-0.09, 0.76, 0.2]}
           rotation={[0, 0, 0.15]}
@@ -1407,7 +1411,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[0.09, 0.76, 0.2]}
           rotation={[0, 0, -0.15]}
@@ -1416,7 +1420,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
         />
         {/* ear strip across the top of the head */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[0, 0.8, 0.2]}
           scale={[0.3, 0.12, 0.06]}
@@ -1426,42 +1430,42 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
       <Detail level={level} min={3}>
         {/* four legs with lighter paw tips — a full body, not a floating blob */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[-0.12, 0.11, 0.18]}
           scale={[0.07, 0.16, 0.08]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[0.12, 0.11, 0.18]}
           scale={[0.07, 0.16, 0.08]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[-0.13, 0.11, -0.18]}
           scale={[0.08, 0.16, 0.09]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[0.13, 0.11, -0.18]}
           scale={[0.08, 0.16, 0.09]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.sign)}
           position={[-0.12, 0.035, 0.19]}
           scale={[0.07, 0.05, 0.09]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.sign)}
           position={[0.12, 0.035, 0.19]}
           scale={[0.07, 0.05, 0.09]}
@@ -1484,6 +1488,21 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           scale={[0.04, 0.1, 0.02]}
           raycast={noRaycast}
         />
+        {/* round dark eyes — the lovable face */}
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[-0.08, 0.62, 0.44]}
+          scale={[0.05, 0.05, 0.03]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0.08, 0.62, 0.44]}
+          scale={[0.05, 0.05, 0.03]}
+          raycast={noRaycast}
+        />
       </Detail>
       <Detail level={level} min={4}>
         {/* inner-ear pads + a darker tail tip */}
@@ -1504,7 +1523,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.sign)}
           position={[0, moving ? 0.62 : 0.48, -0.5]}
           rotation={[moving ? -0.4 : 0.6, 0, 0]}
@@ -1529,7 +1548,7 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={fur}
           position={[0, 0.34, -0.42]}
           rotation={[0.5, 0, 0]}
@@ -1605,6 +1624,8 @@ function BirdMesh({ tint, moving, level }: SpeciesProps) {
   const feathers = useMaterial(tint ?? '#5b8ab5');
   const beak = useMaterial(DETAIL_COLORS.beak);
   const sphere = sphereFor(level);
+  const soft = softBoxFor(level);
+  const eye = eyeFor();
   return (
     <>
       <mesh
@@ -1624,10 +1645,27 @@ function BirdMesh({ tint, moving, level }: SpeciesProps) {
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={beak}
           position={[0, 0.4, 0.3]}
           scale={[0.06, 0.05, 0.1]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* round dark eyes */}
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[-0.07, 0.44, 0.3]}
+          scale={[0.04, 0.04, 0.025]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0.07, 0.44, 0.3]}
+          scale={[0.04, 0.04, 0.025]}
           raycast={noRaycast}
         />
       </Detail>
@@ -1706,6 +1744,8 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
   const feathers = useMaterial(tint ?? DETAIL_COLORS.soil);
   const head = useMaterial('#e8eef4');
   const sphere = sphereFor(level);
+  const soft = softBoxFor(level);
+  const eye = eyeFor();
   return (
     <>
       <mesh
@@ -1726,10 +1766,27 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
         />
         {/* hooked beak */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.beak)}
           position={[0, 0.58, 0.42]}
           scale={[0.07, 0.06, 0.1]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* round dark eyes */}
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[-0.09, 0.66, 0.44]}
+          scale={[0.05, 0.05, 0.03]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0.09, 0.66, 0.44]}
+          scale={[0.05, 0.05, 0.03]}
           raycast={noRaycast}
         />
       </Detail>
@@ -1747,14 +1804,14 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
       <Detail level={level} min={3}>
         {/* talons — the raptor's grip */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.beak)}
           position={[-0.09, 0.05, 0.06]}
           scale={[0.06, 0.08, 0.1]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.beak)}
           position={[0.09, 0.05, 0.06]}
           scale={[0.06, 0.08, 0.1]}
@@ -1783,7 +1840,7 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
       <Detail level={level} min={6}>
         {/* bald-eagle head + tail — the white cap the raptor is known by */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert(DETAIL_COLORS.sign)}
           position={[0, 0.47, 0.28]}
           scale={[0.18, 0.1, 0.16]}
@@ -1803,11 +1860,13 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
 
 function FishMesh({ tint, moving, level }: SpeciesProps) {
   const scales = useMaterial(tint ?? '#e08a3c');
+  const sphere = sphereFor(level);
+  const eye = eyeFor();
   return (
     <>
       {/* half-emerged at the waterline; origin sits on the water surface */}
       <mesh
-        geometry={sphereFor(level)}
+        geometry={sphere}
         material={scales}
         position={[0, 0.02, 0]}
         scale={[0.16, 0.22, 0.4]}
@@ -1821,6 +1880,23 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
           position={[0, 0.04, -0.3]}
           rotation={[0, moving ? 0.5 : 0.15, 0]}
           scale={[0.04, 0.16, 0.16]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* round dark eyes */}
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[-0.07, 0.1, 0.28]}
+          scale={[0.035, 0.035, 0.02]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0.07, 0.1, 0.28]}
+          scale={[0.035, 0.035, 0.02]}
           raycast={noRaycast}
         />
       </Detail>
@@ -1879,11 +1955,12 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
 function ButterflyMesh({ tint, moving, level }: SpeciesProps) {
   const wings = useMaterial(tint ?? '#d96f9e');
   const body = useMaterial(DETAIL_COLORS.soil);
+  const soft = softBoxFor(level);
   return (
     <>
       {/* slender body, upright — origin is the hover point */}
       <mesh
-        geometry={BOX}
+        geometry={soft}
         material={body}
         position={[0, 0, 0]}
         scale={[0.05, 0.05, 0.22]}
