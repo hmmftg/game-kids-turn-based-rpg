@@ -61,6 +61,18 @@ no persistence surface. Persistence lives in two application coordinators
 The game reducer stays the only transition mechanism: coordinators decide
 _when_ to dispatch, never _what_ a command means.
 
+### Second consumer + lifecycle evidence
+
+`examples/hello-world/` is the framework's independent consumer — a DOM-only
+one-prop scene driven by `createGameRuntime` + a ~30-line declared world +
+memory `PersistenceAdapter`, built by its own Vite config outside the game
+bundle (`scripts/check-deploy.ts` asserts it never reaches `dist/` or the
+precache manifest). API reference: `docs/framework-api.md`.
+
+Lifecycle is probed, not assumed: `__worldDisposeEvents` counts real
+`dispose` events on scene-owned resources across remounts, and
+`__worldCritterTimersAtUnmount` must read 0 (`e2e/memory-soak.spec.ts`).
+
 ## Key invariants
 
 - **Domain purity**: `domain/` never imports React, Three, or DOM APIs. All transitions are pure

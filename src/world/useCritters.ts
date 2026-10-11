@@ -593,7 +593,17 @@ export function useCritters(
   useEffect(() => {
     const controller = getController();
     controller.setTimersEnabled(enabled && detailLevel > 0);
-    return () => controller.setTimersEnabled(false);
+    return () => {
+      controller.setTimersEnabled(false);
+      // Probe-gated disposal evidence: after the scheduler freezes, the
+      // pending-timer count MUST be zero — remounts leave nothing behind.
+      const w = window as unknown as Record<string, unknown>;
+      if (import.meta.env.DEV || w['__WORLD_PROBE']) {
+        w['__worldCritterTimersAtUnmount'] = controller.critters.filter(
+          (rt) => rt.timer !== null,
+        ).length;
+      }
+    };
   }, [enabled, detailLevel, getController]);
 
   // Fountain tap → fish dart away from the touch. Nonce-keyed like the rest

@@ -72,7 +72,22 @@ if (existsSync(swPath)) {
     !sw.includes('perfProbe'),
     'sw.js precache includes the perfProbe chunk — profiling must cost the PWA nothing',
   );
+  // examples/* build with their own Vite config into their own dist — they
+  // must never reach the game's bundle budget or precache manifest. Verified
+  // against the built output, not the config.
+  must(
+    !sw.includes('hello-world') && !sw.includes('examples/'),
+    'sw.js precache includes example assets — examples are not part of the app bundle',
+  );
 }
+
+// Bundle check: nothing example-flavoured may land in the game dist at all.
+import { readdirSync } from 'node:fs';
+const distFiles = existsSync(DIST) ? readdirSync(DIST, { recursive: true }) : [];
+const exampleLeak = distFiles.find(
+  (entry) => String(entry).includes('hello-world') || String(entry).startsWith('examples'),
+);
+must(!exampleLeak, `dist contains an example artifact: ${String(exampleLeak)}`);
 
 must(existsSync(join(DIST, 'offline.html')), 'dist/offline.html missing');
 must(existsSync(join(DIST, 'audio/music-hub.wav')), 'dist/audio missing — audio must be precached');
