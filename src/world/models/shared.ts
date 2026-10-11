@@ -86,6 +86,38 @@ export function roundedBoxFor(level: DetailLevel): THREE.BufferGeometry {
   return geometry;
 }
 
+/**
+ * One-piece garment drape for the top-tier covering: a single open cylinder
+ * segment whose theta gap leaves the face exposed. Every parameter that
+ * shapes the cloth (radii, height, face gap, radial/height segments) is in
+ * the cache key — a `scarf` and a `chador` get different silhouettes from
+ * the same call. Meshes scale this unit-height geometry like `cylinderFor`.
+ */
+export function drapeFor(kind: 'scarf' | 'chador', level: DetailLevel): THREE.CylinderGeometry {
+  // thetaStart = half the face gap so the opening centres on +z (the face).
+  const { radiusTop, radiusBottom, faceGap } =
+    kind === 'chador'
+      ? { radiusTop: 0.26, radiusBottom: 0.5, faceGap: 0.95 }
+      : { radiusTop: 0.23, radiusBottom: 0.42, faceGap: 1.7 };
+  const radialSegments = level <= 0 ? 16 : profileFor(level).radialSegments;
+  const key = `drape:${kind}:${radiusTop}:${radiusBottom}:${faceGap}:${radialSegments}`;
+  let geometry = GEOMETRY_CACHE.get(key);
+  if (!geometry) {
+    geometry = new THREE.CylinderGeometry(
+      radiusTop,
+      radiusBottom,
+      1,
+      radialSegments,
+      2,
+      false,
+      faceGap / 2,
+      Math.PI * 2 - faceGap,
+    );
+    GEOMETRY_CACHE.set(key, geometry);
+  }
+  return geometry as THREE.CylinderGeometry;
+}
+
 /** Test/perf instrumentation: geometry variants the registry holds. */
 export function sharedGeometryCount(): number {
   return GEOMETRY_CACHE.size;

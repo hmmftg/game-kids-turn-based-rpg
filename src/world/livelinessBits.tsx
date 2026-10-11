@@ -73,6 +73,7 @@ export function IdleFlourish({
   readonly children: ReactNode;
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  const headRef = useRef<THREE.Object3D | null | undefined>(undefined);
   const startedAt = useRef<number | null>(null);
   const eyesRef = useRef<THREE.Mesh[] | null>(null);
   const invalidate = useThree((state) => state.invalidate);
@@ -92,9 +93,11 @@ export function IdleFlourish({
     if (eyesRef.current === null) eyesRef.current = findEyes(group);
     const eyes = eyesRef.current;
 
+    if (headRef.current === undefined) headRef.current = findHead(group);
     if (nonce === 0 || cue === null || reduced) {
       group.rotation.set(base.rotationX, 0, base.rotationZ);
       group.position.y = base.offsetY;
+      if (headRef.current) headRef.current.rotation.y = 0;
       for (const eye of eyes) eye.scale.y = 0.07;
       return;
     }
@@ -104,6 +107,7 @@ export function IdleFlourish({
       startedAt.current = null;
       group.rotation.set(base.rotationX, 0, base.rotationZ);
       group.position.y = base.offsetY;
+      if (headRef.current) headRef.current.rotation.y = 0;
       for (const eye of eyes) eye.scale.y = 0.07;
       return;
     }
@@ -111,8 +115,14 @@ export function IdleFlourish({
     const settle = Math.sin(t * Math.PI);
     group.position.y = base.offsetY;
     if (cue === 'looks-around') {
-      // One sweep out and back — reads as looking around, then settling.
-      group.rotation.set(base.rotationX, settle * 0.3, base.rotationZ);
+      if (headRef.current) {
+        // Human-like: only the head turns to look, the body stays put.
+        headRef.current.rotation.y = settle * 0.45;
+        group.rotation.set(base.rotationX, 0, base.rotationZ);
+      } else {
+        // No head group (critters) — a small whole-body tilt stands in.
+        group.rotation.set(base.rotationX, settle * 0.18, base.rotationZ);
+      }
     } else if (eyes.length > 0) {
       // True blink: the eyes squash shut and reopen.
       for (const eye of eyes) eye.scale.y = 0.07 * (1 - settle * 0.9);

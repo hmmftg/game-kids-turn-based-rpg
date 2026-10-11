@@ -168,15 +168,19 @@ export function CharacterReact({
       // A look, not a greeting: the whole body tips toward the child.
       group.rotation.y = settle * 0.18;
       group.position.y = settle * 0.03;
-    } else {
+    } else if (armColor !== undefined && armRef.current) {
+      // Humanoid greeting: the figure turns and one arm lifts in a wave.
       group.rotation.y = settle * 0.12;
       const arm = armRef.current;
-      if (arm) {
-        arm.visible = armColor !== undefined;
-        const lift = Math.sin(Math.min(1, t * 1.35) * (Math.PI / 2));
-        const wave = Math.sin(t * Math.PI * 4) * 0.28 * (1 - t);
-        arm.rotation.z = -2.15 * lift + wave;
-      }
+      arm.visible = true;
+      const lift = Math.sin(Math.min(1, t * 1.35) * (Math.PI / 2));
+      const wave = Math.sin(t * Math.PI * 4) * 0.28 * (1 - t);
+      arm.rotation.z = -2.15 * lift + wave;
+    } else {
+      // Animal greeting: no arm exists — a small eager hop toward the
+      // child reads as the same welcome.
+      group.rotation.y = settle * 0.12;
+      group.position.y = settle * 0.1;
     }
     invalidate();
   });

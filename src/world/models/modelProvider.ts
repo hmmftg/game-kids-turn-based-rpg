@@ -19,14 +19,16 @@ export interface GroundPoint {
  * low keeps silhouettes and key accents, medium is the standard look, high adds
  * secondary accents. It never changes the rendering pipeline.
  */
-export type DetailLevel = 0 | 1 | 2 | 3 | 4;
+export type DetailLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export function detailLevelFor(tier: QualityTier): DetailLevel {
   if (tier === 'very-low') return 0;
   if (tier === 'low') return 1;
-  if (tier === 'normal') return 2;
-  if (tier === 'high') return 3;
-  return 4;
+  // `normal` is the full-detail tier — it renders the same bodies and
+  // clothing that used to sit at the top of the scale.
+  if (tier === 'normal') return 4;
+  if (tier === 'high') return 5;
+  return 6;
 }
 
 /**

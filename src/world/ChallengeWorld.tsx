@@ -465,7 +465,6 @@ export function ChallengeWorld({
                 npcId={npc.id}
                 nonce={attention?.npcId === npc.id ? attention.nonce : 0}
                 context={attention?.context ?? 'notices-child'}
-                armColor={look.palette.limb}
               >
                 <IdleFlourish nonce={worldTime} cue={cue} pose={pose}>
                   <group rotation={[0, facing, 0]}>

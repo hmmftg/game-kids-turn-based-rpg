@@ -764,7 +764,7 @@ export function Hub({
               npcId={npc.id}
               nonce={attention?.npcId === npc.id ? attention.nonce : 0}
               context={attention?.context ?? 'notices-child'}
-              armColor={look.palette.limb}
+              armColor={npc.archetype === 'critter' ? undefined : look.palette.limb}
             >
               {/* Presentation liveliness lives inside the semantic wrapper
                     deliberately: idle cues and the held activity pose are
