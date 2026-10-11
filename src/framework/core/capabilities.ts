@@ -1,0 +1,58 @@
+import type { QualityTier } from './quality.ts';
+
+/** Cheap WebGL probe; the context is released immediately. */
+export function detectWebgl(): boolean {
+  if (typeof document === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    const gl =
+      canvas.getContext('webgl2') ??
+      canvas.getContext('webgl') ??
+      canvas.getContext('experimental-webgl');
+    if (!gl) return false;
+    const lose = (gl as WebGLRenderingContext).getExtension('WEBGL_lose_context');
+    lose?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Conservative first guess; the runtime frame monitor may lower it further. */
+export function detectQualityTier(): QualityTier {
+  if (typeof navigator === 'undefined') return 'low';
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+  const cores = navigator.hardwareConcurrency ?? 4;
+  const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio;
+  if (memory <= 2 || cores <= 4) return 'very-low';
+  if (memory >= 6 && cores >= 8 && dpr >= 2) return 'normal';
+  return 'low';
+}
+
+export function maxPixelRatioFor(tier: QualityTier): number {
+  switch (tier) {
+    case 'very-low':
+      return 1;
+    case 'low':
+      return 1.5;
+    case 'normal':
+      return 2;
+    case 'high':
+      return 2;
+    case 'very-high':
+      return 2.5;
+  }
+}
+
+export function currentOrientation(): 'landscape' | 'portrait' {
+  if (typeof window === 'undefined') return 'landscape';
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape';
+  }
+  return window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
+}
+
+export function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}

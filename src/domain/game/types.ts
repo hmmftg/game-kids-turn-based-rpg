@@ -5,8 +5,20 @@
  * or storage APIs. Everything here is serialisable or derived from serialisable data.
  */
 
-import type { BattleActionId, BattleDefinition, BattleState } from '../battle/types.ts';
-import type { DiscoveryId, MapId } from '../world/types.ts';
+import type { BattleActionId, BattleDefinition, BattleState } from '../../framework/index.ts';
+import type { AnchorId, DiscoveryId, MapId, NpcId, QualityTier } from '../../framework/index.ts';
+
+// Generic world identifiers and the quality dial live in the framework; they
+// are re-exported here so existing `domain/game/types.ts` imports keep working.
+export type {
+  AnchorId,
+  AreaId,
+  DiscoveryId,
+  LandmarkId,
+  MapId,
+  NpcId,
+  QualityTier,
+} from '../../framework/index.ts';
 
 export const MODES = [
   'boot',
@@ -76,10 +88,6 @@ export type EncounterPhase = (typeof ENCOUNTER_PHASES)[number];
 
 export type StickerId = `sticker-${string}`;
 export type IconId = `icon-${string}`;
-export type NpcId = `npc-${string}`;
-export type LandmarkId = `landmark-${string}`;
-export type AnchorId = `anchor-${string}`;
-export type { DiscoveryId, MapId };
 
 export interface QuestProgress {
   readonly status: QuestStatus;
@@ -113,8 +121,6 @@ export interface Checkpoint {
   readonly questId: QuestId | null;
   readonly at: number;
 }
-
-export type QualityTier = 'very-low' | 'low' | 'normal' | 'high' | 'very-high';
 
 export interface AudioSettings {
   readonly musicMuted: boolean;

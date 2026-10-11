@@ -1,4 +1,4 @@
-import { validateBattleDefinition } from '../domain/battle/validation.ts';
+import { validateBattleDefinition } from '../framework/index.ts';
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../domain/quests/definitions.ts';
 import {
   allDialogueReports,

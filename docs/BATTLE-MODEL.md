@@ -10,7 +10,7 @@ an RPG engine — battle edits neither world structure nor quest structure.
 - `GameState.battle: BattleState | null` is **session-only**: never persisted,
   never part of `PersistedState`, never a `Mode` — `mode` stays `'hub'` for
   the whole battle.
-- Battle state lives in `src/domain/battle/` (pure — no React/DOM/timers).
+- Battle state lives in `src/framework/modules/battle/` (pure — no React/DOM/timers).
 - The battle owns all child input: the `BattleScene` overlay covers world,
   trail and pause, **and** the game reducer returns the same object for
   `OPEN_DIALOGUE`, `START_QUEST`, `CHANGE_MAP`, `DISCOVER`, `PAUSE`,
@@ -22,7 +22,7 @@ an RPG engine — battle edits neither world structure nor quest structure.
   figure (`onNpcTap` → `battleForOpponent(npcId)` → `START_BATTLE`). Arriving
   near the fountain never starts it.
 
-## State machine (`src/domain/battle/`)
+## State machine (`src/framework/modules/battle/`)
 
 ```
 intro → playerChoice → playerResolution → enemyResolution → roundCheck
@@ -64,10 +64,10 @@ failure — defeat only when the round limit expires.
   budgets, non-empty actions/pattern, definition↔copy bidirectionality,
   **winnability** (rest rounds within the budget must reach zero hearts via
   an offered ball action), and the usual child-copy text rules.
-  Definition-level rules live in `src/domain/battle/validation.ts`
+  Definition-level rules live in `src/framework/modules/battle/validation.ts`
   (`validateBattleDefinition`); winnability reuses `enemyIntentFor`, so the
   pattern **cycles** — `[rest, attack]` over 6 rounds yields three scorable
-  rounds, not one literal entry. `src/domain/battle/reducer.ts`
+  rounds, not one literal entry. `src/framework/modules/battle/reducer.ts`
   (`battleReducer` over `BattleState | null`) is the seam the game reducer
   delegates `START_BATTLE`/`CHOOSE_BATTLE_ACTION`/`ADVANCE_BATTLE_PHASE`/
   `LEAVE_BATTLE` to — same shape as the encounter delegation.

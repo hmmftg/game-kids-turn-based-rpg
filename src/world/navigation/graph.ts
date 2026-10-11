@@ -1,10 +1,20 @@
-import type { AnchorId, LandmarkId, NpcId } from '../../domain/game/types.ts';
-import type { WorldSource } from '../../domain/world/source.ts';
 import type { Anchor, Edge } from '../../domain/world/types.ts';
 
-// The types live in `domain/world/types.ts` (shared world-structure contract);
-// re-exported so existing `./navigation/graph.ts` imports keep working.
+// The types live in `domain/world/types.ts` (this game's world-structure
+// contract, extending the framework's generic primitives); re-exported so
+// existing `./navigation/graph.ts` imports keep working.
 export type { Anchor, Edge } from '../../domain/world/types.ts';
+
+// The generic graph lookups (`GraphSource`/`getAnchor`/`neighboursOf`/...)
+// moved to the framework core; re-exported via the public index.
+export {
+  anchorForLandmark,
+  anchorForNpc,
+  distanceBetween,
+  getAnchor,
+  getAnchorOrNull,
+  neighboursOf,
+} from '../../framework/index.ts';
 
 /**
  * Data-defined waypoint graph. Movement is restricted to these anchors, so the
@@ -499,61 +509,3 @@ export const EDGES: readonly Edge[] = [
     requiresDiscoveryId: 'discovery-challenge-eagle',
   },
 ];
-
-// Lookups are source-parameterized (WorldSource carries the anchor/edge
-// tables): the same helpers resolve the shipped world and a builder's
-// `DocumentWorldSource` identically. Results are memoized per table identity
-// so gameplay passes the static source at zero extra cost.
-const BY_ID = new WeakMap<readonly Anchor[], Map<AnchorId, Anchor>>();
-const NEIGHBOURS = new WeakMap<readonly Edge[], Map<AnchorId, AnchorId[]>>();
-
-function anchorsById(anchors: readonly Anchor[]): Map<AnchorId, Anchor> {
-  let byId = BY_ID.get(anchors);
-  if (!byId) {
-    byId = new Map(anchors.map((anchor) => [anchor.id, anchor]));
-    BY_ID.set(anchors, byId);
-  }
-  return byId;
-}
-
-function neighboursById(source: WorldSource): Map<AnchorId, AnchorId[]> {
-  let byId = NEIGHBOURS.get(source.edges);
-  if (!byId) {
-    byId = new Map(source.anchors.map((anchor) => [anchor.id, []]));
-    for (const edge of source.edges) {
-      byId.get(edge.from)?.push(edge.to);
-      byId.get(edge.to)?.push(edge.from);
-    }
-    NEIGHBOURS.set(source.edges, byId);
-  }
-  return byId;
-}
-
-export function getAnchor(source: WorldSource, id: AnchorId): Anchor {
-  const anchor = anchorsById(source.anchors).get(id);
-  if (!anchor) throw new Error(`Unknown anchor: ${id}`);
-  return anchor;
-}
-
-export function getAnchorOrNull(source: WorldSource, id: string): Anchor | null {
-  return anchorsById(source.anchors).get(id as AnchorId) ?? null;
-}
-
-/** Walkable neighbours only; unwalkable anchors are decoration/interaction-only. */
-export function neighboursOf(source: WorldSource, id: AnchorId): readonly AnchorId[] {
-  return (neighboursById(source).get(id) ?? []).filter(
-    (neighbour) => getAnchor(source, neighbour).walkable,
-  );
-}
-
-export function distanceBetween(a: Anchor, b: Anchor): number {
-  return Math.hypot(a.x - b.x, a.z - b.z);
-}
-
-export function anchorForNpc(source: WorldSource, npcId: NpcId): Anchor | null {
-  return source.anchors.find((anchor) => anchor.npcId === npcId) ?? null;
-}
-
-export function anchorForLandmark(source: WorldSource, landmarkId: LandmarkId): Anchor | null {
-  return source.anchors.find((anchor) => anchor.landmarkId === landmarkId) ?? null;
-}
