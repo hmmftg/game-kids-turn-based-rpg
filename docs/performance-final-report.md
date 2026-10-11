@@ -23,21 +23,28 @@ this document is P6).
 ## Before / after (same procedure, same environment label)
 
 Active frame intervals (ms) between consecutive rendered frames; idle gaps
-excluded per the metric contract. Before = P1 run (2026-10-10); after =
-post-P2 run (2026-10-11). Tier names remapped for the PR #83 five-tier scale
-(before-low → very-low, before-medium → low, before-high → normal).
+excluded per the metric contract. These are the **historical P2 measurements**
+(PR #80, 2026-10-10 runs on the pre/post-P2 code, three-tier names; raw
+artifacts: `docs/performance-baseline.raw.json` for the before run). Tier
+crosswalk to the current five-tier scale: `low` → `very-low`, `medium` →
+`low`, `high` → `normal`. Current `high` and `very-high` are newer detail
+levels with **no historical frame-time baseline** — they are not renames.
 
-| Window                | Before avg/p95 (`low`) | After (`very-low`) | Before avg/p95 (`medium`) | After (`low`) | Before avg/p95 (`high`) | After (`normal`) |
-| --------------------- | ---------------------- | ------------------ | ------------------------- | ------------- | ----------------------- | ---------------- |
-| walk                  | 24.5 / 35.8            | 20.1 / 28.2        | 30.5 / 46.0               | 25.0 / 34.6   | 35.6 / 49.9             | 27.4 / 38.9      |
-| encounter-beats       | 18.0 / 24.9            | 17.0 / 21.9        | 26.4 / 35.4               | 22.0 / 28.2   | 32.1 / 42.3             | 24.7 / 34.8      |
-| encounter-consequence | 18.6 / 26.1            | 17.0 / 20.9        | 25.6 / 34.8               | 22.6 / 29.7   | 30.7 / 42.8             | 24.5 / 32.8      |
+| Current tier | Window                | Avg before → after | p95 before → after |
+| ------------ | --------------------- | ------------------ | ------------------ |
+| very-low     | walk                  | 24.5 → 20.6        | 35.8 → 27.1        |
+| low          | walk                  | 30.5 → 25.5        | 46.0 → 34.7        |
+| normal       | walk                  | 35.6 → 26.2        | 49.9 → 36.7        |
+| normal       | encounter-consequence | 30.7 → 24.0        | 42.8 → 31.6        |
 
-Change: **~15–25% lower active frame intervals across all continuous-render
-windows** from the single P2 commit (Hub static-scenery memoization). JS heap
-flat in both runs (29.4 MB → ~44.7 MB bucket; different Chromium buckets, both
-flat). Draw calls unchanged — the optimization removed React reconciliation
-work, not scene content.
+Change attributed to P2: **~15–25% lower active frame intervals** on the
+walk window at every measured tier (Hub static-scenery memoization — React
+reconciliation work removed, scene content unchanged).
+
+A separate **current five-tier re-baseline** (2026-10-11, merged P0–P5 code)
+lives in `docs/performance-baseline.md` with raw capture
+`docs/performance-after.raw.json` — it is a current-state measurement, not a
+P2-attribution table. JS heap flat in all runs. Draw calls unchanged by P2.
 
 ## What each stage delivered
 
@@ -56,7 +63,10 @@ work, not scene content.
 
 - Objective B (reusable framework): lint-enforced `index.ts` boundary, runtime
   adapter contract implemented per the frozen spec, independently runnable
-  second consumer validating the API, API reference + walkthrough docs.
+  second consumer validating the API, API reference + walkthrough docs. Export
+  audit in `framework-api.md`: every export is game-consumed, example-proven,
+  or the documented public surface of the optional battle module — the API
+  remains **internal and provisional**, not a published stable package.
 - Instrumentation: every metric labeled, demand-loop-aware, idle never
   reported as FPS, environment labeled per run.
 - Baseline + before/after: real measured numbers with stated environment and
@@ -64,8 +74,16 @@ work, not scene content.
 - Lifecycle correctness: probe-counted dispose events across remounts,
   `useCritters` zero pending timers at unmount, JS-heap labeled heap.
 - Constraints held: Three.js/R3F/React/Vite kept; gameplay, saves,
-  `PersistedState`, offline/PWA, Persian/RTL, accessibility, touch unchanged —
-  proven by the existing suites, not asserted.
+  offline/PWA, Persian/RTL, accessibility, touch unchanged — proven by the
+  existing suites, not asserted. **Save-schema history, stated accurately:**
+  the program itself (P0–P5) changed no `PersistedState` field or version —
+  P4's runtime migration preserved the then-current schema. The **concurrently
+  merged** quality-tier evolution (PR #83) did ship a justified schema
+  v2 → v3 migration (`migrateQualityTier` maps old tier ids by detail level)
+  because quality-tier _identifiers_ changed — versioned-save and migration
+  behavior stays covered by existing tests. Claiming "no schema change
+  anywhere in the programme window" would be inaccurate; claiming the runtime
+  migration touched persistence would be equally inaccurate.
 
 **Incomplete / deferred**
 

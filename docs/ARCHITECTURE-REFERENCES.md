@@ -644,3 +644,11 @@ was actually built against its verdicts — no re-audit, pointers only.
 Nothing in the audit required the rejected directions to be revisited during
 implementation; the "Adapt later" list (manifest/`schemaVersion` convention,
 distributable content package) remains open and unchanged.
+
+> Save-schema note: the reconciliation above describes the framework program
+> (P0–P5), which changed no `PersistedState` field or version — P4 preserved
+> the schema it found. The concurrently merged quality-tier evolution (PR #83)
+> did ship a justified v2 → v3 migration (`migrateQualityTier`) when tier
+> identifiers changed; that is real migration work, covered by existing tests,
+> and belongs to the "manifest/schemaVersion/migration convention" lesson —
+> the first practical instance of an "Adapt later" item being exercised.
