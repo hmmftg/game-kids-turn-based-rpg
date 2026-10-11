@@ -88,34 +88,69 @@ export function roundedBoxFor(level: DetailLevel): THREE.BufferGeometry {
 
 /**
  * One-piece garment drape for the top-tier covering: a single open cylinder
- * segment whose theta gap leaves the face exposed. Every parameter that
- * shapes the cloth (radii, height, face gap, radial/height segments) is in
- * the cache key — a `scarf` and a `chador` get different silhouettes from
- * the same call. Meshes scale this unit-height geometry like `cylinderFor`.
+ * segment whose theta gap leaves the face exposed, deformed into cloth.
+ * The base cone's vertices are reshaped deterministically — a snug crown, a
+ * swell over the shoulders, a slight gather, a flared hem — plus radial
+ * folds that deepen toward the hem, an uneven hemline, and a longer back
+ * fall, so it reads as draped fabric (coat/skin), not a rigid cone.
+ * Every shaping parameter lives in the cache key; meshes scale this
+ * unit-height geometry like `cylinderFor`.
  */
-export function drapeFor(kind: 'scarf' | 'chador', level: DetailLevel): THREE.CylinderGeometry {
+export function drapeFor(kind: 'scarf' | 'chador', level: DetailLevel): THREE.BufferGeometry {
   // thetaStart = half the face gap so the opening centres on +z (the face).
-  const { radiusTop, radiusBottom, faceGap } =
+  const { radiusTop, radiusBottom, faceGap, folds } =
     kind === 'chador'
-      ? { radiusTop: 0.26, radiusBottom: 0.5, faceGap: 0.95 }
-      : { radiusTop: 0.23, radiusBottom: 0.42, faceGap: 1.7 };
+      ? { radiusTop: 0.26, radiusBottom: 0.5, faceGap: 0.95, folds: 3 }
+      : { radiusTop: 0.23, radiusBottom: 0.42, faceGap: 1.7, folds: 5 };
   const radialSegments = level <= 0 ? 16 : profileFor(level).radialSegments;
-  const key = `drape:${kind}:${radiusTop}:${radiusBottom}:${faceGap}:${radialSegments}`;
+  const heightSegments = 8;
+  const key = `drape:${kind}:${radiusTop}:${radiusBottom}:${faceGap}:${folds}:${radialSegments}`;
   let geometry = GEOMETRY_CACHE.get(key);
   if (!geometry) {
-    geometry = new THREE.CylinderGeometry(
+    const cone = new THREE.CylinderGeometry(
       radiusTop,
       radiusBottom,
       1,
       radialSegments,
-      2,
+      heightSegments,
       false,
       faceGap / 2,
       Math.PI * 2 - faceGap,
     );
+    const position = cone.attributes.position;
+    if (!position) {
+      GEOMETRY_CACHE.set(key, cone);
+      return cone;
+    }
+    const vertex = new THREE.Vector3();
+    for (let i = 0; i < position.count; i += 1) {
+      vertex.fromBufferAttribute(position, i);
+      // t: 0 at the crown, 1 at the hem.
+      const t = 0.5 - vertex.y;
+      const theta = Math.atan2(vertex.x, vertex.z);
+      // Coat profile vs the straight cone: shoulder swell, a light gather
+      // under it, then the hem kicks out a touch.
+      const profile =
+        1 +
+        0.09 * Math.sin(Math.min(t / 0.35, 1) * Math.PI) -
+        0.04 * Math.sin(t * Math.PI * 2) +
+        0.12 * t * t;
+      // Cloth folds: angular ripples that only grow below the shoulders.
+      const foldAmp = 0.05 * t * t * (kind === 'chador' ? 1 : 0.7);
+      const radial = profile + foldAmp * Math.sin(theta * folds + 1.3);
+      vertex.x *= radial;
+      vertex.z *= radial;
+      // Uneven hemline — the cloth doesn't end on a machined circle.
+      vertex.y -= 0.035 * t * t * Math.sin(theta * folds + 0.6);
+      // Back fall: the rear hem sweeps a little longer (-z is the back).
+      if (vertex.z < 0) vertex.z *= 1 + 0.12 * t;
+      position.setXYZ(i, vertex.x, vertex.y, vertex.z);
+    }
+    cone.computeVertexNormals();
+    geometry = cone;
     GEOMETRY_CACHE.set(key, geometry);
   }
-  return geometry as THREE.CylinderGeometry;
+  return geometry;
 }
 
 /** Test/perf instrumentation: geometry variants the registry holds. */

@@ -24,9 +24,9 @@ stack the single-mesh coverings, garment finishing, and animal feather/fur detai
 | --------- | ----- | ------- | --------- |
 | very-low  | 116   | 260     | 5,238     |
 | low       | 273   | 506     | 12,280    |
-| normal    | 580   | 898     | 22,932    |
-| high      | 606   | 928     | 25,196    |
-| very-high | 620   | 944     | 27,452    |
+| normal    | 580   | 898     | 24,084    |
+| high      | 606   | 928     | 26,444    |
+| very-high | 620   | 944     | 28,796    |
 
 Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
 frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —
