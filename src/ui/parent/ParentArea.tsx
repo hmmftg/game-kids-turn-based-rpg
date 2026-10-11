@@ -108,8 +108,8 @@ export function ParentArea({
         <h2 className="subtitle">{FA.parentArea}</h2>
 
         {researchActive ? (
-          <section data-testid="parent-research">
-            <h3 className="subtitle">🔬 {FA.researchBadge}</h3>
+          <section className="section" data-testid="parent-research">
+            <h3 className="section__title">🔬 {FA.researchBadge}</h3>
             <p className="text text--soft">
               {FA.researchPending}:{' '}
               <span data-testid="research-pending-count">{researchPending ?? '…'}</span>
@@ -178,15 +178,16 @@ export function ParentArea({
           </section>
         ) : null}
 
-        <section data-testid="parent-quality">
-          <h3 className="subtitle">{FA.quality}</h3>
-          <div className="row" role="group" aria-label={FA.quality}>
+        <section className="section" data-testid="parent-quality">
+          <h3 className="section__title">{FA.quality}</h3>
+          <div className="row" role="radiogroup" aria-label={FA.quality}>
             {(['very-low', 'low', 'normal', 'high', 'very-high'] as const).map((tier) => (
               <button
                 key={tier}
                 type="button"
+                role="radio"
                 className="btn btn--secondary"
-                aria-pressed={state.qualityTier === tier}
+                aria-checked={state.qualityTier === tier}
                 onClick={() => onQualityChange(tier)}
                 data-testid={`quality-${tier}`}
               >
@@ -197,48 +198,50 @@ export function ParentArea({
         </section>
 
         {researchEndpointConfigured() ? (
-          <section data-testid="parent-feedback">
-            <h3 className="subtitle">{FA.feedbackTitle}</h3>
+          <section className="section" data-testid="parent-feedback">
+            <h3 className="section__title">{FA.feedbackTitle}</h3>
             <p className="text text--soft">{FA.feedbackHint}</p>
-            <textarea
-              className="input"
-              rows={3}
-              maxLength={4000}
-              placeholder={FA.feedbackPlaceholder}
-              value={feedbackText}
-              onChange={(e) => {
-                setFeedbackText(e.target.value);
-                if (feedbackState !== 'sending') setFeedbackState('idle');
-              }}
-              data-testid="feedback-text"
-            />
-            <button
-              type="button"
-              className="btn btn--secondary"
-              disabled={feedbackState === 'sending'}
-              onClick={() => {
-                setFeedbackState('sending');
-                submitParentFeedback(feedbackText, {
-                  mapId: state.mapId,
-                  qualityTier: state.qualityTier,
-                  researchSession: researchActive,
-                })
-                  .then(() => {
-                    setFeedbackState('sent');
-                    setFeedbackText('');
+            <div className="feedback-form">
+              <textarea
+                className="input"
+                rows={3}
+                maxLength={4000}
+                placeholder={FA.feedbackPlaceholder}
+                value={feedbackText}
+                onChange={(e) => {
+                  setFeedbackText(e.target.value);
+                  if (feedbackState !== 'sending') setFeedbackState('idle');
+                }}
+                data-testid="feedback-text"
+              />
+              <button
+                type="button"
+                className="btn btn--secondary"
+                disabled={feedbackState === 'sending'}
+                onClick={() => {
+                  setFeedbackState('sending');
+                  submitParentFeedback(feedbackText, {
+                    mapId: state.mapId,
+                    qualityTier: state.qualityTier,
+                    researchSession: researchActive,
                   })
-                  .catch((error: unknown) => {
-                    setFeedbackState(
-                      error instanceof Error && error.message === 'feedback-empty'
-                        ? 'empty'
-                        : 'failed',
-                    );
-                  });
-              }}
-              data-testid="feedback-send"
-            >
-              {feedbackState === 'sending' ? FA.feedbackSending : FA.feedbackSend}
-            </button>{' '}
+                    .then(() => {
+                      setFeedbackState('sent');
+                      setFeedbackText('');
+                    })
+                    .catch((error: unknown) => {
+                      setFeedbackState(
+                        error instanceof Error && error.message === 'feedback-empty'
+                          ? 'empty'
+                          : 'failed',
+                      );
+                    });
+                }}
+                data-testid="feedback-send"
+              >
+                {feedbackState === 'sending' ? FA.feedbackSending : FA.feedbackSend}
+              </button>
+            </div>{' '}
             {feedbackState === 'sent' ? (
               <span className="text" data-testid="feedback-status">
                 {FA.feedbackSent}
@@ -257,8 +260,8 @@ export function ParentArea({
           </section>
         ) : null}
 
-        <section>
-          <h3 className="subtitle">{FA.parentSources}</h3>
+        <section className="section" data-testid="parent-info">
+          <h3 className="section__title">{FA.parentSources}</h3>
           <p className="text text--soft">{FA.sourcesDraftBody}</p>
           <ul className="text">
             {SOURCE_RECORDS.map((record) => (
@@ -272,25 +275,21 @@ export function ParentArea({
               </li>
             ))}
           </ul>
-        </section>
 
-        <section>
-          <h3 className="subtitle">{FA.parentCredits}</h3>
+          <h3 className="section__title">{FA.parentCredits}</h3>
           <p className="text text--soft">
             قلم Vazirmatn با پروانه‌ی SIL Open Font License؛ کد بازی با پروانه‌ی MIT. صداها:{' '}
             {AUDIO_MANIFEST.every((asset) => asset.url === null)
               ? 'همه‌ی صداها فعلاً خاموش و جای‌نگه‌دارند.'
               : 'صداهای فعلی با ژنراتور داخلی بازی ساخته شده‌اند و جای‌نگه‌دارند.'}
           </p>
-        </section>
 
-        <section>
-          <h3 className="subtitle">{FA.parentPrivacy}</h3>
+          <h3 className="section__title">{FA.parentPrivacy}</h3>
           <p className="text text--soft">{FA.privacyBody}</p>
         </section>
 
-        <section data-testid="parent-tools">
-          <h3 className="subtitle">{FA.parentTools}</h3>
+        <section className="section" data-testid="parent-tools">
+          <h3 className="section__title">{FA.parentTools}</h3>
           <p className="text text--soft">{FA.worldBuilderHint}</p>
           <button
             type="button"
@@ -310,8 +309,8 @@ export function ParentArea({
           </button>
         </section>
 
-        <section>
-          <h3 className="subtitle">{FA.parentInstall}</h3>
+        <section className="section">
+          <h3 className="section__title">{FA.parentInstall}</h3>
           <p className="text text--soft">{FA.installBody}</p>
           {installReady ? (
             <button
@@ -339,133 +338,145 @@ export function ParentArea({
         </section>
 
         {profiles.length > 0 ? (
-          <section data-testid="parent-profiles">
-            <h3 className="subtitle">{FA.parentProfiles}</h3>
+          <section className="section" data-testid="parent-profiles">
+            <h3 className="section__title">{FA.parentProfiles}</h3>
             <ul className="column">
               {profiles.map((profile, index) => (
                 <li key={profile.id} className="row parent-profile" dir="rtl">
-                  <span className="parent-profile__identity" aria-hidden="true">
-                    <span className="emoji">{profile.badge}</span>
-                    <AvatarPortrait avatarId={profile.avatarId} size={32} />
-                  </span>
-                  <input
-                    className="parent-profile__name"
-                    type="text"
-                    dir="rtl"
-                    defaultValue={profile.nameFa}
-                    placeholder={profile.nameFa || `${FA.playerFallback} ${index + 1}`}
-                    aria-label={FA.profileNameHint}
-                    data-testid={`rename-${profile.id}`}
-                    onBlur={(event) => {
-                      const nameFa = event.currentTarget.value.trim();
-                      if (nameFa !== profile.nameFa) onRenameProfile(profile.id, nameFa);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') event.currentTarget.blur();
-                    }}
-                  />
-                  <span className="text--soft">⭐ {profile.stickerCount}</span>
-                  {profile.id === activeProfileId ? <span className="text--soft">●</span> : null}
-                  {confirmingProfileId === profile.id ? (
-                    <button
-                      type="button"
-                      className="btn btn--accent"
-                      onClick={() => {
-                        setConfirmingProfileId(null);
-                        onResetProfile(profile.id);
+                  <span className="parent-profile__meta">
+                    <span className="parent-profile__identity" aria-hidden="true">
+                      <span className="emoji">{profile.badge}</span>
+                      <AvatarPortrait avatarId={profile.avatarId} size={32} />
+                    </span>
+                    <input
+                      className="parent-profile__name"
+                      type="text"
+                      dir="rtl"
+                      defaultValue={profile.nameFa}
+                      placeholder={profile.nameFa || `${FA.playerFallback} ${index + 1}`}
+                      aria-label={FA.profileNameHint}
+                      data-testid={`rename-${profile.id}`}
+                      onBlur={(event) => {
+                        const nameFa = event.currentTarget.value.trim();
+                        if (nameFa !== profile.nameFa) onRenameProfile(profile.id, nameFa);
                       }}
-                      data-testid={`parent-reset-confirm-${profile.id}`}
-                    >
-                      {FA.parentResetYes}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn--secondary"
-                      onClick={() => setConfirmingProfileId(profile.id)}
-                      data-testid={`parent-reset-${profile.id}`}
-                    >
-                      {FA.parentReset}
-                    </button>
-                  )}
-                  {deletingProfileId === profile.id ? (
-                    <>
-                      <span className="text--soft">{FA.parentDeleteConfirm}</span>
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') event.currentTarget.blur();
+                      }}
+                    />
+                    <span className="text--soft">⭐ {profile.stickerCount}</span>
+                    {profile.id === activeProfileId ? <span className="text--soft">●</span> : null}
+                  </span>
+                  <span className="parent-profile__actions">
+                    {confirmingProfileId === profile.id ? (
                       <button
                         type="button"
                         className="btn btn--accent"
                         onClick={() => {
-                          setDeletingProfileId(null);
-                          onDeleteProfile(profile.id);
+                          setConfirmingProfileId(null);
+                          onResetProfile(profile.id);
                         }}
-                        data-testid={`parent-delete-confirm-${profile.id}`}
+                        data-testid={`parent-reset-confirm-${profile.id}`}
                       >
-                        {FA.parentDeleteYes}
+                        {FA.parentResetYes}
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn--secondary"
-                      onClick={() => setDeletingProfileId(profile.id)}
-                      data-testid={`parent-delete-${profile.id}`}
-                    >
-                      {FA.parentDelete}
-                    </button>
-                  )}
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn--secondary"
+                        onClick={() => setConfirmingProfileId(profile.id)}
+                        data-testid={`parent-reset-${profile.id}`}
+                      >
+                        {FA.parentReset}
+                      </button>
+                    )}
+                    {deletingProfileId === profile.id ? (
+                      <>
+                        <span className="text--soft">{FA.parentDeleteConfirm}</span>
+                        <button
+                          type="button"
+                          className="btn btn--accent"
+                          onClick={() => {
+                            setDeletingProfileId(null);
+                            onDeleteProfile(profile.id);
+                          }}
+                          data-testid={`parent-delete-confirm-${profile.id}`}
+                        >
+                          {FA.parentDeleteYes}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn--secondary"
+                        onClick={() => setDeletingProfileId(profile.id)}
+                        data-testid={`parent-delete-${profile.id}`}
+                      >
+                        {FA.parentDelete}
+                      </button>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>
           </section>
         ) : null}
 
-        <section>
-          <h3 className="subtitle">{FA.parentDiagnostics}</h3>
-          <ul className="text text--soft" data-testid="diagnostics">
-            <li>وضعیت ذخیره‌سازی آفلاین: {CACHE_LABEL[cacheStatus]}</li>
-            <li>سلامت فایل ذخیره: {state.saveHealth}</li>
-            <li>نسخه‌ی طرح ذخیره: {state.schemaVersion}</li>
-            <li>کیفیت تصویر: {state.qualityTier}</li>
-            <li>پشتیبانی سه‌بعدی: {state.webglAvailable ? 'بله' : 'خیر'}</li>
-            <li>تعداد برچسب‌ها: {state.stickers.length}</li>
-          </ul>
+        <section className="section">
+          <h3 className="section__title">{FA.parentDiagnostics}</h3>
+          <dl className="diagnostics-list text text--soft" data-testid="diagnostics">
+            <dt>وضعیت ذخیره‌سازی آفلاین</dt>
+            <dd>{CACHE_LABEL[cacheStatus]}</dd>
+            <dt>سلامت فایل ذخیره</dt>
+            <dd>{state.saveHealth}</dd>
+            <dt>نسخه‌ی طرح ذخیره</dt>
+            <dd>{state.schemaVersion}</dd>
+            <dt>کیفیت تصویر</dt>
+            <dd>{state.qualityTier}</dd>
+            <dt>پشتیبانی سه‌بعدی</dt>
+            <dd>{state.webglAvailable ? 'بله' : 'خیر'}</dd>
+            <dt>تعداد برچسب‌ها</dt>
+            <dd>{state.stickers.length}</dd>
+          </dl>
         </section>
 
-        <div className="row">
-          {confirming ? (
-            <>
-              <span className="text">{FA.parentResetConfirm}</span>
-              <button
-                type="button"
-                className="btn btn--accent"
-                onClick={onReset}
-                data-testid="reset-confirm"
-              >
-                {FA.parentResetYes}
-              </button>
+        <section className="section section--danger">
+          <div className="confirm-slot">
+            {confirming ? (
+              <>
+                <span className="text">{FA.parentResetConfirm}</span>
+                <button
+                  type="button"
+                  className="btn btn--accent"
+                  onClick={onReset}
+                  data-testid="reset-confirm"
+                >
+                  {FA.parentResetYes}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => setConfirming(false)}
+                  data-testid="reset-cancel"
+                >
+                  {FA.parentResetNo}
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
                 className="btn btn--secondary"
-                onClick={() => setConfirming(false)}
-                data-testid="reset-cancel"
+                onClick={() => setConfirming(true)}
+                data-testid="reset-request"
               >
-                {FA.parentResetNo}
+                {FA.parentReset}
               </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={() => setConfirming(true)}
-              data-testid="reset-request"
-            >
-              {FA.parentReset}
-            </button>
-          )}
+            )}
+          </div>
           <button type="button" className="btn" onClick={onClose} data-testid="parent-close">
             {FA.parentClose}
           </button>
-        </div>
+        </section>
       </div>
     </div>
   );
