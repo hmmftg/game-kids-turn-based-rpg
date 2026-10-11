@@ -22,10 +22,10 @@ export interface GroundPoint {
 export type DetailLevel = 0 | 1 | 2 | 3 | 4;
 
 export function detailLevelFor(tier: QualityTier): DetailLevel {
-  if (tier === 'low') return 0;
-  if (tier === 'medium') return 1;
-  if (tier === 'high') return 2;
-  if (tier === 'very-high') return 3;
+  if (tier === 'very-low') return 0;
+  if (tier === 'low') return 1;
+  if (tier === 'normal') return 2;
+  if (tier === 'high') return 3;
   return 4;
 }
 
@@ -49,6 +49,14 @@ export interface FigureProps {
   readonly label?: string;
   /** Cosmetic headwear layer; omitted/'none' leaves the head uncovered. */
   readonly headwear?: HeadwearId;
+  /**
+   * Female figures get garment-following clothing at the top tier (scarf or
+   * chador drape + manteau skirt); males get normal clothes (trousers,
+   * collar, cuffs). Omitted renders the neutral villager body.
+   */
+  readonly female?: boolean | undefined;
+  /** Female head covering for the top tier; ignored when `female` is false. */
+  readonly covering?: 'scarf' | 'chador' | undefined;
   /** Kid-avatar hair silhouette + color; omitted renders a bare head. */
   readonly hairStyle?: AvatarHairStyle | undefined;
   readonly hairColor?: string | undefined;
@@ -128,6 +136,8 @@ export interface AvatarVisual {
   readonly palette: Palette;
   readonly hairStyle: AvatarHairStyle;
   readonly hairColor: string;
+  /** Girl avatars get the scarf/chador garment at the very-high tier. */
+  readonly female?: boolean | undefined;
 }
 
 export const AVATAR_VISUALS: Readonly<Record<AvatarId, AvatarVisual>> = {
@@ -135,6 +145,7 @@ export const AVATAR_VISUALS: Readonly<Record<AvatarId, AvatarVisual>> = {
     palette: { body: '#2f6f8f', head: '#f2d1b3', limb: '#33475a' },
     hairStyle: 'pigtails',
     hairColor: '#5a3a22',
+    female: true,
   },
   'avatar-arta': {
     palette: { body: '#8a4fa0', head: '#f2d1b3', limb: '#4a3255' },
@@ -145,6 +156,7 @@ export const AVATAR_VISUALS: Readonly<Record<AvatarId, AvatarVisual>> = {
     palette: { body: '#c96f4a', head: '#eab98f', limb: '#6f4530' },
     hairStyle: 'curly',
     hairColor: '#2e2018',
+    female: true,
   },
   'avatar-diyar': {
     palette: { body: '#3f8f5f', head: '#f7dcbc', limb: '#2f5c40' },

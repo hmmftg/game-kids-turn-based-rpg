@@ -11,6 +11,9 @@ export interface NpcLook {
   readonly palette: Palette;
   /** Accessory identity already supported by the figure layer, if any. */
   readonly role?: FigureVisualRole | undefined;
+  /** Female NPCs wear a real covering + garment at the very-high tier. */
+  readonly female?: boolean | undefined;
+  readonly covering?: 'scarf' | 'chador' | undefined;
   readonly hairStyle?: AvatarHairStyle | undefined;
   readonly hairColor?: string | undefined;
   /** Body scale multiplier — coarse height variation between villagers. */
@@ -21,12 +24,16 @@ export const NPC_LOOKS: Readonly<Record<string, NpcLook>> = {
   'npc-elder': {
     palette: { body: '#7a5f8f', head: '#f0cfae', limb: '#5c4670' },
     role: 'elder',
+    female: true,
+    covering: 'chador',
     hairStyle: 'bun',
     hairColor: '#cfcfcf',
   },
   'npc-neighbour': {
     palette: { body: '#4c7a4c', head: '#f0cfae', limb: '#3b5c3b' },
     role: 'neighbour',
+    female: true,
+    covering: 'scarf',
     hairStyle: 'bun',
     hairColor: '#5a3a22',
   },
@@ -45,6 +52,8 @@ export const NPC_LOOKS: Readonly<Record<string, NpcLook>> = {
   'npc-child-friend': {
     palette: { body: '#c96f4a', head: '#eab98f', limb: '#6f4530' },
     role: 'friend',
+    female: true,
+    covering: 'scarf',
     hairStyle: 'pigtails',
     hairColor: '#2e2018',
     scale: 0.72,
@@ -56,6 +65,8 @@ export const NPC_LOOKS: Readonly<Record<string, NpcLook>> = {
   },
   'npc-teacher': {
     palette: { body: '#2f6f8f', head: '#f2d1b3', limb: '#33475a' },
+    female: true,
+    covering: 'scarf',
     hairStyle: 'bun',
     hairColor: '#3a2a1c',
   },
@@ -72,6 +83,8 @@ export const NPC_LOOKS: Readonly<Record<string, NpcLook>> = {
   },
   'npc-child-sara': {
     palette: { body: '#e88bb0', head: '#f7dcbc', limb: '#8f5a6f' },
+    female: true,
+    covering: 'scarf',
     hairStyle: 'pigtails',
     hairColor: '#8a5a33',
     scale: 0.7,

@@ -16,17 +16,18 @@ Always run `verify`, `measure-world`, `qa-screenshots`, and Playwright before a 
 
 Budget **ceilings** are enforced in `scripts/measure-world.ts`. Environment for all numbers
 below: **dev-server/headless-Chromium** (SwiftShader) — a regression baseline, not low-end-GPU
-proof. **Observed sampled maxima** (re-measured after the three-tier geometry work, October 2026 —
-medium/high grew because the tiers now differentiate geometry, not just decoration count;
-low is unchanged because it reuses the exact same shared geometry objects as before):
+proof. **Observed sampled maxima** (re-measured after the five-tier rename + full-body pass,
+October 2026 — very-low/low/normal reuse the old low/medium/high geometry unchanged; high adds
+full bodies — arms, hands, feet, faces on every human plus legs/paws/fins on the animals; very-high
+adds draped garments and coverings, so the two top tiers carry the cost):
 
-| Tier       | Calls | Objects | Triangles |
-| ---------- | ----- | ------- | --------- |
-| low        | 116   | 260     | 5,238     |
-| medium     | 273   | 506     | 12,280    |
-| high       | 393   | 676     | 15,464    |
-| very-high  | 399   | 682     | 17,920    |
-| extra-high | 419   | 704     | 20,136    |
+| Tier      | Calls | Objects | Triangles |
+| --------- | ----- | ------- | --------- |
+| very-low  | 116   | 260     | 5,238     |
+| low       | 273   | 506     | 12,280    |
+| normal    | 393   | 676     | 15,464    |
+| high      | 514   | 816     | 19,300    |
+| very-high | 591   | 909     | 22,536    |
 
 Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
 frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —

@@ -63,6 +63,50 @@ describe('save parsing and migration', () => {
     expect(result.state.checkpoint.kind).toBe('hub');
   });
 
+  // v3 renamed the tier ids: an old id now names a different detail level,
+  // so every stored id must migrate to the equivalent geometry tier.
+  it.each([
+    ['low', 'very-low'],
+    ['medium', 'low'],
+    ['high', 'normal'],
+    ['very-high', 'high'],
+    ['extra-high', 'very-high'],
+  ])('migrates a v2 save storing qualityTier %s to %s', (oldTier, expected) => {
+    const v2 = {
+      version: 2,
+      avatar: 'avatar-aban',
+      completedQuests: [],
+      stickers: [],
+      audio: { musicMuted: false, sfxMuted: false },
+      qualityTier: oldTier,
+      lastPlayedAt: 42,
+    };
+    const result = parseSave(v2, NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrated).toBe(true);
+    expect(result.state.qualityTier).toBe(expected);
+  });
+
+  it('keeps a v3 save quality tier exactly as stored', () => {
+    const result = parseSave(
+      {
+        version: SAVE_SCHEMA_VERSION,
+        avatar: 'avatar-aban',
+        completedQuests: [],
+        stickers: [],
+        audio: { musicMuted: false, sfxMuted: false },
+        qualityTier: 'very-high',
+        lastPlayedAt: 42,
+      },
+      NOW,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrated).toBe(false);
+    expect(result.state.qualityTier).toBe('very-high');
+  });
+
   it.each([
     ['null', null],
     ['a string', 'not-a-save'],
@@ -97,7 +141,7 @@ describe('save parsing and migration', () => {
     expect(result.state.stickers).toEqual(['sticker-greeting']);
     expect(result.state.audio.musicVolume).toBe(1);
     expect(result.state.audio.sfxMuted).toBe(false);
-    expect(result.state.qualityTier).toBe('medium');
+    expect(result.state.qualityTier).toBe('low');
     expect(result.state.checkpoint).toEqual({ kind: 'title', questId: null, at: NOW });
   });
 });

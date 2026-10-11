@@ -207,7 +207,7 @@ export function WorldCanvas({
         dpr={[1, maxPixelRatioFor(qualityTier)]}
         shadows={false}
         camera={{ position: [10, 10, 10], zoom, near: -100, far: 200 }}
-        gl={{ antialias: qualityTier !== 'low', powerPreference: 'low-power', alpha: false }}
+        gl={{ antialias: qualityTier !== 'very-low', powerPreference: 'low-power', alpha: false }}
         onCreated={({ gl, camera, scene }) => {
           gl.setClearColor(env.clearColor);
           camera.lookAt(0, 0, 0);

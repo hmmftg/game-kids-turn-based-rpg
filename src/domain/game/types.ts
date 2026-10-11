@@ -114,7 +114,7 @@ export interface Checkpoint {
   readonly at: number;
 }
 
-export type QualityTier = 'low' | 'medium' | 'high' | 'very-high' | 'extra-high';
+export type QualityTier = 'very-low' | 'low' | 'normal' | 'high' | 'very-high';
 
 export interface AudioSettings {
   readonly musicMuted: boolean;

@@ -20,26 +20,26 @@ export function detectWebgl(): boolean {
 
 /** Conservative first guess; the runtime frame monitor may lower it further. */
 export function detectQualityTier(): QualityTier {
-  if (typeof navigator === 'undefined') return 'medium';
+  if (typeof navigator === 'undefined') return 'low';
   const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
   const cores = navigator.hardwareConcurrency ?? 4;
   const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio;
-  if (memory <= 2 || cores <= 4) return 'low';
-  if (memory >= 6 && cores >= 8 && dpr >= 2) return 'high';
-  return 'medium';
+  if (memory <= 2 || cores <= 4) return 'very-low';
+  if (memory >= 6 && cores >= 8 && dpr >= 2) return 'normal';
+  return 'low';
 }
 
 export function maxPixelRatioFor(tier: QualityTier): number {
   switch (tier) {
-    case 'low':
+    case 'very-low':
       return 1;
-    case 'medium':
+    case 'low':
       return 1.5;
+    case 'normal':
+      return 2;
     case 'high':
       return 2;
     case 'very-high':
-      return 2;
-    case 'extra-high':
       return 2.5;
   }
 }
