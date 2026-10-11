@@ -13,6 +13,14 @@ import { startGame } from './harness.ts';
  */
 test.describe('memory soak — remount cycles stay bounded', () => {
   test.setTimeout(240000);
+  // Probes (__worldDisposeEvents, __worldCritterTimersAtUnmount, renderer
+  // info) are dev-only or gated behind __WORLD_PROBE; e2e runs `vite preview`
+  // (a production build), so the flag must be set before the app loads.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as unknown as Record<string, unknown>)['__WORLD_PROBE'] = true;
+    });
+  });
 
   interface WorldProbe {
     __worldScene?: { traverse: (fn: () => void) => void };
