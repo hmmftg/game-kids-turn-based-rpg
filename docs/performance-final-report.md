@@ -94,14 +94,23 @@ P2-attribution table. JS heap flat in all runs. Draw calls unchanged by P2.
   documented in `performance-baseline.md` for future evidence-driven work.
 - Engine migration proposal: **none** — the evidence does not justify one.
 
-## Verification record
+## Verification record (P6 acceptance run, 2026-10-11)
 
-- `npm run verify` green on every stage PR (format, lint, typecheck, unit
-  tests, build + budgets + deploy shape, `validate:content`).
-- `npx playwright test` green on every stage PR except documented pre-existing
-  landscape flakes (`liveliness.spec.ts:124`, `slice.spec.ts:69/84`,
-  `routines.spec.ts:260`) reproduced on `origin/main` — verified as having no
-  regression, not a globally green repository.
+- `npm run verify`: **green** (format, lint, typecheck, 381 unit tests, build +
+  budgets + deploy shape, `validate:content`, `example:build`).
+- `scripts/measure-world.ts`: **3 consecutive green runs** across all five
+  tiers on this branch; sampled maxima match `docs/QA.md` exactly
+  (very-low 116/260/5,238 → very-high 591/909/22,536 calls/obj/tri).
+- `scripts/measure-perf.ts`: re-run → `docs/performance-after.raw.json`.
+- `npx playwright test`: **236 tests, 0 failures, 11 skipped — fully green**,
+  serial, both projects. Every previously documented flake passed
+  (`liveliness.spec.ts:124`, `slice.spec.ts:69/84`, `routines.spec.ts:260`);
+  they remain listed in `docs/QA.md` as real intermittent races, not retired.
+- Precache/bundle: `check-deploy` inside `verify` re-asserts `perfProbe` and
+  `examples/hello-world` absent from `dist/` and `sw.js` on the final build.
+- Historical runs: stage PRs each ran `verify` + the full suite; the four
+  flake failures seen across P3–P5 were reproduced on `origin/main`
+  (worktree-built main, identical 1-fail/2-pass signature).
 
 ## Next steps (evidence-gated)
 
