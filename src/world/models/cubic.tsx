@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { HeadwearId } from '../../domain/game/types.ts';
@@ -1447,37 +1447,70 @@ interface SpeciesProps {
 const GAIT_SPEED = 9;
 
 /**
- * Per-part stride/flap motion while a critter moves. Animatable parts live in
- * a single group named `gait-<kind>` carrying the authored pose; the gait root
- * itself mounts only while `moving`, so idle critters add no objects at all.
- * Each activation traverses the fresh root, captures the authored pose as the
- * base, and oscillates around it, so `moving` pose switches always win and the
- * written axis composes with the authored one. On stop the wrapper unmounts —
- * nothing else writes those rotations — and under reduced motion the gait
- * never activates. Same bounded, presentation-only contract as the figure's
- * walkSway. Frames already flow while a critter moves; invalidate() keeps it
- * true in every world.
+ * Per-part stride/flap motion while a critter moves, plus a short settle
+ * flourish on the moving→idle transition. Animatable parts live in a single
+ * group named `gait-<kind>` carrying the authored pose; the gait root itself
+ * mounts only while `moving` or during the ~1.4 s settle, so idle critters
+ * add no objects at all. Each activation traverses the fresh root, captures
+ * the authored pose as the base, and oscillates around it, so `moving` pose
+ * switches always win and the written axis composes with the authored one.
+ * The settle phase is the same oscillation under an exp(-3t) envelope — a
+ * tail flick, wing rustle, or swish that dies out — then `onSettled` unmounts
+ * the root and joints snap back to their authored idle pose. Nothing else
+ * writes those rotations, and under reduced motion none of this activates.
+ * Same bounded, presentation-only contract as the figure's walkSway. Frames
+ * already flow while a critter moves; invalidate() keeps it true through the
+ * settle as well.
  */
-function useCritterGait(rootRef: React.RefObject<THREE.Group | null>) {
+const SETTLE_SECONDS = 1.4;
+
+function useCritterGait(
+  rootRef: React.RefObject<THREE.Group | null>,
+  moving: boolean,
+  onSettled: () => void,
+) {
   const lastRoot = useRef<THREE.Group | null>(null);
   const joints = useRef<THREE.Object3D[]>([]);
   const bases = useRef<THREE.Euler[]>([]);
+  const mode = useRef<'gait' | 'settle' | null>(null);
+  const settleStart = useRef(0);
+  const settleDone = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
   useFrame((state) => {
     const root = rootRef.current;
     if (!root || prefersReducedMotion()) return;
     if (root !== lastRoot.current) {
       lastRoot.current = root;
+      mode.current = null;
       joints.current = [];
       root.traverse((obj) => {
         if (obj.name.startsWith('gait-')) joints.current.push(obj);
       });
-      // Capture the authored pose as the swing baseline — React has already
-      // applied this burst's `moving` pose by now.
-      bases.current = joints.current.map((joint) => joint.rotation.clone());
     }
-    const s = Math.sin(state.clock.elapsedTime * GAIT_SPEED);
-    const flutter = Math.sin(state.clock.elapsedTime * GAIT_SPEED * 1.8);
+    const now = state.clock.elapsedTime;
+    const next = moving ? 'gait' : 'settle';
+    if (mode.current !== next) {
+      mode.current = next;
+      // React has already applied this burst's authored pose by now.
+      bases.current = joints.current.map((joint) => joint.rotation.clone());
+      settleStart.current = now;
+      settleDone.current = false;
+    }
+    let damp = 1;
+    if (!moving) {
+      const t = now - settleStart.current;
+      if (t > SETTLE_SECONDS) {
+        joints.current.forEach((joint, i) => joint.rotation.copy(bases.current[i]!));
+        if (!settleDone.current) {
+          settleDone.current = true;
+          onSettled();
+        }
+        return;
+      }
+      damp = Math.exp(-3 * t);
+    }
+    const s = Math.sin(now * GAIT_SPEED) * damp;
+    const flutter = Math.sin(now * GAIT_SPEED * 1.8) * damp;
     joints.current.forEach((joint, i) => {
       const base = bases.current[i]!;
       switch (joint.name.slice(5)) {
@@ -2164,7 +2197,16 @@ function ButterflyMesh({ tint, moving, level }: SpeciesProps) {
 
 export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: AnimalProps) {
   const gaitRoot = useRef<THREE.Group>(null);
-  useCritterGait(gaitRoot);
+  // The gait root also stays mounted for a short settle flourish after a
+  // move ends — bounded, then the critter is a bare idle species again.
+  const [settling, setSettling] = useState(false);
+  const wasMoving = useRef(moving);
+  useEffect(() => {
+    if (wasMoving.current && !moving && !prefersReducedMotion()) setSettling(true);
+    wasMoving.current = moving;
+  }, [moving]);
+  const onSettled = useCallback(() => setSettling(false), []);
+  useCritterGait(gaitRoot, moving, onSettled);
   const species =
     variant === 'cat' ? (
       <CatMesh tint={tint} moving={moving} level={detailLevel} />
@@ -2177,9 +2219,9 @@ export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: 
     ) : (
       <ButterflyMesh tint={tint} moving={moving} level={detailLevel} />
     );
-  // The gait root exists only while the critter moves — idle renders the
-  // bare species with zero extra objects.
-  return moving ? (
+  // The gait root exists only while the critter moves or settles — idle
+  // renders the bare species with zero extra objects.
+  return moving || settling ? (
     <group ref={gaitRoot} dispose={null}>
       {species}
     </group>
