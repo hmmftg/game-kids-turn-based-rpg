@@ -640,6 +640,10 @@ export function CubicFigure({
   // walk cycle (no loop of its own, nothing while idle, dropped under
   // reduced motion).
   const walkSway = moving && !prefersReducedMotion() ? Math.sin(bobbing) : 0;
+  // Forward pitch into the stride: the upper body leans a few degrees into
+  // the heading while walking, with a subtle per-step ripple — same bounded
+  // driver, rest pose (lean = 0) identical to the upright figure.
+  const walkLean = moving && !prefersReducedMotion() ? 0.07 + Math.sin(bobbing * 2) * 0.02 : 0;
   // Quality-tier geometry: level 0 resolves to the exact shared constants
   // (BOX / 12-seg CYLINDER) so low stays identical to the original look.
   const legGeometry = cylinderFor(detailLevel, detailLevel >= 2 ? 0.8 : 1);
@@ -724,238 +728,263 @@ export function CubicFigure({
           ) : null}
         </Detail>
       </group>
-      <mesh
-        geometry={BOX}
-        material={body}
-        position={[0, 0.72 + lift, 0]}
-        scale={[0.56, 0.46, 0.4]}
-        raycast={noRaycast}
-      />
-      <Detail level={detailLevel} min={1}>
-        {/* collar: thin garment band hugging the neck/torso join */}
-        <mesh
-          geometry={cylinderFor(detailLevel)}
-          material={limb}
-          position={[0, 0.95 + lift, 0]}
-          scale={[0.3, 0.05, 0.24]}
-          raycast={noRaycast}
-        />
-      </Detail>
-      <Detail level={detailLevel} min={2}>
-        {/* hem band along the bottom edge of the tunic */}
-        <mesh
-          geometry={BOX}
-          material={limb}
-          position={[0, 0.51 + lift, 0]}
-          scale={[0.6, 0.06, 0.44]}
-          raycast={noRaycast}
-        />
-      </Detail>
-      <Detail level={detailLevel} min={3}>
-        {/* arms angled slightly out from the shoulders, swinging opposite
+      {/* everything above the hips rides one lean group pivoting at the hip
+          line — the inner offset keeps every child's authored height
+          unchanged when walkLean = 0 */}
+      <group position={[0, 0.5, 0]} rotation={[walkLean, 0, 0]}>
+        <group position={[0, -0.5, 0]}>
+          <mesh
+            geometry={BOX}
+            material={body}
+            position={[0, 0.72 + lift, 0]}
+            scale={[0.56, 0.46, 0.4]}
+            raycast={noRaycast}
+          />
+          <Detail level={detailLevel} min={1}>
+            {/* collar: thin garment band hugging the neck/torso join */}
+            <mesh
+              geometry={cylinderFor(detailLevel)}
+              material={limb}
+              position={[0, 0.95 + lift, 0]}
+              scale={[0.3, 0.05, 0.24]}
+              raycast={noRaycast}
+            />
+          </Detail>
+          <Detail level={detailLevel} min={2}>
+            {/* hem band along the bottom edge of the tunic */}
+            <mesh
+              geometry={BOX}
+              material={limb}
+              position={[0, 0.51 + lift, 0]}
+              scale={[0.6, 0.06, 0.44]}
+              raycast={noRaycast}
+            />
+          </Detail>
+          <Detail level={detailLevel} min={3}>
+            {/* arms angled slightly out from the shoulders, swinging opposite
             the same-side leg in stride; hands, finger hints and cuffs ride
             inside each shoulder swing group */}
-        <group position={[-0.335, 0.88 + lift, 0]} rotation={[-walkSway * 0.15, 0, 0]}>
-          <mesh
-            geometry={soft}
-            material={limb}
-            position={[0, -0.16, 0]}
-            rotation={[0, 0, 0.12]}
-            scale={[0.09, 0.36, 0.13]}
-            raycast={noRaycast}
-          />
-          <mesh
-            geometry={BOX}
-            material={head}
-            position={[-0.04, -0.38, 0.02]}
-            scale={[0.09, 0.08, 0.1]}
-            raycast={noRaycast}
-          />
-          <mesh
-            geometry={BOX}
-            material={head}
-            position={[-0.065, -0.44, 0.05]}
-            scale={[0.022, 0.05, 0.03]}
-            raycast={noRaycast}
-          />
-          <mesh
-            geometry={BOX}
-            material={head}
-            position={[-0.015, -0.44, 0.05]}
-            scale={[0.022, 0.05, 0.03]}
-            raycast={noRaycast}
-          />
-          <Detail level={detailLevel} min={5}>
-            {/* sleeve cuff at the wrist — cloth finishing, not decoration */}
-            <mesh
-              geometry={BOX}
-              material={sharedLambert('#e8eef4')}
-              position={[-0.04, -0.335, 0.02]}
-              scale={[0.1, 0.035, 0.11]}
-              raycast={noRaycast}
-            />
+            <group position={[-0.335, 0.88 + lift, 0]} rotation={[-walkSway * 0.15, 0, 0]}>
+              <mesh
+                geometry={soft}
+                material={limb}
+                position={[0, -0.16, 0]}
+                rotation={[0, 0, 0.12]}
+                scale={[0.09, 0.36, 0.13]}
+                raycast={noRaycast}
+              />
+              <mesh
+                geometry={BOX}
+                material={head}
+                position={[-0.04, -0.38, 0.02]}
+                scale={[0.09, 0.08, 0.1]}
+                raycast={noRaycast}
+              />
+              <mesh
+                geometry={BOX}
+                material={head}
+                position={[-0.065, -0.44, 0.05]}
+                scale={[0.022, 0.05, 0.03]}
+                raycast={noRaycast}
+              />
+              <mesh
+                geometry={BOX}
+                material={head}
+                position={[-0.015, -0.44, 0.05]}
+                scale={[0.022, 0.05, 0.03]}
+                raycast={noRaycast}
+              />
+              <Detail level={detailLevel} min={5}>
+                {/* sleeve cuff at the wrist — cloth finishing, not decoration */}
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#e8eef4')}
+                  position={[-0.04, -0.335, 0.02]}
+                  scale={[0.1, 0.035, 0.11]}
+                  raycast={noRaycast}
+                />
+              </Detail>
+            </group>
+            <group position={[0.335, 0.88 + lift, 0]} rotation={[walkSway * 0.15, 0, 0]}>
+              <mesh
+                geometry={soft}
+                material={limb}
+                position={[0, -0.16, 0]}
+                rotation={[0, 0, -0.12]}
+                scale={[0.09, 0.36, 0.13]}
+                raycast={noRaycast}
+              />
+              <mesh
+                geometry={BOX}
+                material={head}
+                position={[0.04, -0.38, 0.02]}
+                scale={[0.09, 0.08, 0.1]}
+                raycast={noRaycast}
+              />
+              <mesh
+                geometry={BOX}
+                material={head}
+                position={[0.015, -0.44, 0.05]}
+                scale={[0.022, 0.05, 0.03]}
+                raycast={noRaycast}
+              />
+              <mesh
+                geometry={BOX}
+                material={head}
+                position={[0.065, -0.44, 0.05]}
+                scale={[0.022, 0.05, 0.03]}
+                raycast={noRaycast}
+              />
+              <Detail level={detailLevel} min={5}>
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#e8eef4')}
+                  position={[0.04, -0.335, 0.02]}
+                  scale={[0.1, 0.035, 0.11]}
+                  raycast={noRaycast}
+                />
+              </Detail>
+            </group>
           </Detail>
-        </group>
-        <group position={[0.335, 0.88 + lift, 0]} rotation={[walkSway * 0.15, 0, 0]}>
-          <mesh
-            geometry={soft}
-            material={limb}
-            position={[0, -0.16, 0]}
-            rotation={[0, 0, -0.12]}
-            scale={[0.09, 0.36, 0.13]}
-            raycast={noRaycast}
-          />
-          <mesh
-            geometry={BOX}
-            material={head}
-            position={[0.04, -0.38, 0.02]}
-            scale={[0.09, 0.08, 0.1]}
-            raycast={noRaycast}
-          />
-          <mesh
-            geometry={BOX}
-            material={head}
-            position={[0.015, -0.44, 0.05]}
-            scale={[0.022, 0.05, 0.03]}
-            raycast={noRaycast}
-          />
-          <mesh
-            geometry={BOX}
-            material={head}
-            position={[0.065, -0.44, 0.05]}
-            scale={[0.022, 0.05, 0.03]}
-            raycast={noRaycast}
-          />
-          <Detail level={detailLevel} min={5}>
-            <mesh
-              geometry={BOX}
-              material={sharedLambert('#e8eef4')}
-              position={[0.04, -0.335, 0.02]}
-              scale={[0.1, 0.035, 0.11]}
-              raycast={noRaycast}
-            />
-          </Detail>
-        </group>
-      </Detail>
-      <Detail level={detailLevel} min={4}>
-        {female ? (
-          /* flared manteau skirt over the torso, in the figure's own outfit
+          <Detail level={detailLevel} min={4}>
+            {female ? (
+              /* flared manteau skirt over the torso, in the figure's own outfit
              color — garment-following, not a floating cone; swings softly
              around the waist while walking */
-          <group position={[0, 0.78 + lift, 0]} rotation={[walkSway * 0.05, 0, walkSway * 0.02]}>
-            <mesh
-              geometry={cylinderFor(detailLevel, 0.8)}
-              material={limb}
-              position={[0, -0.22, 0]}
-              scale={[0.66, 0.46, 0.6]}
-              raycast={noRaycast}
-            />
-          </group>
-        ) : (
-          <>
-            {/* real clothes: trousers swing at the hip in stride, belt,
+              <group
+                position={[0, 0.78 + lift, 0]}
+                rotation={[walkSway * 0.05, 0, walkSway * 0.02]}
+              >
+                <mesh
+                  geometry={cylinderFor(detailLevel, 0.8)}
+                  material={limb}
+                  position={[0, -0.22, 0]}
+                  scale={[0.66, 0.46, 0.6]}
+                  raycast={noRaycast}
+                />
+              </group>
+            ) : (
+              <>
+                {/* real clothes: trousers swing at the hip in stride, belt,
                 shirt placket + collar tips stay torso-bound */}
-            <group position={[-0.16, 0.4, 0]} rotation={[walkSway * 0.14, 0, 0]}>
-              <mesh
-                geometry={soft}
-                material={limb}
-                position={[0, -0.18, 0]}
-                scale={[0.24, 0.34, 0.24]}
-                raycast={noRaycast}
-              />
-            </group>
-            <group position={[0.16, 0.4, 0]} rotation={[-walkSway * 0.14, 0, 0]}>
-              <mesh
-                geometry={soft}
-                material={limb}
-                position={[0, -0.18, 0]}
-                scale={[0.24, 0.34, 0.24]}
-                raycast={noRaycast}
-              />
-            </group>
+                <group position={[-0.16, 0.4, 0]} rotation={[walkSway * 0.14, 0, 0]}>
+                  <mesh
+                    geometry={soft}
+                    material={limb}
+                    position={[0, -0.18, 0]}
+                    scale={[0.24, 0.34, 0.24]}
+                    raycast={noRaycast}
+                  />
+                </group>
+                <group position={[0.16, 0.4, 0]} rotation={[-walkSway * 0.14, 0, 0]}>
+                  <mesh
+                    geometry={soft}
+                    material={limb}
+                    position={[0, -0.18, 0]}
+                    scale={[0.24, 0.34, 0.24]}
+                    raycast={noRaycast}
+                  />
+                </group>
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#33303a')}
+                  position={[0, 0.5 + lift, 0]}
+                  scale={[0.58, 0.05, 0.42]}
+                  raycast={noRaycast}
+                />
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#e8eef4')}
+                  position={[0, 0.76 + lift, 0.205]}
+                  scale={[0.14, 0.26, 0.03]}
+                  raycast={noRaycast}
+                />
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#e8eef4')}
+                  position={[-0.08, 0.93 + lift, 0.19]}
+                  scale={[0.08, 0.04, 0.03]}
+                  raycast={noRaycast}
+                />
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#e8eef4')}
+                  position={[0.08, 0.93 + lift, 0.19]}
+                  scale={[0.08, 0.04, 0.03]}
+                  raycast={noRaycast}
+                />
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#33303a')}
+                  position={[0, 0.8 + lift, 0.225]}
+                  scale={[0.025, 0.025, 0.02]}
+                  raycast={noRaycast}
+                />
+                <mesh
+                  geometry={BOX}
+                  material={sharedLambert('#33303a')}
+                  position={[0, 0.7 + lift, 0.225]}
+                  scale={[0.025, 0.025, 0.02]}
+                  raycast={noRaycast}
+                />
+              </>
+            )}
+          </Detail>
+          <Detail level={detailLevel} min={6}>
+            {/* hem trim at the garment's bottom edge */}
             <mesh
               geometry={BOX}
-              material={sharedLambert('#33303a')}
-              position={[0, 0.5 + lift, 0]}
-              scale={[0.58, 0.05, 0.42]}
+              material={sharedLambert('#b23a48')}
+              position={[0, (female ? 0.335 : 0.53) + lift, 0]}
+              scale={female ? [0.68, 0.03, 0.62] : [0.58, 0.03, 0.42]}
               raycast={noRaycast}
             />
-            <mesh
-              geometry={BOX}
-              material={sharedLambert('#e8eef4')}
-              position={[0, 0.76 + lift, 0.205]}
-              scale={[0.14, 0.26, 0.03]}
-              raycast={noRaycast}
-            />
-            <mesh
-              geometry={BOX}
-              material={sharedLambert('#e8eef4')}
-              position={[-0.08, 0.93 + lift, 0.19]}
-              scale={[0.08, 0.04, 0.03]}
-              raycast={noRaycast}
-            />
-            <mesh
-              geometry={BOX}
-              material={sharedLambert('#e8eef4')}
-              position={[0.08, 0.93 + lift, 0.19]}
-              scale={[0.08, 0.04, 0.03]}
-              raycast={noRaycast}
-            />
-            <mesh
-              geometry={BOX}
-              material={sharedLambert('#33303a')}
-              position={[0, 0.8 + lift, 0.225]}
-              scale={[0.025, 0.025, 0.02]}
-              raycast={noRaycast}
-            />
-            <mesh
-              geometry={BOX}
-              material={sharedLambert('#33303a')}
-              position={[0, 0.7 + lift, 0.225]}
-              scale={[0.025, 0.025, 0.02]}
-              raycast={noRaycast}
-            />
-          </>
-        )}
-      </Detail>
-      <Detail level={detailLevel} min={6}>
-        {/* hem trim at the garment's bottom edge */}
-        <mesh
-          geometry={BOX}
-          material={sharedLambert('#b23a48')}
-          position={[0, (female ? 0.335 : 0.53) + lift, 0]}
-          scale={female ? [0.68, 0.03, 0.62] : [0.58, 0.03, 0.42]}
-          raycast={noRaycast}
-        />
-      </Detail>
-      {/* The head pivots as one unit at the neck — the avatar's arrival
+          </Detail>
+          {/* The head pivots as one unit at the neck — the avatar's arrival
         glance turns this group, not the body. The inner offset group keeps
         every head part's authored absolute height unchanged. */}
-      <group name="figure-head" position={[0, HEAD_PIVOT_Y, 0]}>
-        <group position={[0, -HEAD_PIVOT_Y, 0]}>
-          {/* Rounded box, not a sphere: keeps the authored 0.42×0.38×0.38
+          {/* the head counter-pitches about half the torso lean so the gaze
+          stays near level instead of staring at the ground — the glance
+          cue owns rotation.y and only fires while idle, so it is
+          unaffected */}
+          <group
+            name="figure-head"
+            position={[0, HEAD_PIVOT_Y, 0]}
+            rotation={[-walkLean * 0.5, 0, 0]}
+          >
+            <group position={[0, -HEAD_PIVOT_Y, 0]}>
+              {/* Rounded box, not a sphere: keeps the authored 0.42×0.38×0.38
             proportions and face plane while softening the cube silhouette. */}
-          <mesh
-            geometry={roundedBoxFor(detailLevel)}
-            material={head}
-            position={[0, 1.14 + lift, 0]}
-            scale={[0.42, 0.38, 0.38]}
-            raycast={noRaycast}
-          />
-          {role === 'avatar' || detailLevel >= 3 ? <Face lift={lift} level={detailLevel} /> : null}
-          {covered ? (
-            <Covering kind={covering ?? 'chador'} lift={lift} level={detailLevel} sway={walkSway} />
-          ) : (
-            <Headwear id={headwear} lift={lift} level={detailLevel} />
-          )}
-          {/* Covered heads skip hair entirely — the scarf/chador replaces
+              <mesh
+                geometry={roundedBoxFor(detailLevel)}
+                material={head}
+                position={[0, 1.14 + lift, 0]}
+                scale={[0.42, 0.38, 0.38]}
+                raycast={noRaycast}
+              />
+              {role === 'avatar' || detailLevel >= 3 ? (
+                <Face lift={lift} level={detailLevel} />
+              ) : null}
+              {covered ? (
+                <Covering
+                  kind={covering ?? 'chador'}
+                  lift={lift}
+                  level={detailLevel}
+                  sway={walkSway}
+                />
+              ) : (
+                <Headwear id={headwear} lift={lift} level={detailLevel} />
+              )}
+              {/* Covered heads skip hair entirely — the scarf/chador replaces
               the silhouette and nothing may poke through the cloth. */}
-          {role === 'avatar' && headwear === 'none' && !covered && hairStyle ? (
-            <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
-          ) : null}
+              {role === 'avatar' && headwear === 'none' && !covered && hairStyle ? (
+                <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
+              ) : null}
+            </group>
+          </group>
+          {role !== undefined ? <RoleDetails role={role} lift={lift} level={detailLevel} /> : null}
         </group>
       </group>
-      {role !== undefined ? <RoleDetails role={role} lift={lift} level={detailLevel} /> : null}
     </group>
   );
 }
