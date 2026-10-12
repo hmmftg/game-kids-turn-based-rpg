@@ -1,4 +1,5 @@
 import type {
+  BattleAchievementId,
   BattleActionId,
   BattleDefinition,
   BattleIntent,
@@ -42,6 +43,7 @@ export function createBattle(definition: BattleDefinition): BattleState {
     enemyIntent: enemyIntentFor(definition, 1),
     lastAction: null,
     lastOutcome: null,
+    rounds: [],
   };
 }
 
@@ -96,7 +98,39 @@ export function chooseBattleAction(state: BattleState, action: BattleActionId): 
     lastAction: action,
     lastOutcome: outcome,
     opponentHearts: Math.max(0, state.opponentHearts - damage),
+    rounds: [...state.rounds, { action, outcome }],
   };
+}
+
+/**
+ * Session-only badges a finished battle earns (W7b) — presentation derived
+ * from the round log, never persisted:
+ * - `won`: the battle ended in victory.
+ * - `found-the-fear`: the feared action produced an effect at least once.
+ * - `steady`: victory where every round produced an effect — no whiffs, no
+ *   shrugged-off cushions.
+ */
+export function battleAchievements(state: BattleState): readonly BattleAchievementId[] {
+  const badges: BattleAchievementId[] = [];
+  if (state.phase !== 'victory') return badges;
+  badges.push('won');
+  const fear = state.definition.weakness;
+  if (
+    fear !== undefined &&
+    state.rounds.some(
+      (round) =>
+        round.action === fear && (round.outcome === 'opponent-hit' || round.outcome === 'blocked'),
+    )
+  ) {
+    badges.push('found-the-fear');
+  }
+  if (
+    state.rounds.length > 0 &&
+    state.rounds.every((round) => round.outcome === 'opponent-hit' || round.outcome === 'blocked')
+  ) {
+    badges.push('steady');
+  }
+  return badges;
 }
 
 /**

@@ -97,18 +97,23 @@ export type {
 // Optional gameplay modules — reusable but not required by a consumer.
 export {
   advanceBattlePhase,
+  battleAchievements,
   chooseBattleAction,
   createBattle,
+  damageFor,
+  damagePotential,
   enemyIntentFor,
 } from './modules/battle/battle.ts';
 export { battleReducer } from './modules/battle/reducer.ts';
 export { validateBattleDefinition } from './modules/battle/validation.ts';
 export { BATTLE_ACTION_IDS, BATTLE_PHASES } from './modules/battle/types.ts';
 export type {
+  BattleAchievementId,
   BattleActionId,
   BattleDefinition,
   BattleIntent,
   BattleOutcome,
   BattlePhase,
+  BattleRound,
   BattleState,
 } from './modules/battle/types.ts';

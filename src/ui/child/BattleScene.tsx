@@ -1,5 +1,11 @@
 import { useEffect, useRef, type MouseEvent } from 'react';
-import type { BattleActionId, BattlePhase, BattleState } from '../../framework/index.ts';
+import { battleAchievements } from '../../framework/index.ts';
+import type {
+  BattleAchievementId,
+  BattleActionId,
+  BattlePhase,
+  BattleState,
+} from '../../framework/index.ts';
 import type { BattleCopy } from '../../content/fa/battles.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { DialogueCard } from './DialogueCard.tsx';
@@ -35,13 +41,65 @@ const ACTION_TESTID: Record<BattleActionId, string> = {
   'action-shield': 'battle-action-shield',
 };
 
-function Hearts({ count, testId }: { readonly count: number; readonly testId: string }) {
+/**
+ * Heart pips: filled hearts remain, emptied slots stay visible as pale
+ * hearts — the count is read as a picture, never as a numeral.
+ */
+function HeartPips({
+  filled,
+  total,
+  testId,
+}: {
+  readonly filled: number;
+  readonly total: number;
+  readonly testId: string;
+}) {
   return (
-    <span className="battle__hearts" data-testid={testId} aria-label={`${count}`}>
-      {'❤️'.repeat(Math.max(0, count))}
+    <span className="battle__pips" data-testid={testId} aria-label={`${filled}`}>
+      {Array.from({ length: total }, (_, index) => (
+        <span key={index} className="battle__pip" data-filled={index < filled} aria-hidden>
+          {index < filled ? '❤️' : '🤍'}
+        </span>
+      ))}
     </span>
   );
 }
+
+/**
+ * Round dots: one dot per authored round — elapsed rounds fill in, the
+ * current one wears the ring, future rounds stay hollow. Pictographic
+ * pacing instead of the bare numeral.
+ */
+function RoundDots({
+  round,
+  total,
+  testId,
+}: {
+  readonly round: number;
+  readonly total: number;
+  readonly testId: string;
+}) {
+  return (
+    <span className="battle__dots" data-testid={testId} aria-label={`${round}`}>
+      {Array.from({ length: total }, (_, index) => (
+        <span
+          key={index}
+          className="battle__dot"
+          data-filled={index < round}
+          data-now={index === round - 1}
+          aria-hidden
+        />
+      ))}
+    </span>
+  );
+}
+
+/** Badge glyphs — pictograms only, the toy's own language (§9). */
+const ACHIEVEMENT_GLYPH: Record<BattleAchievementId, string> = {
+  won: '🏅',
+  'found-the-fear': '💡',
+  steady: '🎯',
+};
 
 export function BattleScene({
   battle,
@@ -98,11 +156,21 @@ export function BattleScene({
       />
       <div className="battle__panel">
         <header className="battle__header">
-          <Hearts count={battle.playerHearts} testId="battle-hearts-player" />
-          <span className="battle__round" data-testid="battle-round">
-            {battle.round}
-          </span>
-          <Hearts count={battle.opponentHearts} testId="battle-hearts-opponent" />
+          <HeartPips
+            filled={battle.playerHearts}
+            total={battle.definition.hearts}
+            testId="battle-hearts-player"
+          />
+          <RoundDots
+            round={battle.round}
+            total={battle.definition.maxRounds}
+            testId="battle-round"
+          />
+          <HeartPips
+            filled={battle.opponentHearts}
+            total={battle.definition.hearts}
+            testId="battle-hearts-opponent"
+          />
           <button
             type="button"
             className="btn btn--secondary"
@@ -163,6 +231,20 @@ export function BattleScene({
             hideText={hideCopy}
             onTap={PASSIVE_DWELL_MS[battle.phase] !== undefined ? onAdvance : undefined}
           >
+            {battle.phase === 'victory' ? (
+              <span className="battle__badges" data-testid="battle-badges">
+                {battleAchievements(battle).map((badge) => (
+                  <span
+                    key={badge}
+                    className="battle__badge"
+                    data-testid={`battle-badge-${badge}`}
+                    aria-hidden
+                  >
+                    {ACHIEVEMENT_GLYPH[badge]}
+                  </span>
+                ))}
+              </span>
+            ) : null}
             {battle.phase === 'victory' || battle.phase === 'defeat' ? (
               <button
                 type="button"

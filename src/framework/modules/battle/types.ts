@@ -43,6 +43,19 @@ export type BattleIntent = 'rest' | 'attack';
 /** The deterministic consequence of one child action against the intent. */
 export type BattleOutcome = 'opponent-hit' | 'blocked' | 'whiffed' | 'no-effect';
 
+/** One resolved player round — what the child did and what it produced. */
+export interface BattleRound {
+  readonly action: BattleActionId;
+  readonly outcome: BattleOutcome;
+}
+
+/**
+ * Session-only battle badge (W7b): derived from a finished battle's round
+ * log, never persisted — the "first win vs this opponent" record already
+ * lives in `victoryDiscoveryId`/discoveries.
+ */
+export type BattleAchievementId = 'won' | 'found-the-fear' | 'steady';
+
 export interface BattleState {
   /** The authored row that started the battle — plain serializable data. */
   readonly definition: BattleDefinition;
@@ -57,6 +70,8 @@ export interface BattleState {
   readonly enemyIntent: BattleIntent;
   readonly lastAction: BattleActionId | null;
   readonly lastOutcome: BattleOutcome | null;
+  /** Every resolved player round, in order — the achievement source. */
+  readonly rounds: readonly BattleRound[];
 }
 
 /**

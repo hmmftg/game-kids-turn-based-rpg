@@ -53,6 +53,26 @@ else → playerChoice (round + 1, next authored intent)
 No counter-damage to the child, no crits, no randomness, no punitive
 failure — defeat only when the round limit expires.
 
+### Weakness (W7a)
+
+Each opponent fears exactly one action: `BattleDefinition.weakness` adds
+**+1 heart** to any _effective_ weak-to action (`damageFor`):
+
+- `opponent-hit` deals 2 hearts instead of 1 (a feared ball lands harder),
+- `blocked` deals 1 instead of 0 (a feared cushion turns the attacker's
+  own charge into a heart loss),
+- `whiffed`/`no-effect` stay 0.
+
+Weakness is communicated **physically** (§9): the opponent flinches toward
+the feared object while the child chooses (`data-weakness` on
+`.battle__opponent`) and recoils harder when it lands (`data-weak`) —
+never an icon or text label. Content: mouse/bird fear the ball,
+eagle/butterfly fear the cushion; the 2-heart challengers end in one good
+bonk. `validateBattleDefinition` rejects a `weakness` that is not offered
+(`weakness-not-offered`), and winnability sums `damagePotential()` — the
+engine's own matrix — over `maxRounds`, so weakness can make an
+otherwise-unwinnable pattern beatable.
+
 ## Content contract
 
 - Rows live in `src/content/fa/battles.ts`: `BattleDefinition`
@@ -94,8 +114,15 @@ failure — defeat only when the round limit expires.
 
 - Physical actions only — the soft ball and the cushion are tappable
   `SceneGlyph` objects, never an action-icon row.
-- Hearts, round dot and the leave button sit in the header; the opponent is
-  a physical presence (`SceneGlyph 'mouse'`).
+- Pictographic strip in the header (W7b): heart **pips** — filled hearts
+  remain, emptied slots stay pale — and round **dots** (elapsed filled,
+  current ringed, future hollow); never bare numerals. The leave button
+  sits alongside; the opponent is a physical presence (`SceneGlyph 'mouse'`).
+- Session-only badges on the victory card (W7b): `battleAchievements`
+  derives 🏅 `won`, 💡 `found-the-fear` (the feared action landed
+  effectively), and 🎯 `steady` (no whiffed/shrugged rounds) from the
+  `rounds` log — presentation only, never persisted; the persisted
+  first-win record is already `victoryDiscoveryId`/discoveries.
 - Instrumentation (probe/dev only): `window.__worldBattleState` mirrors the
   live `BattleState`; `window.__worldBattleEvents` records one row per phase
   entry (`'phase@round'`, `'end'` on exit).

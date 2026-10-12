@@ -1123,6 +1123,7 @@
   .world-marker,
   .celebration__burst,
   .celebration__sticker,
+  .battle__badge,
   .trail__item--current {
     animation: none;
   }
@@ -1165,21 +1166,72 @@
   box-shadow: var(--shadow-card);
 }
 
-.battle__hearts {
+/* W7b pictographic strip: hearts and rounds read as pictures — filled vs
+   emptied slots — never as bare numerals. */
+.battle__pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   font-size: var(--font-size-lg);
-  letter-spacing: 0.1em;
 }
 
-.battle__round {
-  min-inline-size: var(--touch-min);
+.battle__pip[data-filled='false'] {
+  filter: grayscale(0.4);
+  opacity: 0.55;
+}
+
+.battle__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   min-block-size: var(--touch-min);
+}
+
+.battle__dot {
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid var(--color-ink-soft, #8a7a63);
+}
+
+.battle__dot[data-filled='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.battle__dot[data-now='true'] {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 1px;
+  opacity: 0.85;
+}
+
+/* Session badges on the victory card — pictograms earned this battle. */
+.battle__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-xl, 2rem);
+}
+
+.battle__badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: var(--color-surface-strong);
-  color: var(--color-ink);
-  font-weight: 700;
+  min-inline-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  animation: battle-badge-pop 400ms ease-out both;
+}
+
+@keyframes battle-badge-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .battle__opponent {
