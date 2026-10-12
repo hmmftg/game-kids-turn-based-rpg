@@ -9,6 +9,7 @@ import type {
   PropProps,
 } from './modelProvider.ts';
 import { noRaycast } from './raycast.ts';
+import { prefersReducedMotion } from '../../services/device/capabilities.ts';
 import {
   AwningDetail,
   Detail,
@@ -195,30 +196,37 @@ function Covering({
   kind,
   lift,
   level,
+  sway,
 }: {
   readonly kind: 'scarf' | 'chador';
   readonly lift: number;
   readonly level: DetailLevel;
+  readonly sway: number;
 }) {
   const main = useMaterial(HEADWEAR_COLORS[kind]);
   // ONE draped mesh — an open cylinder segment that falls from the crown,
   // flares over the shoulders, and leaves the face exposed. The chador is
   // taller, wider, and wraps nearly all the way around (chest covered by
   // the same cloth); the scarf stops higher and opens wider at the front.
-  // Chador falls to just above the ground (hem ~0.15); the scarf stops at
-  // waist level. Crown stays put — only the hem lengthens.
-  const height = kind === 'chador' ? 1.32 : 0.72;
-  const centerY = (kind === 'chador' ? 1.47 : 1.45) - height / 2;
+  // The crown sits right on the head (head top = 1.33): its closed cap
+  // covers the head top and the rim overlaps it slightly — no air gap.
+  // Chador falls to just above the ground (hem ~0.14); the scarf stops at
+  // waist level. The whole garment rocks gently around the neck pivot while
+  // the figure walks, settling still on arrival.
+  const height = kind === 'chador' ? 1.2 : 0.68;
+  const centerY = COVERING_CROWN_Y - height / 2;
   return (
     <Detail level={level} min={4}>
       <group position={[0, lift, 0]}>
-        <mesh
-          geometry={drapeFor(kind, level)}
-          material={main}
-          position={[0, centerY, -0.03]}
-          scale={[1.08, height, 0.82]}
-          raycast={noRaycast}
-        />
+        <group position={[0, COVERING_PIVOT_Y, 0]} rotation={[sway * 0.03, 0, sway * 0.05]}>
+          <mesh
+            geometry={drapeFor(kind, level)}
+            material={main}
+            position={[0, centerY - COVERING_PIVOT_Y, -0.03]}
+            scale={[1.08, height, 0.82]}
+            raycast={noRaycast}
+          />
+        </group>
       </group>
     </Detail>
   );
@@ -596,6 +604,11 @@ function RoleDetails({
 /** Neck height the `figure-head` group pivots around (avatar glance). */
 const HEAD_PIVOT_Y = 0.95;
 
+/** Crown top of a scarf/chador: just over the head's top edge (1.33). */
+const COVERING_CROWN_Y = 1.335;
+/** Height the covering sways around — the neck, not the garment centre. */
+const COVERING_PIVOT_Y = 1.28;
+
 /**
  * A cubic character: body, head and two legs built from the shared box and
  * cylinder geometries. Both avatars use identical proportions and identical
@@ -622,6 +635,10 @@ export function CubicFigure({
   const lift = Math.sin(bobbing) * 0.05;
   // Squash-and-stretch only while walking; settles rigid on arrival.
   const squash = moving ? 1 + Math.sin(bobbing * 2) * 0.05 : 1;
+  // Cloth sway: garments lag the stride while the figure walks and rest
+  // still on arrival — bounded, driven by the same walk cycle (no loop of
+  // its own, nothing while idle, dropped under reduced motion).
+  const clothSway = moving && !prefersReducedMotion() ? Math.sin(bobbing) : 0;
   // Quality-tier geometry: level 0 resolves to the exact shared constants
   // (BOX / 12-seg CYLINDER) so low stays identical to the original look.
   const legGeometry = cylinderFor(detailLevel, detailLevel >= 2 ? 0.8 : 1);
@@ -787,31 +804,39 @@ export function CubicFigure({
       <Detail level={detailLevel} min={4}>
         {female ? (
           /* flared manteau skirt over the torso, in the figure's own outfit
-             color — garment-following, not a floating cone */
-          <mesh
-            geometry={cylinderFor(detailLevel, 0.8)}
-            material={limb}
-            position={[0, 0.56 + lift, 0]}
-            scale={[0.66, 0.46, 0.6]}
-            raycast={noRaycast}
-          />
+             color — garment-following, not a floating cone; swings softly
+             around the waist while walking */
+          <group position={[0, 0.78 + lift, 0]} rotation={[clothSway * 0.05, 0, clothSway * 0.02]}>
+            <mesh
+              geometry={cylinderFor(detailLevel, 0.8)}
+              material={limb}
+              position={[0, -0.22, 0]}
+              scale={[0.66, 0.46, 0.6]}
+              raycast={noRaycast}
+            />
+          </group>
         ) : (
           <>
-            {/* real clothes: trousers, belt, shirt placket + collar tips */}
-            <mesh
-              geometry={soft}
-              material={limb}
-              position={[-0.16, 0.22, 0]}
-              scale={[0.24, 0.34, 0.24]}
-              raycast={noRaycast}
-            />
-            <mesh
-              geometry={soft}
-              material={limb}
-              position={[0.16, 0.22, 0]}
-              scale={[0.24, 0.34, 0.24]}
-              raycast={noRaycast}
-            />
+            {/* real clothes: trousers swing at the hip in stride, belt,
+                shirt placket + collar tips stay torso-bound */}
+            <group position={[-0.16, 0.4, 0]} rotation={[clothSway * 0.14, 0, 0]}>
+              <mesh
+                geometry={soft}
+                material={limb}
+                position={[0, -0.18, 0]}
+                scale={[0.24, 0.34, 0.24]}
+                raycast={noRaycast}
+              />
+            </group>
+            <group position={[0.16, 0.4, 0]} rotation={[-clothSway * 0.14, 0, 0]}>
+              <mesh
+                geometry={soft}
+                material={limb}
+                position={[0, -0.18, 0]}
+                scale={[0.24, 0.34, 0.24]}
+                raycast={noRaycast}
+              />
+            </group>
             <mesh
               geometry={BOX}
               material={sharedLambert('#33303a')}
@@ -900,7 +925,12 @@ export function CubicFigure({
           />
           {role === 'avatar' || detailLevel >= 3 ? <Face lift={lift} level={detailLevel} /> : null}
           {covered ? (
-            <Covering kind={covering ?? 'chador'} lift={lift} level={detailLevel} />
+            <Covering
+              kind={covering ?? 'chador'}
+              lift={lift}
+              level={detailLevel}
+              sway={clothSway}
+            />
           ) : (
             <Headwear id={headwear} lift={lift} level={detailLevel} />
           )}

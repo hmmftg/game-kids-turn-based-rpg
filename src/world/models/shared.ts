@@ -149,8 +149,8 @@ export function drapeFor(kind: 'scarf' | 'chador', level: DetailLevel): THREE.Bu
   // thetaStart = half the face gap so the opening centres on +z (the face).
   const { radiusTop, radiusBottom, faceGap, folds } =
     kind === 'chador'
-      ? { radiusTop: 0.26, radiusBottom: 0.5, faceGap: 0.95, folds: 3 }
-      : { radiusTop: 0.23, radiusBottom: 0.42, faceGap: 1.7, folds: 5 };
+      ? { radiusTop: 0.235, radiusBottom: 0.5, faceGap: 0.95, folds: 3 }
+      : { radiusTop: 0.21, radiusBottom: 0.42, faceGap: 1.7, folds: 5 };
   const radialSegments = level <= 0 ? 16 : profileFor(level).radialSegments;
   const heightSegments = 8;
   const key = `drape:${kind}:${radiusTop}:${radiusBottom}:${faceGap}:${folds}:${radialSegments}`;
