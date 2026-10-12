@@ -91,10 +91,13 @@ async function catPosition() {
 // elder, so both stay in frame at the same pose for every tier.
 await page.getByTestId('trail-quest-greeting').click();
 await waitForWalkerIdle();
+await page.getByTestId('pause-button').click();
 for (let i = 0; i < 4; i += 1) {
   await page.getByTestId('zoom-in').click();
   await page.waitForTimeout(150);
 }
+await page.getByTestId('resume-button').click();
+await page.getByTestId('world-canvas').waitFor();
 await page.waitForTimeout(600);
 
 mkdirSync(out, { recursive: true });

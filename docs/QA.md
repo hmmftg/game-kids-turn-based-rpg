@@ -27,9 +27,9 @@ trouser legs use the same plush morph) — the added triangles stay inside exist
 | --------- | ----- | ------- | --------- |
 | very-low  | 116   | 260     | 5,238     |
 | low       | 273   | 506     | 12,280    |
-| normal    | 591   | 910     | 34,360    |
-| high      | 617   | 940     | 36,720    |
-| very-high | 631   | 956     | 39,168    |
+| normal    | 591   | 924     | 34,360    |
+| high      | 617   | 954     | 36,720    |
+| very-high | 631   | 970     | 39,168    |
 
 Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
 frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —
