@@ -280,13 +280,14 @@ describe('UX pass', { timeout: 90000 }, () => {
     await screen.findByTestId('encounter-demonstrate', undefined, { timeout: 10000 });
   });
 
-  it('keeps quality controls out of the child pause menu but in the parent area', async () => {
+  it('offers pictogram quality in the child pause menu and words in the parent area', async () => {
     const { user } = renderApp();
     await reachHub(user);
 
     await user.click(screen.getByTestId('pause-button'));
     expect(await screen.findByTestId('pause-menu')).toBeInTheDocument();
-    expect(screen.queryByTestId('quality-low')).toBeNull();
+    await user.click(screen.getByTestId('child-quality-low'));
+    expect(screen.getByTestId('child-quality-low')).toHaveAttribute('aria-checked', 'true');
 
     await user.click(screen.getByTestId('parent-entry-pause'));
     const hold = await screen.findByTestId('parent-gate-hold');
