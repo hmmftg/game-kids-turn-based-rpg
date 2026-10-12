@@ -6,6 +6,7 @@ import type {
   ResearchEventType,
   ResearchSession,
 } from '../../domain/research/types.ts';
+import { flushAutoFlushOnce, startAutoFlush, stopAutoFlush } from './autoFlush.ts';
 import { enqueueResearchEvent, pendingResearchCount, readResearchEvents } from './queue.ts';
 
 /**
@@ -29,6 +30,8 @@ interface ResearchConfig {
 
 let config: ResearchConfig | null = null;
 let lastTap: { x: number; z: number; target: string; at: number } | null = null;
+/** In-flight queue writes — the end-of-session flush waits on the last one. */
+let pendingEnqueue: Promise<void> = Promise.resolve();
 
 export function isResearchActive(): boolean {
   return config !== null;
@@ -84,6 +87,9 @@ export function startResearchSession(input: {
   const session = researchSession();
   record('session_started', environmentContext(input));
   record('started_game');
+  // W6: the queue uploads itself on an interval / reconnect while the
+  // session runs — the parent button stays as a manual "upload now".
+  startAutoFlush(config.sessionId);
   return session!;
 }
 
@@ -97,6 +103,8 @@ export function endResearchSession(): void {
   record('session_ended', { durationMs: Date.now() - config.startedAt });
   config = null;
   lastTap = null;
+  // Final flush after the session_ended stamp has landed in the queue.
+  flushAutoFlushOnce(pendingEnqueue);
 }
 
 /** A parent's observer bookmark — a hand-marked moment that matters. */
@@ -118,7 +126,8 @@ export function record(type: ResearchEventType, context: ResearchContext = {}): 
     },
   };
   // Fire-and-forget: the queue's failure posture already degrades to memory.
-  void enqueueResearchEvent(event);
+  pendingEnqueue = enqueueResearchEvent(event);
+  void pendingEnqueue.catch(() => undefined);
 }
 
 /**
@@ -153,6 +162,8 @@ export function recordPassiveBeat(context: ResearchContext): void {
 export function __resetResearchForTest(): void {
   config = null;
   lastTap = null;
+  pendingEnqueue = Promise.resolve();
+  stopAutoFlush();
 }
 
 /** Count of queued events for the parent-area indicator. */
