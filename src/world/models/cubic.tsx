@@ -1,3 +1,6 @@
+import { useRef } from 'react';
+import type * as THREE from 'three';
+import { useFrame, useThree } from '@react-three/fiber';
 import type { HeadwearId } from '../../domain/game/types.ts';
 import type {
   AnimalProps,
@@ -1440,6 +1443,74 @@ interface SpeciesProps {
   readonly level: DetailLevel;
 }
 
+/** ~the dash-bob cadence in useCritters (phase += step * 10). */
+const GAIT_SPEED = 9;
+
+/**
+ * Per-part stride/flap motion while a critter moves. Animatable parts live in
+ * a single group named `gait-<kind>` carrying the authored pose; the gait root
+ * itself mounts only while `moving`, so idle critters add no objects at all.
+ * Each activation traverses the fresh root, captures the authored pose as the
+ * base, and oscillates around it, so `moving` pose switches always win and the
+ * written axis composes with the authored one. On stop the wrapper unmounts —
+ * nothing else writes those rotations — and under reduced motion the gait
+ * never activates. Same bounded, presentation-only contract as the figure's
+ * walkSway. Frames already flow while a critter moves; invalidate() keeps it
+ * true in every world.
+ */
+function useCritterGait(rootRef: React.RefObject<THREE.Group | null>) {
+  const lastRoot = useRef<THREE.Group | null>(null);
+  const joints = useRef<THREE.Object3D[]>([]);
+  const bases = useRef<THREE.Euler[]>([]);
+  const invalidate = useThree((state) => state.invalidate);
+  useFrame((state) => {
+    const root = rootRef.current;
+    if (!root || prefersReducedMotion()) return;
+    if (root !== lastRoot.current) {
+      lastRoot.current = root;
+      joints.current = [];
+      root.traverse((obj) => {
+        if (obj.name.startsWith('gait-')) joints.current.push(obj);
+      });
+      // Capture the authored pose as the swing baseline — React has already
+      // applied this burst's `moving` pose by now.
+      bases.current = joints.current.map((joint) => joint.rotation.clone());
+    }
+    const s = Math.sin(state.clock.elapsedTime * GAIT_SPEED);
+    const flutter = Math.sin(state.clock.elapsedTime * GAIT_SPEED * 1.8);
+    joints.current.forEach((joint, i) => {
+      const base = bases.current[i]!;
+      switch (joint.name.slice(5)) {
+        case 'a':
+          joint.rotation.x = base.x + s * 0.5;
+          break;
+        case 'b':
+          joint.rotation.x = base.x - s * 0.5;
+          break;
+        case 'flap-l':
+          joint.rotation.z = base.z + s * 0.35;
+          break;
+        case 'flap-r':
+          joint.rotation.z = base.z - s * 0.35;
+          break;
+        case 'swish':
+          joint.rotation.y = base.y + s * 0.45;
+          break;
+        case 'tail':
+          joint.rotation.z = base.z + s * 0.18;
+          break;
+        case 'flutter-l':
+          joint.rotation.z = base.z + flutter * 0.5;
+          break;
+        case 'flutter-r':
+          joint.rotation.z = base.z - flutter * 0.5;
+          break;
+      }
+    });
+    invalidate();
+  });
+}
+
 function CatMesh({ tint, moving, level }: SpeciesProps) {
   const fur = useMaterial(tint ?? '#d98a4a');
   const sphere = sphereFor(level);
@@ -1464,15 +1535,15 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           scale={[0.3, 0.28, 0.28]}
           raycast={noRaycast}
         />
-        {/* tail: raised when running, curled low when sitting */}
-        <mesh
-          geometry={soft}
-          material={fur}
+        {/* tail: raised when running, curled low when sitting; sways
+            gently on the `gait-tail` joint while moving */}
+        <group
+          name="gait-tail"
           position={[0, moving ? 0.5 : 0.3, -0.38]}
           rotation={[moving ? -0.4 : 0.6, 0, 0]}
-          scale={[0.07, 0.5, 0.07]}
-          raycast={noRaycast}
-        />
+        >
+          <mesh geometry={soft} material={fur} scale={[0.07, 0.5, 0.07]} raycast={noRaycast} />
+        </group>
         {/* muzzle pad on the face side of the head */}
         <mesh
           geometry={soft}
@@ -1510,35 +1581,44 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
         />
       </Detail>
       <Detail level={level} min={3}>
-        {/* four legs with lighter paw tips — a full body, not a floating blob */}
-        <mesh
-          geometry={soft}
-          material={fur}
-          position={[-0.12, 0.11, 0.18]}
-          scale={[0.07, 0.16, 0.08]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={soft}
-          material={fur}
-          position={[0.12, 0.11, 0.18]}
-          scale={[0.07, 0.16, 0.08]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={soft}
-          material={fur}
-          position={[-0.13, 0.11, -0.18]}
-          scale={[0.08, 0.16, 0.09]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={soft}
-          material={fur}
-          position={[0.13, 0.11, -0.18]}
-          scale={[0.08, 0.16, 0.09]}
-          raycast={noRaycast}
-        />
+        {/* four legs with lighter paw tips — a full body, not a floating blob;
+            diagonal pairs trot on gait joints while moving */}
+        <group name="gait-a" position={[-0.12, 0.19, 0.18]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.08, 0]}
+            scale={[0.07, 0.16, 0.08]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-b" position={[0.12, 0.19, 0.18]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.08, 0]}
+            scale={[0.07, 0.16, 0.08]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-b" position={[-0.13, 0.19, -0.18]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.08, 0]}
+            scale={[0.08, 0.16, 0.09]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-a" position={[0.13, 0.19, -0.18]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.08, 0]}
+            scale={[0.08, 0.16, 0.09]}
+            raycast={noRaycast}
+          />
+        </group>
         <mesh
           geometry={soft}
           material={sharedLambert(DETAIL_COLORS.sign)}
@@ -1761,15 +1841,20 @@ function BirdMesh({ tint, moving, level }: SpeciesProps) {
           scale={[0.14, 0.02, 0.22]}
           raycast={noRaycast}
         />
-        {/* wing band: a wide flat slab — spread while flying, folded back when perched */}
-        <mesh
-          geometry={BOX}
-          material={feathers}
+        {/* wing band: a wide flat slab — spread while flying, folded back
+            when perched; flaps on the `gait-flap-l` joint while moving */}
+        <group
+          name="gait-flap-l"
           position={[0, moving ? 0.3 : 0.26, moving ? 0 : -0.1]}
           rotation={[moving ? 0 : -0.5, 0, 0]}
-          scale={[moving ? 0.72 : 0.3, 0.03, moving ? 0.2 : 0.3]}
-          raycast={noRaycast}
-        />
+        >
+          <mesh
+            geometry={BOX}
+            material={feathers}
+            scale={[moving ? 0.72 : 0.3, 0.03, moving ? 0.2 : 0.3]}
+            raycast={noRaycast}
+          />
+        </group>
       </Detail>
       <Detail level={level} min={3}>
         {/* two perching feet */}
@@ -1873,15 +1958,20 @@ function EagleMesh({ tint, moving, level }: SpeciesProps) {
         />
       </Detail>
       <Detail level={level} min={2}>
-        {/* broad wing band — the soaring silhouette is the whole point up high */}
-        <mesh
-          geometry={BOX}
-          material={feathers}
+        {/* broad wing band — the soaring silhouette is the whole point up
+            high; flaps on the `gait-flap-l` joint while moving */}
+        <group
+          name="gait-flap-l"
           position={[0, moving ? 0.42 : 0.34, 0]}
           rotation={[0, 0, moving ? 0 : -0.2]}
-          scale={[moving ? 1.6 : 0.5, 0.04, moving ? 0.36 : 0.5]}
-          raycast={noRaycast}
-        />
+        >
+          <mesh
+            geometry={BOX}
+            material={feathers}
+            scale={[moving ? 1.6 : 0.5, 0.04, moving ? 0.36 : 0.5]}
+            raycast={noRaycast}
+          />
+        </group>
       </Detail>
       <Detail level={level} min={3}>
         {/* talons — the raptor's grip */}
@@ -1955,15 +2045,11 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
         raycast={noRaycast}
       />
       <Detail level={level} min={1}>
-        {/* tail fin: kicks sideways while swimming */}
-        <mesh
-          geometry={BOX}
-          material={scales}
-          position={[0, 0.04, -0.3]}
-          rotation={[0, moving ? 0.5 : 0.15, 0]}
-          scale={[0.04, 0.16, 0.16]}
-          raycast={noRaycast}
-        />
+        {/* tail fin: kicks sideways while swimming — the `gait-swish`
+            joint oscillates it while moving */}
+        <group name="gait-swish" position={[0, 0.04, -0.3]} rotation={[0, moving ? 0.5 : 0.15, 0]}>
+          <mesh geometry={BOX} material={scales} scale={[0.04, 0.16, 0.16]} raycast={noRaycast} />
+        </group>
       </Detail>
       <Detail level={level} min={3}>
         {/* round dark eyes */}
@@ -2002,15 +2088,11 @@ function FishMesh({ tint, moving, level }: SpeciesProps) {
         />
       </Detail>
       <Detail level={level} min={5}>
-        {/* second tail lobe — a real forked tail — plus the lateral line */}
-        <mesh
-          geometry={BOX}
-          material={scales}
-          position={[0, -0.06, -0.42]}
-          rotation={[0.5, 0, 0]}
-          scale={[0.03, 0.12, 0.1]}
-          raycast={noRaycast}
-        />
+        {/* second tail lobe — a real forked tail — kicks with the same
+            swish joint, plus the lateral line */}
+        <group name="gait-swish" position={[0, -0.06, -0.42]} rotation={[0.5, 0, 0]}>
+          <mesh geometry={BOX} material={scales} scale={[0.03, 0.12, 0.1]} raycast={noRaycast} />
+        </group>
         <mesh
           geometry={BOX}
           material={sharedLambert(DETAIL_COLORS.sign)}
@@ -2049,23 +2131,22 @@ function ButterflyMesh({ tint, moving, level }: SpeciesProps) {
         raycast={noRaycast}
       />
       {/* two flat wings; angled up while fluttering, held wider at rest so
-          the silhouette still reads as a butterfly from the fixed camera */}
-      <mesh
-        geometry={BOX}
-        material={wings}
+          the silhouette still reads as a butterfly from the fixed camera —
+          `gait-flutter-*` joints beat the wings while moving */}
+      <group
+        name="gait-flutter-l"
         position={[-0.14, moving ? 0.04 : 0.02, 0]}
         rotation={[0, 0, moving ? 0.7 : 0.25]}
-        scale={[0.24, 0.02, 0.3]}
-        raycast={noRaycast}
-      />
-      <mesh
-        geometry={BOX}
-        material={wings}
+      >
+        <mesh geometry={BOX} material={wings} scale={[0.24, 0.02, 0.3]} raycast={noRaycast} />
+      </group>
+      <group
+        name="gait-flutter-r"
         position={[0.14, moving ? 0.04 : 0.02, 0]}
         rotation={[0, 0, moving ? -0.7 : -0.25]}
-        scale={[0.24, 0.02, 0.3]}
-        raycast={noRaycast}
-      />
+      >
+        <mesh geometry={BOX} material={wings} scale={[0.24, 0.02, 0.3]} raycast={noRaycast} />
+      </group>
       <Detail level={level} min={2}>
         {/* antennae nubs */}
         <mesh
@@ -2082,16 +2163,27 @@ function ButterflyMesh({ tint, moving, level }: SpeciesProps) {
 }
 
 export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: AnimalProps) {
-  switch (variant) {
-    case 'cat':
-      return <CatMesh tint={tint} moving={moving} level={detailLevel} />;
-    case 'bird':
-      return <BirdMesh tint={tint} moving={moving} level={detailLevel} />;
-    case 'eagle':
-      return <EagleMesh tint={tint} moving={moving} level={detailLevel} />;
-    case 'fish':
-      return <FishMesh tint={tint} moving={moving} level={detailLevel} />;
-    case 'butterfly':
-      return <ButterflyMesh tint={tint} moving={moving} level={detailLevel} />;
-  }
+  const gaitRoot = useRef<THREE.Group>(null);
+  useCritterGait(gaitRoot);
+  const species =
+    variant === 'cat' ? (
+      <CatMesh tint={tint} moving={moving} level={detailLevel} />
+    ) : variant === 'bird' ? (
+      <BirdMesh tint={tint} moving={moving} level={detailLevel} />
+    ) : variant === 'eagle' ? (
+      <EagleMesh tint={tint} moving={moving} level={detailLevel} />
+    ) : variant === 'fish' ? (
+      <FishMesh tint={tint} moving={moving} level={detailLevel} />
+    ) : (
+      <ButterflyMesh tint={tint} moving={moving} level={detailLevel} />
+    );
+  // The gait root exists only while the critter moves — idle renders the
+  // bare species with zero extra objects.
+  return moving ? (
+    <group ref={gaitRoot} dispose={null}>
+      {species}
+    </group>
+  ) : (
+    species
+  );
 }
