@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 // presents the consent gate — never a silent record — and `?research=0`
 // (set by the gate's exit) opts the session out. Ordinary play after
 // consent lands structured events in the researchEvents store.
+// `autoflush=0` keeps W6's automatic upload from draining the queue mid-assert.
 
 const readEvents = (page: Page) =>
   page.evaluate(
@@ -41,7 +42,7 @@ test('the consent gate stands between the launch and the game', async ({ page })
 });
 
 test('a started session records started_game and selected_avatar', async ({ page }) => {
-  await page.goto('/?research=1');
+  await page.goto('/?research=1&autoflush=0');
   await page.getByTestId('research-age-3-4').click();
   await page.getByTestId('research-start').click();
   // Normal boot continues after consent — same avatar flow as the base game.
@@ -66,7 +67,7 @@ test('a started session records started_game and selected_avatar', async ({ page
 });
 
 test('observer bookmarks stamp and session end closes the session', async ({ page }) => {
-  await page.goto('/?research=1');
+  await page.goto('/?research=1&autoflush=0');
   await page.getByTestId('research-age-5-7').click();
   await page.getByTestId('research-start').click();
   await page.getByTestId('start-button').click();

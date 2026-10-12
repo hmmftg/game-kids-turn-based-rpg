@@ -107,7 +107,8 @@ export async function flushResearchQueue(_sessionId: string): Promise<'skipped' 
   let sent = 0;
   for (const e of events) {
     // The research endpoint is the sole intentional network call: it exists
-    // only when configured at build time and fires only on the parent's flush.
+    // only when configured at build time, and fires on the automatic flushes
+    // (interval/reconnect/session-end) or the parent's manual upload.
     // eslint-disable-next-line no-restricted-globals
     const response = await fetch(url, {
       method: 'POST',
