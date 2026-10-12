@@ -1,20 +1,32 @@
 import { FA } from '../../content/fa/strings.ts';
 import { clampUserZoom, USER_ZOOM_MAX, USER_ZOOM_MIN } from '../../framework/index.ts';
-import type { AudioSettings, StickerId } from '../../domain/game/types.ts';
+import type { AudioSettings, QualityTier, StickerId } from '../../domain/game/types.ts';
 import { StickerShelf } from './QuestTrail.tsx';
+
+const QUALITY_TIERS: readonly QualityTier[] = ['very-low', 'low', 'normal', 'high', 'very-high'];
+
+/** Pictogram scale for pre-readers: heavier picture runs slower. */
+const QUALITY_GLYPH: Record<QualityTier, string> = {
+  'very-low': '🐢',
+  low: '🚶',
+  normal: '🚲',
+  high: '🚗',
+  'very-high': '🚀',
+};
 
 /**
  * The one child-facing menu (W4): every scattered HUD control gathers here —
  * album, friends, zoom, sound, player switching. The world keeps only the
  * menu opener and the guidance surface (objective chip + quest trail).
  * Sheet-opening entries resume first because the sheets overlay the HUD,
- * not the paused layer. Technical settings (rendering quality, diagnostics,
- * updates) live in the parent area, not here.
+ * not the paused layer. Picture quality is a pictogram choice here too
+ * (child-accessible by user decision); diagnostics/updates stay parent-only.
  */
 export function PauseMenu({
   audio,
   stickers,
   zoomFactor,
+  qualityTier,
   onResume,
   onAudioChange,
   onParentArea,
@@ -22,10 +34,12 @@ export function PauseMenu({
   onOpenAlbum,
   onOpenNearby,
   onZoom,
+  onQualityChange,
 }: {
   readonly audio: AudioSettings;
   readonly stickers: readonly StickerId[];
   readonly zoomFactor: number;
+  readonly qualityTier: QualityTier;
   readonly onResume: () => void;
   readonly onAudioChange: (patch: Partial<AudioSettings>) => void;
   readonly onParentArea: () => void;
@@ -33,6 +47,7 @@ export function PauseMenu({
   readonly onOpenAlbum: () => void;
   readonly onOpenNearby: () => void;
   readonly onZoom: (factor: number) => void;
+  readonly onQualityChange: (tier: QualityTier) => void;
 }) {
   return (
     <div className="layer layer--overlay" data-testid="pause-menu">
@@ -125,6 +140,27 @@ export function PauseMenu({
             </span>{' '}
             {FA.sfx}: {audio.sfxMuted ? FA.off : FA.on}
           </button>
+        </div>
+
+        {/* W5: child quality choice — a pictogram speed scale instead of the
+            parent's word labels. Same state and dispatch as parent-quality. */}
+        <div className="row" role="radiogroup" aria-label={FA.quality}>
+          {QUALITY_TIERS.map((tier) => (
+            <button
+              key={tier}
+              type="button"
+              role="radio"
+              className="btn btn--secondary"
+              aria-checked={qualityTier === tier}
+              aria-label={FA.quality}
+              onClick={() => onQualityChange(tier)}
+              data-testid={`child-quality-${tier}`}
+            >
+              <span className="emoji" aria-hidden="true">
+                {QUALITY_GLYPH[tier]}
+              </span>
+            </button>
+          ))}
         </div>
 
         <div className="row">

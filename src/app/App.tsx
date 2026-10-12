@@ -696,6 +696,7 @@ export function App() {
           audio={state.audio}
           stickers={state.stickers}
           zoomFactor={zoomFactor}
+          qualityTier={state.qualityTier}
           onResume={() => dispatch({ type: 'RESUME' })}
           onAudioChange={(audio) => dispatch({ type: 'SET_AUDIO_SETTINGS', audio })}
           onParentArea={() => dispatch({ type: 'OPEN_PARENT_GATE' })}
@@ -715,6 +716,7 @@ export function App() {
             dispatch({ type: 'RESUME' });
           }}
           onZoom={setZoomFactor}
+          onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
         />
       );
 
