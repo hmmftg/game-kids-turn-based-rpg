@@ -205,7 +205,9 @@ function Covering({
   // flares over the shoulders, and leaves the face exposed. The chador is
   // taller, wider, and wraps nearly all the way around (chest covered by
   // the same cloth); the scarf stops higher and opens wider at the front.
-  const height = kind === 'chador' ? 0.95 : 0.72;
+  // Chador falls to just above the ground (hem ~0.15); the scarf stops at
+  // waist level. Crown stays put — only the hem lengthens.
+  const height = kind === 'chador' ? 1.32 : 0.72;
   const centerY = (kind === 'chador' ? 1.47 : 1.45) - height / 2;
   return (
     <Detail level={level} min={4}>
@@ -354,13 +356,16 @@ function Hair({
 
 /** Small static face: two eyes + a mouth on the head's +z side. */
 function Face({ lift, level }: { readonly lift: number; readonly level: DetailLevel }) {
+  // Round eyes at detail >=3 — same footprint, softer silhouette; the blink
+  // still scales the `face-eye` meshes so liveliness is untouched.
+  const eye = level >= 3 ? eyeFor() : BOX;
   return (
     <Detail level={level} min={1}>
       {/* `face-eye` names let the presentation-liveliness layer blink the
           eyes without touching the figure contract. */}
       <mesh
         name="face-eye"
-        geometry={BOX}
+        geometry={eye}
         material={sharedLambert('#33303a')}
         position={[-0.09, 1.2 + lift, 0.2]}
         scale={[0.05, 0.07, 0.02]}
@@ -368,7 +373,7 @@ function Face({ lift, level }: { readonly lift: number; readonly level: DetailLe
       />
       <mesh
         name="face-eye"
-        geometry={BOX}
+        geometry={eye}
         material={sharedLambert('#33303a')}
         position={[0.09, 1.2 + lift, 0.2]}
         scale={[0.05, 0.07, 0.02]}
@@ -620,6 +625,13 @@ export function CubicFigure({
   // Quality-tier geometry: level 0 resolves to the exact shared constants
   // (BOX / 12-seg CYLINDER) so low stays identical to the original look.
   const legGeometry = cylinderFor(detailLevel, detailLevel >= 2 ? 0.8 : 1);
+  const soft = softBoxFor(detailLevel);
+  const covered =
+    covering !== undefined &&
+    detailLevel >= 4 &&
+    headwear !== 'kolah' &&
+    headwear !== 'kufi' &&
+    headwear !== 'beanie';
   // The torso stays the shared BOX at every tier: the tunic's angular slab
   // is intentional stylization, and rounding its corners would cost ~300
   // triangles per figure for a change barely visible at hub distance.
@@ -677,14 +689,14 @@ export function CubicFigure({
       <Detail level={detailLevel} min={4}>
         {/* shoe caps — darker tips grounded at the bottom of each leg */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert('#4a3f36')}
           position={[-0.16, 0.05, 0.04]}
           scale={[0.22, 0.1, 0.26]}
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={sharedLambert('#4a3f36')}
           position={[0.16, 0.05, 0.04]}
           scale={[0.22, 0.1, 0.26]}
@@ -695,7 +707,7 @@ export function CubicFigure({
         {/* arms angled slightly out from the shoulders; hands and a
             two-finger hint in the figure's own skin tone */}
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={limb}
           position={[-0.335, 0.72 + lift, 0]}
           rotation={[0, 0, 0.12]}
@@ -703,7 +715,7 @@ export function CubicFigure({
           raycast={noRaycast}
         />
         <mesh
-          geometry={BOX}
+          geometry={soft}
           material={limb}
           position={[0.335, 0.72 + lift, 0]}
           rotation={[0, 0, -0.12]}
@@ -756,14 +768,14 @@ export function CubicFigure({
           <>
             {/* shoes — the avatar's own pair already lands at medium */}
             <mesh
-              geometry={BOX}
+              geometry={soft}
               material={sharedLambert('#5a4632')}
               position={[-0.16, 0.04, 0.03]}
               scale={[0.24, 0.08, 0.3]}
               raycast={noRaycast}
             />
             <mesh
-              geometry={BOX}
+              geometry={soft}
               material={sharedLambert('#5a4632')}
               position={[0.16, 0.04, 0.03]}
               scale={[0.24, 0.08, 0.3]}
@@ -787,14 +799,14 @@ export function CubicFigure({
           <>
             {/* real clothes: trousers, belt, shirt placket + collar tips */}
             <mesh
-              geometry={BOX}
+              geometry={soft}
               material={limb}
               position={[-0.16, 0.22, 0]}
               scale={[0.24, 0.34, 0.24]}
               raycast={noRaycast}
             />
             <mesh
-              geometry={BOX}
+              geometry={soft}
               material={limb}
               position={[0.16, 0.22, 0]}
               scale={[0.24, 0.34, 0.24]}
@@ -887,17 +899,14 @@ export function CubicFigure({
             raycast={noRaycast}
           />
           {role === 'avatar' || detailLevel >= 3 ? <Face lift={lift} level={detailLevel} /> : null}
-          {covering !== undefined &&
-          detailLevel >= 4 &&
-          headwear !== 'kolah' &&
-          headwear !== 'kufi' &&
-          headwear !== 'beanie' ? (
-            <Covering kind={covering} lift={lift} level={detailLevel} />
+          {covered ? (
+            <Covering kind={covering ?? 'chador'} lift={lift} level={detailLevel} />
           ) : (
             <Headwear id={headwear} lift={lift} level={detailLevel} />
           )}
-          {/* Covered heads skip hair entirely — headwear replaces the silhouette. */}
-          {role === 'avatar' && headwear === 'none' && hairStyle ? (
+          {/* Covered heads skip hair entirely — the scarf/chador replaces
+              the silhouette and nothing may poke through the cloth. */}
+          {role === 'avatar' && headwear === 'none' && !covered && hairStyle ? (
             <Hair style={hairStyle} color={hairColor} lift={lift} level={detailLevel} />
           ) : null}
         </group>

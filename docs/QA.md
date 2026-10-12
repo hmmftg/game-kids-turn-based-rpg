@@ -20,15 +20,16 @@ proof. **Observed sampled maxima** (re-measured after the realism pass, October 
 very-low/low unchanged; `normal` now renders the full-body/clothing tier, and high/very-high
 stack the single-mesh coverings, garment finishing, and animal feather/fur detail on top.
 The coverings are cloth-deformed single meshes (not cones), and animals gain plush rounded
-parts + eyes at detail ≥3 — the added ~21 % triangles stay inside existing ceilings):
+parts + eyes at detail ≥3 (round eyes on human faces too; arms, shoes,
+trouser legs use the same plush morph) — the added triangles stay inside existing ceilings):
 
 | Tier      | Calls | Objects | Triangles |
 | --------- | ----- | ------- | --------- |
 | very-low  | 116   | 260     | 5,238     |
 | low       | 273   | 506     | 12,280    |
-| normal    | 594   | 914     | 29,212    |
-| high      | 620   | 944     | 31,572    |
-| very-high | 634   | 960     | 34,020    |
+| normal    | 591   | 910     | 34,360    |
+| high      | 617   | 940     | 36,720    |
+| very-high | 631   | 956     | 39,168    |
 
 Headless SwiftShader renders this scene continuously at idle (liveliness cues invalidate every
 frame); measured frame pacing at medium is ~41 fps vs ~48 fps on the pre-change build —
