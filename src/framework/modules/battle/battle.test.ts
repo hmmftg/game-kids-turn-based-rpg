@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { advanceBattlePhase, chooseBattleAction, createBattle, enemyIntentFor } from './battle.ts';
+import {
+  advanceBattlePhase,
+  battleAchievements,
+  chooseBattleAction,
+  createBattle,
+  enemyIntentFor,
+} from './battle.ts';
 import { battleReducer } from './reducer.ts';
 import type { BattleDefinition, BattleState } from './types.ts';
 import { validateBattleDefinition } from './validation.ts';
@@ -202,5 +208,41 @@ describe('battle definition validation', () => {
     expect(validateBattleDefinition(noWeakness).map((issue) => issue.code)).toContain(
       'unwinnable-battle',
     );
+  });
+
+  it('logs every resolved round and derives session badges off it', () => {
+    // Ball-shy mouse: two bonks win, every round effective → all three badges.
+    const ballShy: BattleDefinition = { ...DEFINITION, weakness: 'action-ball' };
+    let battle = advanceBattlePhase(createBattle(ballShy));
+    battle = playRound(battle, 'action-ball');
+    battle = playRound(battle, 'action-ball');
+    expect(battle.phase).toBe('victory');
+    expect(battle.rounds).toEqual([
+      { action: 'action-ball', outcome: 'opponent-hit' },
+      { action: 'action-ball', outcome: 'opponent-hit' },
+    ]);
+    expect(battleAchievements(battle)).toEqual(['won', 'found-the-fear', 'steady']);
+
+    // A whiffed round still wins but forfeits `steady`; the landed weak
+    // bonks still earn `found-the-fear`. No weakness → no fear badge, and
+    // unfinished battles earn nothing.
+    const plain: BattleDefinition = {
+      ...DEFINITION,
+      enemyIntentPattern: ['attack', 'rest', 'rest'],
+      weakness: 'action-ball',
+    };
+    let messy = advanceBattlePhase(createBattle(plain));
+    messy = playRound(messy, 'action-ball'); // whiffed
+    messy = playRound(messy, 'action-ball'); // weak hit −2
+    messy = playRound(messy, 'action-ball'); // weak hit −2 → victory
+    expect(messy.phase).toBe('victory');
+    expect(battleAchievements(messy)).toEqual(['won', 'found-the-fear']);
+
+    const fearless: BattleDefinition = { ...DEFINITION, hearts: 1, maxRounds: 1 };
+    let quick = advanceBattlePhase(createBattle(fearless));
+    quick = playRound(quick, 'action-ball');
+    expect(quick.phase).toBe('victory');
+    expect(battleAchievements(quick)).toEqual(['won', 'steady']);
+    expect(battleAchievements(createBattle(DEFINITION))).toEqual([]);
   });
 });

@@ -88,6 +88,11 @@ test.describe('micro turn-based battle', () => {
 
     await page.getByTestId('battle-action-ball').click();
     await waitForPhase(page, 'victory');
+    // Victory earns the session badges: won the game, found what the mouse
+    // fears, and never missed a beat.
+    await expect(page.getByTestId('battle-badge-won')).toBeVisible();
+    await expect(page.getByTestId('battle-badge-found-the-fear')).toBeVisible();
+    await expect(page.getByTestId('battle-badge-steady')).toBeVisible();
     await expect(page.getByTestId('battle-continue')).toBeVisible();
 
     // LEAVE_BATTLE is the only exit — back to a plain hub, nothing persisted.
