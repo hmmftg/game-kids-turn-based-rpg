@@ -28,6 +28,9 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     // battle keeps the mouse resting — ball taps score, cushion taps harmlessly
     // do nothing. `attack` rows stay in the model for future definitions.
     enemyIntentPattern: ['rest', 'rest', 'rest'],
+    // W7: the mouse is scared of the ball — a landed ball costs it two
+    // hearts, so two good bonks end the game.
+    weakness: 'action-ball',
   },
   // Challenge Zone opponents: same machine, same actions — 3 rounds is the
   // hard maximum and hearts are a per-opponent authored budget ≤3, so each
@@ -35,7 +38,9 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
   // `attack` round fits inside the budget and the battle stays winnable).
   // Each carries a `victoryDiscoveryId`: winning records the world fact
   // that drives the opponent's happy/resting presentation and opens a
-  // gated path.
+  // gated path. Each also fears one action (W7): the bird fears the ball
+  // (one good bonk wins), the eagle and butterfly fear the cushion — their
+  // own attack bounces back and costs them a heart.
   {
     battleId: 'battle-challenge-bird',
     opponentId: 'npc-challenge-bird',
@@ -43,6 +48,7 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     maxRounds: 3,
     availableActions: ['action-ball', 'action-shield'],
     enemyIntentPattern: ['rest', 'attack', 'rest'],
+    weakness: 'action-ball',
     victoryDiscoveryId: 'discovery-challenge-bird',
   },
   {
@@ -52,6 +58,7 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     maxRounds: 3,
     availableActions: ['action-ball', 'action-shield'],
     enemyIntentPattern: ['attack', 'rest', 'rest'],
+    weakness: 'action-shield',
     victoryDiscoveryId: 'discovery-challenge-eagle',
   },
   {
@@ -61,6 +68,7 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     maxRounds: 3,
     availableActions: ['action-ball', 'action-shield'],
     enemyIntentPattern: ['rest', 'rest', 'attack'],
+    weakness: 'action-shield',
     victoryDiscoveryId: 'discovery-challenge-butterfly',
   },
 ];

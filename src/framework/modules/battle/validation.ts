@@ -1,4 +1,4 @@
-import { enemyIntentFor } from './battle.ts';
+import { damagePotential } from './battle.ts';
 import type { BattleDefinition } from './types.ts';
 
 /**
@@ -13,7 +13,11 @@ import type { BattleDefinition } from './types.ts';
  */
 export interface BattleDefinitionIssue {
   readonly code:
-    'bad-battle-budget' | 'no-battle-actions' | 'empty-intent-pattern' | 'unwinnable-battle';
+    | 'bad-battle-budget'
+    | 'no-battle-actions'
+    | 'empty-intent-pattern'
+    | 'weakness-not-offered'
+    | 'unwinnable-battle';
   readonly message: string;
 }
 
@@ -31,19 +35,26 @@ export function validateBattleDefinition(definition: BattleDefinition): BattleDe
   if (definition.enemyIntentPattern.length === 0) {
     issues.push({ code: 'empty-intent-pattern', message: 'Battle intent pattern is empty.' });
   }
+  if (
+    definition.weakness !== undefined &&
+    !definition.availableActions.includes(definition.weakness)
+  ) {
+    issues.push({
+      code: 'weakness-not-offered',
+      message: `Battle weakness ${definition.weakness} is not among the child's offered actions.`,
+    });
+  }
   if (issues.length > 0) return issues;
-  // Scorable rounds are `rest` rounds where the ball is offered; enough must
-  // fit inside the round budget to take every heart.
+  // Scorable is the best heart damage the child can deal each round — the
+  // engine's own matrix (weakness included) decides, not a literal count.
   let scorable = 0;
-  if (definition.availableActions.includes('action-ball')) {
-    for (let round = 1; round <= definition.maxRounds; round += 1) {
-      if (enemyIntentFor(definition, round) === 'rest') scorable += 1;
-    }
+  for (let round = 1; round <= definition.maxRounds; round += 1) {
+    scorable += damagePotential(definition, round);
   }
   if (scorable < definition.hearts) {
     issues.push({
       code: 'unwinnable-battle',
-      message: `Battle cannot be won: only ${scorable} rest rounds within ${definition.maxRounds} rounds but ${definition.hearts} hearts to take.`,
+      message: `Battle cannot be won: at most ${scorable} hearts of damage within ${definition.maxRounds} rounds but ${definition.hearts} hearts to take.`,
     });
   }
   return issues;

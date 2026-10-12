@@ -64,6 +64,34 @@ describe('battle rules', () => {
     expect(nothing.opponentHearts).toBe(3);
   });
 
+  it('weakness costs the opponent one extra heart on an effective action', () => {
+    const atChoice: BattleState = { ...createBattle(DEFINITION), phase: 'playerChoice' };
+    const ballShy: BattleDefinition = { ...DEFINITION, weakness: 'action-ball' };
+    const hit = chooseBattleAction(
+      { ...atChoice, definition: ballShy, enemyIntent: 'rest' },
+      'action-ball',
+    );
+    expect(hit.lastOutcome).toBe('opponent-hit');
+    expect(hit.opponentHearts).toBe(1); // 3 − 2
+
+    // A feared cushion turns `blocked` into damage: the charge bounces back.
+    const cushionShy: BattleDefinition = { ...DEFINITION, weakness: 'action-shield' };
+    const blocked = chooseBattleAction(
+      { ...atChoice, definition: cushionShy, enemyIntent: 'attack' },
+      'action-shield',
+    );
+    expect(blocked.lastOutcome).toBe('blocked');
+    expect(blocked.opponentHearts).toBe(2); // 3 − 1
+
+    // A whiffed weak action still costs nothing.
+    const whiffed = chooseBattleAction(
+      { ...atChoice, definition: ballShy, enemyIntent: 'attack' },
+      'action-ball',
+    );
+    expect(whiffed.lastOutcome).toBe('whiffed');
+    expect(whiffed.opponentHearts).toBe(3);
+  });
+
   it('rejects actions outside playerChoice and actions the definition does not offer', () => {
     const battle = createBattle(DEFINITION);
     expect(chooseBattleAction(battle, 'action-ball')).toBe(battle);
@@ -142,6 +170,36 @@ describe('battle definition validation', () => {
       enemyIntentPattern: ['rest', 'attack'],
     };
     expect(validateBattleDefinition(stretched).map((issue) => issue.code)).toContain(
+      'unwinnable-battle',
+    );
+  });
+
+  it('weakness must be an offered action, and a feared shield makes attack rounds scorable', () => {
+    const notOffered: BattleDefinition = {
+      ...DEFINITION,
+      availableActions: ['action-ball'],
+      weakness: 'action-shield',
+    };
+    expect(validateBattleDefinition(notOffered).map((issue) => issue.code)).toContain(
+      'weakness-not-offered',
+    );
+    // [attack] × 3 rounds, shield-weak: blocking every charge deals 3 hearts.
+    const shieldShy: BattleDefinition = {
+      ...DEFINITION,
+      hearts: 3,
+      maxRounds: 3,
+      enemyIntentPattern: ['attack'],
+      weakness: 'action-shield',
+    };
+    expect(validateBattleDefinition(shieldShy)).toEqual([]);
+    // Same shape without the weakness is unwinnable — nothing scores.
+    const noWeakness: BattleDefinition = {
+      ...DEFINITION,
+      hearts: 3,
+      maxRounds: 3,
+      enemyIntentPattern: ['attack'],
+    };
+    expect(validateBattleDefinition(noWeakness).map((issue) => issue.code)).toContain(
       'unwinnable-battle',
     );
   });
