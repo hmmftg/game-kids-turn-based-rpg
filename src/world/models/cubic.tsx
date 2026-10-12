@@ -635,10 +635,11 @@ export function CubicFigure({
   const lift = Math.sin(bobbing) * 0.05;
   // Squash-and-stretch only while walking; settles rigid on arrival.
   const squash = moving ? 1 + Math.sin(bobbing * 2) * 0.05 : 1;
-  // Cloth sway: garments lag the stride while the figure walks and rest
-  // still on arrival — bounded, driven by the same walk cycle (no loop of
-  // its own, nothing while idle, dropped under reduced motion).
-  const clothSway = moving && !prefersReducedMotion() ? Math.sin(bobbing) : 0;
+  // Walk-cycle sway: limbs stride and garments lag the walk while the
+  // figure moves, and rest still on arrival — bounded, driven by the same
+  // walk cycle (no loop of its own, nothing while idle, dropped under
+  // reduced motion).
+  const walkSway = moving && !prefersReducedMotion() ? Math.sin(bobbing) : 0;
   // Quality-tier geometry: level 0 resolves to the exact shared constants
   // (BOX / 12-seg CYLINDER) so low stays identical to the original look.
   const legGeometry = cylinderFor(detailLevel, detailLevel >= 2 ? 0.8 : 1);
@@ -662,20 +663,67 @@ export function CubicFigure({
       scale={[1, squash, 1]}
     >
       <BlobShadow radius={0.42} />
-      <mesh
-        geometry={legGeometry}
-        material={limb}
-        position={[-0.16, 0.25, 0]}
-        scale={[0.22, 0.5, 0.22]}
-        raycast={noRaycast}
-      />
-      <mesh
-        geometry={legGeometry}
-        material={limb}
-        position={[0.16, 0.25, 0]}
-        scale={[0.22, 0.5, 0.22]}
-        raycast={noRaycast}
-      />
+      {/* legs stride at the hip in opposite phase while walking — the
+          shoe caps / NPC shoes ride inside each swing group */}
+      <group position={[-0.16, 0.5, 0]} rotation={[walkSway * 0.18, 0, 0]}>
+        <mesh
+          geometry={legGeometry}
+          material={limb}
+          position={[0, -0.25, 0]}
+          scale={[0.22, 0.5, 0.22]}
+          raycast={noRaycast}
+        />
+        <Detail level={detailLevel} min={4}>
+          {/* shoe cap — darker tip grounded at the bottom of the leg */}
+          <mesh
+            geometry={soft}
+            material={sharedLambert('#4a3f36')}
+            position={[0, -0.45, 0.04]}
+            scale={[0.22, 0.1, 0.26]}
+            raycast={noRaycast}
+          />
+        </Detail>
+        <Detail level={detailLevel} min={3}>
+          {role !== 'avatar' ? (
+            <mesh
+              geometry={soft}
+              material={sharedLambert('#5a4632')}
+              position={[0, -0.46, 0.03]}
+              scale={[0.24, 0.08, 0.3]}
+              raycast={noRaycast}
+            />
+          ) : null}
+        </Detail>
+      </group>
+      <group position={[0.16, 0.5, 0]} rotation={[-walkSway * 0.18, 0, 0]}>
+        <mesh
+          geometry={legGeometry}
+          material={limb}
+          position={[0, -0.25, 0]}
+          scale={[0.22, 0.5, 0.22]}
+          raycast={noRaycast}
+        />
+        <Detail level={detailLevel} min={4}>
+          <mesh
+            geometry={soft}
+            material={sharedLambert('#4a3f36')}
+            position={[0, -0.45, 0.04]}
+            scale={[0.22, 0.1, 0.26]}
+            raycast={noRaycast}
+          />
+        </Detail>
+        <Detail level={detailLevel} min={3}>
+          {role !== 'avatar' ? (
+            <mesh
+              geometry={soft}
+              material={sharedLambert('#5a4632')}
+              position={[0, -0.46, 0.03]}
+              scale={[0.24, 0.08, 0.3]}
+              raycast={noRaycast}
+            />
+          ) : null}
+        </Detail>
+      </group>
       <mesh
         geometry={BOX}
         material={body}
@@ -703,110 +751,98 @@ export function CubicFigure({
           raycast={noRaycast}
         />
       </Detail>
-      <Detail level={detailLevel} min={4}>
-        {/* shoe caps — darker tips grounded at the bottom of each leg */}
-        <mesh
-          geometry={soft}
-          material={sharedLambert('#4a3f36')}
-          position={[-0.16, 0.05, 0.04]}
-          scale={[0.22, 0.1, 0.26]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={soft}
-          material={sharedLambert('#4a3f36')}
-          position={[0.16, 0.05, 0.04]}
-          scale={[0.22, 0.1, 0.26]}
-          raycast={noRaycast}
-        />
-      </Detail>
       <Detail level={detailLevel} min={3}>
-        {/* arms angled slightly out from the shoulders; hands and a
-            two-finger hint in the figure's own skin tone */}
-        <mesh
-          geometry={soft}
-          material={limb}
-          position={[-0.335, 0.72 + lift, 0]}
-          rotation={[0, 0, 0.12]}
-          scale={[0.09, 0.36, 0.13]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={soft}
-          material={limb}
-          position={[0.335, 0.72 + lift, 0]}
-          rotation={[0, 0, -0.12]}
-          scale={[0.09, 0.36, 0.13]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={BOX}
-          material={head}
-          position={[-0.375, 0.5 + lift, 0.02]}
-          scale={[0.09, 0.08, 0.1]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={BOX}
-          material={head}
-          position={[0.375, 0.5 + lift, 0.02]}
-          scale={[0.09, 0.08, 0.1]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={BOX}
-          material={head}
-          position={[-0.4, 0.44 + lift, 0.05]}
-          scale={[0.022, 0.05, 0.03]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={BOX}
-          material={head}
-          position={[-0.35, 0.44 + lift, 0.05]}
-          scale={[0.022, 0.05, 0.03]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={BOX}
-          material={head}
-          position={[0.35, 0.44 + lift, 0.05]}
-          scale={[0.022, 0.05, 0.03]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={BOX}
-          material={head}
-          position={[0.4, 0.44 + lift, 0.05]}
-          scale={[0.022, 0.05, 0.03]}
-          raycast={noRaycast}
-        />
-        {role !== 'avatar' ? (
-          <>
-            {/* shoes — the avatar's own pair already lands at medium */}
+        {/* arms angled slightly out from the shoulders, swinging opposite
+            the same-side leg in stride; hands, finger hints and cuffs ride
+            inside each shoulder swing group */}
+        <group position={[-0.335, 0.88 + lift, 0]} rotation={[-walkSway * 0.15, 0, 0]}>
+          <mesh
+            geometry={soft}
+            material={limb}
+            position={[0, -0.16, 0]}
+            rotation={[0, 0, 0.12]}
+            scale={[0.09, 0.36, 0.13]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={head}
+            position={[-0.04, -0.38, 0.02]}
+            scale={[0.09, 0.08, 0.1]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={head}
+            position={[-0.065, -0.44, 0.05]}
+            scale={[0.022, 0.05, 0.03]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={head}
+            position={[-0.015, -0.44, 0.05]}
+            scale={[0.022, 0.05, 0.03]}
+            raycast={noRaycast}
+          />
+          <Detail level={detailLevel} min={5}>
+            {/* sleeve cuff at the wrist — cloth finishing, not decoration */}
             <mesh
-              geometry={soft}
-              material={sharedLambert('#5a4632')}
-              position={[-0.16, 0.04, 0.03]}
-              scale={[0.24, 0.08, 0.3]}
+              geometry={BOX}
+              material={sharedLambert('#e8eef4')}
+              position={[-0.04, -0.335, 0.02]}
+              scale={[0.1, 0.035, 0.11]}
               raycast={noRaycast}
             />
+          </Detail>
+        </group>
+        <group position={[0.335, 0.88 + lift, 0]} rotation={[walkSway * 0.15, 0, 0]}>
+          <mesh
+            geometry={soft}
+            material={limb}
+            position={[0, -0.16, 0]}
+            rotation={[0, 0, -0.12]}
+            scale={[0.09, 0.36, 0.13]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={head}
+            position={[0.04, -0.38, 0.02]}
+            scale={[0.09, 0.08, 0.1]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={head}
+            position={[0.015, -0.44, 0.05]}
+            scale={[0.022, 0.05, 0.03]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={head}
+            position={[0.065, -0.44, 0.05]}
+            scale={[0.022, 0.05, 0.03]}
+            raycast={noRaycast}
+          />
+          <Detail level={detailLevel} min={5}>
             <mesh
-              geometry={soft}
-              material={sharedLambert('#5a4632')}
-              position={[0.16, 0.04, 0.03]}
-              scale={[0.24, 0.08, 0.3]}
+              geometry={BOX}
+              material={sharedLambert('#e8eef4')}
+              position={[0.04, -0.335, 0.02]}
+              scale={[0.1, 0.035, 0.11]}
               raycast={noRaycast}
             />
-          </>
-        ) : null}
+          </Detail>
+        </group>
       </Detail>
       <Detail level={detailLevel} min={4}>
         {female ? (
           /* flared manteau skirt over the torso, in the figure's own outfit
              color — garment-following, not a floating cone; swings softly
              around the waist while walking */
-          <group position={[0, 0.78 + lift, 0]} rotation={[clothSway * 0.05, 0, clothSway * 0.02]}>
+          <group position={[0, 0.78 + lift, 0]} rotation={[walkSway * 0.05, 0, walkSway * 0.02]}>
             <mesh
               geometry={cylinderFor(detailLevel, 0.8)}
               material={limb}
@@ -819,7 +855,7 @@ export function CubicFigure({
           <>
             {/* real clothes: trousers swing at the hip in stride, belt,
                 shirt placket + collar tips stay torso-bound */}
-            <group position={[-0.16, 0.4, 0]} rotation={[clothSway * 0.14, 0, 0]}>
+            <group position={[-0.16, 0.4, 0]} rotation={[walkSway * 0.14, 0, 0]}>
               <mesh
                 geometry={soft}
                 material={limb}
@@ -828,7 +864,7 @@ export function CubicFigure({
                 raycast={noRaycast}
               />
             </group>
-            <group position={[0.16, 0.4, 0]} rotation={[-clothSway * 0.14, 0, 0]}>
+            <group position={[0.16, 0.4, 0]} rotation={[-walkSway * 0.14, 0, 0]}>
               <mesh
                 geometry={soft}
                 material={limb}
@@ -882,23 +918,6 @@ export function CubicFigure({
           </>
         )}
       </Detail>
-      <Detail level={detailLevel} min={5}>
-        {/* sleeve cuffs at the wrists — cloth finishing, not decoration */}
-        <mesh
-          geometry={BOX}
-          material={sharedLambert('#e8eef4')}
-          position={[-0.375, 0.545 + lift, 0.02]}
-          scale={[0.1, 0.035, 0.11]}
-          raycast={noRaycast}
-        />
-        <mesh
-          geometry={BOX}
-          material={sharedLambert('#e8eef4')}
-          position={[0.375, 0.545 + lift, 0.02]}
-          scale={[0.1, 0.035, 0.11]}
-          raycast={noRaycast}
-        />
-      </Detail>
       <Detail level={detailLevel} min={6}>
         {/* hem trim at the garment's bottom edge */}
         <mesh
@@ -925,12 +944,7 @@ export function CubicFigure({
           />
           {role === 'avatar' || detailLevel >= 3 ? <Face lift={lift} level={detailLevel} /> : null}
           {covered ? (
-            <Covering
-              kind={covering ?? 'chador'}
-              lift={lift}
-              level={detailLevel}
-              sway={clothSway}
-            />
+            <Covering kind={covering ?? 'chador'} lift={lift} level={detailLevel} sway={walkSway} />
           ) : (
             <Headwear id={headwear} lift={lift} level={detailLevel} />
           )}
