@@ -623,6 +623,7 @@ export function CubicFigure({
   palette,
   bobbing = 0,
   moving = false,
+  settle = 0,
   label,
   headwear = 'none',
   female = false,
@@ -635,9 +636,12 @@ export function CubicFigure({
   const body = useMaterial(palette.body);
   const head = useMaterial(palette.head);
   const limb = useMaterial(palette.limb);
-  const lift = Math.sin(bobbing) * 0.05;
-  // Squash-and-stretch only while walking; settles rigid on arrival.
-  const squash = moving ? 1 + Math.sin(bobbing * 2) * 0.05 : 1;
+  // Arrival settle: `settle` is a 1→0 decay envelope for ~0.8 s after the
+  // last hop — lift and squash keep oscillating through it so the figure
+  // eases into rest instead of snapping rigid mid-bounce.
+  const bounce = moving ? 1 : settle;
+  const lift = Math.sin(bobbing) * 0.05 * bounce;
+  const squash = 1 + Math.sin(bobbing * 2) * 0.05 * bounce;
   // Walk-cycle sway: limbs stride and garments lag the walk while the
   // figure moves, and rest still on arrival — bounded, driven by the same
   // walk cycle (no loop of its own, nothing while idle, dropped under

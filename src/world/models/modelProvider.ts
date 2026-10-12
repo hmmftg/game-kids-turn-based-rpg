@@ -48,6 +48,8 @@ export interface FigureProps {
   readonly bobbing?: number;
   /** Whether the figure is actively walking (drives squash-and-stretch). */
   readonly moving?: boolean;
+  /** 1→0 decay envelope for the arrival settle after the last hop. */
+  readonly settle?: number;
   readonly label?: string;
   /** Cosmetic headwear layer; omitted/'none' leaves the head uncovered. */
   readonly headwear?: HeadwearId;

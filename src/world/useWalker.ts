@@ -20,6 +20,9 @@ const CAMERA_LEAD = 2.4;
 /** A dead tap (resolves to no anchor) earns a glance toward it — the honest
  *  physical «I saw that; I can't get there». */
 const GLANCE_S = 0.6;
+/** Arrival settle: the last stride's bounce decays over this window instead
+ *  of freezing mid-phase — the figure eases back into its rest pose. */
+const SETTLE_S = 0.8;
 
 /** Shortest-arc easing between two headings. */
 function lerpAngle(a: number, b: number, k: number): number {
@@ -42,6 +45,8 @@ export interface Walker {
   readonly focus: PathPoint;
   readonly heading: number;
   readonly bobbing: number;
+  /** 1→0 decay envelope for ~0.8 s after the final hop; 0 when idle/walking. */
+  readonly settle: number;
   readonly at: AnchorId;
   readonly moving: boolean;
   /**
@@ -77,6 +82,9 @@ export function useWalker(
   const [bobbing, setBobbing] = useState(0);
   const [at, setAt] = useState<AnchorId>(start);
   const [moving, setMoving] = useState(false);
+  const [settle, setSettle] = useState(0);
+  const settleStart = useRef(0);
+  const settleOn = useRef(false);
   const pendingArrival = useRef<(() => void) | null>(null);
   // Seconds of orientation-before-step left on a fresh walk: the avatar
   // visibly turns toward the new destination before the first stride.
@@ -110,6 +118,7 @@ export function useWalker(
     pendingArrival.current = null;
     turnHold.current = 0;
     glance.current = null;
+    settleStart.current = 0;
     invalidate();
   }, [invalidate]);
 
@@ -165,6 +174,25 @@ export function useWalker(
     const next = queue.current[0];
     if (next === undefined) {
       if (moving) setMoving(false);
+      // Arrival settle: keep the bob phase advancing under a decaying
+      // envelope so the figure eases into rest instead of snapping to it.
+      if (settleStart.current > 0) {
+        const t = (performance.now() - settleStart.current) / 1000;
+        if (t > SETTLE_S) {
+          settleStart.current = 0;
+          settleOn.current = false;
+          setSettle(0);
+        } else {
+          settleOn.current = true;
+          setBobbing((phase) => phase + delta * 9);
+          setSettle(Math.exp(-3 * t));
+          invalidate();
+        }
+      } else if (settleOn.current) {
+        // Cancelled mid-settle: snap the envelope closed on the next frame.
+        settleOn.current = false;
+        setSettle(0);
+      }
       // Idle glance: a dead tap still earns a visible reaction — the avatar
       // turns to face where the child pointed, then the glance expires.
       const g = glance.current;
@@ -201,6 +229,7 @@ export function useWalker(
       if (queue.current.length === 0) {
         setMoving(false);
         setFocus({ x: target.x, z: target.z });
+        if (!reduced) settleStart.current = performance.now();
         finishWalk(next);
       } else {
         setFocus({ x: target.x, z: target.z });
@@ -229,6 +258,7 @@ export function useWalker(
     focus,
     heading,
     bobbing,
+    settle,
     at,
     moving,
     walkTo,
