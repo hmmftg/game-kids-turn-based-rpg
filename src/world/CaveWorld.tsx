@@ -514,6 +514,7 @@ export function CaveWorld({
         rotationY={walker.heading}
         bobbing={walker.bobbing}
         moving={walker.moving}
+        settle={walker.settle}
         palette={AVATAR_VISUALS[avatarId].palette}
         headwear={headwear}
         hairStyle={AVATAR_VISUALS[avatarId].hairStyle}
