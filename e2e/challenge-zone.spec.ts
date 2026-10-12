@@ -147,7 +147,21 @@ async function walkBesideNpc(page: Page, npcId: string) {
  */
 async function leaveTheGate(page: Page) {
   await waitForAnchor(page, 'anchor-challenge-entry');
-  await tapWorldGround(page, 0, 3.0);
+  // The (0,3.0) hop can still tie 1:1 against the transition anchor and walk
+  // the child back through the tunnel — re-enter and retry until it lands.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await tapWorldGround(page, 0, 3.0);
+    const landed = await expect
+      .poll(() => probe(page).at(), { timeout: 15000 })
+      .toBe('anchor-challenge-path-1')
+      .then(() => true)
+      .catch(() => false);
+    if (landed) return;
+    if ((await probe(page).at()) !== 'anchor-challenge-entry') {
+      await reachChallengeZone(page);
+      await waitForAnchor(page, 'anchor-challenge-entry');
+    }
+  }
   await waitForAnchor(page, 'anchor-challenge-path-1');
 }
 
@@ -404,12 +418,13 @@ test.describe('the Challenge Zone', () => {
     await expect
       .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
       .toBe('playerChoice');
+    // The bird fears the ball — one bonk on a 2-heart opponent ends the game.
     await page.getByTestId('battle-action-ball').click();
     await expect
       .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
-      .toBe('playerChoice');
-    expect((await battleState(page))?.opponentHearts).toBe(1);
-    await page.getByTestId('leave-battle').click();
+      .toBe('victory');
+    expect((await battleState(page))?.opponentHearts).toBe(0);
+    await page.getByTestId('battle-continue').click();
     await expect.poll(async () => battleState(page)).toBeNull();
   });
 });
