@@ -79,15 +79,12 @@ test.describe('micro turn-based battle', () => {
     await expect(page.getByTestId('battle-action-shield')).toBeVisible();
     expect((await battleState(page))?.opponentHearts).toBe(3);
 
-    // One action per round; the resting mouse takes one heart per ball.
-    await page.getByTestId('battle-action-ball').click();
-    await waitForPhase(page, 'playerChoice');
-    expect((await battleState(page))?.opponentHearts).toBe(2);
-    expect((await battleState(page))?.round).toBe(2);
-
+    // One action per round; the mouse fears the ball — a landed ball costs
+    // it two hearts, so two good bonks end the game.
     await page.getByTestId('battle-action-ball').click();
     await waitForPhase(page, 'playerChoice');
     expect((await battleState(page))?.opponentHearts).toBe(1);
+    expect((await battleState(page))?.round).toBe(2);
 
     await page.getByTestId('battle-action-ball').click();
     await waitForPhase(page, 'victory');
@@ -166,7 +163,7 @@ test.describe('micro turn-based battle', () => {
   });
 
   // Rapid/repeated taps must not duplicate actions: one choice per round, so
-  // a burst of taps on the ball still costs the mouse exactly one heart.
+  // a burst of taps on the ball still resolves as a single choice.
   test('repeated taps on the ball still resolve exactly one action', async ({ page }) => {
     await startGame(page);
     await walkToChallengeZone(page);
@@ -180,17 +177,17 @@ test.describe('micro turn-based battle', () => {
       for (let i = 0; i < 4; i += 1) button?.click();
     });
     // The round must first leave playerChoice (the choice committed), then
-    // return to it exactly once — two hearts lost would mean round 3.
+    // return to it exactly once — resolving twice would mean round 3.
     await expect
       .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
       .not.toBe('playerChoice');
     await waitForPhase(page, 'playerChoice');
-    expect((await battleState(page))?.opponentHearts).toBe(2);
+    expect((await battleState(page))?.opponentHearts).toBe(1);
     expect((await battleState(page))?.round).toBe(2);
   });
 
   // Reduced motion removes decoration, not meaning: phases still advance and
-  // the ball still costs a heart — the state change stays perceivable.
+  // the ball still costs hearts — the state change stays perceivable.
   test('the battle resolves the same under reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await startGame(page);
@@ -200,7 +197,7 @@ test.describe('micro turn-based battle', () => {
 
     await page.getByTestId('battle-action-ball').click();
     await waitForPhase(page, 'playerChoice');
-    expect((await battleState(page))?.opponentHearts).toBe(2);
+    expect((await battleState(page))?.opponentHearts).toBe(1);
 
     await page.getByTestId('leave-battle').click();
     await expect.poll(async () => battleState(page)).toBeNull();

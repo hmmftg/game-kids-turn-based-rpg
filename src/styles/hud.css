@@ -992,6 +992,66 @@
   animation: scene-exec-bounce 0.55s ease-out backwards;
 }
 
+/* W7 weakness telegraph — physical, never an icon label: when the choice
+   opens, the opponent visibly flinches toward the thing it fears (a shiver
+   down toward the feared object), and a landed weak-to action recoils much
+   harder than a plain hit. Both play once per beat — bounded, not a loop. */
+.battle__opponent[data-phase='playerChoice'][data-weakness='action-ball'] svg {
+  animation: battle-wince-ball 0.7s ease-out backwards;
+}
+
+.battle__opponent[data-phase='playerChoice'][data-weakness='action-shield'] svg {
+  animation: battle-wince-shield 0.7s ease-out backwards;
+}
+
+.battle__opponent[data-weak='true'] svg {
+  animation: battle-weak-hit 0.8s ease-out backwards;
+}
+
+@keyframes battle-wince-ball {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  35% {
+    /* Eyes down toward the ball side — a nervous lean, not an attack. */
+    transform: translateY(4px) rotate(5deg) scaleY(0.93);
+  }
+  70% {
+    transform: translateY(1px) rotate(-2deg);
+  }
+}
+
+@keyframes battle-wince-shield {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+  35% {
+    /* Shrinks back from the cushion — bracing for its own charge. */
+    transform: translateX(-6px) scale(0.9);
+  }
+  70% {
+    transform: translateX(2px) scale(0.98);
+  }
+}
+
+@keyframes battle-weak-hit {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
+    /* Much harder recoil than a plain hit — the feared thing really lands. */
+    transform: translateY(14px) rotate(-12deg) scale(0.88);
+  }
+  60% {
+    transform: translateY(-3px) rotate(6deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
 @keyframes battle-lunge {
   0% {
     transform: translateY(0);

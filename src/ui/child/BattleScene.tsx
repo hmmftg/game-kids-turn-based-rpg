@@ -118,13 +118,22 @@ export function BattleScene({
 
         {/* The opponent is a physical presence, not a portrait icon: it
             recoils when hit, lunges when it attacks, settles when it rests
-            — the physical cause for every beat, not just swapped words. */}
+            — the physical cause for every beat, not just swapped words.
+            W7: it also flinches toward the action it fears when the choice
+            opens (data-weakness), and a landed weak-to action recoils
+            harder (data-weak) — the weakness is read off the body, never
+            off an icon label. */}
         <div
           className="battle__opponent"
           data-testid="battle-opponent"
           data-phase={battle.phase}
           data-outcome={battle.lastOutcome ?? 'none'}
           data-intent={battle.enemyIntent}
+          data-weakness={battle.definition.weakness ?? 'none'}
+          data-weak={
+            battle.lastAction === battle.definition.weakness &&
+            (battle.lastOutcome === 'opponent-hit' || battle.lastOutcome === 'blocked')
+          }
         >
           <SceneGlyph element="mouse" size={96} />
         </div>

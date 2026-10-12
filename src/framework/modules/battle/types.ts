@@ -73,6 +73,15 @@ export interface BattleDefinition {
   readonly availableActions: readonly BattleActionId[];
   readonly enemyIntentPattern: readonly BattleIntent[];
   /**
+   * The one action this opponent fears (W7): when it produces an effect —
+   * a ball that lands, a cushion that blocks — it costs the opponent one
+   * extra heart. Communicated physically (the opponent recoils harder and
+   * flinches toward the weak-to object), never by icon or text label.
+   * Must reference an action in `availableActions`; optional — a battle
+   * without a weakness keeps the plain outcome matrix.
+   */
+  readonly weakness?: BattleActionId;
+  /**
    * World fact recorded once when the child leaves a *victorious* battle —
    * the "world remembers the challenge was solved" primitive behind
    * post-victory presentation and gated paths. Optional: battles without it

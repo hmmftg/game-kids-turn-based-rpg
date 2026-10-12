@@ -96,9 +96,10 @@ test.describe('the world noticed me', () => {
     await walkToChallengeZone(page);
     expect(await tapMouseForBattle(page)).toBe(true);
     await waitForBattlePhase(page, 'playerChoice');
-    for (let i = 0; i < 3; i++) {
+    // The mouse fears the ball — two landed bonks win (W7 weakness).
+    for (let i = 0; i < 2; i++) {
       await page.getByTestId('battle-action-ball').click();
-      if (i < 2) await waitForBattlePhase(page, 'playerChoice');
+      if (i < 1) await waitForBattlePhase(page, 'playerChoice');
     }
     await waitForBattlePhase(page, 'victory');
     // "Friendly celebration", not "enemy driven off": the mouse stays on
