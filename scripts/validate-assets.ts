@@ -2,15 +2,18 @@
  * Asset provenance gate.
  *
  * Every binary asset the game ships — audio under `public/audio/`, icons under
- * `public/icons/`, fonts under `src/assets/fonts/` — must be declared in a
- * license registry (`ASSET_REGISTRY` for icons/fonts, `AUDIO_MANIFEST` for
- * audio). An undeclared file or an empty license fails the build, so new
- * content cannot bypass attribution review.
+ * `public/icons/`, models under `public/models/`, fonts under
+ * `src/assets/fonts/` — must be declared in a license registry
+ * (`ASSET_REGISTRY` for icons/fonts/models, `AUDIO_MANIFEST` for audio).
+ * An undeclared file or an empty license fails the build, so new content
+ * cannot bypass attribution review. Entries that record a `sha256` get the
+ * shipped file's hash verified too.
  *
  * Usage: node --experimental-strip-types scripts/validate-assets.ts
  *        [--release]  (release mode fails on placeholder assets)
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AUDIO_MANIFEST } from '../src/services/audio/manifest.ts';
 import { ASSET_REGISTRY } from '../src/services/assets/registry.ts';
@@ -23,6 +26,7 @@ interface KnownAsset {
   readonly license: string;
   readonly attribution: string;
   readonly status: 'licensed' | 'placeholder';
+  readonly sha256?: string;
   readonly where: string;
 }
 
@@ -42,6 +46,7 @@ const registryAssets: readonly KnownAsset[] = ASSET_REGISTRY.map((entry) => ({
   license: entry.license,
   attribution: entry.attribution,
   status: entry.status,
+  sha256: entry.sha256,
   where: `ASSET_REGISTRY:${entry.id}`,
 }));
 
@@ -61,6 +66,17 @@ const warnings: string[] = [];
 for (const asset of known.values()) {
   if (!existsSync(join(ROOT, asset.file))) {
     errors.push(`[asset-registry] ${asset.where} declares missing file ${asset.file}`);
+  } else if (asset.sha256) {
+    // Integrity check: a recorded hash proves the shipped file is the
+    // licensed upstream artifact, not a silently swapped binary.
+    const digest = createHash('sha256')
+      .update(readFileSync(join(ROOT, asset.file)))
+      .digest('hex');
+    if (digest !== asset.sha256) {
+      errors.push(
+        `[asset-registry] ${asset.where} sha256 mismatch for ${asset.file} — recorded ${asset.sha256}, file ${digest}`,
+      );
+    }
   }
   if (asset.license.trim() === '') {
     errors.push(`[asset-registry] ${asset.where} has an empty license`);
@@ -79,6 +95,7 @@ for (const asset of known.values()) {
 const coveredDirs: Array<{ dir: string; exts: readonly string[] }> = [
   { dir: 'public/audio', exts: ['.wav', '.mp3', '.ogg'] },
   { dir: 'public/icons', exts: ['.svg', '.png', '.ico'] },
+  { dir: 'public/models', exts: ['.glb', '.gltf', '.bin'] },
   { dir: 'src/assets/fonts', exts: ['.woff2', '.woff', '.ttf', '.otf'] },
 ];
 for (const { dir, exts } of coveredDirs) {

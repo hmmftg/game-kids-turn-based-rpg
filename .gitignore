@@ -13,3 +13,4 @@ blob-report/
 .tsbuildinfo
 *.tsbuildinfo
 dev-dist/
+downloaded-models/

@@ -14,7 +14,7 @@ import type {
 import type { WorldSource } from '../domain/world/source.ts';
 import { maxPixelRatioFor } from '../services/device/capabilities.ts';
 import { Hub, type HubHandle } from './Hub.tsx';
-import { CUBIC_MODELS } from './models/cubicModels.ts';
+import { modelsForTier } from './models/gltfModels.tsx';
 import { ModelContext, detailLevelFor } from './models/modelProvider.ts';
 import { skyDomeResources } from './models/shared.ts';
 import { noRaycast } from './models/raycast.ts';
@@ -259,6 +259,10 @@ export function WorldCanvas({
   // The quality tier is the only quality system; the world only derives how
   // much decoration it draws from it, never a different render pipeline.
   const detailLevel = detailLevelFor(qualityTier);
+  // GLB landmarks ship only on high/very-high — lower tiers keep the cubic
+  // set and never initiate a model fetch (no GLB component mounts there).
+  // See modelsForTier for the measured budget reasoning.
+  const models = modelsForTier(qualityTier);
   const map = getMap(world, mapId);
   const env = map.environment;
 
@@ -329,7 +333,7 @@ export function WorldCanvas({
         <InvalidateOnChange
           token={`${avatarId}:${headwear}:${completedCount}:${String(interactive)}:${zoom}:${qualityTier}:${mapId}`}
         />
-        <ModelContext.Provider value={CUBIC_MODELS}>
+        <ModelContext.Provider value={models}>
           {/* Only the current map's scene mounts — the other side carries
               zero mounted content and zero callbacks. `key` remounts the
               scene so the walker restarts at the map's spawn anchor. */}
