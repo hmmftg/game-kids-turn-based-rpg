@@ -7,7 +7,14 @@ import {
   enemyIntentFor,
 } from './battle.ts';
 import { battleReducer } from './reducer.ts';
-import type { BattleDefinition, BattleState } from './types.ts';
+import { BATTLE_ABILITY_IDS } from './types.ts';
+import type {
+  BattleActionId,
+  BattleDefinition,
+  BattleIntent,
+  BattleOutcome,
+  BattleState,
+} from './types.ts';
 import { validateBattleDefinition } from './validation.ts';
 
 const DEFINITION: BattleDefinition = {
@@ -20,7 +27,7 @@ const DEFINITION: BattleDefinition = {
 };
 
 /** Runs one full player round: choose + advance through the passive phases. */
-function playRound(battle: BattleState, action: 'action-ball' | 'action-shield'): BattleState {
+function playRound(battle: BattleState, action: BattleActionId): BattleState {
   let state = chooseBattleAction(battle, action);
   while (state.phase !== 'playerChoice' && state.phase !== 'victory' && state.phase !== 'defeat') {
     state = advanceBattlePhase(state);
@@ -145,6 +152,123 @@ describe('battle rules', () => {
   });
 });
 
+describe('quest abilities', () => {
+  /** A definition that already includes two unlocked abilities — the shape
+   *  the game reducer produces after merging `offeredAbilities`. */
+  const WITH_ABILITIES: BattleDefinition = {
+    ...DEFINITION,
+    availableActions: [
+      'action-ball',
+      'action-shield',
+      'action-kite',
+      'action-shell',
+      'action-crystal',
+      'action-smile',
+      'action-basket',
+      'action-leaf',
+      'action-friends',
+      'action-bread',
+      'action-book',
+    ],
+  };
+
+  function atChoice(definition: BattleDefinition, intent: BattleIntent): BattleState {
+    return { ...createBattle(definition), phase: 'playerChoice', enemyIntent: intent };
+  }
+
+  it('every action has its own outcome matrix row', () => {
+    const cases: [BattleActionId, BattleIntent, BattleOutcome][] = [
+      ['action-ball', 'rest', 'opponent-hit'],
+      ['action-ball', 'attack', 'whiffed'],
+      ['action-shield', 'rest', 'no-effect'],
+      ['action-shield', 'attack', 'blocked'],
+      ['action-smile', 'rest', 'no-effect'],
+      ['action-smile', 'attack', 'opponent-hit'],
+      ['action-basket', 'rest', 'opponent-hit'],
+      ['action-basket', 'attack', 'blocked'],
+      ['action-leaf', 'rest', 'whiffed'],
+      ['action-leaf', 'attack', 'blocked'],
+      ['action-friends', 'rest', 'opponent-hit'],
+      ['action-friends', 'attack', 'whiffed'],
+      ['action-kite', 'rest', 'opponent-hit'],
+      ['action-kite', 'attack', 'opponent-hit'],
+      ['action-shell', 'rest', 'whiffed'],
+      ['action-shell', 'attack', 'opponent-hit'],
+      ['action-bread', 'rest', 'no-effect'],
+      ['action-bread', 'attack', 'blocked'],
+      ['action-book', 'rest', 'opponent-hit'],
+      ['action-book', 'attack', 'no-effect'],
+      ['action-crystal', 'rest', 'opponent-hit'],
+      ['action-crystal', 'attack', 'whiffed'],
+    ];
+    for (const [action, intent, outcome] of cases) {
+      const state = chooseBattleAction(atChoice(WITH_ABILITIES, intent), action);
+      expect(state.lastOutcome, `${action} vs ${intent}`).toBe(outcome);
+    }
+  });
+
+  it('the crystal keepsake lands for two hearts', () => {
+    const hit = chooseBattleAction(atChoice(WITH_ABILITIES, 'rest'), 'action-crystal');
+    expect(hit.lastOutcome).toBe('opponent-hit');
+    expect(hit.opponentHearts).toBe(1); // 3 − 2
+    // Weak to it and it lands for three.
+    const feared: BattleDefinition = { ...WITH_ABILITIES, weakness: 'action-crystal' };
+    const fearedHit = chooseBattleAction(
+      { ...atChoice(feared, 'rest'), definition: feared },
+      'action-crystal',
+    );
+    expect(fearedHit.opponentHearts).toBe(0);
+  });
+
+  it('a pacifying keepsake forces the next intent to rest, once', () => {
+    // Pattern says round 2 is an attack — the bread's calm overrides it.
+    const attacking: BattleDefinition = {
+      ...WITH_ABILITIES,
+      enemyIntentPattern: ['rest', 'attack'],
+    };
+    let battle = advanceBattlePhase(createBattle(attacking));
+    battle = chooseBattleAction({ ...battle, enemyIntent: 'attack' }, 'action-bread');
+    expect(battle.lastOutcome).toBe('blocked');
+    expect(battle.forcedIntent).toBe('rest');
+    battle = advanceBattlePhase(battle); // → enemyResolution
+    battle = advanceBattlePhase(battle); // → roundCheck
+    battle = advanceBattlePhase(battle); // → playerChoice round 2
+    expect(battle.enemyIntent).toBe('rest');
+    expect(battle.forcedIntent).toBeUndefined();
+    // The pattern resumes afterward.
+    battle = playRound(battle, 'action-ball');
+    expect(battle.round).toBe(3);
+    expect(battle.enemyIntent).toBe('rest');
+  });
+
+  it('a shrugged-off pacifier calms nobody', () => {
+    let battle = advanceBattlePhase(createBattle(WITH_ABILITIES));
+    battle = chooseBattleAction(battle, 'action-bread'); // rest → no-effect
+    expect(battle.lastOutcome).toBe('no-effect');
+    expect(battle.forcedIntent).toBeUndefined();
+  });
+
+  it('an ability weakness costs the extra heart only when it lands effectively', () => {
+    const feared: BattleDefinition = { ...WITH_ABILITIES, weakness: 'action-kite' };
+    const landed = chooseBattleAction(
+      { ...atChoice(feared, 'attack'), definition: feared },
+      'action-kite',
+    );
+    expect(landed.opponentHearts).toBe(1); // 3 − 2
+    // An ineffective feared action is still harmless.
+    const shrugged = chooseBattleAction(
+      { ...atChoice(feared, 'rest'), definition: feared },
+      'action-shell',
+    );
+    expect(shrugged.opponentHearts).toBe(3);
+  });
+
+  it('abilities not in availableActions are refused', () => {
+    const base = advanceBattlePhase(createBattle(DEFINITION));
+    expect(chooseBattleAction(base, 'action-kite')).toBe(base);
+  });
+});
+
 describe('battle reducer', () => {
   it('delegates the state machine over BattleState | null', () => {
     expect(battleReducer(null, { type: 'LEAVE_BATTLE' })).toBeNull();
@@ -207,6 +331,40 @@ describe('battle definition validation', () => {
     };
     expect(validateBattleDefinition(noWeakness).map((issue) => issue.code)).toContain(
       'unwinnable-battle',
+    );
+  });
+
+  it('an ability weakness is offerable via offeredAbilities only', () => {
+    // An ability the opponent never notices cannot be its weakness.
+    const unnoticed: BattleDefinition = { ...DEFINITION, weakness: 'action-kite' };
+    expect(validateBattleDefinition(unnoticed).map((issue) => issue.code)).toContain(
+      'weakness-not-offered',
+    );
+    // Noticed via offeredAbilities — offered to the child once unlocked.
+    const noticed: BattleDefinition = {
+      ...DEFINITION,
+      offeredAbilities: ['action-kite'],
+      weakness: 'action-kite',
+    };
+    expect(validateBattleDefinition(noticed)).toEqual([]);
+    // A base action is not an ability and cannot hide in offeredAbilities.
+    const baseAsAbility: BattleDefinition = {
+      ...DEFINITION,
+      offeredAbilities: ['action-ball'],
+    };
+    expect(validateBattleDefinition(baseAsAbility).map((issue) => issue.code)).toContain(
+      'offered-not-ability',
+    );
+    expect(BATTLE_ABILITY_IDS).not.toContain('action-ball');
+  });
+
+  it('abilities must not hide in availableActions — the quest gate would vanish', () => {
+    const smuggled: BattleDefinition = {
+      ...DEFINITION,
+      availableActions: [...DEFINITION.availableActions, 'action-kite'],
+    };
+    expect(validateBattleDefinition(smuggled).map((issue) => issue.code)).toContain(
+      'non-base-action',
     );
   });
 

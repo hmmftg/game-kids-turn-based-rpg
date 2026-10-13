@@ -1,4 +1,5 @@
 import { battleReducer } from '../../framework/index.ts';
+import { unlockedBattleActions } from '../quests/battleAbilities.ts';
 import { advancePhase, applyChoice, createEncounter } from '../quests/encounter.ts';
 import { getQuestDefinition } from '../quests/definitions.ts';
 import { canStartQuest } from '../quests/prerequisites.ts';
@@ -324,7 +325,21 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // GameState guards stay here; the transition delegates to the battle
       // domain reducer like encounters delegate to `quests/encounter.ts`.
       if (state.mode !== 'hub' || state.battle !== null || state.dialogue !== null) return state;
-      const battle = battleReducer(state.battle, command);
+      // Quest-granted abilities: the authored `offeredAbilities` the child
+      // has unlocked join the base actions for this battle. The authored row
+      // stays the validation unit — winnability is proven on base actions.
+      const unlocked = unlockedBattleActions(state.quests);
+      const earned = (command.definition.offeredAbilities ?? []).filter((action) =>
+        unlocked.includes(action),
+      );
+      const definition =
+        earned.length === 0
+          ? command.definition
+          : {
+              ...command.definition,
+              availableActions: [...command.definition.availableActions, ...earned],
+            };
+      const battle = battleReducer(state.battle, { ...command, definition });
       if (battle === state.battle || battle === null) return state;
       return { ...state, battle };
     }

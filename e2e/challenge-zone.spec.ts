@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { AnchorId } from '../src/domain/game/types.ts';
-import { resumeFromPicker, startGame } from './harness.ts';
+import { resumeFromPicker, seedCompletedQuests, startGame } from './harness.ts';
 import {
   attentionProbe,
   dialogueNpc,
@@ -412,14 +412,16 @@ test.describe('the Challenge Zone', () => {
   test('the zone works under reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await startGame(page);
+    // quest-park-kite grants the kite keepsake — the bird's fear — so one
+    // bonk on a 2-heart opponent ends the game.
+    await seedCompletedQuests(page, ['quest-park-kite']);
     await reachChallengeZone(page);
     await walkToOpponent(page, 'npc-challenge-bird', 'anchor-challenge-bird');
     expect(await tapOpponentFigure(page, 'npc-challenge-bird')).toBe(true);
     await expect
       .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
       .toBe('playerChoice');
-    // The bird fears the ball — one bonk on a 2-heart opponent ends the game.
-    await page.getByTestId('battle-action-ball').click();
+    await page.getByTestId('battle-action-kite').click();
     await expect
       .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
       .toBe('victory');

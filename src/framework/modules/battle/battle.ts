@@ -17,9 +17,15 @@ import type {
  *   | rest         | opponent −1 heart | no effect          |
  *   | attack       | ball whiffs       | shield blocks      |
  *
+ * Quest abilities each carry their own row in `OUTCOME_MATRIX` — one
+ * deterministic rule a child can learn. Two extras sit on top:
+ * `ABILITY_DAMAGE_BONUS` (the crystal hits for 2) and `PACIFYING_ACTIONS`
+ * (friends/bread calm the opponent — its next intent is forced to `rest`).
+ *
  * Weakness (W7): the authored `weakness` action costs the opponent one
  * extra heart when it produces an effect — a feared ball hits for −2 on a
- * rest, a feared cushion turns `blocked` into −1 on an attack.
+ * rest, a feared cushion turns `blocked` into −1 on an attack, a feared
+ * keepsake lands just as hard.
  *
  * No counter-damage to the child, no crits, no randomness, no punitive
  * failure — defeat only when the round limit expires.
@@ -41,15 +47,55 @@ export function createBattle(definition: BattleDefinition): BattleState {
     playerHearts: definition.hearts,
     opponentHearts: definition.hearts,
     enemyIntent: enemyIntentFor(definition, 1),
+    forcedIntent: undefined,
     lastAction: null,
     lastOutcome: null,
     rounds: [],
   };
 }
 
+/**
+ * The full outcome matrix — one row per action the child can ever hold.
+ * Every ability gets its own one-line rule; the base rows preserve the
+ * original contract verbatim.
+ */
+const OUTCOME_MATRIX: Record<BattleActionId, Record<BattleIntent, BattleOutcome>> = {
+  'action-ball': { rest: 'opponent-hit', attack: 'whiffed' },
+  'action-shield': { rest: 'no-effect', attack: 'blocked' },
+  // Kindness counter — a smile does nothing to a calm friend but disarms a charge.
+  'action-smile': { rest: 'no-effect', attack: 'opponent-hit' },
+  // Helping works in every moment.
+  'action-basket': { rest: 'opponent-hit', attack: 'blocked' },
+  // A leaf is too soft to bonk but cushions a charge.
+  'action-leaf': { rest: 'whiffed', attack: 'blocked' },
+  // The gang rallies — a point on calm, and everyone settles (pacifies).
+  'action-friends': { rest: 'opponent-hit', attack: 'whiffed' },
+  // The kite always lands — it flies above the charge.
+  'action-kite': { rest: 'opponent-hit', attack: 'opponent-hit' },
+  // The shiny shell dazzles only mid-charge.
+  'action-shell': { rest: 'whiffed', attack: 'opponent-hit' },
+  // A shared snack — only stops a charge, and everyone settles (pacifies).
+  'action-bread': { rest: 'no-effect', attack: 'blocked' },
+  // The clever answer lands only on a calm opponent.
+  'action-book': { rest: 'opponent-hit', attack: 'no-effect' },
+  // The last-quest keepsake hits like the ball but counts double.
+  'action-crystal': { rest: 'opponent-hit', attack: 'whiffed' },
+};
+
+/**
+ * Extra hearts an action always costs the opponent when it lands
+ * (`opponent-hit`) — before the weakness bonus. The crystal is the
+ * strongest keepsake.
+ */
+const ABILITY_DAMAGE_BONUS: Partial<Record<BattleActionId, number>> = {
+  'action-crystal': 1,
+};
+
+/** Abilities that calm the opponent — its next intent is forced to `rest`. */
+const PACIFYING_ACTIONS: ReadonlySet<BattleActionId> = new Set(['action-friends', 'action-bread']);
+
 function resolveOutcome(intent: BattleIntent, action: BattleActionId): BattleOutcome {
-  if (intent === 'rest') return action === 'action-ball' ? 'opponent-hit' : 'no-effect';
-  return action === 'action-shield' ? 'blocked' : 'whiffed';
+  return OUTCOME_MATRIX[action][intent];
 }
 
 /**
@@ -63,7 +109,8 @@ export function damageFor(
   weakness: BattleActionId | undefined,
 ): number {
   const weak = action === weakness;
-  if (outcome === 'opponent-hit') return weak ? 2 : 1;
+  const bonus = ABILITY_DAMAGE_BONUS[action] ?? 0;
+  if (outcome === 'opponent-hit') return 1 + bonus + (weak ? 1 : 0);
   if (outcome === 'blocked') return weak ? 1 : 0;
   return 0;
 }
@@ -92,12 +139,17 @@ export function chooseBattleAction(state: BattleState, action: BattleActionId): 
   if (!state.definition.availableActions.includes(action)) return state;
   const outcome = resolveOutcome(state.enemyIntent, action);
   const damage = damageFor(outcome, action, state.definition.weakness);
+  // A pacifying keepsake only settles the opponent when it actually did
+  // something — a shrugged-off snack calms nobody.
+  const pacifies =
+    PACIFYING_ACTIONS.has(action) && (outcome === 'opponent-hit' || outcome === 'blocked');
   return {
     ...state,
     phase: 'playerResolution',
     lastAction: action,
     lastOutcome: outcome,
     opponentHearts: Math.max(0, state.opponentHearts - damage),
+    forcedIntent: pacifies ? 'rest' : state.forcedIntent,
     rounds: [...state.rounds, { action, outcome }],
   };
 }
@@ -159,7 +211,9 @@ export function advanceBattlePhase(state: BattleState): BattleState {
         ...state,
         phase: 'playerChoice',
         round,
-        enemyIntent: enemyIntentFor(definition, round),
+        // A pacify effect overrides this round's authored intent once.
+        enemyIntent: state.forcedIntent ?? enemyIntentFor(definition, round),
+        forcedIntent: undefined,
         lastAction: null,
         lastOutcome: null,
       };

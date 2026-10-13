@@ -1,3 +1,4 @@
+import type { BattleActionId } from '../../framework/index.ts';
 import type { IconId, LandmarkId, NpcId, QuestId, StickerId } from '../game/types.ts';
 import type { AreaId, MapId } from '../world/types.ts';
 
@@ -23,6 +24,12 @@ export interface QuestDefinition {
   readonly landmarkId: LandmarkId;
   readonly anchorId: string;
   readonly stickerId: StickerId;
+  /**
+   * The battle ability completing this quest grants — a physical keepsake
+   * object the child can then bring into micro battles. Unlocks derive from
+   * `state.quests` at battle start; nothing is persisted separately.
+   */
+  readonly battleAbility: BattleActionId;
   readonly steps: readonly EncounterStep[];
   /** The world area the quest lives in — quests reference areas, not coordinates. */
   readonly areaId: AreaId;
@@ -52,6 +59,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['neighbour-intro'],
     nextQuestIds: ['quest-helping'],
     stickerId: 'sticker-greeting',
+    battleAbility: 'action-smile',
     steps: [
       {
         id: 'greeting-1',
@@ -80,6 +88,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['shopkeeper-intro'],
     nextQuestIds: ['quest-tidying'],
     stickerId: 'sticker-helping',
+    battleAbility: 'action-basket',
     steps: [
       {
         id: 'helping-1',
@@ -108,6 +117,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['gardener-intro'],
     nextQuestIds: ['quest-finale'],
     stickerId: 'sticker-tidying',
+    battleAbility: 'action-leaf',
     steps: [
       {
         id: 'tidying-1',
@@ -143,6 +153,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['elder-intro'],
     nextQuestIds: ['quest-park-kite'],
     stickerId: 'sticker-finale',
+    battleAbility: 'action-friends',
     steps: [
       {
         id: 'finale-1',
@@ -178,6 +189,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['parkkeeper-intro'],
     nextQuestIds: ['quest-river-shell'],
     stickerId: 'sticker-kite',
+    battleAbility: 'action-kite',
     steps: [
       {
         id: 'park-kite-1',
@@ -206,6 +218,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['fisher-intro'],
     nextQuestIds: ['quest-bread-errand'],
     stickerId: 'sticker-shell',
+    battleAbility: 'action-shell',
     steps: [
       {
         id: 'river-shell-1',
@@ -241,6 +254,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['baker-intro'],
     nextQuestIds: ['quest-school-answer'],
     stickerId: 'sticker-bread',
+    battleAbility: 'action-bread',
     steps: [
       {
         id: 'bread-errand-1',
@@ -269,6 +283,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['teacher-intro'],
     nextQuestIds: ['quest-cave-crystal'],
     stickerId: 'sticker-school',
+    battleAbility: 'action-book',
     steps: [
       {
         id: 'school-answer-1',
@@ -298,6 +313,7 @@ export const QUEST_DEFINITIONS: readonly QuestDefinition[] = [
     dialogueIds: ['cavemouse-intro'],
     nextQuestIds: [],
     stickerId: 'sticker-cave',
+    battleAbility: 'action-crystal',
     steps: [
       {
         id: 'cave-crystal-1',

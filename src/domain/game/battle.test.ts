@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameReducer } from './reducer.ts';
 import { createInitialState } from './initialState.ts';
-import type { GameState } from './types.ts';
+import type { GameState, QuestId } from './types.ts';
 import type { BattleDefinition } from '../../framework/index.ts';
 
 const DEFINITION: BattleDefinition = {
@@ -15,6 +15,14 @@ const DEFINITION: BattleDefinition = {
 
 function hubState(patch: Partial<GameState> = {}): GameState {
   return { ...createInitialState(), mode: 'hub', resumeMode: 'hub', ...patch };
+}
+
+function withCompletedQuests(state: GameState, questIds: readonly QuestId[]): GameState {
+  const quests = { ...state.quests };
+  for (const questId of questIds) {
+    quests[questId] = { status: 'completed', completedSteps: [], completionCount: 1 };
+  }
+  return { ...state, quests };
 }
 
 describe('game reducer battle boundary', () => {
@@ -72,6 +80,49 @@ describe('game reducer battle boundary', () => {
     }
     expect(state.battle?.phase).toBe('victory');
     expect(state.battle?.opponentHearts).toBe(0);
+  });
+});
+
+describe('quest-granted battle abilities', () => {
+  const MOUSE: BattleDefinition = {
+    ...DEFINITION,
+    offeredAbilities: ['action-basket', 'action-book'],
+    weakness: 'action-basket',
+  };
+
+  it('unlocked abilities the opponent offers join the action strip', () => {
+    // quest-helping grants the basket; quest-school-answer grants the book.
+    const state = withCompletedQuests(hubState(), ['quest-helping', 'quest-school-answer']);
+    const next = gameReducer(state, { type: 'START_BATTLE', definition: MOUSE });
+    expect(next.battle?.definition.availableActions).toEqual([
+      'action-ball',
+      'action-shield',
+      'action-basket',
+      'action-book',
+    ]);
+  });
+
+  it('locked abilities stay off the strip', () => {
+    const next = gameReducer(hubState(), { type: 'START_BATTLE', definition: MOUSE });
+    expect(next.battle?.definition.availableActions).toEqual(['action-ball', 'action-shield']);
+    // Identical definition object when nothing is earned — no enrichment.
+    expect(next.battle?.definition).toBe(MOUSE);
+  });
+
+  it('an ability the opponent does not offer stays locked away', () => {
+    // quest-park-kite grants the kite, which the mouse never notices.
+    const state = withCompletedQuests(hubState(), ['quest-park-kite']);
+    const next = gameReducer(state, { type: 'START_BATTLE', definition: MOUSE });
+    expect(next.battle?.definition.availableActions).toEqual(['action-ball', 'action-shield']);
+  });
+
+  it('a feared ability costs the extra heart once it lands', () => {
+    const state = withCompletedQuests(hubState(), ['quest-helping']);
+    let next = gameReducer(state, { type: 'START_BATTLE', definition: MOUSE });
+    next = gameReducer(next, { type: 'ADVANCE_BATTLE_PHASE' }); // → playerChoice
+    next = gameReducer(next, { type: 'CHOOSE_BATTLE_ACTION', action: 'action-basket' });
+    expect(next.battle?.lastOutcome).toBe('opponent-hit');
+    expect(next.battle?.opponentHearts).toBe(1); // 3 − 2
   });
 });
 

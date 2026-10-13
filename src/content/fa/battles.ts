@@ -1,4 +1,4 @@
-import type { BattleDefinition, BattleOutcome } from '../../framework/index.ts';
+import type { BattleAbilityId, BattleDefinition, BattleOutcome } from '../../framework/index.ts';
 import type { ReviewMetadata } from '../types.ts';
 
 const DRAFT_REVIEW: ReviewMetadata = {
@@ -28,9 +28,11 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     // battle keeps the mouse resting — ball taps score, cushion taps harmlessly
     // do nothing. `attack` rows stay in the model for future definitions.
     enemyIntentPattern: ['rest', 'rest', 'rest'],
-    // W7: the mouse is scared of the ball — a landed ball costs it two
-    // hearts, so two good bonks end the game.
-    weakness: 'action-ball',
+    // Quest abilities the mouse notices once earned: the basket and the
+    // book both reach a resting opponent. The mouse is scared of the
+    // basket — a landed basket bonk costs it two hearts.
+    offeredAbilities: ['action-basket', 'action-book'],
+    weakness: 'action-basket',
   },
   // Challenge Zone opponents: same machine, same actions — 3 rounds is the
   // hard maximum and hearts are a per-opponent authored budget ≤3, so each
@@ -38,17 +40,18 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
   // `attack` round fits inside the budget and the battle stays winnable).
   // Each carries a `victoryDiscoveryId`: winning records the world fact
   // that drives the opponent's happy/resting presentation and opens a
-  // gated path. Each also fears one action (W7): the bird fears the ball
-  // (one good bonk wins), the eagle and butterfly fear the cushion — their
-  // own attack bounces back and costs them a heart.
+  // gated path. Each also fears one quest keepsake — a feared ability
+  // landing for two hearts ends the challenger in one good bonk.
   {
     battleId: 'battle-challenge-bird',
     opponentId: 'npc-challenge-bird',
     hearts: 2,
     maxRounds: 3,
     availableActions: ['action-ball', 'action-shield'],
+    // The bird envies the flying kite; the shiny shell dazzles it mid-charge.
+    offeredAbilities: ['action-kite', 'action-shell'],
     enemyIntentPattern: ['rest', 'attack', 'rest'],
-    weakness: 'action-ball',
+    weakness: 'action-kite',
     victoryDiscoveryId: 'discovery-challenge-bird',
   },
   {
@@ -57,8 +60,10 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     hearts: 2,
     maxRounds: 3,
     availableActions: ['action-ball', 'action-shield'],
+    // The proud eagle respects the shiny crystal; a shared snack settles it.
+    offeredAbilities: ['action-crystal', 'action-bread'],
     enemyIntentPattern: ['attack', 'rest', 'rest'],
-    weakness: 'action-shield',
+    weakness: 'action-crystal',
     victoryDiscoveryId: 'discovery-challenge-eagle',
   },
   {
@@ -67,8 +72,10 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     hearts: 2,
     maxRounds: 3,
     availableActions: ['action-ball', 'action-shield'],
+    // The butterfly loses its heart to the shiny shell; a smile disarms it too.
+    offeredAbilities: ['action-shell', 'action-smile'],
     enemyIntentPattern: ['rest', 'rest', 'attack'],
-    weakness: 'action-shield',
+    weakness: 'action-shell',
     victoryDiscoveryId: 'discovery-challenge-butterfly',
   },
 ];
@@ -160,6 +167,117 @@ export const BATTLE_COPY: readonly BattleCopy[] = [
     review: DRAFT_REVIEW,
   },
 ];
+
+/**
+ * Child-facing copy for one quest-granted ability — a name for the unlock
+ * line and one short line per outcome the ability can produce. Abilities
+ * without a line for an outcome fall back to the battle's own `outcomeFa`.
+ */
+export interface BattleAbilityCopy {
+  readonly action: BattleAbilityId;
+  readonly nameFa: string;
+  /** Celebration line when the granting quest completes. */
+  readonly unlockFa: string;
+  readonly outcomeFa: Partial<Record<BattleOutcome, string>>;
+  readonly review: ReviewMetadata;
+}
+
+export const BATTLE_ABILITY_COPY: readonly BattleAbilityCopy[] = [
+  {
+    action: 'action-smile',
+    nameFa: 'لبخند',
+    unlockFa: 'لبخندت حالا در بازی‌ها هم کمکت می‌کند.',
+    outcomeFa: {
+      'opponent-hit': 'لبخندت کارساز شد!',
+      'no-effect': 'فقط لبخندی رد و بدل شد.',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-basket',
+    nameFa: 'سبد',
+    unlockFa: 'سبدت حالا در بازی‌ها هم با توست.',
+    outcomeFa: {
+      'opponent-hit': 'سبد کمک رسید!',
+      blocked: 'سبد جلوی بازی را گرفت.',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-leaf',
+    nameFa: 'برگ',
+    unlockFa: 'برگت حالا در بازی‌ها هم با توست.',
+    outcomeFa: {
+      whiffed: 'برگ آرام زمین نشست.',
+      blocked: 'برگ نرم بازی را نرم کرد.',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-friends',
+    nameFa: 'دوستان',
+    unlockFa: 'دوستانت حالا در بازی‌ها هم کنارت‌اند.',
+    outcomeFa: {
+      'opponent-hit': 'دوستانت رسیدند!',
+      whiffed: 'دوستان کنار ماندند.',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-kite',
+    nameFa: 'بادبادک',
+    unlockFa: 'بادبادکت حالا در بازی‌ها هم با توست.',
+    outcomeFa: {
+      'opponent-hit': 'بادبادک رسید!',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-shell',
+    nameFa: 'صدف',
+    unlockFa: 'صدفت حالا در بازی‌ها هم با توست.',
+    outcomeFa: {
+      whiffed: 'صدف آرام بود.',
+      'opponent-hit': 'درخشش صدف رسید!',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-bread',
+    nameFa: 'نان',
+    unlockFa: 'نانت حالا در بازی‌ها هم با توست.',
+    outcomeFa: {
+      'no-effect': 'نان فقط بوی خوب داد.',
+      blocked: 'برای نان ایستاد!',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-book',
+    nameFa: 'کتاب',
+    unlockFa: 'کتابت حالا در بازی‌ها هم با توست.',
+    outcomeFa: {
+      'opponent-hit': 'کتاب جواب را گفت!',
+      'no-effect': 'کتاب حالا لازم نبود.',
+    },
+    review: DRAFT_REVIEW,
+  },
+  {
+    action: 'action-crystal',
+    nameFa: 'بلور',
+    unlockFa: 'بلورت حالا در بازی‌ها هم با توست.',
+    outcomeFa: {
+      'opponent-hit': 'بلور درخشید!',
+      whiffed: 'بلور از کنارش گذشت.',
+    },
+    review: DRAFT_REVIEW,
+  },
+];
+
+/** Copy row for one quest-granted ability, if authored. */
+export function abilityCopyFor(action: string): BattleAbilityCopy | null {
+  return BATTLE_ABILITY_COPY.find((copy) => copy.action === action) ?? null;
+}
 
 export function getBattleDefinition(battleId: string): BattleDefinition | null {
   return BATTLE_DEFINITIONS.find((definition) => definition.battleId === battleId) ?? null;

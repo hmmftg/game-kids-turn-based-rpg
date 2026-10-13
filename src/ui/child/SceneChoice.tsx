@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import type { BattleActionId } from '../../framework/index.ts';
 import type { IconId } from '../../domain/game/types.ts';
 import { getIcon } from '../../content/fa/icons.ts';
 import { prefersReducedMotion } from '../../services/device/capabilities.ts';
@@ -57,6 +58,22 @@ export const HELD_ITEM: Partial<Record<IconId, HeldItem>> = {
   'icon-give-shell': 'shell',
   'icon-place-bread': 'bread',
   'icon-give-crystal': 'crystal',
+};
+
+/** The physical object each battle action renders as — abilities reuse the
+ *  quest object's own glyph so the keepsake looks the same everywhere. */
+export const BATTLE_ACTION_ELEMENT: Record<BattleActionId, SceneElement> = {
+  'action-ball': 'ball',
+  'action-shield': 'cushion',
+  'action-smile': 'face',
+  'action-basket': 'basket',
+  'action-leaf': 'leaf',
+  'action-friends': 'person',
+  'action-kite': 'kite',
+  'action-shell': 'shell',
+  'action-bread': 'bread',
+  'action-book': 'book',
+  'action-crystal': 'crystal',
 };
 
 const stroke = {

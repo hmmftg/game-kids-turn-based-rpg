@@ -33,7 +33,30 @@ export type BattlePhase = (typeof BATTLE_PHASES)[number];
  * The child's physical actions: the soft ball and the cushion (shield).
  * Physical objects only — no action vocabulary on the child surface.
  */
-export const BATTLE_ACTION_IDS = ['action-ball', 'action-shield'] as const;
+export const BASE_BATTLE_ACTION_IDS = ['action-ball', 'action-shield'] as const;
+
+/**
+ * Quest-granted ability actions — physical objects the child earns by
+ * completing quests. Each carries its own row in the outcome matrix (see
+ * `battle.ts`); they are never authored in `availableActions`, only in
+ * `offeredAbilities`, and reach a battle only when the child has unlocked
+ * them (derived from completed quests by the game reducer).
+ */
+export const BATTLE_ABILITY_IDS = [
+  'action-smile',
+  'action-basket',
+  'action-leaf',
+  'action-friends',
+  'action-kite',
+  'action-shell',
+  'action-bread',
+  'action-book',
+  'action-crystal',
+] as const;
+
+export type BattleAbilityId = (typeof BATTLE_ABILITY_IDS)[number];
+
+export const BATTLE_ACTION_IDS = [...BASE_BATTLE_ACTION_IDS, ...BATTLE_ABILITY_IDS] as const;
 
 export type BattleActionId = (typeof BATTLE_ACTION_IDS)[number];
 
@@ -70,6 +93,11 @@ export interface BattleState {
   readonly enemyIntent: BattleIntent;
   readonly lastAction: BattleActionId | null;
   readonly lastOutcome: BattleOutcome | null;
+  /**
+   * One-round carryover for pacifying abilities: when set, it replaces the
+   * authored intent for the next round and is cleared on use.
+   */
+  readonly forcedIntent: BattleIntent | undefined;
   /** Every resolved player round, in order — the achievement source. */
   readonly rounds: readonly BattleRound[];
 }
@@ -86,13 +114,21 @@ export interface BattleDefinition {
   readonly hearts: number;
   readonly maxRounds: number;
   readonly availableActions: readonly BattleActionId[];
+  /**
+   * The ability objects this opponent notices: the authored subset of
+   * `BATTLE_ABILITY_IDS` offered to the child when unlocked by completed
+   * quests (the game reducer intersects at START_BATTLE). Keeps the action
+   * strip small — at most the base two plus a couple of keepsakes.
+   */
+  readonly offeredAbilities?: readonly BattleActionId[];
   readonly enemyIntentPattern: readonly BattleIntent[];
   /**
-   * The one action this opponent fears (W7): when it produces an effect —
-   * a ball that lands, a cushion that blocks — it costs the opponent one
-   * extra heart. Communicated physically (the opponent recoils harder and
-   * flinches toward the weak-to object), never by icon or text label.
-   * Must reference an action in `availableActions`; optional — a battle
+   * The one action this opponent fears: when it produces an effect —
+   * a ball that lands, a cushion that blocks, a feared keepsake that lands —
+   * it costs the opponent one extra heart. Communicated physically (the
+   * opponent recoils harder and flinches toward the weak-to object), never
+   * by icon or text label. Must reference an action the child can be
+   * offered (`availableActions` or `offeredAbilities`); optional — a battle
    * without a weakness keeps the plain outcome matrix.
    */
   readonly weakness?: BattleActionId;

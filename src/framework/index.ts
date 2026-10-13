@@ -106,8 +106,14 @@ export {
 } from './modules/battle/battle.ts';
 export { battleReducer } from './modules/battle/reducer.ts';
 export { validateBattleDefinition } from './modules/battle/validation.ts';
-export { BATTLE_ACTION_IDS, BATTLE_PHASES } from './modules/battle/types.ts';
+export {
+  BASE_BATTLE_ACTION_IDS,
+  BATTLE_ABILITY_IDS,
+  BATTLE_ACTION_IDS,
+  BATTLE_PHASES,
+} from './modules/battle/types.ts';
 export type {
+  BattleAbilityId,
   BattleAchievementId,
   BattleActionId,
   BattleDefinition,
