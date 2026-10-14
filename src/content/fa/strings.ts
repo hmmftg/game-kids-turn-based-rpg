@@ -72,6 +72,7 @@ export const FA = {
   hotspotHint: 'جای چشمک‌زن را لمس کن',
   tapHere: 'اینجا را لمس کن',
   backToHood: 'برگرد به محله',
+  battleChooseItem: 'کدام را برمی‌داری؟',
   keepGoing: 'ادامه بده',
   wellDone: 'آفرین!',
   youDidIt: 'انجامش دادی!',

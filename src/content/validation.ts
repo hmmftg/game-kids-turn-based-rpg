@@ -1,4 +1,4 @@
-import { validateBattleDefinition } from '../framework/index.ts';
+import { BATTLE_ABILITY_IDS, validateBattleDefinition } from '../framework/index.ts';
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../domain/quests/definitions.ts';
 import {
   allDialogueReports,
@@ -11,7 +11,7 @@ import { NPC_DEFINITIONS, WORLD_AREAS, insideBounds } from '../world/registry.ts
 import { ANCHORS, EDGES, getAnchorOrNull } from '../world/navigation/graph.ts';
 import { MAP_TRANSITIONS, WORLD_MAPS } from '../world/maps.ts';
 import { STATIC_WORLD_SOURCE } from '../world/worldSource.ts';
-import { BATTLE_COPY, BATTLE_DEFINITIONS } from './fa/battles.ts';
+import { BATTLE_ABILITY_COPY, BATTLE_COPY, BATTLE_DEFINITIONS } from './fa/battles.ts';
 import { DIALOGUE_NODES } from './fa/dialogue.ts';
 import { hasIcon } from './fa/icons.ts';
 import { NPCS, QUEST_COPY } from './fa/quests.ts';
@@ -631,6 +631,67 @@ function validateBattles(issues: ValidationIssue[]): void {
         code: 'missing-battle-copy',
         where: definition.battleId,
         message: 'Battle definition has no Persian copy row.',
+      });
+    }
+  }
+  // Quest-granted abilities: every quest grants exactly one known ability,
+  // no two quests grant the same one, and every ability has a granting
+  // quest — otherwise a weakness could point at an unlockable nothing.
+  const granted = new Set<string>();
+  for (const quest of QUEST_DEFINITIONS) {
+    if (!(BATTLE_ABILITY_IDS as readonly string[]).includes(quest.battleAbility)) {
+      issues.push({
+        severity: 'error',
+        code: 'unknown-ability',
+        where: quest.id,
+        message: `Quest grants unknown battle ability ${quest.battleAbility}.`,
+      });
+    } else if (granted.has(quest.battleAbility)) {
+      issues.push({
+        severity: 'error',
+        code: 'duplicate-ability',
+        where: quest.id,
+        message: `Quest grants ${quest.battleAbility}, already granted by another quest.`,
+      });
+    }
+    granted.add(quest.battleAbility);
+  }
+  for (const ability of BATTLE_ABILITY_IDS) {
+    if (!granted.has(ability)) {
+      issues.push({
+        severity: 'error',
+        code: 'unreachable-ability',
+        where: ability,
+        message: `Battle ability ${ability} is granted by no quest.`,
+      });
+    }
+  }
+  const abilityIds = new Set<string>(BATTLE_ABILITY_IDS);
+  for (const copy of BATTLE_ABILITY_COPY) {
+    if (!abilityIds.has(copy.action)) {
+      issues.push({
+        severity: 'error',
+        code: 'orphan-ability-copy',
+        where: copy.action,
+        message: 'Ability copy exists for an unknown ability.',
+      });
+      continue;
+    }
+    checkText(`${copy.action}.nameFa`, copy.nameFa, issues);
+    checkText(`${copy.action}.unlockFa`, copy.unlockFa, issues);
+    checkLength(`${copy.action}.unlockFa`, copy.unlockFa, MAX_DIALOGUE_LINE_WORDS, issues);
+    for (const [outcome, text] of Object.entries(copy.outcomeFa)) {
+      checkText(`${copy.action}.outcomeFa.${outcome}`, text, issues);
+      checkLength(`${copy.action}.outcomeFa.${outcome}`, text, MAX_DIALOGUE_LINE_WORDS, issues);
+    }
+  }
+  for (const ability of BATTLE_ABILITY_IDS) {
+    if (!BATTLE_ABILITY_COPY.some((copy) => copy.action === ability)) {
+      issues.push({
+        severity: 'error',
+        code: 'missing-ability-copy',
+        where: ability,
+        message: 'Battle ability has no Persian copy row.',
       });
     }
   }

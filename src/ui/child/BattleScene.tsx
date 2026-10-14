@@ -6,10 +6,10 @@ import type {
   BattlePhase,
   BattleState,
 } from '../../framework/index.ts';
-import type { BattleCopy } from '../../content/fa/battles.ts';
+import { abilityCopyFor, type BattleCopy } from '../../content/fa/battles.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { DialogueCard } from './DialogueCard.tsx';
-import { SceneGlyph, type SceneElement } from './SceneChoice.tsx';
+import { BATTLE_ACTION_ELEMENT, SceneGlyph } from './SceneChoice.tsx';
 
 /**
  * Micro turn-based battle surface (PR I).
@@ -31,15 +31,20 @@ const PASSIVE_DWELL_MS: Partial<Record<BattlePhase, number>> = {
   roundCheck: 450,
 };
 
-const ACTION_ELEMENT: Record<BattleActionId, SceneElement> = {
-  'action-ball': 'ball',
-  'action-shield': 'cushion',
-};
-
-const ACTION_TESTID: Record<BattleActionId, string> = {
-  'action-ball': 'battle-action-ball',
-  'action-shield': 'battle-action-shield',
-};
+/** One outcome line per action, when the ability copy authors one —
+ *  otherwise the battle's own outcome line stands. */
+function outcomeLineFor(
+  copy: BattleCopy,
+  action: BattleActionId | null,
+  outcome: BattleState['lastOutcome'],
+): string {
+  const key = outcome ?? 'no-effect';
+  if (action !== null) {
+    const abilityLine = abilityCopyFor(action)?.outcomeFa[key];
+    if (abilityLine !== undefined) return abilityLine;
+  }
+  return copy.outcomeFa[key];
+}
 
 /**
  * Heart pips: filled hearts remain, emptied slots stay visible as pale
@@ -130,13 +135,22 @@ export function BattleScene({
     return () => window.clearTimeout(timer);
   }, [battle.phase, battle.round]);
 
+  // The opponent flinches only toward a feared object the child can
+  // actually pick this battle — a keepsake still locked by its quest isn't
+  // on the strip, so there is nothing to wince at.
+  const weaknessOffered =
+    battle.definition.weakness !== undefined &&
+    battle.definition.availableActions.includes(battle.definition.weakness);
+  const manyActions = battle.definition.availableActions.length > 2;
   const lineFa =
     battle.phase === 'intro'
       ? copy.introFa
       : battle.phase === 'playerChoice'
-        ? copy.promptFa
+        ? manyActions
+          ? FA.battleChooseItem
+          : copy.promptFa
         : battle.phase === 'playerResolution'
-          ? copy.outcomeFa[battle.lastOutcome ?? 'no-effect']
+          ? outcomeLineFor(copy, battle.lastAction, battle.lastOutcome)
           : battle.phase === 'enemyResolution'
             ? copy.intentFa[battle.enemyIntent]
             : battle.phase === 'victory'
@@ -197,7 +211,7 @@ export function BattleScene({
           data-phase={battle.phase}
           data-outcome={battle.lastOutcome ?? 'none'}
           data-intent={battle.enemyIntent}
-          data-weakness={battle.definition.weakness ?? 'none'}
+          data-weakness={weaknessOffered ? battle.definition.weakness : 'none'}
           data-weak={
             battle.lastAction === battle.definition.weakness &&
             (battle.lastOutcome === 'opponent-hit' || battle.lastOutcome === 'blocked')
@@ -217,9 +231,9 @@ export function BattleScene({
                   event.stopPropagation();
                   onChoose(action);
                 }}
-                data-testid={ACTION_TESTID[action]}
+                data-testid={`battle-${action}`}
               >
-                <SceneGlyph element={ACTION_ELEMENT[action]} size={56} />
+                <SceneGlyph element={BATTLE_ACTION_ELEMENT[action]} size={56} />
               </button>
             ))}
           </DialogueCard>

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { BATTLE_ACTION_IDS } from '../../framework/index.ts';
 import { ICONS } from '../../content/fa/icons.ts';
 import { QUEST_COPY } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
@@ -8,7 +9,7 @@ import { AVATAR_IDS } from '../../domain/game/types.ts';
 import type { IconId } from '../../domain/game/types.ts';
 import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
 import { AVATAR_VISUALS } from '../../world/models/modelProvider.ts';
-import { SceneGlyph } from './SceneChoice.tsx';
+import { BATTLE_ACTION_ELEMENT, SceneGlyph } from './SceneChoice.tsx';
 import { AvatarPortrait } from './AvatarPortrait.tsx';
 import { sceneElementFor } from './contextInteraction.ts';
 import { AvatarSelectScreen } from './screens.tsx';
@@ -104,6 +105,18 @@ describe('scene objects (objects and people are the verbs)', () => {
     for (const icon of ICONS) {
       expect(icon.labelFa.length).toBeGreaterThan(0);
       expect(icon.color).toMatch(/^#/);
+    }
+  });
+});
+
+describe('battle objects (ball, cushion and quest keepsakes)', () => {
+  it('every battle action renders as a physical scene element', () => {
+    for (const action of BATTLE_ACTION_IDS) {
+      const element = BATTLE_ACTION_ELEMENT[action];
+      const { container } = render(<SceneGlyph element={element} />);
+      const svg = container.querySelector('svg');
+      expect(svg, action).not.toBeNull();
+      expect(svg!.getAttribute('data-element')).toBe(element);
     }
   });
 });

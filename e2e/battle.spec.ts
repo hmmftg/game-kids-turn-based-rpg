@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resumeFromPicker } from './harness.ts';
+import { resumeFromPicker, seedCompletedQuests } from './harness.ts';
 import {
   enableWorldProbe,
   npcProbe,
@@ -79,20 +79,25 @@ test.describe('micro turn-based battle', () => {
     await expect(page.getByTestId('battle-action-shield')).toBeVisible();
     expect((await battleState(page))?.opponentHearts).toBe(3);
 
-    // One action per round; the mouse fears the ball — a landed ball costs
-    // it two hearts, so two good bonks end the game.
+    // One action per round; the plain ball costs one heart per bonk — the
+    // mouse's true fear is a quest keepsake it hasn't earned yet, so the
+    // basket stays off the strip.
+    await expect(page.getByTestId('battle-action-basket')).toHaveCount(0);
     await page.getByTestId('battle-action-ball').click();
     await waitForPhase(page, 'playerChoice');
-    expect((await battleState(page))?.opponentHearts).toBe(1);
+    expect((await battleState(page))?.opponentHearts).toBe(2);
     expect((await battleState(page))?.round).toBe(2);
 
     await page.getByTestId('battle-action-ball').click();
+    await waitForPhase(page, 'playerChoice');
+    await page.getByTestId('battle-action-ball').click();
     await waitForPhase(page, 'victory');
-    // Victory earns the session badges: won the game, found what the mouse
-    // fears, and never missed a beat.
+    // Victory earns the session badges: won the game and never missed a
+    // beat; `found-the-fear` stays unearned — the mouse's feared keepsake
+    // was never offered.
     await expect(page.getByTestId('battle-badge-won')).toBeVisible();
-    await expect(page.getByTestId('battle-badge-found-the-fear')).toBeVisible();
     await expect(page.getByTestId('battle-badge-steady')).toBeVisible();
+    await expect(page.getByTestId('battle-badge-found-the-fear')).toHaveCount(0);
     await expect(page.getByTestId('battle-continue')).toBeVisible();
 
     // LEAVE_BATTLE is the only exit — back to a plain hub, nothing persisted.
@@ -100,6 +105,36 @@ test.describe('micro turn-based battle', () => {
     await expect(page.getByTestId('battle-scene')).toHaveCount(0);
     await expect.poll(async () => battleState(page)).toBeNull();
     await expect(page.getByTestId('hud')).toBeVisible();
+  });
+
+  // A completed quest adds its keepsake to the strip — and the mouse fears
+  // the basket, so a landed one costs two hearts and ends it in two bonks.
+  test('a completed quest offers its keepsake — and the mouse fears it', async ({ page }) => {
+    await startGame(page);
+    // quest-helping grants the basket keepsake.
+    await seedCompletedQuests(page, ['quest-helping']);
+    await walkToChallengeZone(page);
+    expect(await tapBattleOpponent(page, 'npc-playful-mouse')).toBe(true);
+    await waitForPhase(page, 'playerChoice');
+
+    const basket = page.getByTestId('battle-action-basket');
+    await expect(basket).toBeVisible();
+    // The opponent winces toward the feared object once it's on the strip.
+    await expect(page.getByTestId('battle-opponent')).toHaveAttribute(
+      'data-weakness',
+      'action-basket',
+    );
+
+    await basket.click();
+    await waitForPhase(page, 'playerChoice');
+    // Feared + effective: 3 − 2.
+    expect((await battleState(page))?.opponentHearts).toBe(1);
+
+    await basket.click();
+    await waitForPhase(page, 'victory');
+    await expect(page.getByTestId('battle-badge-found-the-fear')).toBeVisible();
+    await page.getByTestId('battle-continue').click();
+    await expect(page.getByTestId('battle-scene')).toHaveCount(0);
   });
 
   // Every passive beat carries its physical cause on the opponent: hit →
@@ -187,7 +222,7 @@ test.describe('micro turn-based battle', () => {
       .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
       .not.toBe('playerChoice');
     await waitForPhase(page, 'playerChoice');
-    expect((await battleState(page))?.opponentHearts).toBe(1);
+    expect((await battleState(page))?.opponentHearts).toBe(2);
     expect((await battleState(page))?.round).toBe(2);
   });
 
@@ -202,7 +237,7 @@ test.describe('micro turn-based battle', () => {
 
     await page.getByTestId('battle-action-ball').click();
     await waitForPhase(page, 'playerChoice');
-    expect((await battleState(page))?.opponentHearts).toBe(1);
+    expect((await battleState(page))?.opponentHearts).toBe(2);
 
     await page.getByTestId('leave-battle').click();
     await expect.poll(async () => battleState(page)).toBeNull();
