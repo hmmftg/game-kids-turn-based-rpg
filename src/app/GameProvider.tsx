@@ -17,6 +17,7 @@ import { listenForInstallPrompt } from '../services/pwa/installPrompt.ts';
 import type { ProfileMeta } from '../services/persistence/repository.ts';
 import { GameContext, type GameShell } from './gameContext.ts';
 import { createAppGameRuntime } from './gameRuntime.ts';
+import { musicForState } from './musicRouting.ts';
 import { ProfileCoordinator } from './profileCoordinator.ts';
 import { SaveCoordinator } from './saveCoordinator.ts';
 
@@ -95,17 +96,19 @@ export function GameProvider({
     audioService.applySettings(state.audio);
   }, [state.audio]);
 
-  // Background music belongs to the playable world modes; menus are silent.
-  // unlock() inside a settled-gesture context is a no-op once running, so the
-  // first real tap (which reaches 'hub') is what actually starts the loop.
+  // Music routing is pure state → track (menus get their own theme, battle
+  // overlays the world bed). Autoplay policy still applies: an effect is not
+  // a gesture, so the first audible note waits for the first real tap —
+  // playSfx/playMusic run that single unlock() path. Once unlocked, the
+  // #musicId guard inside play() makes same-track replays a no-op.
   useEffect(() => {
-    const worldModes = ['hub', 'dialogue', 'encounter', 'paused'];
-    if (worldModes.includes(state.mode)) {
-      void audioService.unlock().then(() => audioService.play('music-hub'));
-    } else {
+    const id = musicForState(state.mode, state.battle !== null);
+    if (id === null) {
       audioService.stopMusic();
+    } else {
+      void audioService.unlock().then(() => audioService.play(id));
     }
-  }, [state.mode]);
+  }, [state.mode, state.battle]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -154,6 +157,11 @@ export function GameProvider({
     void audioService.unlock().then(() => audioService.play(id));
   }, []);
 
+  // Same gesture-unlock path as playSfx — bus routing lives inside play().
+  const playMusic = useCallback((id: string) => {
+    void audioService.unlock().then(() => audioService.play(id));
+  }, []);
+
   const shell = useMemo<GameShell>(
     () => ({
       state,
@@ -165,6 +173,7 @@ export function GameProvider({
       installApp: () => installPromptRef.current?.(),
       resetProgress: () => coordinators.profile.resetProgress(),
       playSfx,
+      playMusic,
       profiles,
       activeProfileId,
       selectProfile,
@@ -182,6 +191,7 @@ export function GameProvider({
       installReady,
       coordinators,
       playSfx,
+      playMusic,
       profiles,
       activeProfileId,
       selectProfile,

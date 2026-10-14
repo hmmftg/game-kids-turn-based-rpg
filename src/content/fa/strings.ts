@@ -45,6 +45,8 @@ export const FA = {
   resumePlay: 'برگرد به بازی',
   music: 'آهنگ',
   sfx: 'صداها',
+  musicVolume: 'بلندی آهنگ',
+  sfxVolume: 'بلندی صداها',
   on: 'روشن',
   off: 'خاموش',
   quality: 'کیفیت تصویر',

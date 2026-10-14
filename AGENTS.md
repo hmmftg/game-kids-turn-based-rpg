@@ -134,10 +134,12 @@ Run these before opening or updating a PR:
 
 ```bash
 npm run verify        # format:check + lint + typecheck + unit tests + build (incl. content validation + bundle budgets)
-npx playwright test   # golden-path e2e (landscape-mobile project)
 ```
 
 - `npm run verify` must be fully green — do not skip stages because a previous PR passed them.
+- The full e2e suite runs sharded in CI (`.github/workflows/e2e.yml`) — it is
+  too slow under local software WebGL. Locally, run only the spec(s) for the
+  feature you touched, e.g. `npx playwright test e2e/audio.spec.ts`.
 - Playwright browsers must be installed once per machine: `npx playwright install chromium`.
 - When e2e touches the celebration overlay, dismiss it via `celebration-continue` before tapping onward — the overlay intercepts pointer events by design.
 
@@ -228,6 +230,7 @@ The child's interaction language is **the physical thing**, never an action icon
 - `README.md` — setup, scripts, content governance.
 - `AGENTS.md` — rules every agent must follow (this file).
 - `docs/ARCHITECTURE.md` — module map, invariants, budgets.
+- `docs/AUDIO.md` — audio provenance, encoding pipeline, licensing, playback lifecycle.
 - `docs/INTERACTION-MODEL.md` — contextual-target interaction contract.
 - `docs/ANIMATIONS.md` — semantic animation vocabulary and episode rules.
 - `docs/LIVING-WORLD.md` — presentation liveliness contract: semantic vs. presentation boundary, triggers, `arrivalNonce` invariant.

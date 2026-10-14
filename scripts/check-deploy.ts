@@ -94,7 +94,7 @@ const exampleLeak = distFiles.find(
 must(!exampleLeak, `dist contains an example artifact: ${String(exampleLeak)}`);
 
 must(existsSync(join(DIST, 'offline.html')), 'dist/offline.html missing');
-must(existsSync(join(DIST, 'audio/music-hub.wav')), 'dist/audio missing — audio must be precached');
+must(existsSync(join(DIST, 'audio/music-hub.mp3')), 'dist/audio missing — audio must be precached');
 
 for (const error of errors) process.stderr.write(`error  ${error}\n`);
 if (errors.length > 0) {

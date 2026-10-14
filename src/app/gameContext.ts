@@ -13,6 +13,8 @@ export interface GameShell {
   readonly installApp: () => void;
   readonly resetProgress: () => void;
   readonly playSfx: (id: string) => void;
+  /** Music-bus playback through the same gesture-unlock path as playSfx. */
+  readonly playMusic: (id: string) => void;
   /** Player profiles on this device, in creation order. */
   readonly profiles: readonly ProfileMeta[];
   readonly activeProfileId: string | null;

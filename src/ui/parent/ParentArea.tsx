@@ -278,10 +278,19 @@ export function ParentArea({
 
           <h3 className="section__title">{FA.parentCredits}</h3>
           <p className="text text--soft">
-            قلم Vazirmatn با پروانه‌ی SIL Open Font License؛ کد بازی با پروانه‌ی MIT. صداها:{' '}
-            {AUDIO_MANIFEST.every((asset) => asset.url === null)
-              ? 'همه‌ی صداها فعلاً خاموش و جای‌نگه‌دارند.'
-              : 'صداهای فعلی با ژنراتور داخلی بازی ساخته شده‌اند و جای‌نگه‌دارند.'}
+            قلم Vazirmatn با پروانه‌ی SIL Open Font License؛ کد بازی با پروانه‌ی MIT.
+          </p>
+          {/* Attribution lines are licence obligations — render every distinct
+              one declared in the manifest (CC BY 4.0 requires this credit). */}
+          {[...new Set(AUDIO_MANIFEST.map((a) => a.attribution).filter((a) => a !== ''))].map(
+            (line) => (
+              <p key={line} className="text text--soft" dir="ltr" data-testid="audio-credit">
+                🎵 {line}
+              </p>
+            ),
+          )}
+          <p className="text text--soft">
+            جلوه‌های صوتی با ژنراتور داخلی بازی ساخته شده‌اند و با پروانه‌ی MIT منتشر می‌شوند.
           </p>
 
           <h3 className="section__title">{FA.parentPrivacy}</h3>

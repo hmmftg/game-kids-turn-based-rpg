@@ -142,6 +142,44 @@ export function PauseMenu({
           </button>
         </div>
 
+        {/* Volume sliders ride the same SET_AUDIO_SETTINGS patch as the mute
+            toggles — 0..1, already clamped + persisted by the reducer. Muted
+            buses keep their stored level; the slider just can't be dragged. */}
+        <div className="volume-row">
+          <span className="emoji" aria-hidden="true">
+            🎵
+          </span>
+          <input
+            type="range"
+            className="volume-slider"
+            min={0}
+            max={1}
+            step={0.05}
+            value={audio.musicVolume}
+            disabled={audio.musicMuted}
+            aria-label={FA.musicVolume}
+            onChange={(e) => onAudioChange({ musicVolume: Number(e.currentTarget.value) })}
+            data-testid="music-volume"
+          />
+        </div>
+        <div className="volume-row">
+          <span className="emoji" aria-hidden="true">
+            🔔
+          </span>
+          <input
+            type="range"
+            className="volume-slider"
+            min={0}
+            max={1}
+            step={0.05}
+            value={audio.sfxVolume}
+            disabled={audio.sfxMuted}
+            aria-label={FA.sfxVolume}
+            onChange={(e) => onAudioChange({ sfxVolume: Number(e.currentTarget.value) })}
+            data-testid="sfx-volume"
+          />
+        </div>
+
         {/* W5: child quality choice — a pictogram speed scale instead of the
             parent's word labels. Same state and dispatch as parent-quality. */}
         <div className="row" role="radiogroup" aria-label={FA.quality}>
