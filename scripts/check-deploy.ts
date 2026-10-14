@@ -72,6 +72,10 @@ if (existsSync(swPath)) {
     !sw.includes('perfProbe'),
     'sw.js precache includes the perfProbe chunk — profiling must cost the PWA nothing',
   );
+  must(
+    sw.includes('models/'),
+    'sw.js precache does not include models/*.glb — GLB landmarks would fail offline',
+  );
   // examples/* build with their own Vite config into their own dist — they
   // must never reach the game's bundle budget or precache manifest. Verified
   // against the built output, not the config.

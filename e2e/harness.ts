@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { getQuestDefinition } from '../src/domain/quests/definitions.ts';
-import type { QuestId } from '../src/domain/game/types.ts';
+import type { QualityTier, QuestId } from '../src/domain/game/types.ts';
 import { enableWorldProbe, expandTrail, openQuestDialogue } from './npcTap.ts';
 
 /** Shared golden-path helpers for e2e specs — importing a .spec file would
@@ -34,11 +34,17 @@ export { expandTrail };
 /**
  * Writes a profile with `completed` quests marked done into IndexedDB, then
  * reloads so the picker offers it — Mode-B prototypes skip the whole chain.
+ * `qualityTier` is the parent's persisted choice; the GLB spec seeds
+ * 'high' deliberately because SwiftShader auto-detection lands on 'low'.
  */
-export async function seedCompletedQuests(page: Page, completed: QuestId[]) {
+export async function seedCompletedQuests(
+  page: Page,
+  completed: QuestId[],
+  qualityTier: QualityTier = 'very-low',
+) {
   await page.goto('/?research=0');
   await page.evaluate(
-    async ({ done, dbName, profileId }) => {
+    async ({ done, dbName, profileId, tier }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         // No explicit version — opens whatever the app upgraded the DB to.
         const open = indexedDB.open(dbName);
@@ -74,13 +80,17 @@ export async function seedCompletedQuests(page: Page, completed: QuestId[]) {
       );
       store.put(
         {
-          schemaVersion: 2,
+          // v3 is the current schema — its qualityTier is the modern id and
+          // passes through parseQualityTier unchanged. (schemaVersion 2 would
+          // route through migrateQualityTier, which remaps legacy ids:
+          // seeding 'high' there would land on 'normal'.)
+          schemaVersion: 3,
           avatarId: 'avatar-aban',
           quests,
           checkpoint: { kind: 'hub', questId: null, at: now },
           stickers: [],
           audio: { musicMuted: false, sfxMuted: false, musicVolume: 0.6, sfxVolume: 0.8 },
-          qualityTier: 'low',
+          qualityTier: tier,
           lastPlayedAt: now,
           discoveries: [],
           mapId: 'map-town',
@@ -93,7 +103,7 @@ export async function seedCompletedQuests(page: Page, completed: QuestId[]) {
         tx.onerror = () => reject(tx.error);
       });
     },
-    { done: completed, dbName: DB_NAME, profileId: SEEDED_PROFILE_ID },
+    { done: completed, dbName: DB_NAME, profileId: SEEDED_PROFILE_ID, tier: qualityTier },
   );
   await page.reload();
   await resumeFromPicker(page);

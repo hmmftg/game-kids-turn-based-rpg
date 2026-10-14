@@ -236,7 +236,7 @@ function Covering({
 }
 
 /** Soft blob shadow: one transparent disc, no shadow maps anywhere in the scene. */
-function BlobShadow({ radius = 0.5 }: { readonly radius?: number }) {
+export function BlobShadow({ radius = 0.5 }: { readonly radius?: number }) {
   return (
     <mesh
       position={[0, 0.02, 0]}
