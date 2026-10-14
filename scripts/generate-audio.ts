@@ -1,10 +1,12 @@
 /**
- * Generates the bundled audio assets (public/audio/*.wav).
+ * Generates the bundled SFX assets (public/audio/sfx-*.wav).
  *
  * Everything is synthesized here — pure sine/triangle tones with soft
- * envelopes — so the game ships audio with zero third-party licensing.
+ * envelopes — so the SFX ship with zero third-party licensing (released under
+ * the project MIT licence; see docs/AUDIO.md). Music is NOT generated here:
+ * it is licensed CC BY 4.0 audio encoded by `scripts/encode-music.ts`.
  * Run: `node --experimental-strip-types scripts/generate-audio.ts`
- * Re-run and commit whenever a melody or jingle changes.
+ * Re-run and commit whenever a jingle changes.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -73,29 +75,11 @@ function writeWav(name: string, samples: Float32Array): void {
 
 // C-major pentatonic-ish helpers (Hz)
 const C4 = 261.63,
-  D4 = 293.66,
   E4 = 329.63,
   G4 = 392.0,
-  A4 = 440.0,
   C5 = 523.25,
   E5 = 659.25,
   G5 = 783.99;
-
-function hubMusic(): Float32Array {
-  // 8-bar gentle loop, ~16s at a slow swaying feel.
-  const melody = [C5, A4, G4, E4, D4, E4, G4, A4, C5, A4, G4, E4, D4, C4, D4, E4];
-  const bass = [C4, G4 * 0.5, A4 * 0.5, C4, C4, G4 * 0.5, A4 * 0.5, C4];
-  const notes: Note[] = [];
-  const beat = 0.5;
-  melody.forEach((freq, i) => {
-    notes.push({ freq, start: i * beat, dur: 0.42, gain: 0.3, wave: 'triangle' });
-    notes.push({ freq: freq * 2, start: i * beat, dur: 0.42, gain: 0.06 });
-  });
-  bass.forEach((freq, i) => {
-    notes.push({ freq, start: i * beat * 2, dur: 0.9, gain: 0.16 });
-  });
-  return render(notes, melody.length * beat + 0.9, 0.25);
-}
 
 function jingle(freqs: readonly number[], step: number, dur: number, gain = 0.4): Float32Array {
   const notes = freqs.map((freq, i) => ({
@@ -109,7 +93,6 @@ function jingle(freqs: readonly number[], step: number, dur: number, gain = 0.4)
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
-writeWav('music-hub', hubMusic());
 writeWav('sfx-tap', jingle([E5], 0, 0.09, 0.3));
 writeWav('sfx-choice', jingle([C5, E5], 0.07, 0.12));
 writeWav('sfx-success', jingle([C5, E5, G5], 0.09, 0.22));

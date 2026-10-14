@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFreshPersistedState } from '../domain/game/initialState.ts';
 import { MemorySaveRepository } from '../services/persistence/memoryRepository.ts';
 import { profileSlotKey } from '../services/persistence/repository.ts';
+import { audioService } from '../services/audio/audioService.ts';
 import { App } from './App.tsx';
 import { GameProvider } from './GameProvider.tsx';
 
@@ -31,6 +32,10 @@ async function reachHub(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('App', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('walks from the title screen to the hub and shows the quest trail', async () => {
     const { user } = renderApp();
     await reachHub(user);
@@ -100,6 +105,46 @@ describe('App', () => {
       expect(profile).toBeDefined();
       expect(repository.peek(profileSlotKey(profile!.id))).toMatchObject({
         audio: { musicMuted: true },
+      });
+    });
+  });
+
+  it('routes menu and world music through the gesture-unlock path', async () => {
+    const playSpy = vi.spyOn(audioService, 'play').mockResolvedValue(undefined);
+    const unlockSpy = vi.spyOn(audioService, 'unlock').mockResolvedValue(undefined);
+
+    const { user } = renderApp();
+    // Menu modes route to the menu theme — play() itself gates on the real
+    // unlock; the spy observes the routed id regardless of jsdom's missing
+    // AudioContext.
+    await waitFor(() => expect(playSpy).toHaveBeenCalledWith('music-menu'));
+
+    await reachHub(user);
+    await waitFor(() => expect(playSpy).toHaveBeenCalledWith('music-hub'));
+
+    // Back to a menu mode → menu theme again.
+    await user.click(await screen.findByTestId('pause-button'));
+    await user.click(await screen.findByTestId('switch-player'));
+    await waitFor(() => expect(playSpy).toHaveBeenCalledWith('music-menu'));
+
+    expect(unlockSpy).toHaveBeenCalled();
+  });
+
+  it('persists a volume-slider change through save, not just the control', async () => {
+    const repository = new MemorySaveRepository();
+    const { user } = renderApp(repository);
+    await reachHub(user);
+
+    await user.click(screen.getByTestId('pause-button'));
+    fireEvent.change(await screen.findByTestId('music-volume'), { target: { value: '0.3' } });
+    fireEvent.change(await screen.findByTestId('sfx-volume'), { target: { value: '0.4' } });
+    await user.click(screen.getByTestId('resume-button'));
+
+    await waitFor(async () => {
+      const [profile] = await repository.listProfiles();
+      expect(profile).toBeDefined();
+      expect(repository.peek(profileSlotKey(profile!.id))).toMatchObject({
+        audio: { musicVolume: 0.3, sfxVolume: 0.4 },
       });
     });
   });

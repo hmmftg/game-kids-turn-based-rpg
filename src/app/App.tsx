@@ -71,6 +71,7 @@ import {
 import { getMap, transitionForAnchor } from '../world/maps.ts';
 import { nearbyNpcs } from '../world/nearby.ts';
 import { useGame } from './gameContext.ts';
+import { musicForState } from './musicRouting.ts';
 
 // The shipped world: gameplay resolves every anchor/NPC/transition through
 // this one source — the same seam the World Builder swaps for a document.
@@ -127,6 +128,7 @@ export function App() {
     installApp,
     resetProgress,
     playSfx,
+    playMusic,
     profiles,
     activeProfileId,
     selectProfile,
@@ -220,6 +222,13 @@ export function App() {
       setRevealedFinds((set) => (set.has(findId) ? set : new Set(set).add(findId))),
     [],
   );
+
+  // Celebration music rides the same render gate as the overlay (hub mode
+  // only) — it never plays for a checkpoint the child can't see.
+  const celebrationActive = celebrating !== null && state.mode === 'hub';
+  useEffect(() => {
+    if (celebrationActive) playMusic('music-celebration');
+  }, [celebrationActive, playMusic]);
 
   // Presentation-only celebration: the reducer has already completed the quest
   // and granted the sticker before this fires; the overlay just reports it.
@@ -1047,7 +1056,16 @@ export function App() {
       ) : null}
 
       {celebrating !== null && state.mode === 'hub' ? (
-        <QuestCelebration questId={celebrating} onDone={() => setCelebrating(null)} />
+        <QuestCelebration
+          questId={celebrating}
+          onDone={() => {
+            setCelebrating(null);
+            // Resume whatever the routed state wants now — same helper the
+            // GameProvider effect uses, so dismiss agrees with mode+battle.
+            const id = musicForState(state.mode, state.battle !== null);
+            if (id !== null) playMusic(id);
+          }}
+        />
       ) : null}
     </div>
   );

@@ -68,8 +68,10 @@ add remote origins.
 entry (`AUDIO_MANIFEST` for audio, `ASSET_REGISTRY` for the rest) — an
 undeclared file or empty license **fails the build**. `npm run
 validate:assets:release` additionally fails on `status: 'placeholder'` — run
-it before a public content release (audio + icons are currently placeholders;
-fonts are licensed Vazirmatn OFL-1.1).
+it before a public content release (icons are currently placeholders;
+music is licensed CC BY 4.0 — Clement Panchout, attribution rendered in the
+parent area; SFX are original synthesis under the project MIT licence; fonts
+are licensed Vazirmatn OFL-1.1). Full audio provenance: `docs/AUDIO.md`.
 
 ## 6. Ship checklist
 

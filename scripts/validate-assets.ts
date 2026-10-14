@@ -31,12 +31,16 @@ interface KnownAsset {
 }
 
 // Slots with `url: null` are intentionally silent — no file to declare.
+// Audio status derives from the manifest licence: placeholder licences fail
+// release mode; CC-BY entries must carry a non-empty attribution line.
 const audioAssets: readonly KnownAsset[] = AUDIO_MANIFEST.filter((asset) => asset.url !== null).map(
   (asset) => ({
     file: `public/${(asset.url as string).replace(/^\.\//, '')}`,
     license: asset.licence,
-    attribution: '',
-    status: 'placeholder',
+    attribution: asset.attribution,
+    status: asset.licence.includes('placeholder')
+      ? ('placeholder' as const)
+      : ('licensed' as const),
     where: `AUDIO_MANIFEST:${asset.id}`,
   }),
 );
@@ -80,6 +84,9 @@ for (const asset of known.values()) {
   }
   if (asset.license.trim() === '') {
     errors.push(`[asset-registry] ${asset.where} has an empty license`);
+  }
+  if (asset.license.startsWith('CC-BY') && asset.attribution.trim() === '') {
+    errors.push(`[asset-registry] ${asset.where} is CC-BY but has no attribution line`);
   }
   if (release && asset.status === 'placeholder') {
     errors.push(

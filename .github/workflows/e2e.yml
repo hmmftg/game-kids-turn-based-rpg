@@ -1,0 +1,48 @@
+name: E2E (Playwright)
+
+# The full e2e suite is too heavy for a dev machine under software WebGL —
+# it runs here instead, sharded 4 ways. CI already retries each test once
+# (playwright.config.ts), which absorbs the timing flakes seen locally.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright chromium + system deps
+        run: npx playwright install --with-deps chromium
+      - name: Emoji font
+        # Headless Linux renders emoji as tofu without this — a font gap,
+        # not an app bug (docs/QA.md).
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-color-emoji
+      - name: Build
+        run: npm run build
+        env:
+          # Same variable the deploy build reads; unset is fine — the app
+          # falls back to the built-in default endpoint.
+          VITE_RESEARCH_API_URL: ${{ vars.VITE_RESEARCH_API_URL }}
+      - name: Playwright shard ${{ matrix.shard }}/4
+        run: npx playwright test --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
