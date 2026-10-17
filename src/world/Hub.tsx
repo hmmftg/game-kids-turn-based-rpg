@@ -935,7 +935,7 @@ export function Hub({
                 >
                   <PlantCluster position={[0, 0, 0]} scale={slot.scale} />
                 </ReactiveProp>
-              ) : (
+              ) : slot.kind === 'patch' ? (
                 <mesh
                   key={i}
                   geometry={PLANE}
@@ -945,6 +945,25 @@ export function Hub({
                   scale={[slot.scale ?? 2, slot.scale ?? 2, 1]}
                   raycast={noRaycast}
                 />
+              ) : (
+                // scenery kinds (tree-*/rocks/farm/fence) go through the
+                // active ModelSet — a truthful GLB on high tiers, the same
+                // silhouette in cubic form below. Directional kinds declare
+                // `rotationY`; the rest get a golden-angle yaw so slots
+                // sharing one GLB (both `rocks` slots use rocks.glb) don't
+                // read as stamped copies.
+                <group
+                  key={i}
+                  position={[slot.x, 0, slot.z]}
+                  rotation={[0, slot.rotationY ?? i * 2.399, 0]}
+                  raycast={noRaycast}
+                >
+                  <models.Scenery
+                    variant={slot.kind}
+                    scale={slot.scale ?? 1}
+                    detailLevel={detailLevel}
+                  />
+                </group>
               )
             ) : null,
           )}

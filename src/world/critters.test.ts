@@ -4,11 +4,14 @@ import {
   BUTTERFLY_SPOTS,
   CAT_PATROLS,
   CRITTER_BOUNDS,
+  DOG_PATROLS,
+  DUCK_PATROLS,
   EAGLE_ORBIT,
   EAGLE_PERCHES,
   FOUNTAIN_BASIN,
   INITIAL_CRITTER_PLACEMENTS,
   catPathIsSafe,
+  groundPatrolsFor,
   groundSpotIsClear,
   nextSeed,
   pickSpot,
@@ -16,21 +19,25 @@ import {
 } from './critters.ts';
 import { isDecorationClearPath } from './decorations.ts';
 
-describe('CAT_PATROLS', () => {
+describe.each([
+  ['cat', CAT_PATROLS],
+  ['duck', DUCK_PATROLS],
+  ['dog', DOG_PATROLS],
+] as const)('ground patrols (%s)', (kind, patrols) => {
   it('every spot in every patrol clears the exclusion envelope', () => {
-    for (const patrol of CAT_PATROLS) {
+    for (const patrol of patrols) {
       for (const spot of patrol) {
-        expect(groundSpotIsClear(spot), `cat spot ${spot.x},${spot.z}`).toBe(true);
+        expect(groundSpotIsClear(spot), `${kind} spot ${spot.x},${spot.z}`).toBe(true);
       }
     }
   });
 
   it('every reachable pair within a patrol has a safe swept path', () => {
-    for (const patrol of CAT_PATROLS) {
+    for (const patrol of patrols) {
       for (const a of patrol) {
         for (const b of patrol) {
           if (a === b) continue;
-          expect(catPathIsSafe(a, b), `cat path ${a.x},${a.z} → ${b.x},${b.z}`).toBe(true);
+          expect(catPathIsSafe(a, b), `${kind} path ${a.x},${a.z} → ${b.x},${b.z}`).toBe(true);
         }
       }
     }
@@ -114,8 +121,8 @@ describe('INITIAL_CRITTER_PLACEMENTS', () => {
       if (p.kind === 'bird' || p.kind === 'eagle') {
         expect(perchIds.has(p.spotId ?? ''), p.key).toBe(true);
       }
-      if (p.kind === 'cat') {
-        const patrol = CAT_PATROLS[p.poolIndex];
+      if (p.kind === 'cat' || p.kind === 'duck' || p.kind === 'dog') {
+        const patrol = groundPatrolsFor(p.kind)[p.poolIndex];
         expect(patrol).toBeDefined();
       }
       if (p.kind === 'butterfly') {
@@ -134,6 +141,8 @@ describe('INITIAL_CRITTER_PLACEMENTS', () => {
     expect(kinds.filter((k) => k === 'eagle')).toHaveLength(1);
     expect(kinds.filter((k) => k === 'fish')).toHaveLength(2);
     expect(kinds.filter((k) => k === 'butterfly')).toHaveLength(2);
+    expect(kinds.filter((k) => k === 'duck')).toHaveLength(1);
+    expect(kinds.filter((k) => k === 'dog')).toHaveLength(1);
   });
 
   it('fish spawn inside the fountain basin', () => {

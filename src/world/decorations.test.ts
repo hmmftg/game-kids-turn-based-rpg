@@ -22,7 +22,9 @@ describe('GROUND_DECORATIONS', () => {
 
   it('slots only appear at their declared detail level', () => {
     for (const slot of GROUND_DECORATIONS) {
-      expect(slot.minDetail === 1 || slot.minDetail === 2).toBe(true);
+      // 1/2 are the always-on decoration tiers; 5 gates top-tier scenery
+      // (fence runs) to where the gltf ModelSet is active (detail ≥ 5).
+      expect([1, 2, 5]).toContain(slot.minDetail);
     }
   });
 });

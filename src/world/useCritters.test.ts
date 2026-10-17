@@ -272,9 +272,10 @@ describe('critter controller lifecycle', () => {
         for (const c of controller.critters) {
           expect(c.y).toBeLessThanOrEqual(CRITTER_BOUNDS.maxY + 0.01);
           // Horizontal: transit between authored spots is bounded by the
-          // widest authored reach (~7.2). CRITTER_BOUNDS.maxHorizontalRadius
-          // is only the guaranteed-minimum the camera FIT reserves.
-          expect(Math.hypot(c.x, c.z)).toBeLessThanOrEqual(7.5 + 0.01);
+          // widest authored reach — the duck's river-bank patrol at
+          // (13.3, 8.9) ≈ 16.0. CRITTER_BOUNDS.maxHorizontalRadius is only
+          // the guaranteed-minimum the camera FIT reserves.
+          expect(Math.hypot(c.x, c.z)).toBeLessThanOrEqual(16.5 + 0.01);
         }
       }
     }

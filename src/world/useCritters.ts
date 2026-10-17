@@ -5,7 +5,6 @@ import type { DetailLevel } from './models/modelProvider.ts';
 import {
   BIRD_PERCHES,
   CAT_FOOTPRINT,
-  CAT_PATROLS,
   CRITTER_BOUNDS,
   EAGLE_ORBIT,
   EAGLE_PERCHES,
@@ -13,6 +12,7 @@ import {
   FOUNTAIN_BASIN,
   INITIAL_CRITTER_PLACEMENTS,
   catPathIsSafe,
+  groundPatrolsFor,
   nextSeed,
   pickSpot,
   seedUnit,
@@ -33,6 +33,8 @@ import { recordReactionProbe } from './reactions.ts';
  * Species behaviours:
  *  cat:   idle → dash between patrol spots → sit → idle
  *         (a settled child nearby earns one follow hop or a look)
+ *  duck:  idle → waddle between river-bank spots → idle
+ *  dog:   idle → trot between park-green spots → idle
  *  bird:  perch → parabolic hop to another perch → idle
  *         (a tap sends it early to its next deterministic perch)
  *  eagle: perch → takeoff hop → soar laps → land hop → idle
@@ -40,6 +42,9 @@ import { recordReactionProbe } from './reactions.ts';
  */
 
 const CAT_SPEED = 3.2;
+/** A waddle is slower than a dash; a trot is close to the cat's pace. */
+const DUCK_SPEED = 1.6;
+const DOG_SPEED = 2.8;
 const BIRD_SPEED = 4.5;
 const EAGLE_SPEED = 3.0;
 const EAGLE_SOAR_ANGULAR = 0.55; // rad/s — a lap ≈ 11.4 s
@@ -61,6 +66,8 @@ const IDLE_RANGE: Record<CritterKind, readonly [number, number]> = {
   eagle: [8000, 14000],
   fish: [1200, 4000],
   butterfly: [4000, 9000],
+  duck: [3000, 8000],
+  dog: [2500, 7000],
 };
 
 type MoveMode = 'idle' | 'dash' | 'hop' | 'soar' | 'swim';
@@ -219,15 +226,17 @@ export function createCritterController(effects: ControllerEffects): Controller 
     const claimed = claimedSpots();
     claimed.delete(rt.spotId);
     switch (rt.kind) {
-      case 'cat': {
-        const patrol = CAT_PATROLS[rt.poolIndex];
+      case 'cat':
+      case 'duck':
+      case 'dog': {
+        const patrol = groundPatrolsFor(rt.kind)[rt.poolIndex];
         if (!patrol) return;
         const current = patrol.findIndex(
           (s) => Math.abs(s.x - rt.x) < 0.01 && Math.abs(s.z - rt.z) < 0.01,
         );
         const pool = patrol
           .map((spot, i) => ({ spot, i }))
-          .filter(({ i }) => i !== current && !claimed.has(`cat-${rt.poolIndex}-${i}`));
+          .filter(({ i }) => i !== current && !claimed.has(`${rt.kind}-${rt.poolIndex}-${i}`));
         const safe = pool.filter(({ spot }) => catPathIsSafe({ x: rt.x, z: rt.z }, spot));
         if (safe.length === 0) {
           controller.schedule(rt, idleDelay(rt.kind, rt.seed));
@@ -238,9 +247,9 @@ export function createCritterController(effects: ControllerEffects): Controller 
         startHop(
           rt,
           [pick.spot.x, 0, pick.spot.z],
-          CAT_SPEED,
+          rt.kind === 'cat' ? CAT_SPEED : rt.kind === 'duck' ? DUCK_SPEED : DOG_SPEED,
           'dash',
-          `cat-${rt.poolIndex}-${pick.i}`,
+          `${rt.kind}-${rt.poolIndex}-${pick.i}`,
         );
         break;
       }

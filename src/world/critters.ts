@@ -13,7 +13,7 @@ import { landmarkPosition } from './placement.ts';
  * landmark or path corridor.
  */
 
-export type CritterKind = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly';
+export type CritterKind = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly' | 'duck' | 'dog';
 
 export interface GroundSpot {
   readonly x: number;
@@ -60,6 +60,35 @@ const CAT_PATROL_SE: readonly GroundSpot[] = [
 
 /** Each cat roams one corridor-bounded pocket; pairwise paths are test-verified. */
 export const CAT_PATROLS: readonly (readonly GroundSpot[])[] = [CAT_PATROL_NE, CAT_PATROL_SE];
+
+/**
+ * River bank — the duck waddles the open bank south-east of town, out of the
+ * walking corridors but close enough to spot on the way to the river.
+ */
+const DUCK_PATROL_RIVER: readonly GroundSpot[] = [
+  { x: 11.8, z: 8.4 },
+  { x: 12.8, z: 7.4 },
+  { x: 13.3, z: 8.9 },
+  { x: 11.8, z: 9.9 },
+  { x: 10.8, z: 9.4 },
+];
+
+/** Park greens — the dog trots the open pocket south of the park lane. */
+const DOG_PATROL_PARK: readonly GroundSpot[] = [
+  { x: -11.5, z: 2.5 },
+  { x: -9.5, z: 2.5 },
+  { x: -8.0, z: 2.0 },
+  { x: -12.0, z: 3.0 },
+  { x: -7.5, z: 2.5 },
+];
+
+/** Ground-walking kinds share the cat's swept-path safety rules. */
+export const DUCK_PATROLS: readonly (readonly GroundSpot[])[] = [DUCK_PATROL_RIVER];
+export const DOG_PATROLS: readonly (readonly GroundSpot[])[] = [DOG_PATROL_PARK];
+
+export function groundPatrolsFor(kind: 'cat' | 'duck' | 'dog'): readonly (readonly GroundSpot[])[] {
+  return kind === 'cat' ? CAT_PATROLS : kind === 'duck' ? DUCK_PATROLS : DOG_PATROLS;
+}
 
 const FOUNTAIN_ANCHOR = ANCHORS.find((anchor) => anchor.id === 'anchor-fountain');
 
@@ -270,5 +299,24 @@ export const INITIAL_CRITTER_PLACEMENTS: readonly CritterPlacement[] = [
     poolIndex: 0,
     spotId: 'fish-1',
     seed: 887,
+  },
+  {
+    key: 'duck-0',
+    kind: 'duck',
+    position: [DUCK_PATROL_RIVER[0]!.x, 0, DUCK_PATROL_RIVER[0]!.z],
+    rotationY: -0.7,
+    poolIndex: 0,
+    spotId: 'duck-0',
+    seed: 1231,
+  },
+  {
+    key: 'dog-0',
+    kind: 'dog',
+    tint: '#b98a52',
+    position: [DOG_PATROL_PARK[0]!.x, 0, DOG_PATROL_PARK[0]!.z],
+    rotationY: 1.1,
+    poolIndex: 0,
+    spotId: 'dog-0',
+    seed: 1361,
   },
 ];

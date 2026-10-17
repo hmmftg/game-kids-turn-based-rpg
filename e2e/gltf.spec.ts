@@ -28,7 +28,16 @@ async function glbMeshNames(page: Page) {
     const scene = (window as unknown as SceneProbe).__worldScene;
     const names: string[] = [];
     scene?.traverse((o) => {
-      if (o.isMesh && o.name && /^(Cube|Cylinder)\d/.test(o.name)) names.push(o.name);
+      // Vertex-color-baked GLBs mount a single mesh named after the source
+      // node (see scripts/gen-components-tmp.cjs + convert-model.ts --vcolor).
+      if (
+        o.isMesh &&
+        o.name &&
+        /^(house|market|well|ball|box_A|farm_plot|fence|pathCobbled|pathDirt|detail_|character_)/.test(
+          o.name,
+        )
+      )
+        names.push(o.name);
     });
     return names;
   });
@@ -54,7 +63,7 @@ test.describe('gltf landmarks', () => {
     expect(await glbMeshNames(page)).toEqual([]);
   });
 
-  test('high and very-high tiers load exactly the three committed GLBs and mounts them', async ({
+  test('high and very-high tiers load exactly the committed GLBs and mount them', async ({
     page,
   }) => {
     await enableWorldProbe(page);
@@ -65,12 +74,51 @@ test.describe('gltf landmarks', () => {
       .poll(async () => (await glbMeshNames(page)).length, { timeout: 15000 })
       .toBeGreaterThan(0);
     const urls = requested().map((u) => new URL(u).pathname.split('/').pop());
-    expect(new Set(urls)).toEqual(new Set(['home-gate.glb', 'shop.glb', 'fountain.glb']));
+    // Landmarks + bakery crate + ambient duck/dog + the town/fountain rocks
+    // scenery slots mount eagerly at the town spawn; the farm plot is
+    // very-high only (triangle ceiling), Sara's ball and the park/river/
+    // school trees stay lazy until their areas are visible.
+    expect(new Set(urls)).toEqual(
+      new Set([
+        'home-gate.glb',
+        'shop.glb',
+        'fountain.glb',
+        'crate.glb',
+        'duck.glb',
+        'dog.glb',
+        'rocks.glb',
+      ]),
+    );
     const names = await glbMeshNames(page);
-    // house → Cube1019_*, market → Cube1021_*, well → Cylinder1311_*
-    expect(names.some((n) => n.startsWith('Cube1019'))).toBe(true);
-    expect(names.some((n) => n.startsWith('Cube1021'))).toBe(true);
-    expect(names.some((n) => n.startsWith('Cylinder1311'))).toBe(true);
+    // node names post-vertex-bake: house, market, well — one mesh each
+    expect(names).toContain('house');
+    expect(names).toContain('market');
+    expect(names).toContain('well');
+    // crate → box_A; mini-game characters → character_duck/character_dog
+    expect(names).toContain('box_A');
+    expect(names).toContain('character_duck');
+    expect(names).toContain('character_dog');
+    // two authored rocks slots share rocks.glb — one fetch, two mounts
+    expect(names.filter((n) => n === 'detail_rocks').length).toBe(2);
+    // the garden's farm plot keeps its cubic form on high (see minDetail)
+    expect(names).not.toContain('farm_plot');
+  });
+
+  test('very-high upgrades the farm plot and garden fence to their GLBs', async ({ page }) => {
+    await enableWorldProbe(page);
+    const requested = watchGlbRequests(page);
+    await seedCompletedQuests(page, [], 'very-high');
+    await waitForWalkerIdle(page);
+    await expect
+      .poll(async () => (await glbMeshNames(page)).length, { timeout: 15000 })
+      .toBeGreaterThan(0);
+    const urls = requested().map((u) => new URL(u).pathname.split('/').pop());
+    // both top-tier scenery GLBs in spawn-visible areas (garden)
+    expect(urls).toContain('farm-plot.glb');
+    expect(urls).toContain('fence.glb');
+    const names = await glbMeshNames(page);
+    expect(names).toContain('farm_plot');
+    expect(names).toContain('fence');
   });
 
   test('the glb home-gate door still answers a knock with door-swing', async ({ page }) => {

@@ -7,17 +7,33 @@ human-readable record.
 
 ## 3D models (`public/models/`)
 
-| File            | Upstream asset                        | Pack                             | Author                                                    | License                                                       |
-| --------------- | ------------------------------------- | -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
-| `home-gate.glb` | `Models/objects/gltf/house.gltf.glb`  | KayKit Medieval Builder Pack 1.0 | Kay Lousberg ([kaylousberg.com](https://kaylousberg.com)) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| `shop.glb`      | `Models/objects/gltf/market.gltf.glb` | KayKit Medieval Builder Pack 1.0 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| `fountain.glb`  | `Models/objects/gltf/well.gltf.glb`   | KayKit Medieval Builder Pack 1.0 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| File               | Upstream asset                                    | Pack                                | Author                                                    | License                                                       |
+| ------------------ | ------------------------------------------------- | ----------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| `home-gate.glb`    | `Models/objects/gltf/house.gltf.glb`              | KayKit Medieval Builder Pack 1.0    | Kay Lousberg ([kaylousberg.com](https://kaylousberg.com)) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `shop.glb`         | `Models/objects/gltf/market.gltf.glb`             | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `fountain.glb`     | `Models/objects/gltf/well.gltf.glb`               | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `ball.glb`         | `Models/gltf/ball.gltf.glb`                       | KayKit Mini-Game Variety Pack 1.2   | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `duck.glb`         | `Models/Characters/Duck/gltf/character_duck.gltf` | KayKit Mini-Game Variety Pack 1.2   | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `dog.glb`          | `Models/Characters/Dog/gltf/character_dog.gltf`   | KayKit Mini-Game Variety Pack 1.2   | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `crate.glb`        | `Assets/gltf/box_A.gltf`                          | KayKit City Builder Bits 1.0 FREE   | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `tree-a.glb`       | `Models/objects/gltf/detail_treeA.gltf.glb`       | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `tree-b.glb`       | `Models/objects/gltf/detail_treeB.gltf.glb`       | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `tree-c.glb`       | `Models/objects/gltf/detail_treeC.gltf.glb`       | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `rocks.glb`        | `Models/objects/gltf/detail_rocks.gltf.glb`       | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `rocks-small.glb`  | `Models/objects/gltf/detail_rocks_small.gltf.glb` | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `farm-plot.glb`    | `Models/objects/gltf/farm_plot.gltf.glb`          | KayKit Medieval Builder Pack 1.0    | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `fence.glb`        | `Models/gltf/fence.gltf.glb`                      | KayKit Spooktober Seasonal Pack 1.1 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `path-cobbled.glb` | `Models/gltf/pathCobbled.gltf.glb`                | KayKit Spooktober Seasonal Pack 1.1 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `path-dirt.glb`    | `Models/gltf/pathDirt.gltf.glb`                   | KayKit Spooktober Seasonal Pack 1.1 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 CC0 dedicates the works to the public domain — no attribution is legally
 required; the author requests a credit, which we provide here and in the
-registry. Modifications: filenames renamed, and each model was decimated
-with `@gltf-transform/cli` (`simplify --ratio 0.4 --error 0.01`) to fit the
-per-tier triangle budgets in `scripts/measure-world.ts`; no other changes.
+registry. Modifications: filenames renamed, and each model was decimated to
+fit the per-tier triangle budgets in `scripts/measure-world.ts` — the first
+three via `@gltf-transform/cli` (`simplify --ratio 0.4 --error 0.01`), the
+rest via `scripts/convert-model.ts` (ratio/error per registry `source`). The
+`crate` model also had its palette texture stripped in favour of a flat wood
+tone; no other changes.
 
 Only **CC0** or **CC BY 4.0** assets may ship. CC BY requires the license link
 plus a modification notice in this table, and the project MIT license never
