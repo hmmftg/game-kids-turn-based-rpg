@@ -1,4 +1,4 @@
-import { MeshLambertMaterial } from 'three';
+import { DoubleSide, MeshLambertMaterial } from 'three';
 
 /**
  * Single shared material for every shipped GLB.
@@ -14,3 +14,15 @@ import { MeshLambertMaterial } from 'three';
  * the conversion step — never rebind the file's own materials here.
  */
 export const VERTEX_LAMBERT = new MeshLambertMaterial({ vertexColors: true });
+
+/**
+ * For models whose SOURCE material was doubleSided — Sketchfab auto-rigged
+ * models (elephant, phoenix) rely on backfaces and fall apart into black
+ * shards under single-sided culling. convert-model.ts reports this in its
+ * metrics as "doubleSided": true; only those components use this variant —
+ * the extra fragment cost stays scoped to the meshes that need it.
+ */
+export const VERTEX_LAMBERT_DS = new MeshLambertMaterial({
+  vertexColors: true,
+  side: DoubleSide,
+});

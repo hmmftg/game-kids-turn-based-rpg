@@ -90,7 +90,15 @@ export interface PropProps {
   readonly variant?: PropVisualVariant | undefined;
 }
 
-export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly' | 'duck' | 'dog';
+export type AnimalVisualVariant =
+  | 'cat'
+  | 'bird'
+  | 'eagle'
+  | 'fish'
+  | 'butterfly'
+  | 'duck'
+  | 'dog'
+  | 'elephant';
 
 /**
  * Static authored scenery — trees, rock formations, the garden's farm plot.

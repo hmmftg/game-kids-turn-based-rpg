@@ -2,15 +2,17 @@ import { describe, expect, it } from 'vitest';
 import {
   BIRD_PERCHES,
   BUTTERFLY_SPOTS,
+  CAT_FOOTPRINT,
   CAT_PATROLS,
   CRITTER_BOUNDS,
   DOG_PATROLS,
   DUCK_PATROLS,
   EAGLE_ORBIT,
   EAGLE_PERCHES,
+  ELEPHANT_FOOTPRINT,
+  ELEPHANT_PATROLS,
   FOUNTAIN_BASIN,
   INITIAL_CRITTER_PLACEMENTS,
-  catPathIsSafe,
   groundPatrolsFor,
   groundSpotIsClear,
   nextSeed,
@@ -20,14 +22,17 @@ import {
 import { isDecorationClearPath } from './decorations.ts';
 
 describe.each([
-  ['cat', CAT_PATROLS],
-  ['duck', DUCK_PATROLS],
-  ['dog', DOG_PATROLS],
-] as const)('ground patrols (%s)', (kind, patrols) => {
+  ['cat', CAT_PATROLS, 0.35, CAT_FOOTPRINT],
+  ['duck', DUCK_PATROLS, 0.35, CAT_FOOTPRINT],
+  ['dog', DOG_PATROLS, 0.35, CAT_FOOTPRINT],
+  ['elephant', ELEPHANT_PATROLS, ELEPHANT_FOOTPRINT, ELEPHANT_FOOTPRINT],
+] as const)('ground patrols (%s)', (kind, patrols, spotRadius, pathRadius) => {
   it('every spot in every patrol clears the exclusion envelope', () => {
     for (const patrol of patrols) {
       for (const spot of patrol) {
-        expect(groundSpotIsClear(spot), `${kind} spot ${spot.x},${spot.z}`).toBe(true);
+        expect(groundSpotIsClear(spot, spotRadius), `${kind} spot ${spot.x},${spot.z}`).toBe(
+          true,
+        );
       }
     }
   });
@@ -37,7 +42,10 @@ describe.each([
       for (const a of patrol) {
         for (const b of patrol) {
           if (a === b) continue;
-          expect(catPathIsSafe(a, b), `${kind} path ${a.x},${a.z} → ${b.x},${b.z}`).toBe(true);
+          expect(
+            isDecorationClearPath(a, b, pathRadius),
+            `${kind} path ${a.x},${a.z} → ${b.x},${b.z}`,
+          ).toBe(true);
         }
       }
     }
@@ -121,7 +129,12 @@ describe('INITIAL_CRITTER_PLACEMENTS', () => {
       if (p.kind === 'bird' || p.kind === 'eagle') {
         expect(perchIds.has(p.spotId ?? ''), p.key).toBe(true);
       }
-      if (p.kind === 'cat' || p.kind === 'duck' || p.kind === 'dog') {
+      if (
+        p.kind === 'cat' ||
+        p.kind === 'duck' ||
+        p.kind === 'dog' ||
+        p.kind === 'elephant'
+      ) {
         const patrol = groundPatrolsFor(p.kind)[p.poolIndex];
         expect(patrol).toBeDefined();
       }
@@ -143,6 +156,7 @@ describe('INITIAL_CRITTER_PLACEMENTS', () => {
     expect(kinds.filter((k) => k === 'butterfly')).toHaveLength(2);
     expect(kinds.filter((k) => k === 'duck')).toHaveLength(1);
     expect(kinds.filter((k) => k === 'dog')).toHaveLength(1);
+    expect(kinds.filter((k) => k === 'elephant')).toHaveLength(1);
   });
 
   it('fish spawn inside the fountain basin', () => {

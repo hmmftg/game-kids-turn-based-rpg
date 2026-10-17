@@ -210,3 +210,14 @@ export const KOI_BOUNDS: GlbExtents = {
   min: [-3.523, -1.179, -1.19],
   max: [2.868, 1.714, 1.155],
 };
+
+/**
+ * Sketchfab `elephant` — vertex colors sampled from its painted texture
+ * after `--unskin` baked the bind pose to world space. Head + trunk sit
+ * at +x (the ear cluster), so the fit rotates -π/2 to face +z. The x span
+ * dominates, so `fitToSize` reads size as trunk-to-tail length.
+ */
+export const ELEPHANT_BOUNDS: GlbExtents = {
+  min: [-53.514, -0.391, -35.862],
+  max: [93.829, 87.921, 35.938],
+};

@@ -2090,6 +2090,153 @@ function DogMesh({ tint, moving, level }: SpeciesProps) {
   );
 }
 
+/**
+ * Park elephant: broad barrel body, oversized ears, a hanging trunk — the
+ * biggest critter (~1.5 long), still small enough to read as a friendly
+ * park resident next to the child avatar. The trunk sways on `gait-swish`
+ * and four column legs stride on `gait-a`/`gait-b` while ambling.
+ */
+function ElephantMesh({ tint, moving, level }: SpeciesProps) {
+  const hide = useMaterial(tint ?? '#a9a29a');
+  const soft = softBoxFor(level);
+  const eye = eyeFor();
+  return (
+    <>
+      {/* barrel body — settles a touch lower while ambling */}
+      <mesh
+        geometry={soft}
+        material={hide}
+        position={[0, moving ? 0.52 : 0.58, 0]}
+        scale={[0.56, 0.56, 0.95]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        {/* big head on the front of the body */}
+        <mesh
+          geometry={soft}
+          material={hide}
+          position={[0, 0.72, 0.5]}
+          scale={[0.42, 0.4, 0.36]}
+          raycast={noRaycast}
+        />
+        {/* trunk hangs from the head's lower edge — sways on gait-swish */}
+        <group name="gait-swish" position={[0, 0.62, 0.66]}>
+          <mesh
+            geometry={soft}
+            material={hide}
+            position={[0, -0.22, 0.02]}
+            rotation={[0.12, 0, 0]}
+            scale={[0.13, 0.44, 0.13]}
+            raycast={noRaycast}
+          />
+        </group>
+        {/* short tail flicks on gait-tail while moving */}
+        <group name="gait-tail" position={[0, 0.62, -0.5]} rotation={[0.5, 0, 0]}>
+          <mesh
+            geometry={soft}
+            material={hide}
+            position={[0, -0.14, -0.02]}
+            scale={[0.07, 0.3, 0.07]}
+            raycast={noRaycast}
+          />
+        </group>
+      </Detail>
+      <Detail level={level} min={2}>
+        {/* oversized flat ears — the unmistakable elephant read */}
+        <mesh
+          geometry={soft}
+          material={hide}
+          position={[-0.24, 0.74, 0.46]}
+          rotation={[0, 0, 0.18]}
+          scale={[0.07, 0.34, 0.28]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={soft}
+          material={hide}
+          position={[0.24, 0.74, 0.46]}
+          rotation={[0, 0, -0.18]}
+          scale={[0.07, 0.34, 0.28]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* four column legs — diagonal pairs stride while ambling */}
+        <group name="gait-a" position={[-0.18, 0.28, 0.28]}>
+          <mesh
+            geometry={soft}
+            material={hide}
+            position={[0, -0.14, 0]}
+            scale={[0.14, 0.3, 0.16]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-b" position={[0.18, 0.28, 0.28]}>
+          <mesh
+            geometry={soft}
+            material={hide}
+            position={[0, -0.14, 0]}
+            scale={[0.14, 0.3, 0.16]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-b" position={[-0.18, 0.28, -0.28]}>
+          <mesh
+            geometry={soft}
+            material={hide}
+            position={[0, -0.14, 0]}
+            scale={[0.14, 0.3, 0.16]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-a" position={[0.18, 0.28, -0.28]}>
+          <mesh
+            geometry={soft}
+            material={hide}
+            position={[0, -0.14, 0]}
+            scale={[0.14, 0.3, 0.16]}
+            raycast={noRaycast}
+          />
+        </group>
+        {/* round dark eyes on the head's front corners */}
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[-0.13, 0.78, 0.66]}
+          scale={[0.045, 0.045, 0.03]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0.13, 0.78, 0.66]}
+          scale={[0.045, 0.045, 0.03]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={4}>
+        {/* short cream tusks beside the trunk */}
+        <mesh
+          geometry={soft}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[-0.12, 0.52, 0.64]}
+          rotation={[0.35, 0, 0]}
+          scale={[0.05, 0.05, 0.16]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={soft}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[0.12, 0.52, 0.64]}
+          rotation={[0.35, 0, 0]}
+          scale={[0.05, 0.05, 0.16]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
 function BirdMesh({ tint, moving, level }: SpeciesProps) {
   const feathers = useMaterial(tint ?? '#5b8ab5');
   const beak = useMaterial(DETAIL_COLORS.beak);
@@ -2510,6 +2657,8 @@ export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: 
       <DuckMesh tint={tint} moving={moving} level={detailLevel} />
     ) : variant === 'dog' ? (
       <DogMesh tint={tint} moving={moving} level={detailLevel} />
+    ) : variant === 'elephant' ? (
+      <ElephantMesh tint={tint} moving={moving} level={detailLevel} />
     ) : variant === 'bird' ? (
       <BirdMesh tint={tint} moving={moving} level={detailLevel} />
     ) : variant === 'eagle' ? (

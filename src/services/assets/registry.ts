@@ -302,4 +302,17 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     sha256: 'ddd89f93cd64e34bf635de157a154cff386678c655972a19e36003ce200ea2cf',
     status: 'licensed',
   },
+  {
+    id: 'model-elephant',
+    file: 'public/models/elephant.glb',
+    type: 'model',
+    license: 'CC-BY-4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    attribution:
+      '"Elephant Animation Idle" by GremorySaiyan (sketchfab.com/gremorysaiyan), CC BY 4.0 — sketchfab.com/3d-models/elephant-animation-idle-a8e7e10f005f4baab0a2f5079d759fcd',
+    source:
+      'Elephant Animation Idle (GremorySaiyan, sketchfab.com; mirrored as Sceneview AnimatedElephant.glb) — converted scripts/convert-model.ts (--unskin bind-pose bake, --vcolor texture bake, --no-anim, --brighten 5; ratio 0.2). Source material doubleSided — shipped mesh renders with VERTEX_LAMBERT_DS.',
+    sha256: 'defc79de7ae845e47a999391b6e16798326f413b20b1f88f8084b4dd46e6e96f',
+    status: 'licensed',
+  },
 ];

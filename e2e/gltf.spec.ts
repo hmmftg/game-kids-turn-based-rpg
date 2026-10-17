@@ -33,7 +33,7 @@ async function glbMeshNames(page: Page) {
       if (
         o.isMesh &&
         o.name &&
-        /^(house|market|well|ball|box_A|farm_plot|fence|pathCobbled|pathDirt|detail_|character_|mesh_0)/.test(
+        /^(house|market|well|ball|box_A|farm_plot|fence|pathCobbled|pathDirt|detail_|character_|mesh_0|Object_7)/.test(
           o.name,
         )
       )
@@ -114,15 +114,18 @@ test.describe('gltf landmarks', () => {
       .toBeGreaterThan(0);
     const urls = requested().map((u) => new URL(u).pathname.split('/').pop());
     // both top-tier scenery GLBs in spawn-visible areas (garden), plus the
-    // koi — the fish GLB is very-high only (522 tris over high's headroom).
+    // koi and elephant — both are very-high only (over high's headroom).
     expect(urls).toContain('farm-plot.glb');
     expect(urls).toContain('fence.glb');
     expect(urls).toContain('koi.glb');
+    expect(urls).toContain('elephant.glb');
     const names = await glbMeshNames(page);
     expect(names).toContain('farm_plot');
     expect(names).toContain('fence');
     // both fountain koi mount the shared mesh_0 node — one fetch, two mounts
     expect(names.filter((n) => n === 'mesh_0').length).toBe(2);
+    // the park elephant mounts its single Object_7 mesh — one fetch, one mount
+    expect(names.filter((n) => n === 'Object_7').length).toBe(1);
   });
 
   test('the glb home-gate door still answers a knock with door-swing', async ({ page }) => {

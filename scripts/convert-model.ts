@@ -16,8 +16,13 @@
  * baseColorTexture the bake samples it per-vertex at TEXCOORD_0 (sRGB→linear)
  * — that is how painted Sketchfab textures and KayKit palette textures keep
  * their colors; otherwise the flat baseColorFactor is baked.
- * --unskin drops JOINTS_0/WEIGHTS_0 and every skin so rigged sources ship as
- * their authored rest pose. --no-anim disposes all animations (never played).
+ * --unskin bakes each skinned primitive through linear-blend skinning at the
+ * file's authored pose (JOINTS/WEIGHTS + inverse bind matrices → static
+ * positions), then drops the attributes and skins — rigged sources ship as
+ * their authored rest pose. Some rigged sources scatter at bind pose because
+ * their animation is what assembles the parts — `--pose <seconds>` evaluates
+ * every animation channel at that time and writes the TRS onto the nodes
+ * before the unskin bake. --no-anim disposes all animations (never played).
  * Prints triangle count, bounds, and output size so registry entries can be
  * filled in immediately.
  */
@@ -29,6 +34,7 @@ import { dedup, flatten, join, prune, simplify, weld } from '@gltf-transform/fun
 import { MeshoptSimplifier } from 'meshoptimizer';
 import { decode as decodeJpeg } from 'jpeg-js';
 import { PNG } from 'pngjs';
+import { Matrix3, Matrix4, Vector3 } from 'three';
 
 const [, , input, output, ...rest] = process.argv;
 if (!input || !output) {
@@ -47,6 +53,8 @@ const flat = opt('flat')?.split(',').map(Number);
 const vcolor = rest.includes('--vcolor');
 const unskin = rest.includes('--unskin');
 const noAnim = rest.includes('--no-anim');
+const poseTime = opt('pose') !== undefined ? Number(opt('pose')) : null;
+const brighten = opt('brighten') !== undefined ? Number(opt('brighten')) : 1;
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(input);
@@ -92,11 +100,148 @@ function sampleTexture(image: DecodedImage, u: number, v: number): [number, numb
   ];
 }
 
+/** Evaluate every animation channel at `t` and write the result into each
+ * target node's TRS — used by --pose before the unskin bake for models whose
+ * bind pose is scattered and whose animation is what assembles them. */
+function applyAnimationPose(d: typeof doc, t: number) {
+  const key: number[] = [];
+  const val: number[] = [];
+  for (const animation of d.getRoot().listAnimations()) {
+    for (const channel of animation.listChannels()) {
+      const sampler = channel.getSampler();
+      const node = channel.getTargetNode();
+      const path = channel.getTargetPath();
+      if (!sampler || !node || !path || path === 'weights') continue;
+      const input = sampler.getInput();
+      const output = sampler.getOutput();
+      if (!input || !output) continue;
+      const size = output.getElementSize();
+      const count = input.getCount();
+      let t0 = 0;
+      let t1 = count - 1;
+      input.getElement(0, key);
+      const first = key[0]!;
+      input.getElement(count - 1, key);
+      const last = key[0]!;
+      const tt = Math.max(first, Math.min(last, t));
+      for (let i = 0; i < count - 1; i++) {
+        input.getElement(i, key);
+        const a = key[0]!;
+        input.getElement(i + 1, key);
+        if (tt >= a && tt <= key[0]!) {
+          t0 = i;
+          t1 = i + 1;
+          break;
+        }
+      }
+      input.getElement(t0, key);
+      const a = key[0]!;
+      input.getElement(t1, key);
+      const span = key[0]! - a;
+      const f = span > 0 ? (tt - a) / span : 0;
+      const out = new Array<number>(size);
+      for (let c = 0; c < size; c++) {
+        output.getElement(t0, val);
+        const va = val[c]!;
+        output.getElement(t1, val);
+        out[c] = va + (val[c]! - va) * f;
+      }
+      if (path === 'rotation' && size === 4) {
+        const len = Math.hypot(out[0]!, out[1]!, out[2]!, out[3]!) || 1;
+        node.setRotation([out[0]! / len, out[1]! / len, out[2]! / len, out[3]! / len]);
+      } else if (path === 'translation' && size === 3) {
+        node.setTranslation([out[0]!, out[1]!, out[2]!]);
+      } else if (path === 'scale' && size === 3) {
+        node.setScale([out[0]!, out[1]!, out[2]!]);
+      }
+    }
+  }
+}
+
+/** True when any source material was doubleSided — the shipped component
+ * then needs VERTEX_LAMBERT_DS instead of the default single-sided one. */
+const sourceDoubleSided = root.listMaterials().some((m) => m.getDoubleSided());
+
 await doc.transform(
+  ...(poseTime !== null ? [(d: typeof doc) => applyAnimationPose(d, poseTime)] : []),
   ...(unskin
     ? [
         (d: typeof doc) => {
-          for (const node of d.getRoot().listNodes()) node.setSkin(null);
+          // Bake LBS at the authored pose: skinned POSITION/NORMAL attributes
+          // live in joint-bind space, so dropping the skin alone leaves
+          // scattered parts. Vertex' = Σ w·(worldJoint · IBM) · v, expressed
+          // back in the skinned node's local space so flatten() still applies
+          // its transform exactly once.
+          for (const node of d.getRoot().listNodes()) {
+            const skin = node.getSkin();
+            const mesh = node.getMesh();
+            if (!skin || !mesh) continue;
+            const joints = skin.listJoints();
+            const ibm = skin.getInverseBindMatrices();
+            if (!ibm) continue;
+            const skinMats = joints.map((joint, i) =>
+              new Matrix4()
+                .fromArray(joint.getWorldMatrix() as unknown as number[])
+                .multiply(new Matrix4().fromArray(ibm.getElement(i, []))),
+            );
+            const skinNorms = skinMats.map((m) =>
+              new Matrix3().setFromMatrix4(m),
+            );
+            const toLocal = new Matrix4()
+              .fromArray(node.getWorldMatrix() as unknown as number[])
+              .invert();
+            const toLocalNorm = new Matrix3().setFromMatrix4(toLocal);
+            for (const prim of mesh.listPrimitives()) {
+              const pos = prim.getAttribute('POSITION');
+              const jAttr = prim.getAttribute('JOINTS_0');
+              const wAttr = prim.getAttribute('WEIGHTS_0');
+              if (!pos || !jAttr || !wAttr) continue;
+              const nrm = prim.getAttribute('NORMAL');
+              const v = new Vector3();
+              const n = new Vector3();
+              const acc = new Vector3();
+              const accN = new Vector3();
+              const tmp = new Vector3();
+              const jEl: number[] = [];
+              const wEl: number[] = [];
+              const vEl: number[] = [];
+              const nEl: number[] = [];
+              for (let i = 0; i < pos.getCount(); i++) {
+                pos.getElement(i, vEl);
+                v.fromArray(vEl);
+                jAttr.getElement(i, jEl);
+                wAttr.getElement(i, wEl);
+                let wSum = 0;
+                acc.set(0, 0, 0);
+                accN.set(0, 0, 0);
+                if (nrm) {
+                  nrm.getElement(i, nEl);
+                  n.fromArray(nEl);
+                }
+                for (let k = 0; k < jEl.length; k++) {
+                  const w = wEl[k] ?? 0;
+                  const j = jEl[k];
+                  if (!w || j === undefined || !skinMats[j]) continue;
+                  wSum += w;
+                  tmp.copy(v).applyMatrix4(skinMats[j]!);
+                  acc.addScaledVector(tmp, w);
+                  tmp.copy(n).applyMatrix3(skinNorms[j]!);
+                  accN.addScaledVector(tmp, w);
+                }
+                if (wSum > 0) {
+                  acc.divideScalar(wSum);
+                  accN.divideScalar(wSum);
+                }
+                acc.applyMatrix4(toLocal);
+                pos.setElement(i, acc.toArray() as never);
+                if (nrm) {
+                  accN.applyMatrix3(toLocalNorm).normalize();
+                  nrm.setElement(i, accN.toArray() as never);
+                }
+              }
+            }
+            node.setSkin(null);
+          }
           for (const mesh of d.getRoot().listMeshes())
             for (const prim of mesh.listPrimitives()) {
               prim.setAttribute('JOINTS_0', null);
@@ -142,20 +287,51 @@ await doc.transform(
               const colors = new Float32Array(count * 4);
               const texture = material?.getBaseColorTexture();
               const image = texture ? decodeTexture(texture) : null;
-              const uvs = image ? prim.getAttribute('TEXCOORD_0') : null;
-              if (image && uvs) {
+              const emissiveTexture = material?.getEmissiveTexture();
+              const emissiveImage = emissiveTexture ? decodeTexture(emissiveTexture) : null;
+              const emissiveFactor = material?.getEmissiveFactor() ?? [0, 0, 0];
+              const uvs =
+                (image || emissiveImage) ? prim.getAttribute('TEXCOORD_0') : null;
+              if ((image || emissiveImage) && uvs) {
                 // Painted/palette texture → per-vertex sample at TEXCOORD_0.
+                // glTF emissive is additive, so fire/glow looks that store
+                // their color in the emissive map still bake correctly.
                 const uv: [number, number] = [0, 0];
                 for (let i = 0; i < count; i++) {
                   uvs.getElement(i, uv);
-                  colors.set(sampleTexture(image, uv[0], uv[1]), i * 4);
+                  const rgba: [number, number, number, number] = image
+                    ? sampleTexture(image, uv[0], uv[1])
+                    : [1, 1, 1, 1];
+                  const factor = material?.getBaseColorFactor() ?? [1, 1, 1, 1];
+                  rgba[0] *= factor[0]!;
+                  rgba[1] *= factor[1]!;
+                  rgba[2] *= factor[2]!;
+                  if (emissiveImage) {
+                    const glow = sampleTexture(emissiveImage, uv[0], uv[1]);
+                    rgba[0] = Math.min(1, rgba[0] + glow[0] * emissiveFactor[0]!);
+                    rgba[1] = Math.min(1, rgba[1] + glow[1] * emissiveFactor[1]!);
+                    rgba[2] = Math.min(1, rgba[2] + glow[2] * emissiveFactor[2]!);
+                  }
+                  if (brighten !== 1) {
+                    rgba[0] = Math.min(1, rgba[0] * brighten);
+                    rgba[1] = Math.min(1, rgba[1] * brighten);
+                    rgba[2] = Math.min(1, rgba[2] * brighten);
+                  }
+                  colors.set(rgba, i * 4);
                 }
               } else {
-                const rgba = material?.getBaseColorFactor() ?? [1, 1, 1, 1];
+                const rgba = (material?.getBaseColorFactor() ?? [1, 1, 1, 1]).map(
+                  (c, i) => (i < 3 ? Math.min(1, c * brighten) : c),
+                );
                 for (let i = 0; i < count; i++) colors.set(rgba, i * 4);
               }
               prim.setAttribute('COLOR_0', d.createAccessor().setType('VEC4').setArray(colors));
               prim.setMaterial(null);
+              // Materials are gone — their coordinate/tangent channels are
+              // dead weight now (prune won't drop live prim attributes).
+              for (const sem of prim.listSemantics())
+                if (sem.startsWith('TEXCOORD') || sem === 'TANGENT')
+                  prim.setAttribute(sem, null);
             }
           }
         },
@@ -193,6 +369,7 @@ console.log(
     sha256: createHash('sha256').update(bytes).digest('hex'),
     materials: root.listMaterials().length,
     meshes: root.listMeshes().length,
+    doubleSided: sourceDoubleSided,
   }),
 );
 writeFileSync(output, bytes);

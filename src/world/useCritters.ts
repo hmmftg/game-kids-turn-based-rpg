@@ -35,6 +35,7 @@ import { recordReactionProbe } from './reactions.ts';
  *         (a settled child nearby earns one follow hop or a look)
  *  duck:  idle → waddle between river-bank spots → idle
  *  dog:   idle → trot between park-green spots → idle
+ *  elephant: idle → slow amble along the park's north green → idle
  *  bird:  perch → parabolic hop to another perch → idle
  *         (a tap sends it early to its next deterministic perch)
  *  eagle: perch → takeoff hop → soar laps → land hop → idle
@@ -45,6 +46,8 @@ const CAT_SPEED = 3.2;
 /** A waddle is slower than a dash; a trot is close to the cat's pace. */
 const DUCK_SPEED = 1.6;
 const DOG_SPEED = 2.8;
+/** An amble is the slowest walk — a big body should never look hurried. */
+const ELEPHANT_SPEED = 1.2;
 const BIRD_SPEED = 4.5;
 const EAGLE_SPEED = 3.0;
 const EAGLE_SOAR_ANGULAR = 0.55; // rad/s — a lap ≈ 11.4 s
@@ -68,6 +71,7 @@ const IDLE_RANGE: Record<CritterKind, readonly [number, number]> = {
   butterfly: [4000, 9000],
   duck: [3000, 8000],
   dog: [2500, 7000],
+  elephant: [4000, 9000],
 };
 
 type MoveMode = 'idle' | 'dash' | 'hop' | 'soar' | 'swim';
@@ -228,7 +232,8 @@ export function createCritterController(effects: ControllerEffects): Controller 
     switch (rt.kind) {
       case 'cat':
       case 'duck':
-      case 'dog': {
+      case 'dog':
+      case 'elephant': {
         const patrol = groundPatrolsFor(rt.kind)[rt.poolIndex];
         if (!patrol) return;
         const current = patrol.findIndex(
@@ -247,7 +252,13 @@ export function createCritterController(effects: ControllerEffects): Controller 
         startHop(
           rt,
           [pick.spot.x, 0, pick.spot.z],
-          rt.kind === 'cat' ? CAT_SPEED : rt.kind === 'duck' ? DUCK_SPEED : DOG_SPEED,
+          rt.kind === 'cat'
+            ? CAT_SPEED
+            : rt.kind === 'duck'
+              ? DUCK_SPEED
+              : rt.kind === 'dog'
+                ? DOG_SPEED
+                : ELEPHANT_SPEED,
           'dash',
           `${rt.kind}-${rt.poolIndex}-${pick.i}`,
         );
@@ -658,10 +669,13 @@ export function useCritters(
   }, [getController]);
 
   // Views are built from module-level placements + the React-side moving
-  // snapshot — no ref access during render.
+  // snapshot — no ref access during render. A placement's `minDetail`
+  // gates the view (same discipline as decoration slots): the runtime
+  // sim keeps wandering invisibly, so a tier upgrade resumes the critter
+  // mid-patrol instead of popping it into existence.
   const views = useMemo<CritterView[]>(
     () =>
-      INITIAL_CRITTER_PLACEMENTS.map((p) => ({
+      INITIAL_CRITTER_PLACEMENTS.filter((p) => detailLevel >= (p.minDetail ?? 1)).map((p) => ({
         key: p.key,
         kind: p.kind,
         tint: p.tint,
@@ -682,7 +696,7 @@ export function useCritters(
               }
             : undefined,
       })),
-    [movingMap, getController],
+    [movingMap, getController, detailLevel],
   );
 
   return views;

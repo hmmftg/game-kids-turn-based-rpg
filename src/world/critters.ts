@@ -1,4 +1,5 @@
 import type { Xyz } from './models/details.tsx';
+import type { DetailLevel } from './models/modelProvider.ts';
 import { isDecorationClear, isDecorationClearPath } from './decorations.ts';
 import { ANCHORS } from './navigation/graph.ts';
 import { landmarkPosition } from './placement.ts';
@@ -13,7 +14,15 @@ import { landmarkPosition } from './placement.ts';
  * landmark or path corridor.
  */
 
-export type CritterKind = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly' | 'duck' | 'dog';
+export type CritterKind =
+  | 'cat'
+  | 'bird'
+  | 'eagle'
+  | 'fish'
+  | 'butterfly'
+  | 'duck'
+  | 'dog'
+  | 'elephant';
 
 export interface GroundSpot {
   readonly x: number;
@@ -82,12 +91,34 @@ const DOG_PATROL_PARK: readonly GroundSpot[] = [
   { x: -7.5, z: 2.5 },
 ];
 
+/**
+ * Park north green — the elephant ambles a west→east line above the dog's
+ * pocket. Every spot clears the exclusion envelope at the elephant's own
+ * footprint (ELEPHANT_FOOTPRINT), and every pair is swept-path connected.
+ */
+const ELEPHANT_PATROL_PARK: readonly GroundSpot[] = [
+  { x: -13.5, z: 3.0 },
+  { x: -12.0, z: 3.5 },
+  { x: -11.0, z: 3.5 },
+  { x: -10.0, z: 3.5 },
+  { x: -9.0, z: 3.0 },
+];
+
 /** Ground-walking kinds share the cat's swept-path safety rules. */
 export const DUCK_PATROLS: readonly (readonly GroundSpot[])[] = [DUCK_PATROL_RIVER];
 export const DOG_PATROLS: readonly (readonly GroundSpot[])[] = [DOG_PATROL_PARK];
+export const ELEPHANT_PATROLS: readonly (readonly GroundSpot[])[] = [ELEPHANT_PATROL_PARK];
 
-export function groundPatrolsFor(kind: 'cat' | 'duck' | 'dog'): readonly (readonly GroundSpot[])[] {
-  return kind === 'cat' ? CAT_PATROLS : kind === 'duck' ? DUCK_PATROLS : DOG_PATROLS;
+export function groundPatrolsFor(
+  kind: 'cat' | 'duck' | 'dog' | 'elephant',
+): readonly (readonly GroundSpot[])[] {
+  return kind === 'cat'
+    ? CAT_PATROLS
+    : kind === 'duck'
+      ? DUCK_PATROLS
+      : kind === 'dog'
+        ? DOG_PATROLS
+        : ELEPHANT_PATROLS;
 }
 
 const FOUNTAIN_ANCHOR = ANCHORS.find((anchor) => anchor.id === 'anchor-fountain');
@@ -179,6 +210,14 @@ export function catPathIsSafe(from: GroundSpot, to: GroundSpot): boolean {
   return isDecorationClearPath(from, to, CAT_FOOTPRINT);
 }
 
+/** The elephant's bounding radius — bigger body, same swept-path rules. */
+export const ELEPHANT_FOOTPRINT = 0.8;
+
+/** Elephant patrol checks use the larger footprint, same envelope. */
+export function elephantPathIsSafe(from: GroundSpot, to: GroundSpot): boolean {
+  return isDecorationClearPath(from, to, ELEPHANT_FOOTPRINT);
+}
+
 /** Ground spots (perches standing on the ground plane) must be clear too. */
 export function groundSpotIsClear(spot: GroundSpot, radius = 0.35): boolean {
   return isDecorationClear(spot.x, spot.z, radius);
@@ -198,6 +237,13 @@ export interface CritterPlacement {
   readonly poolIndex: number;
   readonly spotId?: string;
   readonly seed: number;
+  /**
+   * Earliest detail level the critter appears at — same discipline as the
+   * `minDetail` decoration slots. The elephant is the budget-heavy exotic:
+   * its cubic fallback alone would push `high` over the object ceiling, so
+   * it joins the neighbourhood only on `very-high`, as a GLB.
+   */
+  readonly minDetail?: DetailLevel;
 }
 
 export const INITIAL_CRITTER_PLACEMENTS: readonly CritterPlacement[] = [
@@ -318,5 +364,15 @@ export const INITIAL_CRITTER_PLACEMENTS: readonly CritterPlacement[] = [
     poolIndex: 0,
     spotId: 'dog-0',
     seed: 1361,
+  },
+  {
+    key: 'elephant-0',
+    kind: 'elephant',
+    position: [ELEPHANT_PATROL_PARK[0]!.x, 0, ELEPHANT_PATROL_PARK[0]!.z],
+    rotationY: -0.9,
+    poolIndex: 0,
+    spotId: 'elephant-0',
+    seed: 1453,
+    minDetail: 6,
   },
 ];

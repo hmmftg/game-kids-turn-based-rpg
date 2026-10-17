@@ -25,6 +25,7 @@ import { Ball } from './gltf/Ball.tsx';
 import { Crate } from './gltf/Crate.tsx';
 import { Dog } from './gltf/Dog.tsx';
 import { Duck } from './gltf/Duck.tsx';
+import { Elephant } from './gltf/Elephant.tsx';
 import { FarmPlot } from './gltf/FarmPlot.tsx';
 import { Fence } from './gltf/Fence.tsx';
 import { Fountain } from './gltf/Fountain.tsx';
@@ -40,6 +41,7 @@ import {
   CRATE_BOUNDS,
   DOG_BOUNDS,
   DUCK_BOUNDS,
+  ELEPHANT_BOUNDS,
   FARM_BOUNDS,
   FENCE_BOUNDS,
   FOUNTAIN_FIT,
@@ -230,6 +232,14 @@ const ANIMAL_GLBS: Partial<
   duck: { fit: fitToSize(DUCK_BOUNDS, 0.55), Model: Duck, gait: 'gait-waddle' },
   dog: { fit: fitToSize(DOG_BOUNDS, 0.7), Model: Dog, gait: 'gait-waddle' },
   fish: { fit: KOI_FIT, Model: Koi, gait: 'gait-swish', minDetail: 6 },
+  // 1,199 tris + a double-sided material — very-high only, like the koi.
+  // The biggest critter: 1.6 trunk-to-tail ≈ 0.95 tall at the shoulder.
+  elephant: {
+    fit: fitToSize(ELEPHANT_BOUNDS, 1.6, { rotationY: -Math.PI / 2 }),
+    Model: Elephant,
+    gait: 'gait-waddle',
+    minDetail: 6,
+  },
 };
 
 function GltfAnimal(props: AnimalProps) {

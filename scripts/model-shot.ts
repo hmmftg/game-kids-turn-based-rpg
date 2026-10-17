@@ -43,6 +43,11 @@ let tallest = 1;
 for (const [i, name] of names.entries()) {
   const g = await loader.loadAsync('/models/' + name + '.glb');
   const node = g.scene;
+  node.traverse((o) => {
+    // Inspection render: some sources need doubleSided (auto-rigged shards)
+    // — force it so the sheet shows every face like the DS material variant.
+    if (o.isMesh && o.material) o.material.side = THREE.DoubleSide;
+  });
   const x = (i % cols - (cols - 1) / 2) * 3.2;
   const z = (Math.floor(i / cols) - (rows - 1) / 2) * 3.2;
   node.position.set(x, 0, z);
