@@ -25,7 +25,9 @@ import { MeshoptSimplifier } from 'meshoptimizer';
 
 const [, , input, output, ...rest] = process.argv;
 if (!input || !output) {
-  console.error('usage: convert-model.ts <in.glb|gltf> <out.glb> [--ratio r] [--error e] [--flat r,g,b]');
+  console.error(
+    'usage: convert-model.ts <in.glb|gltf> <out.glb> [--ratio r] [--error e] [--flat r,g,b]',
+  );
   process.exit(1);
 }
 const opt = (name: string) => {
@@ -65,10 +67,7 @@ await doc.transform(
               const count = prim.getAttribute('POSITION')!.getCount();
               const colors = new Float32Array(count * 4);
               for (let i = 0; i < count; i++) colors.set(rgba, i * 4);
-              prim.setAttribute(
-                'COLOR_0',
-                d.createAccessor().setType('VEC4').setArray(colors),
-              );
+              prim.setAttribute('COLOR_0', d.createAccessor().setType('VEC4').setArray(colors));
               prim.setMaterial(null);
             }
           }

@@ -88,7 +88,12 @@ const vite = await createServer({
     port: 0,
     strictPort: false,
     // Route /models/* to the scratch GLB dir instead of public/.
-    proxy: { '/models': { target: `http://localhost:${glbPort}`, rewrite: (p) => p.replace('/models', '') } },
+    proxy: {
+      '/models': {
+        target: `http://localhost:${glbPort}`,
+        rewrite: (p) => p.replace('/models', ''),
+      },
+    },
   },
 });
 await vite.listen();

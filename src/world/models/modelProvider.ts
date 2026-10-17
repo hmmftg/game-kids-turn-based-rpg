@@ -98,13 +98,7 @@ export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly
  * the slot replaces an old plant/stone decoration, so it carries the same
  * `minDetail` discipline and stays purely visual on every tier.
  */
-export type SceneryVisualVariant =
-  | 'tree-a'
-  | 'tree-b'
-  | 'tree-c'
-  | 'rocks'
-  | 'farm'
-  | 'fence';
+export type SceneryVisualVariant = 'tree-a' | 'tree-b' | 'tree-c' | 'rocks' | 'farm' | 'fence';
 
 export interface SceneryProps {
   /** Which authored silhouette to draw. */

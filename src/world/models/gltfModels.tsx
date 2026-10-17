@@ -260,8 +260,7 @@ function GltfScenery(props: SceneryProps) {
   const { variant, scale = 1 } = props;
   const entry = SCENERY_GLBS[variant];
   const fallback = <CubicScenery {...props} />;
-  if (entry.minDetail !== undefined && (props.detailLevel ?? 0) < entry.minDetail)
-    return fallback;
+  if (entry.minDetail !== undefined && (props.detailLevel ?? 0) < entry.minDetail) return fallback;
   return (
     // Static scenery pops in once fetched — no pending stand-in (the cubic
     // fallback stays the error path). Keeping Suspense empty also holds the
