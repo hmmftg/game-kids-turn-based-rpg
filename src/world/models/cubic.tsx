@@ -10,6 +10,7 @@ import type {
   FigureVisualRole,
   LandmarkProps,
   PropProps,
+  SceneryProps,
 } from './modelProvider.ts';
 import { noRaycast } from './raycast.ts';
 import { prefersReducedMotion } from '../../services/device/capabilities.ts';
@@ -2519,4 +2520,136 @@ export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: 
       <ButterflyMesh tint={tint} moving={moving} level={detailLevel} />
     );
   return <GaitedAnimal moving={moving}>{species}</GaitedAnimal>;
+}
+
+/**
+ * Cubic scenery — the every-tier silhouette behind `ModelSet.Scenery`.
+ * Each variant is authored ~1 world unit on its largest axis inside a
+ * `scale` group, so `scale` means the same thing as the GLB's `fitToSize`
+ * target: a slot's scale is its world size on either provider. The trees'
+ * accent canopy tuft drops out below detail 2 so the very-low/low
+ * silhouette stays cheap.
+ */
+export function CubicScenery({ variant, scale = 1, detailLevel = 2 }: SceneryProps) {
+  const trunk = useMaterial(DETAIL_COLORS.signPost);
+  const leaf = useMaterial(DETAIL_COLORS.leaf);
+  const leafDark = useMaterial(DETAIL_COLORS.leafDark);
+  const stone = useMaterial(DETAIL_COLORS.stone);
+  const soil = useMaterial(DETAIL_COLORS.soil);
+  return (
+    <group scale={scale} raycast={noRaycast}>
+      {variant === 'rocks' ? (
+        <>
+          <mesh
+            geometry={BOX}
+            material={stone}
+            position={[0, 0.12, 0]}
+            scale={[0.52, 0.24, 0.36]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={stone}
+            position={[0.36, 0.09, 0.12]}
+            scale={[0.3, 0.18, 0.26]}
+            raycast={noRaycast}
+          />
+        </>
+      ) : variant === 'farm' ? (
+        <>
+          {/* tilled soil slab + a row of crop tufts — reads as the garden's
+            little field at every tier; tufts are single leaf boxes (not
+            PlantClusters) because this slot mounts at every detail level
+            and the object budget is the ceiling */}
+          <mesh
+            geometry={BOX}
+            material={soil}
+            position={[0, 0.04, 0]}
+            scale={[1.0, 0.08, 0.7]}
+            raycast={noRaycast}
+          />
+          {[-0.3, 0, 0.3].map((x, i) => (
+            <mesh
+              key={i}
+              geometry={BOX}
+              material={i === 1 ? leafDark : leaf}
+              position={[x, 0.12, i === 1 ? -0.12 : 0]}
+              scale={[0.14, 0.14, 0.14]}
+              raycast={noRaycast}
+            />
+          ))}
+        </>
+      ) : (
+        // trees: trunk + one canopy mass; the silhouette variant (round /
+        // spreading / tall) mirrors the GLB species the slot names
+        <>
+          <mesh
+            geometry={BOX}
+            material={trunk}
+            position={[0, 0.22, 0]}
+            scale={[0.13, 0.44, 0.13]}
+            raycast={noRaycast}
+          />
+          {variant === 'tree-b' ? (
+            <>
+              <mesh
+                geometry={BOX}
+                material={leaf}
+                position={[0, 0.55, 0]}
+                scale={[0.72, 0.32, 0.6]}
+                raycast={noRaycast}
+              />
+              <Detail level={detailLevel} min={2}>
+                <mesh
+                  geometry={BOX}
+                  material={leafDark}
+                  position={[0.3, 0.68, 0.1]}
+                  scale={[0.3, 0.2, 0.28]}
+                  raycast={noRaycast}
+                />
+              </Detail>
+            </>
+          ) : variant === 'tree-c' ? (
+            <>
+              <mesh
+                geometry={BOX}
+                material={leafDark}
+                position={[0, 0.6, 0]}
+                scale={[0.4, 0.6, 0.36]}
+                raycast={noRaycast}
+              />
+              <Detail level={detailLevel} min={2}>
+                <mesh
+                  geometry={BOX}
+                  material={leaf}
+                  position={[0, 0.92, 0]}
+                  scale={[0.26, 0.2, 0.24]}
+                  raycast={noRaycast}
+                />
+              </Detail>
+            </>
+          ) : (
+            <>
+              <mesh
+                geometry={BOX}
+                material={leaf}
+                position={[0, 0.62, 0]}
+                scale={[0.56, 0.46, 0.5]}
+                raycast={noRaycast}
+              />
+              <Detail level={detailLevel} min={2}>
+                <mesh
+                  geometry={BOX}
+                  material={leafDark}
+                  position={[0.08, 0.9, 0.04]}
+                  scale={[0.34, 0.24, 0.3]}
+                  raycast={noRaycast}
+                />
+              </Detail>
+            </>
+          )}
+        </>
+      )}
+    </group>
+  );
 }

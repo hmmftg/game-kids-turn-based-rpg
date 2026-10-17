@@ -1,4 +1,4 @@
-import { CubicAnimal, CubicFigure, CubicLandmark, CubicProp } from './cubic.tsx';
+import { CubicAnimal, CubicFigure, CubicLandmark, CubicProp, CubicScenery } from './cubic.tsx';
 import type { ModelSet } from './modelProvider.ts';
 
 /** Default model set. Swapping in GLB models means replacing this object only. */
@@ -8,4 +8,5 @@ export const CUBIC_MODELS: ModelSet = {
   Landmark: CubicLandmark,
   Prop: CubicProp,
   Animal: CubicAnimal,
+  Scenery: CubicScenery,
 };

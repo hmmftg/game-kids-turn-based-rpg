@@ -1,32 +1,16 @@
-import { sharedLambert } from '../shared.ts';
+import { MeshLambertMaterial } from 'three';
 
 /**
- * KayKit Medieval Builder Pack palette — every material's baseColorFactor in
- * the shipped GLBs, converted to the sRGB the loader displays (the factors
- * are stored linear; these are the rendered colors). Generated components
- * bind these shared `MeshLambertMaterial`s instead of the file's
- * MeshStandardMaterials: the whole world shades Lambert, and the GLB files'
- * ~16 material instances collapse into `LAMBERT_CACHE` so per-tier material
- * budgets are unchanged (one Map lookup per mesh, no new instances).
+ * Single shared material for every shipped GLB.
  *
- * If a regenerated component introduces a material name missing here, the
- * fix belongs in this table — never rebind the file's own materials.
+ * All models in `public/models/` go through `scripts/convert-model.ts
+ * --vcolor`: each primitive's flat KayKit baseColorFactor is baked into a
+ * COLOR_0 vertex attribute and the file's materials are dropped entirely.
+ * One white `vertexColors` Lambert therefore shades every GLB mesh — the
+ * whole gltf ModelSet costs ONE material instance, and the per-tier
+ * materials budget stays flat no matter how many models mount.
+ *
+ * If a regenerated component ever needs a distinct material, the fix is in
+ * the conversion step — never rebind the file's own materials here.
  */
-export const KAYKIT_MATERIAL = {
-  beige: sharedLambert('#d9ad7d'),
-  stone: sharedLambert('#798287'),
-  stoneDark: sharedLambert('#5a6164'),
-  white: sharedLambert('#e6e6e6'),
-  brownDark: sharedLambert('#995a47'),
-  brown: sharedLambert('#c78460'),
-  water: sharedLambert('#49d5e0'),
-  blue: sharedLambert('#64b3ff'),
-  red: sharedLambert('#ff3061'),
-  yellow: sharedLambert('#ffbb29'),
-  black: sharedLambert('#2b3539'),
-  greenDark: sharedLambert('#2c8a8c'),
-  /** Spooktober dirt-path brown; also the fence remap (source is graveyard-
-      black, which reads as wrought iron on a cheerful village garden). */
-  darkWood: sharedLambert('#6d605c'),
-  fenceWood: sharedLambert('#8a6a45'),
-} as const;
+export const VERTEX_LAMBERT = new MeshLambertMaterial({ vertexColors: true });

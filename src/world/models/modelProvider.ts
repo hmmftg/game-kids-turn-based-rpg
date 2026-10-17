@@ -92,6 +92,22 @@ export interface PropProps {
 
 export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly' | 'duck' | 'dog';
 
+/**
+ * Static authored scenery — trees, rock formations, the garden's farm plot.
+ * Unlike critters these never move, and unlike props they are never tapped:
+ * the slot replaces an old plant/stone decoration, so it carries the same
+ * `minDetail` discipline and stays purely visual on every tier.
+ */
+export type SceneryVisualVariant = 'tree-a' | 'tree-b' | 'tree-c' | 'rocks' | 'farm';
+
+export interface SceneryProps {
+  /** Which authored silhouette to draw. */
+  readonly variant: SceneryVisualVariant;
+  /** Target size in world units (largest axis), like `PropProps.scale`. */
+  readonly scale?: number;
+  readonly detailLevel?: DetailLevel;
+}
+
 export interface AnimalProps {
   /** Species silhouette to draw. */
   readonly variant: AnimalVisualVariant;
@@ -118,6 +134,7 @@ export interface ModelSet {
   readonly Landmark: ComponentType<LandmarkProps>;
   readonly Prop: ComponentType<PropProps>;
   readonly Animal: ComponentType<AnimalProps>;
+  readonly Scenery: ComponentType<SceneryProps>;
 }
 
 export const ModelContext = createContext<ModelSet | null>(null);

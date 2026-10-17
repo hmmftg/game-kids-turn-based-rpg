@@ -4,10 +4,15 @@
  *
  * Usage:
  *   node --experimental-strip-types scripts/convert-model.ts \
- *     <input.glb|gltf> <output.glb> [--ratio 0.4] [--error 0.01] [--flat 0.78,0.62,0.42]
+ *     <input.glb|gltf> <output.glb> [--ratio 0.4] [--error 0.01] [--flat 0.78,0.62,0.42] [--vcolor]
  *
  * --flat strips every material texture and sets that baseColorFactor, for
  * sources whose look we reproduce with the shared-Lambert palette instead.
+ * --vcolor bakes each primitive's baseColorFactor into a COLOR_0 vertex
+ * attribute, drops every material and joins each mesh to a single primitive —
+ * the shipped GLB then renders through one shared vertex-color Lambert and
+ * costs exactly ONE geometry per mesh (the tier's geometries ceiling is the
+ * binding budget, so prims-per-file is the metric that matters).
  * Prints triangle count, bounds, and output size so registry entries can be
  * filled in immediately.
  */
@@ -15,7 +20,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { dedup, flatten, prune, simplify, weld } from '@gltf-transform/functions';
+import { dedup, flatten, join, prune, simplify, weld } from '@gltf-transform/functions';
 import { MeshoptSimplifier } from 'meshoptimizer';
 
 const [, , input, output, ...rest] = process.argv;
@@ -30,6 +35,7 @@ const opt = (name: string) => {
 const ratio = Number(opt('ratio') ?? 0.4);
 const error = Number(opt('error') ?? 0.01);
 const flat = opt('flat')?.split(',').map(Number);
+const vcolor = rest.includes('--vcolor');
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(input);
@@ -50,6 +56,26 @@ await doc.transform(
     : []),
   weld(),
   simplify({ simplifier: MeshoptSimplifier, ratio, error }),
+  ...(vcolor
+    ? [
+        (d: typeof doc) => {
+          for (const mesh of d.getRoot().listMeshes()) {
+            for (const prim of mesh.listPrimitives()) {
+              const rgba = prim.getMaterial()?.getBaseColorFactor() ?? [1, 1, 1, 1];
+              const count = prim.getAttribute('POSITION')!.getCount();
+              const colors = new Float32Array(count * 4);
+              for (let i = 0; i < count; i++) colors.set(rgba, i * 4);
+              prim.setAttribute(
+                'COLOR_0',
+                d.createAccessor().setType('VEC4').setArray(colors),
+              );
+              prim.setMaterial(null);
+            }
+          }
+        },
+        join(),
+      ]
+    : []),
   dedup(),
   prune(),
 );

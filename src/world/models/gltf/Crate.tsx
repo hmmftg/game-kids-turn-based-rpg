@@ -8,12 +8,10 @@ Reviewed + adapted for this repo (edit by hand after regenerating):
   root-absolute refs).
 - The generator's module-scope `useGLTF.preload(...)` is removed on purpose:
   importing this module must not fetch while another ModelSet is active.
-- Every mesh is `raycast={noRaycast}` — decorative only; prop taps live on the
-  ReactiveProp panel that wraps this model. Disabling raycast on the parent
-  group does NOT cascade to children.
-- The upstream palette texture was stripped offline (scripts/convert-model.ts
-  --flat); the single material binds `KAYKIT_MATERIAL.beige`, matching the
-  cardboard-tan the texture gave the box — see materials.ts.
+- Every mesh is `raycast={noRaycast}` — decorative only; taps live on the
+  explicit proxies/props that wrap these models.
+- The GLB is vertex-colored (convert-model.ts --vcolor): one shared
+  VERTEX_LAMBERT shades every shipped model — see materials.ts.
 */
 
 import type * as THREE from 'three';
@@ -21,7 +19,7 @@ import type { ThreeElements } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import type { GLTF } from 'three-stdlib';
 import { noRaycast } from '../raycast.ts';
-import { KAYKIT_MATERIAL } from './materials.ts';
+import { VERTEX_LAMBERT } from './materials.ts';
 
 const MODEL_URL = `${import.meta.env.BASE_URL}models/crate.glb`;
 
@@ -38,7 +36,7 @@ export function Crate(props: ThreeElements['group']) {
       <mesh
         name="box_A"
         geometry={nodes.box_A.geometry}
-        material={KAYKIT_MATERIAL.beige}
+        material={VERTEX_LAMBERT}
         raycast={noRaycast}
       />
     </group>

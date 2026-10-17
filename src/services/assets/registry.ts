@@ -106,7 +106,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
       'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/house.gltf.glb, decimated @gltf-transform/cli 4.5.1 (ratio 0.4, error 0.01) to fit render budgets',
-    sha256: '82016c029b24e6fbb2e8271a51ad47de4ac85c2702bbaa0d22e9f53fe343fb56',
+    sha256: '6479dc4983d94425c13ecb91077a552d6c631897a523a97b29838724489b586a',
     status: 'licensed',
   },
   {
@@ -118,7 +118,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
       'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/market.gltf.glb, decimated @gltf-transform/cli 4.5.1 (ratio 0.4, error 0.01) to fit render budgets',
-    sha256: '1992dd7d9caf60cbc9525d5016919d1cd8b6c85e3e0a7f7a99645fe9adc60fe7',
+    sha256: '8feba40901b03a9d914174641a207f8425f228c6f43f824f9d0fcc8dfb7a4915',
     status: 'licensed',
   },
   {
@@ -130,7 +130,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
       'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/well.gltf.glb, decimated @gltf-transform/cli 4.5.1 (ratio 0.4, error 0.01) to fit render budgets',
-    sha256: 'a851a6245a957efc66ea8a84414c9586b2940d915090caca52e8edda014e526f',
+    sha256: 'e6739b0129fc35491e528a33e8088d0b53b69b8e50bcc97edfa32ff6d7e0a678',
     status: 'licensed',
   },
   {
@@ -142,7 +142,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Mini-Game Variety Pack — Kay Lousberg, CC0',
     source:
       'KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com) — Models/gltf/ball.gltf.glb, simplified scripts/convert-model.ts (ratio 0.3, error 0.08)',
-    sha256: 'ae48dd7551f6d698eeda8ca80aae1029d6a4e7c757ac5007d85e1fa92d9d2f4d',
+    sha256: 'b5e1441aa20435fe574a1891bf8bb3fd5ac1ad42de291769d98d40072d1c8b00',
     status: 'licensed',
   },
   {
@@ -154,7 +154,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit City Builder Bits — Kay Lousberg, CC0',
     source:
       'KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/box_A.gltf, texture stripped and flattened to wood tone by scripts/convert-model.ts',
-    sha256: '403503a0e262188dde422383160e9fa9438dc00f8dde0d30dd6a3a8d105ba11f',
+    sha256: '1b36b5957825c17d4fe9136f7f3d9847cc857654edfd2a2d5a5862b3af861ade',
     status: 'licensed',
   },
   {
@@ -166,7 +166,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Mini-Game Variety Pack — Kay Lousberg, CC0',
     source:
       'KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com) — Models/Characters/Duck/gltf/character_duck.gltf, simplified scripts/convert-model.ts (ratio 0.35, error 0.03)',
-    sha256: '45c34c23641f507a049e782da28928b9d6a088c43a2752f6fdb1c71afc7c56c8',
+    sha256: '6a6665c9c4049b7a3143a3f2ac39037098383b0528860cd18ed69fa45067c11e',
     status: 'licensed',
   },
   {
@@ -178,7 +178,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Mini-Game Variety Pack — Kay Lousberg, CC0',
     source:
       'KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com) — Models/Characters/Dog/gltf/character_dog.gltf, simplified scripts/convert-model.ts (ratio 0.35, error 0.03)',
-    sha256: '641665a1483b75837eb3a1cb2d8225eb3b9979b6d479c736ec48fb5e676102e5',
+    sha256: '6d8076eb93fa20350f10f0956001068371a6f0a13d52a46b6ad2668c414682b0',
     status: 'licensed',
   },
   {
@@ -190,7 +190,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
       'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_treeA.gltf.glb, simplified scripts/convert-model.ts (ratio 0.55, error 0.05)',
-    sha256: 'c3b5026c8d2357cd78c6a343ae603bed6b5b60cebc5085abe9a57fa710d125fe',
+    sha256: 'd2e32263f68c494e8c6dbccc08831f23af7087ad6754324b2b68103bbd7c59f9',
     status: 'licensed',
   },
   {
@@ -202,7 +202,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
       'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_treeB.gltf.glb, simplified scripts/convert-model.ts (ratio 0.55, error 0.05)',
-    sha256: '71a759510d92714fa1ac75f683cc87a6d0be6859dc091a04f8e5cd2fd2cd985c',
+    sha256: '78fac3aead94b12c8bc4d399b624288646bf1171d4caabb253ef29bf826b5e0a',
     status: 'licensed',
   },
   {
@@ -214,7 +214,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
       'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_treeC.gltf.glb, simplified scripts/convert-model.ts (ratio 0.55, error 0.05)',
-    sha256: '1ea7f5ed073460d7d2e109444b761104bf4bb37c179afce6d2ef9810ebc50954',
+    sha256: 'b563900d234d3a1a9a09ce1645f7fa188912df02984301ebb30e0a070b01a747',
     status: 'licensed',
   },
   {
@@ -225,8 +225,8 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
-      'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_rocks.gltf.glb, simplified scripts/convert-model.ts (ratio 0.45, error 0.05)',
-    sha256: '471062b204d6f9d9592260027017d64a3a41ad13a91e8bb9bb03cac19a8910d6',
+      'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_rocks.gltf.glb, simplified scripts/convert-model.ts (ratio 0.45 + 0.5, error 0.05)',
+    sha256: '2cbfbe85d67193d32b48b99b184680f27924f4fce05ad19162a204352c337c5a',
     status: 'licensed',
   },
   {
@@ -238,7 +238,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
       'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_rocks_small.gltf.glb, simplified scripts/convert-model.ts (ratio 0.5, error 0.05)',
-    sha256: 'ce8919daa802dedd1ffc2ea5bdc49c82cb1553fc009e8d0af488d84537faa751',
+    sha256: 'a717be34ddeefa7ae6e33f7affa2d13a2694a7b73155ab224fe20a3d00474642',
     status: 'licensed',
   },
   {
@@ -249,8 +249,8 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
     attribution: 'KayKit Medieval Builder Pack — Kay Lousberg, CC0',
     source:
-      'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/farm_plot.gltf.glb, simplified scripts/convert-model.ts (ratio 0.5, error 0.05)',
-    sha256: '7ecc219c95263762ddd1590f01792ab583eb27e45d4191d2121b9086292a0f7c',
+      'KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/farm_plot.gltf.glb, simplified scripts/convert-model.ts (ratio 0.5 ×2, error 0.05)',
+    sha256: '7d4013f5cd677f17fdd5fac51ba09473969a76c58b0bbe53c2a5c0efb60a95b1',
     status: 'licensed',
   },
   {
@@ -262,7 +262,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Spooktober Seasonal Pack — Kay Lousberg, CC0',
     source:
       'KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com) — Models/gltf/fence.gltf.glb, simplified scripts/convert-model.ts (ratio 0.7, error 0.05); material remapped to the shared wood palette',
-    sha256: '97c8192027f4429ad27b74b36dec9d3fa05d0fe7cbf5d4be618c3adf92209eb4',
+    sha256: '9a17149c5886b431ae2306466c5364fd897d8b3aee2c6448209ed47a9d89dc09',
     status: 'licensed',
   },
   {
@@ -274,7 +274,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Spooktober Seasonal Pack — Kay Lousberg, CC0',
     source:
       'KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com) — Models/gltf/pathCobbled.gltf.glb, simplified scripts/convert-model.ts (ratio 0.35, error 0.05)',
-    sha256: '107309f0c7ca7a020fafa88a701ef0298dfa6c8d9360829f700594fe6af95fe0',
+    sha256: 'b02e29a4d6d16acbc9ffff88e9f56863f887363c565a479def341d465a31a03a',
     status: 'licensed',
   },
   {
@@ -286,7 +286,7 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     attribution: 'KayKit Spooktober Seasonal Pack — Kay Lousberg, CC0',
     source:
       'KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com) — Models/gltf/pathDirt.gltf.glb, simplified scripts/convert-model.ts (ratio 0.35, error 0.05)',
-    sha256: '57d1e2ec82a68e2eb9dd7d3218fb7604ce3424bf280505a72a7bc3d4f13a50ce',
+    sha256: '10380349656c8cd8016b35d5a21a88f4794fbf085d286c24608c9f8a5b9ec934',
     status: 'licensed',
   },
 ];

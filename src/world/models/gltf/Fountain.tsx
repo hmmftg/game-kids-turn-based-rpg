@@ -8,11 +8,10 @@ Reviewed + adapted for this repo (edit by hand after regenerating):
   root-absolute refs).
 - The generator's module-scope `useGLTF.preload(...)` is removed on purpose:
   importing this module must not fetch while another ModelSet is active.
-- Every mesh is `raycast={noRaycast}` — decorative only; the fountain's tap
-  reaction is the ReactiveProp wrapper in Hub.tsx. Disabling raycast on the
-  parent group does NOT cascade to children.
-- GLB materials are replaced by `KAYKIT_MATERIAL` shared Lamberts — see
-  materials.ts (materials-budget contract).
+- Every mesh is `raycast={noRaycast}` — decorative only; taps live on the
+  explicit proxies/props that wrap these models.
+- The GLB is vertex-colored (convert-model.ts --vcolor): one shared
+  VERTEX_LAMBERT shades every shipped model — see materials.ts.
 */
 
 import type * as THREE from 'three';
@@ -20,18 +19,13 @@ import type { ThreeElements } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import type { GLTF } from 'three-stdlib';
 import { noRaycast } from '../raycast.ts';
-import { KAYKIT_MATERIAL } from './materials.ts';
+import { VERTEX_LAMBERT } from './materials.ts';
 
 const MODEL_URL = `${import.meta.env.BASE_URL}models/fountain.glb`;
 
 type GLTFResult = GLTF & {
   nodes: {
-    Cylinder1311: THREE.Mesh;
-    Cylinder1311_1: THREE.Mesh;
-    Cylinder1311_2: THREE.Mesh;
-    Cylinder1311_3: THREE.Mesh;
-    Cylinder1311_4: THREE.Mesh;
-    Cylinder1311_5: THREE.Mesh;
+    well: THREE.Mesh;
   };
 };
 
@@ -40,39 +34,9 @@ export function Fountain(props: ThreeElements['group']) {
   return (
     <group {...props} dispose={null}>
       <mesh
-        name="Cylinder1311"
-        geometry={nodes.Cylinder1311.geometry}
-        material={KAYKIT_MATERIAL.stone}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cylinder1311_1"
-        geometry={nodes.Cylinder1311_1.geometry}
-        material={KAYKIT_MATERIAL.stoneDark}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cylinder1311_2"
-        geometry={nodes.Cylinder1311_2.geometry}
-        material={KAYKIT_MATERIAL.brownDark}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cylinder1311_3"
-        geometry={nodes.Cylinder1311_3.geometry}
-        material={KAYKIT_MATERIAL.brown}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cylinder1311_4"
-        geometry={nodes.Cylinder1311_4.geometry}
-        material={KAYKIT_MATERIAL.water}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cylinder1311_5"
-        geometry={nodes.Cylinder1311_5.geometry}
-        material={KAYKIT_MATERIAL.beige}
+        name="well"
+        geometry={nodes.well.geometry}
+        material={VERTEX_LAMBERT}
         raycast={noRaycast}
       />
     </group>

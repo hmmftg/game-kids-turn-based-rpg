@@ -8,13 +8,10 @@ Reviewed + adapted for this repo (edit by hand after regenerating):
   root-absolute refs).
 - The generator's module-scope `useGLTF.preload(...)` is removed on purpose:
   importing this module must not fetch while another ModelSet is active.
-- Every mesh is `raycast={noRaycast}` — decorative only; interactions are
-  explicit proxies (e.g. the door-home-gate DoorDetail in gltfModels.ts).
-  Disabling raycast on the parent group does NOT cascade to children.
-- GLB materials are replaced by `sharedLambert` at the file's authored sRGB
-  colors: the whole world shades Lambert, and ~16 per-file
-  MeshStandardMaterial instances collapse into the shared registry so the
-  per-tier materials budget is unchanged (each entry is one Map lookup).
+- Every mesh is `raycast={noRaycast}` — decorative only; taps live on the
+  explicit proxies/props that wrap these models.
+- The GLB is vertex-colored (convert-model.ts --vcolor): one shared
+  VERTEX_LAMBERT shades every shipped model — see materials.ts.
 */
 
 import type * as THREE from 'three';
@@ -22,17 +19,13 @@ import type { ThreeElements } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import type { GLTF } from 'three-stdlib';
 import { noRaycast } from '../raycast.ts';
-import { KAYKIT_MATERIAL } from './materials.ts';
+import { VERTEX_LAMBERT } from './materials.ts';
 
 const MODEL_URL = `${import.meta.env.BASE_URL}models/home-gate.glb`;
 
 type GLTFResult = GLTF & {
   nodes: {
-    Cube1019: THREE.Mesh;
-    Cube1019_1: THREE.Mesh;
-    Cube1019_2: THREE.Mesh;
-    Cube1019_3: THREE.Mesh;
-    Cube1019_4: THREE.Mesh;
+    house: THREE.Mesh;
   };
 };
 
@@ -41,33 +34,9 @@ export function HomeGate(props: ThreeElements['group']) {
   return (
     <group {...props} dispose={null}>
       <mesh
-        name="Cube1019"
-        geometry={nodes.Cube1019.geometry}
-        material={KAYKIT_MATERIAL.beige}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cube1019_1"
-        geometry={nodes.Cube1019_1.geometry}
-        material={KAYKIT_MATERIAL.stone}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cube1019_2"
-        geometry={nodes.Cube1019_2.geometry}
-        material={KAYKIT_MATERIAL.white}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cube1019_3"
-        geometry={nodes.Cube1019_3.geometry}
-        material={KAYKIT_MATERIAL.brownDark}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="Cube1019_4"
-        geometry={nodes.Cube1019_4.geometry}
-        material={KAYKIT_MATERIAL.brown}
+        name="house"
+        geometry={nodes.house.geometry}
+        material={VERTEX_LAMBERT}
         raycast={noRaycast}
       />
     </group>

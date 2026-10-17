@@ -8,10 +8,10 @@ Reviewed + adapted for this repo (edit by hand after regenerating):
   root-absolute refs).
 - The generator's module-scope `useGLTF.preload(...)` is removed on purpose:
   importing this module must not fetch while another ModelSet is active.
-- Every mesh is `raycast={noRaycast}` — decorative only; critters are not tap
-  targets. Disabling raycast on the parent group does NOT cascade to children.
-- GLB materials are replaced by `KAYKIT_MATERIAL` shared Lamberts — see
-  materials.ts (materials-budget contract).
+- Every mesh is `raycast={noRaycast}` — decorative only; taps live on the
+  explicit proxies/props that wrap these models.
+- The GLB is vertex-colored (convert-model.ts --vcolor): one shared
+  VERTEX_LAMBERT shades every shipped model — see materials.ts.
 */
 
 import type * as THREE from 'three';
@@ -19,18 +19,13 @@ import type { ThreeElements } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import type { GLTF } from 'three-stdlib';
 import { noRaycast } from '../raycast.ts';
-import { KAYKIT_MATERIAL } from './materials.ts';
+import { VERTEX_LAMBERT } from './materials.ts';
 
 const MODEL_URL = `${import.meta.env.BASE_URL}models/duck.glb`;
 
 type GLTFResult = GLTF & {
   nodes: {
     character_duck: THREE.Mesh;
-    character_duckArmLeft: THREE.Mesh;
-    character_duckArmRight: THREE.Mesh;
-    Cube1338: THREE.Mesh;
-    Cube1338_1: THREE.Mesh;
-    Cube1338_2: THREE.Mesh;
   };
 };
 
@@ -41,43 +36,9 @@ export function Duck(props: ThreeElements['group']) {
       <mesh
         name="character_duck"
         geometry={nodes.character_duck.geometry}
-        material={KAYKIT_MATERIAL.white}
+        material={VERTEX_LAMBERT}
         raycast={noRaycast}
       />
-      <mesh
-        name="character_duckArmLeft"
-        geometry={nodes.character_duckArmLeft.geometry}
-        material={KAYKIT_MATERIAL.white}
-        position={[0.204, 0.634, 0]}
-        raycast={noRaycast}
-      />
-      <mesh
-        name="character_duckArmRight"
-        geometry={nodes.character_duckArmRight.geometry}
-        material={KAYKIT_MATERIAL.white}
-        position={[-0.204, 0.634, 0]}
-        raycast={noRaycast}
-      />
-      <group name="character_duckHead" position={[0, 0.704, 0]}>
-        <mesh
-          name="Cube1338"
-          geometry={nodes.Cube1338.geometry}
-          material={KAYKIT_MATERIAL.white}
-          raycast={noRaycast}
-        />
-        <mesh
-          name="Cube1338_1"
-          geometry={nodes.Cube1338_1.geometry}
-          material={KAYKIT_MATERIAL.yellow}
-          raycast={noRaycast}
-        />
-        <mesh
-          name="Cube1338_2"
-          geometry={nodes.Cube1338_2.geometry}
-          material={KAYKIT_MATERIAL.black}
-          raycast={noRaycast}
-        />
-      </group>
     </group>
   );
 }

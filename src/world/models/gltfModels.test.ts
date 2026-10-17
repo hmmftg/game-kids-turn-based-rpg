@@ -30,7 +30,7 @@ describe('modelsForTier', () => {
 describe('GLTF_MODELS', () => {
   it('satisfies the ModelSet contract', () => {
     expect(GLTF_MODELS.kind).toBe('gltf');
-    for (const slot of ['Figure', 'Landmark', 'Prop', 'Animal'] as const) {
+    for (const slot of ['Figure', 'Landmark', 'Prop', 'Animal', 'Scenery'] as const) {
       expect(GLTF_MODELS[slot]).toBeTypeOf('function');
     }
   });

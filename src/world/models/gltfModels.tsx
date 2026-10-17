@@ -7,27 +7,47 @@ import {
   CubicFigure,
   CubicLandmark,
   CubicProp,
+  CubicScenery,
   GaitedAnimal,
 } from './cubic.tsx';
 import { CUBIC_MODELS } from './cubicModels.ts';
 import { DoorDetail, type Xyz } from './details.tsx';
-import type { AnimalProps, LandmarkProps, ModelSet, PropProps } from './modelProvider.ts';
+import type {
+  AnimalProps,
+  DetailLevel,
+  LandmarkProps,
+  ModelSet,
+  PropProps,
+  SceneryProps,
+  SceneryVisualVariant,
+} from './modelProvider.ts';
 import { Ball } from './gltf/Ball.tsx';
 import { Crate } from './gltf/Crate.tsx';
 import { Dog } from './gltf/Dog.tsx';
 import { Duck } from './gltf/Duck.tsx';
+import { FarmPlot } from './gltf/FarmPlot.tsx';
 import { Fountain } from './gltf/Fountain.tsx';
 import { HomeGate } from './gltf/HomeGate.tsx';
+import { Rocks } from './gltf/Rocks.tsx';
 import { Shop } from './gltf/Shop.tsx';
+import { TreeA } from './gltf/TreeA.tsx';
+import { TreeB } from './gltf/TreeB.tsx';
+import { TreeC } from './gltf/TreeC.tsx';
 import {
   BALL_BOUNDS,
   CRATE_BOUNDS,
   DOG_BOUNDS,
   DUCK_BOUNDS,
+  FARM_BOUNDS,
   FOUNTAIN_FIT,
   HOME_GATE_FIT,
+  ROCKS_BOUNDS,
   SHOP_FIT,
+  TREE_A_BOUNDS,
+  TREE_B_BOUNDS,
+  TREE_C_BOUNDS,
   fitToSize,
+  type GlbExtents,
   type GlbFit,
 } from './gltf/placement.ts';
 
@@ -204,12 +224,58 @@ function GltfAnimal(props: AnimalProps) {
   );
 }
 
+/**
+ * GLB scenery — the decoration slots whose kind names a shipped model.
+ * `fitToSize` reads the slot's `scale` as the target size on the largest
+ * axis, identical to `CubicScenery`'s scale semantics, so a swapped kind
+ * occupies the same footprint on every tier. Static pieces get no
+ * pendingFallback: the decoration simply pops in once fetched, which is
+ * what the cubic pending look would draw anyway minus the object cost.
+ */
+const SCENERY_GLBS: Record<
+  SceneryVisualVariant,
+  {
+    readonly bounds: GlbExtents;
+    readonly Model: (props: object) => ReactNode;
+    /**
+     * Detail level at which the slot upgrades to the GLB. Most scenery swaps
+     * as soon as the gltf ModelSet is active (detail 5+); the farm plot — the
+     * heaviest scenery file — waits for very-high so `high` keeps the cubic
+     * plot and stays under its triangle ceiling.
+     */
+    readonly minDetail?: DetailLevel;
+  }
+> = {
+  'tree-a': { bounds: TREE_A_BOUNDS, Model: TreeA },
+  'tree-b': { bounds: TREE_B_BOUNDS, Model: TreeB },
+  'tree-c': { bounds: TREE_C_BOUNDS, Model: TreeC },
+  rocks: { bounds: ROCKS_BOUNDS, Model: Rocks },
+  farm: { bounds: FARM_BOUNDS, Model: FarmPlot, minDetail: 6 },
+};
+
+function GltfScenery(props: SceneryProps) {
+  const { variant, scale = 1 } = props;
+  const entry = SCENERY_GLBS[variant];
+  const fallback = <CubicScenery {...props} />;
+  if (entry.minDetail !== undefined && (props.detailLevel ?? 0) < entry.minDetail)
+    return fallback;
+  return (
+    // Static scenery pops in once fetched — no pending stand-in (the cubic
+    // fallback stays the error path). Keeping Suspense empty also holds the
+    // load-transient object count under the ceiling.
+    <Gltf fit={fitToSize(entry.bounds, scale)} fallback={fallback} pendingFallback={<></>}>
+      <entry.Model />
+    </Gltf>
+  );
+}
+
 export const GLTF_MODELS: ModelSet = {
   kind: 'gltf',
   Figure: CubicFigure,
   Landmark: GltfLandmark,
   Prop: GltfProp,
   Animal: GltfAnimal,
+  Scenery: GltfScenery,
 };
 
 /**

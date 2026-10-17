@@ -11,7 +11,22 @@ import type { QuestId } from '../domain/game/types.ts';
 export interface GroundDecoration {
   readonly x: number;
   readonly z: number;
-  readonly kind: 'flower' | 'stone' | 'plant' | 'patch';
+  /**
+   * `flower`/`stone`/`plant`/`patch` draw the classic detail clusters; the
+   * `tree-*`/`rocks`/`farm` kinds are scenery — routed through the active
+   * `ModelSet.Scenery` slot so high tiers show the truthful GLB and lower
+   * tiers an equivalent cubic silhouette.
+   */
+  readonly kind:
+    | 'flower'
+    | 'stone'
+    | 'plant'
+    | 'patch'
+    | 'tree-a'
+    | 'tree-b'
+    | 'tree-c'
+    | 'rocks'
+    | 'farm';
   readonly minDetail: DetailLevel;
   readonly scale?: number;
 }
@@ -65,11 +80,12 @@ export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: -2.2, z: -2.4, kind: 'plant', minDetail: 1 },
   { x: 2.6, z: 2.6, kind: 'flower', minDetail: 1 },
   { x: 4, z: -2.8, kind: 'stone', minDetail: 1 },
-  { x: -2.4, z: -3.8, kind: 'stone', minDetail: 1 },
+  // rock formation instead of a pebble — same slot, same budget, taller read
+  { x: -2.4, z: -3.8, kind: 'rocks', minDetail: 1, scale: 1.0 },
   { x: 3.6, z: 3.8, kind: 'stone', minDetail: 1 },
   { x: 1.8, z: -5.2, kind: 'plant', minDetail: 1 },
   { x: -4.2, z: 3.4, kind: 'flower', minDetail: 1 },
-  { x: -4.8, z: -3.0, kind: 'stone', minDetail: 1 },
+  { x: -4.8, z: -3.0, kind: 'rocks', minDetail: 1, scale: 0.85 },
   { x: -3.8, z: -3.4, kind: 'patch', minDetail: 1, scale: 2.4 },
   { x: 3.2, z: -4.6, kind: 'patch', minDetail: 1, scale: 2.4 },
   { x: -3, z: 4.6, kind: 'patch', minDetail: 1, scale: 2.4 },
@@ -77,17 +93,20 @@ export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: -3, z: 3.6, kind: 'stone', minDetail: 2 },
   { x: 5, z: 3.2, kind: 'plant', minDetail: 2 },
   { x: -2.2, z: -5.2, kind: 'flower', minDetail: 2 },
-  { x: 4.8, z: 4.8, kind: 'plant', minDetail: 2 },
+  // fenced farm plot beside the garden — crops the child walked past to plant
+  { x: 4.8, z: 4.8, kind: 'farm', minDetail: 2, scale: 1.4 },
   { x: -5.4, z: 3, kind: 'flower', minDetail: 2 },
   { x: 5.6, z: -3.4, kind: 'stone', minDetail: 2 },
-  // new areas — each slot belongs to an area via its position
-  { x: -10.5, z: 4.3, kind: 'flower', minDetail: 1 },
-  { x: -9.7, z: -4.2, kind: 'plant', minDetail: 1 },
+  // new areas — each slot belongs to an area via its position; the trees
+  // replace the flower/plant/stone pieces that used to sit in these slots,
+  // so the decoration budget stays flat while the far corners gain depth
+  { x: -10.5, z: 4.3, kind: 'tree-b', minDetail: 1, scale: 1.5 },
+  { x: -9.7, z: -4.2, kind: 'tree-a', minDetail: 1, scale: 1.6 },
   { x: -9.2, z: 4.2, kind: 'stone', minDetail: 2 },
-  { x: 9, z: 7.6, kind: 'plant', minDetail: 1 },
+  { x: 9, z: 7.6, kind: 'tree-c', minDetail: 1, scale: 1.5 },
   { x: 12.8, z: 6.8, kind: 'flower', minDetail: 2 },
-  { x: 8.2, z: -9.6, kind: 'stone', minDetail: 1 },
-  { x: 10, z: -5.6, kind: 'flower', minDetail: 2 },
+  { x: 8.2, z: -9.6, kind: 'tree-a', minDetail: 1, scale: 1.4 },
+  { x: 10, z: -5.6, kind: 'tree-c', minDetail: 2, scale: 1.3 },
 ];
 
 /**
@@ -101,6 +120,13 @@ const KIND_FOOTPRINT: Record<GroundDecoration['kind'], number> = {
   flower: 0.55,
   plant: 0.55,
   stone: 0.5,
+  // scenery kinds carry a wider berth: the GLB silhouettes have trunks,
+  // branches and fence rails beyond their footprint centre
+  'tree-a': 0.45,
+  'tree-b': 0.45,
+  'tree-c': 0.45,
+  rocks: 0.95,
+  farm: 1.0,
 };
 
 export function decorationFootprint(slot: GroundDecoration): number {
