@@ -29,6 +29,7 @@ import { FarmPlot } from './gltf/FarmPlot.tsx';
 import { Fence } from './gltf/Fence.tsx';
 import { Fountain } from './gltf/Fountain.tsx';
 import { HomeGate } from './gltf/HomeGate.tsx';
+import { Koi } from './gltf/Koi.tsx';
 import { Rocks } from './gltf/Rocks.tsx';
 import { Shop } from './gltf/Shop.tsx';
 import { TreeA } from './gltf/TreeA.tsx';
@@ -43,6 +44,7 @@ import {
   FENCE_BOUNDS,
   FOUNTAIN_FIT,
   HOME_GATE_FIT,
+  KOI_BOUNDS,
   ROCKS_BOUNDS,
   SHOP_FIT,
   TREE_A_BOUNDS,
@@ -197,19 +199,43 @@ function GltfProp(props: PropProps) {
 
 /**
  * GLB critters keep the ambient contract: the shared `GaitedAnimal` shell
- * mounts the gait root only while moving/settling, and a `gait-waddle` joint
- * wraps the model so the whole body rocks like the cubic species' steps.
- * Sized to read next to the cubic cat (~0.85 tall): duck 0.55, dog 0.7.
- * Variants without a GLB stay cubic.
+ * mounts the gait root only while moving/settling, and a `gait-*` joint
+ * wraps the model so the whole body moves like the cubic species' steps —
+ * `waddle` rocks ground walkers, `swish` sways the swimmer (the cubic fish
+ * uses the same joint for its tail).
+ * Sized to read next to the cubic cat (~0.85 tall): duck 0.55, dog 0.7,
+ * fish ~0.9 long (the cubic fish is ~0.8).
+ * Variants without a GLB — or below their `minDetail` gate — stay cubic.
  */
-const ANIMAL_FITS: Partial<Record<AnimalProps['variant'], GlbFit>> = {
-  duck: fitToSize(DUCK_BOUNDS, 0.55),
-  dog: fitToSize(DOG_BOUNDS, 0.7),
+const KOI_FIT: GlbFit = (() => {
+  const fit = fitToSize(KOI_BOUNDS, 0.9, { rotationY: Math.PI / 2 });
+  // Fish origin = the waterline, not the ground: recenter vertically so the
+  // koi rides half-submerged like the cubic fish.
+  const midY = (KOI_BOUNDS.min[1] + KOI_BOUNDS.max[1]) / 2;
+  return { ...fit, position: [fit.position[0], -midY * fit.scale, fit.position[2]] };
+})();
+
+const ANIMAL_GLBS: Partial<
+  Record<
+    AnimalProps['variant'],
+    {
+      readonly fit: GlbFit;
+      readonly Model: (props: object) => ReactNode;
+      readonly gait: string;
+      /** Earliest detail level that mounts the GLB (else cubic). */
+      readonly minDetail?: DetailLevel;
+    }
+  >
+> = {
+  duck: { fit: fitToSize(DUCK_BOUNDS, 0.55), Model: Duck, gait: 'gait-waddle' },
+  dog: { fit: fitToSize(DOG_BOUNDS, 0.7), Model: Dog, gait: 'gait-waddle' },
+  fish: { fit: KOI_FIT, Model: Koi, gait: 'gait-swish', minDetail: 6 },
 };
 
 function GltfAnimal(props: AnimalProps) {
-  const fit = ANIMAL_FITS[props.variant];
-  if (!fit) return <CubicAnimal {...props} />;
+  const entry = ANIMAL_GLBS[props.variant];
+  if (!entry || (entry.minDetail !== undefined && (props.detailLevel ?? 0) < entry.minDetail))
+    return <CubicAnimal {...props} />;
   const fallback = <CubicAnimal {...props} />;
   // Pending fetches get a level-1 silhouette: still the same animal, but ~40
   // fewer objects than the full-detail fallback — the transient stays under
@@ -217,9 +243,9 @@ function GltfAnimal(props: AnimalProps) {
   const pending = <CubicAnimal {...props} detailLevel={1} />;
   return (
     <GaitedAnimal moving={props.moving ?? false}>
-      <group name="gait-waddle">
-        <Gltf fit={fit} fallback={fallback} pendingFallback={pending}>
-          {props.variant === 'duck' ? <Duck /> : <Dog />}
+      <group name={entry.gait}>
+        <Gltf fit={entry.fit} fallback={fallback} pendingFallback={pending}>
+          <entry.Model />
         </Gltf>
       </group>
     </GaitedAnimal>

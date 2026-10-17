@@ -289,4 +289,17 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     sha256: '10380349656c8cd8016b35d5a21a88f4794fbf085d286c24608c9f8a5b9ec934',
     status: 'licensed',
   },
+  {
+    id: 'model-koi',
+    file: 'public/models/koi.glb',
+    type: 'model',
+    license: 'CC-BY-4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    attribution:
+      '"Koi Fish" by 7PLUS (sketchfab.com/7plus), CC BY 4.0 — sketchfab.com/3d-models/koi-fish-236859b809984f52b70c94fd040b9c59',
+    source:
+      'Koi Fish (7PLUS, sketchfab.com) — scene.gltf, converted scripts/convert-model.ts (--vcolor texture bake, --no-anim; ratio 1.0)',
+    sha256: 'ddd89f93cd64e34bf635de157a154cff386678c655972a19e36003ce200ea2cf',
+    status: 'licensed',
+  },
 ];

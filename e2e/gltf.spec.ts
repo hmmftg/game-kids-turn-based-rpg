@@ -29,11 +29,11 @@ async function glbMeshNames(page: Page) {
     const names: string[] = [];
     scene?.traverse((o) => {
       // Vertex-color-baked GLBs mount a single mesh named after the source
-      // node (see scripts/gen-components-tmp.cjs + convert-model.ts --vcolor).
+      // node (see scripts/gen-gltf-component.ts + convert-model.ts --vcolor).
       if (
         o.isMesh &&
         o.name &&
-        /^(house|market|well|ball|box_A|farm_plot|fence|pathCobbled|pathDirt|detail_|character_)/.test(
+        /^(house|market|well|ball|box_A|farm_plot|fence|pathCobbled|pathDirt|detail_|character_|mesh_0)/.test(
           o.name,
         )
       )
@@ -113,12 +113,16 @@ test.describe('gltf landmarks', () => {
       .poll(async () => (await glbMeshNames(page)).length, { timeout: 15000 })
       .toBeGreaterThan(0);
     const urls = requested().map((u) => new URL(u).pathname.split('/').pop());
-    // both top-tier scenery GLBs in spawn-visible areas (garden)
+    // both top-tier scenery GLBs in spawn-visible areas (garden), plus the
+    // koi — the fish GLB is very-high only (522 tris over high's headroom).
     expect(urls).toContain('farm-plot.glb');
     expect(urls).toContain('fence.glb');
+    expect(urls).toContain('koi.glb');
     const names = await glbMeshNames(page);
     expect(names).toContain('farm_plot');
     expect(names).toContain('fence');
+    // both fountain koi mount the shared mesh_0 node — one fetch, two mounts
+    expect(names.filter((n) => n === 'mesh_0').length).toBe(2);
   });
 
   test('the glb home-gate door still answers a knock with door-swing', async ({ page }) => {

@@ -200,3 +200,13 @@ export const PATH_DIRT_BOUNDS: GlbExtents = {
   min: [-0.784, 0, -0.824],
   max: [0.801, 0.054, 0.858],
 };
+
+/**
+ * Sketchfab `koi` — vertex colors sampled from the painted jpeg.
+ * Authored nose-first along -x (bounds are heavily x-dominant), so the fit
+ * rotates +π/2 to face +z. Its length axis maps to the fit's span.
+ */
+export const KOI_BOUNDS: GlbExtents = {
+  min: [-3.523, -1.179, -1.19],
+  max: [2.868, 1.714, 1.155],
+};

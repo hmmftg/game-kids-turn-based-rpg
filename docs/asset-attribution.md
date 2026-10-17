@@ -25,6 +25,7 @@ human-readable record.
 | `fence.glb`        | `Models/gltf/fence.gltf.glb`                      | KayKit Spooktober Seasonal Pack 1.1 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `path-cobbled.glb` | `Models/gltf/pathCobbled.gltf.glb`                | KayKit Spooktober Seasonal Pack 1.1 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `path-dirt.glb`    | `Models/gltf/pathDirt.gltf.glb`                   | KayKit Spooktober Seasonal Pack 1.1 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `koi.glb`          | `scene.gltf` ([model page](https://sketchfab.com/3d-models/koi-fish-236859b809984f52b70c94fd040b9c59)) | Sketchfab download | 7PLUS ([sketchfab.com/7plus](https://sketchfab.com/7plus)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
 CC0 dedicates the works to the public domain — no attribution is legally
 required; the author requests a credit, which we provide here and in the
@@ -33,7 +34,9 @@ fit the per-tier triangle budgets in `scripts/measure-world.ts` — the first
 three via `@gltf-transform/cli` (`simplify --ratio 0.4 --error 0.01`), the
 rest via `scripts/convert-model.ts` (ratio/error per registry `source`). The
 `crate` model also had its palette texture stripped in favour of a flat wood
-tone; no other changes.
+tone; no other changes. The `koi` model had its baseColor texture resampled
+into vertex colors and its morph-target swim animation dropped
+(`scripts/convert-model.ts --vcolor --no-anim`).
 
 Only **CC0** or **CC BY 4.0** assets may ship. CC BY requires the license link
 plus a modification notice in this table, and the project MIT license never
