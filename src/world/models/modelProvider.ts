@@ -91,14 +91,7 @@ export interface PropProps {
 }
 
 export type AnimalVisualVariant =
-  | 'cat'
-  | 'bird'
-  | 'eagle'
-  | 'fish'
-  | 'butterfly'
-  | 'duck'
-  | 'dog'
-  | 'elephant';
+  'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly' | 'duck' | 'dog' | 'elephant';
 
 /**
  * Static authored scenery — trees, rock formations, the garden's farm plot.

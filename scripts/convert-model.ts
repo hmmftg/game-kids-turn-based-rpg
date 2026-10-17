@@ -84,11 +84,14 @@ function decodeTexture(texture: Texture): DecodedImage | null {
   return decoded;
 }
 
-const srgbToLinear = (c: number) =>
-  c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 
 /** Nearest-texel sample of a decoded image at wrapped UV → linear RGBA. */
-function sampleTexture(image: DecodedImage, u: number, v: number): [number, number, number, number] {
+function sampleTexture(
+  image: DecodedImage,
+  u: number,
+  v: number,
+): [number, number, number, number] {
   const x = Math.min(image.width - 1, Math.floor((u - Math.floor(u)) * image.width));
   const y = Math.min(image.height - 1, Math.floor((v - Math.floor(v)) * image.height));
   const i = (y * image.width + x) * 4;
@@ -184,9 +187,7 @@ await doc.transform(
                 .fromArray(joint.getWorldMatrix() as unknown as number[])
                 .multiply(new Matrix4().fromArray(ibm.getElement(i, []))),
             );
-            const skinNorms = skinMats.map((m) =>
-              new Matrix3().setFromMatrix4(m),
-            );
+            const skinNorms = skinMats.map((m) => new Matrix3().setFromMatrix4(m));
             const toLocal = new Matrix4()
               .fromArray(node.getWorldMatrix() as unknown as number[])
               .invert();
@@ -290,8 +291,7 @@ await doc.transform(
               const emissiveTexture = material?.getEmissiveTexture();
               const emissiveImage = emissiveTexture ? decodeTexture(emissiveTexture) : null;
               const emissiveFactor = material?.getEmissiveFactor() ?? [0, 0, 0];
-              const uvs =
-                (image || emissiveImage) ? prim.getAttribute('TEXCOORD_0') : null;
+              const uvs = image || emissiveImage ? prim.getAttribute('TEXCOORD_0') : null;
               if ((image || emissiveImage) && uvs) {
                 // Painted/palette texture → per-vertex sample at TEXCOORD_0.
                 // glTF emissive is additive, so fire/glow looks that store
@@ -320,8 +320,8 @@ await doc.transform(
                   colors.set(rgba, i * 4);
                 }
               } else {
-                const rgba = (material?.getBaseColorFactor() ?? [1, 1, 1, 1]).map(
-                  (c, i) => (i < 3 ? Math.min(1, c * brighten) : c),
+                const rgba = (material?.getBaseColorFactor() ?? [1, 1, 1, 1]).map((c, i) =>
+                  i < 3 ? Math.min(1, c * brighten) : c,
                 );
                 for (let i = 0; i < count; i++) colors.set(rgba, i * 4);
               }
@@ -330,8 +330,7 @@ await doc.transform(
               // Materials are gone — their coordinate/tangent channels are
               // dead weight now (prune won't drop live prim attributes).
               for (const sem of prim.listSemantics())
-                if (sem.startsWith('TEXCOORD') || sem === 'TANGENT')
-                  prim.setAttribute(sem, null);
+                if (sem.startsWith('TEXCOORD') || sem === 'TANGENT') prim.setAttribute(sem, null);
             }
           }
         },

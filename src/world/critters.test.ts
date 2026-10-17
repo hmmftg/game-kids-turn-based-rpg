@@ -30,9 +30,7 @@ describe.each([
   it('every spot in every patrol clears the exclusion envelope', () => {
     for (const patrol of patrols) {
       for (const spot of patrol) {
-        expect(groundSpotIsClear(spot, spotRadius), `${kind} spot ${spot.x},${spot.z}`).toBe(
-          true,
-        );
+        expect(groundSpotIsClear(spot, spotRadius), `${kind} spot ${spot.x},${spot.z}`).toBe(true);
       }
     }
   });
@@ -129,12 +127,7 @@ describe('INITIAL_CRITTER_PLACEMENTS', () => {
       if (p.kind === 'bird' || p.kind === 'eagle') {
         expect(perchIds.has(p.spotId ?? ''), p.key).toBe(true);
       }
-      if (
-        p.kind === 'cat' ||
-        p.kind === 'duck' ||
-        p.kind === 'dog' ||
-        p.kind === 'elephant'
-      ) {
+      if (p.kind === 'cat' || p.kind === 'duck' || p.kind === 'dog' || p.kind === 'elephant') {
         const patrol = groundPatrolsFor(p.kind)[p.poolIndex];
         expect(patrol).toBeDefined();
       }

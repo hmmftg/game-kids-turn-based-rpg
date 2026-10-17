@@ -15,14 +15,7 @@ import { landmarkPosition } from './placement.ts';
  */
 
 export type CritterKind =
-  | 'cat'
-  | 'bird'
-  | 'eagle'
-  | 'fish'
-  | 'butterfly'
-  | 'duck'
-  | 'dog'
-  | 'elephant';
+  'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly' | 'duck' | 'dog' | 'elephant';
 
 export interface GroundSpot {
   readonly x: number;
