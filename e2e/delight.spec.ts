@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { seedCompletedQuests, startGame } from './harness.ts';
+import { seedCompletedQuests, startGame, startGameAtTier } from './harness.ts';
 import {
   critterTransforms,
   factDecorationsProbe,
@@ -60,7 +60,9 @@ test.describe('the world noticed me', () => {
   test('arriving at the fountain earns a fish notice — they swim over to see me', async ({
     page,
   }) => {
-    await startGame(page);
+    // Critter notices require detailLevel > 0 — pin 'low' so 4-core CI
+    // runners ('very-low' detection) don't freeze the fish/cat scheduler.
+    await startGameAtTier(page);
     const before = (await reactionsProbe(page)).length;
     // anchor-fountain is the landmark itself (not navigable); path-west-far
     // settles ~2.7u from the basin rim — inside the fish notice radius.
@@ -76,7 +78,7 @@ test.describe('the world noticed me', () => {
   });
 
   test('tapping a flower answers visibly AND the child still goes to see', async ({ page }) => {
-    await startGame(page);
+    await startGameAtTier(page);
     await waitForWalkerIdle(page);
     // Full chain: tap flower → flower bends → child walks toward it → settle.
     await tapReactivePoint(page, 2, -2.6);
@@ -125,7 +127,7 @@ test.describe('the world noticed me', () => {
     // Full comprehension mode: copy stripped, physical state only, motion
     // free — the reaction still fires and the child still arrives.
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await startGame(page, '/?kidtest=nocopy,noactionicons');
+    await startGameAtTier(page, 'low', '/?kidtest=nocopy,noactionicons');
     await tapReactivePoint(page, 2, -2.6);
     const reactions = await reactionsProbe(page);
     expect(reactions.some((r) => r.reaction === 'bend')).toBe(true);

@@ -110,6 +110,14 @@ markers, action icons, directional arrows, held-item badges) while physical stat
 like the actually-held object stays. `?kidtest=nocopy,noactionicons` is the full
 semantic-comprehension mode.
 
+**Quality tier in e2e is environment-dependent.** `startGame` takes the fresh-profile
+path, so `detectQualityTier()` measures the runner's hardware: 4-core CI runners land
+on `'very-low'` → detailLevel 0, which removes every `GROUND_DECORATIONS` flora slot
+and freezes the critter scheduler (`useCritters` timers, so no notices/follows/darts).
+Specs that exercise detail-gated presentation must use `startGameAtTier` (pins a
+profile at `'low'` minimum, same convention as the GLB spec seeding `'high'`);
+tier-blind specs (DOM flows, navigation, battles) keep plain `startGame`.
+
 ## Semantic animation storyboard
 
 `e2e/animations.spec.ts` runs under `?kidtest=nocopy,noactionicons` and asserts the

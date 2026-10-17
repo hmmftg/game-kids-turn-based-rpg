@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { startGame } from './harness.ts';
+import { startGameAtTier } from './harness.ts';
 import {
   critterTransforms,
   dismissDialogue,
@@ -19,12 +19,15 @@ import {
  * leaves for a deterministic alternate perch, and a leaf pile parts once
  * to reveal what hides underneath — and stays revealed for the session.
  */
+// Cat/bird behaviour runs on the critter scheduler, which freezes at
+// detailLevel 0 ('very-low' on 4-core CI runners) — pin 'low' via
+// startGameAtTier so the ambient layer exists everywhere.
 test.beforeEach(async ({ page }) => {
   await enableWorldProbe(page);
 });
 
 test('a child arriving near a cat earns exactly one notice or follow', async ({ page }) => {
-  await startGame(page);
+  await startGameAtTier(page);
   await waitForProbe(page);
   // Deliberate overlap: at anchor-path-east (3,0) both cats' pockets touch
   // the notice radius — the contract is still exactly ONE cat response per
@@ -64,7 +67,7 @@ test('a child arriving near a cat earns exactly one notice or follow', async ({ 
 });
 
 test('a tapped bird flutters off to another perch', async ({ page }) => {
-  await startGame(page);
+  await startGameAtTier(page);
   await waitForWalkerIdle(page);
   await waitForProbe(page);
 
@@ -129,7 +132,7 @@ test('a tapped bird flutters off to another perch', async ({ page }) => {
 });
 
 test('a leaf pile parts once and stays revealed for the session', async ({ page }) => {
-  await startGame(page);
+  await startGameAtTier(page);
   await waitForWalkerIdle(page);
   const before = await playerAt(page);
 
@@ -157,7 +160,7 @@ test('a leaf pile parts once and stays revealed for the session', async ({ page 
 
 test('a revealed find survives a map transition but not a reload', async ({ page }) => {
   test.setTimeout(120000);
-  await startGame(page);
+  await startGameAtTier(page);
   const revealedFinds = () =>
     page.evaluate(
       () => (window as unknown as { __worldRevealedFinds?: string[] }).__worldRevealedFinds ?? [],
@@ -191,7 +194,7 @@ test('a revealed find survives a map transition but not a reload', async ({ page
 
 test('reduced motion still uncovers the find — meaning without the motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await startGame(page);
+  await startGameAtTier(page);
   await tapReactivePoint(page, 3.6, -1.8);
   await page.waitForTimeout(400);
   expect(
