@@ -315,4 +315,52 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     sha256: 'defc79de7ae845e47a999391b6e16798326f413b20b1f88f8084b4dd46e6e96f',
     status: 'licensed',
   },
+  {
+    id: 'model-bush',
+    file: 'public/models/bush.glb',
+    type: 'model',
+    license: 'CC0-1.0',
+    licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    attribution: 'KayKit Forest Nature Pack — Kay Lousberg, CC0',
+    source:
+      'KayKit Forest Nature Pack 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/Bush_2_A_Color1.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.5, --vcolor)',
+    sha256: 'a24641bd39269f108f76c4fdc41f8281994b8c9f09c74bf71ef903575a399356',
+    status: 'licensed',
+  },
+  {
+    id: 'model-rock',
+    file: 'public/models/rock.glb',
+    type: 'model',
+    license: 'CC0-1.0',
+    licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    attribution: 'KayKit Forest Nature Pack — Kay Lousberg, CC0',
+    source:
+      'KayKit Forest Nature Pack 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/Rock_1_A_Color1.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.5, --vcolor)',
+    sha256: '10dfcb83441257f416776112061fe12b1f0dbef094c415447fb8f8b2d3eab65a',
+    status: 'licensed',
+  },
+  {
+    id: 'model-bench',
+    file: 'public/models/bench.glb',
+    type: 'model',
+    license: 'CC0-1.0',
+    licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    attribution: 'KayKit City Builder Bits — Kay Lousberg, CC0',
+    source:
+      'KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/bench.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.4, --vcolor)',
+    sha256: 'e1fbafc0a294acc3bce258c216ba1fc3736143137e6cf03bd255a753a5a3d2f9',
+    status: 'licensed',
+  },
+  {
+    id: 'model-streetlight',
+    file: 'public/models/streetlight.glb',
+    type: 'model',
+    license: 'CC0-1.0',
+    licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    attribution: 'KayKit City Builder Bits — Kay Lousberg, CC0',
+    source:
+      'KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/streetlight.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.4, --vcolor)',
+    sha256: 'f206528e475fb4ef85f2cdbb1e9d7ec165f7a0e17e69ebc053c9a4c9a81e74bd',
+    status: 'licensed',
+  },
 ];

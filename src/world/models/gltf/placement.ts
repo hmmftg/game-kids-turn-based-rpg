@@ -191,6 +191,37 @@ export const FENCE_BOUNDS: GlbExtents = {
   max: [1, 1.4, 0.057],
 };
 
+/**
+ * Forest Nature `Bush_2_A_Color1` — a rounded shrub ~0.53 across and tall,
+ * palette-texture colors sampled into COLOR_0.
+ */
+export const BUSH_BOUNDS: GlbExtents = {
+  min: [-0.264, 0, -0.264],
+  max: [0.264, 0.528, 0.264],
+};
+
+/** Forest Nature `Rock_1_A_Color1` — a low boulder, ~0.58 across. */
+export const ROCK_BOUNDS: GlbExtents = {
+  min: [-0.32, 0, -0.304],
+  max: [0.259, 0.54, 0.304],
+};
+
+/**
+ * City Builder `bench` — authored as a flat slat seat (0.4 wide, only 0.1
+ * tall/deep-ish): the GLB reads as a park bench once `fitToSize` scales the
+ * seat span; legs live in the silhouette, not separate meshes.
+ */
+export const BENCH_BOUNDS: GlbExtents = {
+  min: [-0.2, 0, -0.075],
+  max: [0.2, 0.1, 0.075],
+};
+
+/** City Builder `streetlight` — a 0.96 pole whose arm reaches -x. */
+export const STREETLIGHT_BOUNDS: GlbExtents = {
+  min: [-0.239, 0, -0.035],
+  max: [0.03, 0.96, 0.035],
+};
+
 /** City Builder path tiles — flat squares ~1.68 across, 0.05 thick. */
 export const PATH_COBBLED_BOUNDS: GlbExtents = {
   min: [-0.837, 0, -0.838],

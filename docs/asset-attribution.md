@@ -27,6 +27,10 @@ human-readable record.
 | `path-dirt.glb`    | `Models/gltf/pathDirt.gltf.glb`                   | KayKit Spooktober Seasonal Pack 1.1 | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `koi.glb`          | `scene.gltf` ([model page](https://sketchfab.com/3d-models/koi-fish-236859b809984f52b70c94fd040b9c59)) | Sketchfab download | 7PLUS ([sketchfab.com/7plus](https://sketchfab.com/7plus)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | `elephant.glb`     | `AnimatedElephant.glb` ([model page](https://sketchfab.com/3d-models/elephant-animation-idle-a8e7e10f005f4baab0a2f5079d759fcd)) | Sketchfab download | GremorySaiyan ([sketchfab.com/gremorysaiyan](https://sketchfab.com/gremorysaiyan)) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `bush.glb`         | `Assets/gltf/Bush_2_A_Color1.gltf`                      | KayKit Forest Nature Pack 1.0 FREE | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `rock.glb`         | `Assets/gltf/Rock_1_A_Color1.gltf`                      | KayKit Forest Nature Pack 1.0 FREE | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `bench.glb`        | `Assets/gltf/bench.gltf`                                | KayKit City Builder Bits 1.0 FREE | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `streetlight.glb`  | `Assets/gltf/streetlight.gltf`                          | KayKit City Builder Bits 1.0 FREE | Kay Lousberg                                              | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 CC0 dedicates the works to the public domain — no attribution is legally
 required; the author requests a credit, which we provide here and in the
@@ -42,7 +46,10 @@ its bind pose baked to world space, its baseColor texture resampled into
 vertex colors, and its skin + idle animation dropped
 (`scripts/convert-model.ts --unskin --vcolor --no-anim --brighten 5`,
 ratio 0.2); its source material is double-sided so the shipped mesh
-renders with the double-sided shared material.
+renders with the double-sided shared material. The `bush`, `rock`,
+`bench` and `streetlight` models had their shared palette textures
+(`forest_texture.png`/`citybits_texture.png`) resampled into vertex
+colors (`scripts/convert-model.ts --vcolor`); no other changes.
 
 Only **CC0** or **CC BY 4.0** assets may ship. CC BY requires the license link
 plus a modification notice in this table, and the project MIT license never

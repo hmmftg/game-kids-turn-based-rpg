@@ -22,6 +22,8 @@ import type {
   SceneryVisualVariant,
 } from './modelProvider.ts';
 import { Ball } from './gltf/Ball.tsx';
+import { Bench } from './gltf/Bench.tsx';
+import { Bush } from './gltf/Bush.tsx';
 import { Crate } from './gltf/Crate.tsx';
 import { Dog } from './gltf/Dog.tsx';
 import { Duck } from './gltf/Duck.tsx';
@@ -31,13 +33,17 @@ import { Fence } from './gltf/Fence.tsx';
 import { Fountain } from './gltf/Fountain.tsx';
 import { HomeGate } from './gltf/HomeGate.tsx';
 import { Koi } from './gltf/Koi.tsx';
+import { Rock } from './gltf/Rock.tsx';
 import { Rocks } from './gltf/Rocks.tsx';
 import { Shop } from './gltf/Shop.tsx';
+import { Streetlight } from './gltf/Streetlight.tsx';
 import { TreeA } from './gltf/TreeA.tsx';
 import { TreeB } from './gltf/TreeB.tsx';
 import { TreeC } from './gltf/TreeC.tsx';
 import {
   BALL_BOUNDS,
+  BENCH_BOUNDS,
+  BUSH_BOUNDS,
   CRATE_BOUNDS,
   DOG_BOUNDS,
   DUCK_BOUNDS,
@@ -47,8 +53,10 @@ import {
   FOUNTAIN_FIT,
   HOME_GATE_FIT,
   KOI_BOUNDS,
+  ROCK_BOUNDS,
   ROCKS_BOUNDS,
   SHOP_FIT,
+  STREETLIGHT_BOUNDS,
   TREE_A_BOUNDS,
   TREE_B_BOUNDS,
   TREE_C_BOUNDS,
@@ -290,6 +298,12 @@ const SCENERY_GLBS: Record<
   rocks: { bounds: ROCKS_BOUNDS, Model: Rocks },
   farm: { bounds: FARM_BOUNDS, Model: FarmPlot, minDetail: 6 },
   fence: { bounds: FENCE_BOUNDS, Model: Fence, minDetail: 6 },
+  // Textured-pack picks — very-high only: high's triangle headroom is ~146
+  // and even these small swaps would tip it over.
+  bush: { bounds: BUSH_BOUNDS, Model: Bush, minDetail: 6 },
+  rock: { bounds: ROCK_BOUNDS, Model: Rock, minDetail: 6 },
+  bench: { bounds: BENCH_BOUNDS, Model: Bench, minDetail: 6 },
+  streetlight: { bounds: STREETLIGHT_BOUNDS, Model: Streetlight, minDetail: 6 },
 };
 
 function GltfScenery(props: SceneryProps) {

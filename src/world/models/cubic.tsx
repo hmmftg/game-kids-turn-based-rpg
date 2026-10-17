@@ -2685,11 +2685,94 @@ export function CubicScenery({ variant, scale = 1, detailLevel = 2 }: SceneryPro
   const leafDark = useMaterial(DETAIL_COLORS.leafDark);
   const stone = useMaterial(DETAIL_COLORS.stone);
   const soil = useMaterial(DETAIL_COLORS.soil);
+  const metal = useMaterial(DETAIL_COLORS.critterDark);
+  const lampGlow = useMaterial(DETAIL_COLORS.domeAccent);
   return (
     <group scale={scale} raycast={noRaycast}>
       {variant === 'fence' ? (
         // one posts-and-rail run; the GLB swaps in at the top detail level
         <FenceRun position={[0, 0, 0]} posts={4} spacing={0.35} />
+      ) : variant === 'bush' ? (
+        // dense rounded shrub — denser than a PlantCluster tuft
+        <>
+          <mesh
+            geometry={BOX}
+            material={leaf}
+            position={[0, 0.2, 0]}
+            scale={[0.44, 0.36, 0.4]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={leafDark}
+            position={[0.12, 0.38, 0.06]}
+            scale={[0.26, 0.2, 0.24]}
+            raycast={noRaycast}
+          />
+        </>
+      ) : variant === 'rock' ? (
+        // one squat boulder — the single-rock counterpart of `rocks`
+        <mesh
+          geometry={BOX}
+          material={stone}
+          position={[0, 0.16, 0]}
+          scale={[0.5, 0.32, 0.42]}
+          raycast={noRaycast}
+        />
+      ) : variant === 'bench' ? (
+        // seat + back + two legs, facing +z — matches the GLB's orientation
+        <>
+          <mesh
+            geometry={BOX}
+            material={trunk}
+            position={[0, 0.22, 0]}
+            scale={[0.6, 0.05, 0.22]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={trunk}
+            position={[0, 0.34, -0.09]}
+            scale={[0.6, 0.2, 0.04]}
+            raycast={noRaycast}
+          />
+          {[-0.24, 0.24].map((x) => (
+            <mesh
+              key={x}
+              geometry={BOX}
+              material={trunk}
+              position={[x, 0.1, 0]}
+              scale={[0.05, 0.2, 0.18]}
+              raycast={noRaycast}
+            />
+          ))}
+        </>
+      ) : variant === 'streetlight' ? (
+        // thin pole + forward arm + warm lamp head — arm reaches -x to
+        // match the GLB's neutral orientation under the shared rotationY
+        <>
+          <mesh
+            geometry={BOX}
+            material={metal}
+            position={[0, 0.5, 0]}
+            scale={[0.05, 1.0, 0.05]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={metal}
+            position={[-0.09, 0.98, 0]}
+            scale={[0.22, 0.05, 0.05]}
+            raycast={noRaycast}
+          />
+          <mesh
+            geometry={BOX}
+            material={lampGlow}
+            position={[-0.17, 0.92, 0]}
+            scale={[0.09, 0.12, 0.09]}
+            raycast={noRaycast}
+          />
+        </>
       ) : variant === 'rocks' ? (
         <>
           <mesh

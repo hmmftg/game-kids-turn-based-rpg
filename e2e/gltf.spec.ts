@@ -33,7 +33,7 @@ async function glbMeshNames(page: Page) {
       if (
         o.isMesh &&
         o.name &&
-        /^(house|market|well|ball|box_A|farm_plot|fence|pathCobbled|pathDirt|detail_|character_|mesh_0|Object_7)/.test(
+        /^(house|market|well|ball|box_A|farm_plot|fence|pathCobbled|pathDirt|detail_|character_|mesh_0|Object_7|Bush_|Rock_|bench|streetlight)/.test(
           o.name,
         )
       )
@@ -115,10 +115,16 @@ test.describe('gltf landmarks', () => {
     const urls = requested().map((u) => new URL(u).pathname.split('/').pop());
     // both top-tier scenery GLBs in spawn-visible areas (garden), plus the
     // koi and elephant — both are very-high only (over high's headroom).
+    // bush/rock/bench/streetlight also mount eagerly: their slots sit in the
+    // spawn-visible square + garden.
     expect(urls).toContain('farm-plot.glb');
     expect(urls).toContain('fence.glb');
     expect(urls).toContain('koi.glb');
     expect(urls).toContain('elephant.glb');
+    expect(urls).toContain('bush.glb');
+    expect(urls).toContain('rock.glb');
+    expect(urls).toContain('bench.glb');
+    expect(urls).toContain('streetlight.glb');
     const names = await glbMeshNames(page);
     expect(names).toContain('farm_plot');
     expect(names).toContain('fence');
