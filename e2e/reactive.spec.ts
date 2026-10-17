@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { startGame } from './harness.ts';
+import { startGameAtTier } from './harness.ts';
 import {
   playerAt,
   reactionsProbe,
@@ -23,8 +23,12 @@ const semanticEvents = (page: Page) =>
 const activeSemantic = (page: Page) =>
   page.evaluate(() => (window as unknown as WorldProbe).__worldAnimationStats?.active);
 
+// Flora slots are minDetail 1 and the whole spec is about them — pin 'low'
+// so the tier never falls to 'very-low' on weak/CI hardware (detailLevel 0
+// renders no flowers at all). See harness.startGameAtTier.
+
 test('a tapped flower bends once and the child still approaches', async ({ page }) => {
-  await startGame(page);
+  await startGameAtTier(page);
   await waitForWalkerIdle(page);
 
   await tapReactivePoint(page, 2, -2.6); // authored flower slot near the square
@@ -37,7 +41,7 @@ test('a tapped flower bends once and the child still approaches', async ({ page 
 });
 
 test('every reaction stays out of the semantic stream and settles', async ({ page }) => {
-  await startGame(page);
+  await startGameAtTier(page);
   await tapReactivePoint(page, -2.2, -2.4); // plant → sway
   // The flourish is actually running — the lifecycle probe saw it start.
   await expect
@@ -67,7 +71,7 @@ test('every reaction stays out of the semantic stream and settles', async ({ pag
 });
 
 test('the fountain bloops, fish dart, and the tap keeps its normal meaning', async ({ page }) => {
-  await startGame(page);
+  await startGameAtTier(page);
   await tapWorldAnchor(page, 'anchor-path-west');
   await waitForWalkerIdle(page);
 
@@ -85,7 +89,7 @@ test('the fountain bloops, fish dart, and the tap keeps its normal meaning', asy
 });
 
 test('a tapped door swings open a crack and closes', async ({ page }) => {
-  await startGame(page);
+  await startGameAtTier(page);
   await waitForWalkerIdle(page);
   // The square's wide doorway — tapped on the door itself (its panel stands
   // above the ground, so aim at its centre like a child's finger).
@@ -109,7 +113,7 @@ test('a tapped door swings open a crack and closes', async ({ page }) => {
 
 test('reduced motion still registers the reaction, drops the flourish', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await startGame(page);
+  await startGameAtTier(page);
   await tapReactivePoint(page, 2, -2.6);
   await page.waitForTimeout(300);
   expect((await reactionsProbe(page)).some((r) => r.reaction === 'bend')).toBe(true);
