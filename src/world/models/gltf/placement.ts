@@ -82,3 +82,63 @@ export const HOME_GATE_FIT: LandmarkFit = fitLandmark(HOME_GATE_BOUNDS, 1.4, {
 });
 export const SHOP_FIT: LandmarkFit = fitLandmark(SHOP_BOUNDS, 1.25);
 export const FOUNTAIN_FIT: LandmarkFit = fitLandmark(FOUNTAIN_BOUNDS, 1.0, { center: true });
+
+/**
+ * Prop/critter placement — no clearance plane, just: fit `size` to the
+ * model's largest axis, centre the footprint on the prop origin, rest the
+ * base on y=0. `bounds` are the raw POSITION min/max triples measured from
+ * the shipped file via scripts/convert-model.ts output.
+ */
+export interface GlbFit {
+  readonly scale: number;
+  readonly position: readonly [number, number, number];
+  readonly rotationY: number;
+}
+
+export interface GlbExtents {
+  readonly min: readonly [number, number, number];
+  readonly max: readonly [number, number, number];
+}
+
+export function fitToSize(
+  bounds: GlbExtents,
+  size: number,
+  opts: { readonly rotationY?: number } = {},
+): GlbFit {
+  const span = Math.max(
+    bounds.max[0] - bounds.min[0],
+    bounds.max[1] - bounds.min[1],
+    bounds.max[2] - bounds.min[2],
+  );
+  const scale = size / span;
+  return {
+    scale,
+    position: [
+      -((bounds.min[0] + bounds.max[0]) / 2) * scale,
+      -bounds.min[1] * scale,
+      -((bounds.min[2] + bounds.max[2]) / 2) * scale,
+    ],
+    rotationY: opts.rotationY ?? 0,
+  };
+}
+
+/** Mini-Game `ball.gltf.glb`: 2-unit sphere centred on the origin. */
+export const BALL_BOUNDS: GlbExtents = { min: [-1, -1, -0.985], max: [1, 1, 0.985] };
+
+/** City Builder `box_A.gltf` (texture stripped): a 0.2-unit cardboard box. */
+export const CRATE_BOUNDS: GlbExtents = { min: [-0.1, 0, -0.1], max: [0.1, 0.176, 0.103] };
+
+/**
+ * Mini-Game `character_duck.gltf` — 4-mesh assembly (body + arms + head).
+ * Origin sits mid-body, so min.y is negative (feet below origin).
+ */
+export const DUCK_BOUNDS: GlbExtents = {
+  min: [-0.5, -0.477, -0.483],
+  max: [0.483, 1.188, 0.652],
+};
+
+/** Mini-Game `character_dog.gltf` — same assembly pattern as the duck. */
+export const DOG_BOUNDS: GlbExtents = {
+  min: [-0.692, -0.477, -0.483],
+  max: [0.692, 0.934, 0.729],
+};

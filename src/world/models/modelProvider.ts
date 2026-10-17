@@ -90,7 +90,7 @@ export interface PropProps {
   readonly variant?: PropVisualVariant | undefined;
 }
 
-export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly';
+export type AnimalVisualVariant = 'cat' | 'bird' | 'eagle' | 'fish' | 'butterfly' | 'duck' | 'dog';
 
 export interface AnimalProps {
   /** Species silhouette to draw. */

@@ -1,25 +1,46 @@
 import { Component, Suspense, useEffect, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { QualityTier } from '../../domain/game/types.ts';
-import { BlobShadow, CubicAnimal, CubicFigure, CubicLandmark, CubicProp } from './cubic.tsx';
+import {
+  BlobShadow,
+  CubicAnimal,
+  CubicFigure,
+  CubicLandmark,
+  CubicProp,
+  GaitedAnimal,
+} from './cubic.tsx';
 import { CUBIC_MODELS } from './cubicModels.ts';
 import { DoorDetail, type Xyz } from './details.tsx';
-import type { LandmarkProps, ModelSet } from './modelProvider.ts';
+import type { AnimalProps, LandmarkProps, ModelSet, PropProps } from './modelProvider.ts';
+import { Ball } from './gltf/Ball.tsx';
+import { Crate } from './gltf/Crate.tsx';
+import { Dog } from './gltf/Dog.tsx';
+import { Duck } from './gltf/Duck.tsx';
 import { Fountain } from './gltf/Fountain.tsx';
 import { HomeGate } from './gltf/HomeGate.tsx';
 import { Shop } from './gltf/Shop.tsx';
-import { FOUNTAIN_FIT, HOME_GATE_FIT, SHOP_FIT, type LandmarkFit } from './gltf/placement.ts';
+import {
+  BALL_BOUNDS,
+  CRATE_BOUNDS,
+  DOG_BOUNDS,
+  DUCK_BOUNDS,
+  FOUNTAIN_FIT,
+  HOME_GATE_FIT,
+  SHOP_FIT,
+  fitToSize,
+  type GlbFit,
+} from './gltf/placement.ts';
 
 /**
  * GLB model set — same `ModelSet` contract as `CUBIC_MODELS` so the hub and
  * quest logic never see the difference.
  *
- * Only landmarks get real GLB geometry for now: `home-gate`, `shop` and
- * `fountain` map to committed KayKit models; `square`/`garden` and every
- * Figure/Prop/Animal delegate to the cubic components. Each GLB subtree is
- * wrapped in Suspense + an error boundary whose fallback is the equivalent
- * cubic landmark — a failed or pending fetch never leaves a hole in the
- * world.
+ * Landmarks (`home-gate`, `shop`, `fountain`), props (`ball`, `crate`) and
+ * critters (`duck`, `dog`) map to committed KayKit models; `square`/`garden`,
+ * every Figure and the remaining variants delegate to the cubic components.
+ * Each GLB subtree is wrapped in Suspense + an error boundary whose fallback
+ * is the equivalent cubic model — a failed or pending fetch never leaves a
+ * hole in the world.
  */
 
 /** Scene-local boundary: a GLB that fails to parse/load falls back to cubic. */
@@ -57,15 +78,18 @@ function InvalidateOnResolve() {
 function Gltf({
   fit,
   fallback,
+  pendingFallback,
   children,
 }: {
-  readonly fit: LandmarkFit;
+  readonly fit: GlbFit;
   readonly fallback: ReactNode;
+  /** Lighter stand-in shown only while the fetch resolves (errors get `fallback`). */
+  readonly pendingFallback?: ReactNode;
   readonly children: ReactNode;
 }) {
   return (
     <GltfErrorBoundary fallback={fallback}>
-      <Suspense fallback={fallback}>
+      <Suspense fallback={pendingFallback ?? fallback}>
         <InvalidateOnResolve />
         <group scale={fit.scale} position={fit.position} rotation={[0, fit.rotationY, 0]}>
           {children}
@@ -122,12 +146,70 @@ function GltfLandmark(props: LandmarkProps) {
   );
 }
 
+/**
+ * GLB props keep the same slot contract: the file model mounts where the
+ * cubic prop's base box would be (its `scale` is the target size), still
+ * wrapped in the callers' ReactiveProp panel, so tap semantics are unchanged.
+ * Variants without a truthful GLB match stay cubic.
+ */
+function GltfProp(props: PropProps) {
+  const { position, variant, scale = 0.4 } = props;
+  const zero = { x: 0, z: 0 };
+  const cubicFallback = <CubicProp {...props} position={zero} />;
+  return (
+    <group position={[position.x, 0, position.z]} dispose={null}>
+      {variant === 'ball' ? (
+        <Gltf fit={fitToSize(BALL_BOUNDS, scale)} fallback={cubicFallback}>
+          <Ball />
+        </Gltf>
+      ) : variant === 'crate' ? (
+        <Gltf fit={fitToSize(CRATE_BOUNDS, scale)} fallback={cubicFallback}>
+          <Crate />
+        </Gltf>
+      ) : (
+        <CubicProp {...props} position={zero} />
+      )}
+    </group>
+  );
+}
+
+/**
+ * GLB critters keep the ambient contract: the shared `GaitedAnimal` shell
+ * mounts the gait root only while moving/settling, and a `gait-waddle` joint
+ * wraps the model so the whole body rocks like the cubic species' steps.
+ * Sized to read next to the cubic cat (~0.85 tall): duck 0.55, dog 0.7.
+ * Variants without a GLB stay cubic.
+ */
+const ANIMAL_FITS: Partial<Record<AnimalProps['variant'], GlbFit>> = {
+  duck: fitToSize(DUCK_BOUNDS, 0.55),
+  dog: fitToSize(DOG_BOUNDS, 0.7),
+};
+
+function GltfAnimal(props: AnimalProps) {
+  const fit = ANIMAL_FITS[props.variant];
+  if (!fit) return <CubicAnimal {...props} />;
+  const fallback = <CubicAnimal {...props} />;
+  // Pending fetches get a level-1 silhouette: still the same animal, but ~40
+  // fewer objects than the full-detail fallback — the transient stays under
+  // the object-count ceiling while two critter GLBs resolve at once.
+  const pending = <CubicAnimal {...props} detailLevel={1} />;
+  return (
+    <GaitedAnimal moving={props.moving ?? false}>
+      <group name="gait-waddle">
+        <Gltf fit={fit} fallback={fallback} pendingFallback={pending}>
+          {props.variant === 'duck' ? <Duck /> : <Dog />}
+        </Gltf>
+      </group>
+    </GaitedAnimal>
+  );
+}
+
 export const GLTF_MODELS: ModelSet = {
   kind: 'gltf',
   Figure: CubicFigure,
   Landmark: GltfLandmark,
-  Prop: CubicProp,
-  Animal: CubicAnimal,
+  Prop: GltfProp,
+  Animal: GltfAnimal,
 };
 
 /**

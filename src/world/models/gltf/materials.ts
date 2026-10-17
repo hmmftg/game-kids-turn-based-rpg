@@ -20,4 +20,13 @@ export const KAYKIT_MATERIAL = {
   brownDark: sharedLambert('#995a47'),
   brown: sharedLambert('#c78460'),
   water: sharedLambert('#49d5e0'),
+  blue: sharedLambert('#64b3ff'),
+  red: sharedLambert('#ff3061'),
+  yellow: sharedLambert('#ffbb29'),
+  black: sharedLambert('#2b3539'),
+  greenDark: sharedLambert('#2c8a8c'),
+  /** Spooktober dirt-path brown; also the fence remap (source is graveyard-
+      black, which reads as wrought iron on a cheerful village garden). */
+  darkWood: sharedLambert('#6d605c'),
+  fenceWood: sharedLambert('#8a6a45'),
 } as const;

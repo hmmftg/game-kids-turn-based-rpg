@@ -28,7 +28,8 @@ async function glbMeshNames(page: Page) {
     const scene = (window as unknown as SceneProbe).__worldScene;
     const names: string[] = [];
     scene?.traverse((o) => {
-      if (o.isMesh && o.name && /^(Cube|Cylinder)\d/.test(o.name)) names.push(o.name);
+      if (o.isMesh && o.name && /^(Cube|Cylinder)\d|^character_|^box_A/.test(o.name))
+        names.push(o.name);
     });
     return names;
   });
@@ -54,7 +55,7 @@ test.describe('gltf landmarks', () => {
     expect(await glbMeshNames(page)).toEqual([]);
   });
 
-  test('high and very-high tiers load exactly the three committed GLBs and mounts them', async ({
+  test('high and very-high tiers load exactly the committed GLBs and mount them', async ({
     page,
   }) => {
     await enableWorldProbe(page);
@@ -65,12 +66,20 @@ test.describe('gltf landmarks', () => {
       .poll(async () => (await glbMeshNames(page)).length, { timeout: 15000 })
       .toBeGreaterThan(0);
     const urls = requested().map((u) => new URL(u).pathname.split('/').pop());
-    expect(new Set(urls)).toEqual(new Set(['home-gate.glb', 'shop.glb', 'fountain.glb']));
+    // Landmarks + bakery crate + ambient duck/dog mount eagerly at the town
+    // spawn; Sara's ball stays lazy until the park area is visible.
+    expect(new Set(urls)).toEqual(
+      new Set(['home-gate.glb', 'shop.glb', 'fountain.glb', 'crate.glb', 'duck.glb', 'dog.glb']),
+    );
     const names = await glbMeshNames(page);
     // house → Cube1019_*, market → Cube1021_*, well → Cylinder1311_*
     expect(names.some((n) => n.startsWith('Cube1019'))).toBe(true);
     expect(names.some((n) => n.startsWith('Cube1021'))).toBe(true);
     expect(names.some((n) => n.startsWith('Cylinder1311'))).toBe(true);
+    // crate → box_A; mini-game characters → character_duck/character_dog
+    expect(names.some((n) => n.startsWith('box_A'))).toBe(true);
+    expect(names.some((n) => n.startsWith('character_duck'))).toBe(true);
+    expect(names.some((n) => n.startsWith('character_dog'))).toBe(true);
   });
 
   test('the glb home-gate door still answers a knock with door-swing', async ({ page }) => {

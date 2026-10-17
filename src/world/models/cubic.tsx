@@ -1487,9 +1487,16 @@ function useCritterGait(
       lastRoot.current = root;
       mode.current = null;
       joints.current = [];
+    }
+    // Re-collect when the subtree changed under us: a Suspense fallback's
+    // joints go stale when the real species resolves, and a subtree that
+    // mounted joint-less may gain joints afterwards.
+    if (joints.current.length === 0 || joints.current.some((j) => j.parent === null)) {
+      joints.current = [];
       root.traverse((obj) => {
         if (obj.name.startsWith('gait-')) joints.current.push(obj);
       });
+      bases.current = joints.current.map((joint) => joint.rotation.clone());
     }
     const now = state.clock.elapsedTime;
     const next = moving ? 'gait' : 'settle';
@@ -1535,6 +1542,9 @@ function useCritterGait(
           break;
         case 'tail':
           joint.rotation.z = base.z + s * 0.18;
+          break;
+        case 'waddle':
+          joint.rotation.z = base.z + s * 0.12;
           break;
         case 'flutter-l':
           joint.rotation.z = base.z + flutter * 0.5;
@@ -1812,6 +1822,266 @@ function CatMesh({ tint, moving, level }: SpeciesProps) {
           position={[0.11, 0.74, 0.24]}
           rotation={[0, 0, -0.3]}
           scale={[0.02, 0.06, 0.02]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
+/** River-bank duck: plump low body, flat bill, webbed feet on waddle joints. */
+function DuckMesh({ tint, moving, level }: SpeciesProps) {
+  const feather = useMaterial(tint ?? '#f2efe2');
+  const bill = useMaterial(DETAIL_COLORS.beak);
+  const sphere = sphereFor(level);
+  const soft = softBoxFor(level);
+  const eye = eyeFor();
+  return (
+    <>
+      {/* plump body: sits tall when idle, stretches forward when waddling */}
+      <mesh
+        geometry={sphere}
+        material={feather}
+        position={[0, moving ? 0.3 : 0.34, 0]}
+        rotation={[moving ? -0.15 : 0.25, 0, 0]}
+        scale={[0.36, 0.38, 0.5]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        {/* head rides a short neck on the front of the body */}
+        <mesh
+          geometry={sphere}
+          material={feather}
+          position={[0, 0.62, 0.24]}
+          scale={[0.22, 0.22, 0.22]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={sphere}
+          material={feather}
+          position={[0, 0.46, 0.16]}
+          scale={[0.14, 0.2, 0.14]}
+          raycast={noRaycast}
+        />
+        {/* flat wide bill — the unmistakable duck read */}
+        <mesh
+          geometry={soft}
+          material={bill}
+          position={[0, 0.58, 0.44]}
+          scale={[0.18, 0.05, 0.16]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={2}>
+        {/* upright tail feathers */}
+        <mesh
+          geometry={soft}
+          material={feather}
+          position={[0, moving ? 0.34 : 0.46, -0.42]}
+          rotation={[moving ? -0.2 : -0.55, 0, 0]}
+          scale={[0.12, 0.18, 0.06]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* webbed feet — diagonal waddle on gait joints while moving */}
+        <group name="gait-a" position={[-0.12, 0.1, 0.04]}>
+          <mesh
+            geometry={soft}
+            material={bill}
+            position={[0, -0.04, 0.04]}
+            scale={[0.11, 0.05, 0.17]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-b" position={[0.12, 0.1, 0.04]}>
+          <mesh
+            geometry={soft}
+            material={bill}
+            position={[0, -0.04, 0.04]}
+            scale={[0.11, 0.05, 0.17]}
+            raycast={noRaycast}
+          />
+        </group>
+        {/* round dark eyes */}
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[-0.08, 0.66, 0.4]}
+          scale={[0.04, 0.04, 0.025]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0.08, 0.66, 0.4]}
+          scale={[0.04, 0.04, 0.025]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={4}>
+        {/* folded wing panels on each flank */}
+        <mesh
+          geometry={soft}
+          material={feather}
+          position={[-0.32, 0.36, -0.02]}
+          rotation={[0, 0, 0.35]}
+          scale={[0.08, 0.2, 0.34]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={soft}
+          material={feather}
+          position={[0.32, 0.36, -0.02]}
+          rotation={[0, 0, -0.35]}
+          scale={[0.08, 0.2, 0.34]}
+          raycast={noRaycast}
+        />
+      </Detail>
+    </>
+  );
+}
+
+/** Village dog: boxy friendly body, floppy ears, wagging tail joint. */
+function DogMesh({ tint, moving, level }: SpeciesProps) {
+  const fur = useMaterial(tint ?? '#b98a52');
+  const soft = softBoxFor(level);
+  const eye = eyeFor();
+  return (
+    <>
+      {/* body: chest-deep box, lowers and stretches when trotting */}
+      <mesh
+        geometry={soft}
+        material={fur}
+        position={[0, moving ? 0.34 : 0.38, 0]}
+        scale={[0.4, moving ? 0.36 : 0.42, 0.66]}
+        raycast={noRaycast}
+      />
+      <Detail level={level} min={1}>
+        {/* head + short muzzle with a dark nose */}
+        <mesh
+          geometry={soft}
+          material={fur}
+          position={[0, 0.64, 0.34]}
+          scale={[0.32, 0.3, 0.3]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={soft}
+          material={fur}
+          position={[0, 0.58, 0.52]}
+          scale={[0.16, 0.13, 0.14]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={soft}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0, 0.6, 0.6]}
+          scale={[0.07, 0.05, 0.05]}
+          raycast={noRaycast}
+        />
+        {/* tail wags on the gait-tail joint while moving */}
+        <group
+          name="gait-tail"
+          position={[0, moving ? 0.52 : 0.46, -0.36]}
+          rotation={[moving ? -0.7 : 0.7, 0, 0]}
+        >
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, 0.1, -0.04]}
+            scale={[0.08, 0.24, 0.08]}
+            raycast={noRaycast}
+          />
+        </group>
+      </Detail>
+      <Detail level={level} min={2}>
+        {/* floppy ears hanging off the head sides */}
+        <mesh
+          geometry={soft}
+          material={fur}
+          position={[-0.18, 0.62, 0.32]}
+          rotation={[0.2, 0, 0.25]}
+          scale={[0.07, 0.2, 0.12]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={soft}
+          material={fur}
+          position={[0.18, 0.62, 0.32]}
+          rotation={[0.2, 0, -0.25]}
+          scale={[0.07, 0.2, 0.12]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={3}>
+        {/* four legs — diagonal pairs trot on gait joints while moving */}
+        <group name="gait-a" position={[-0.14, 0.2, 0.22]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.1, 0]}
+            scale={[0.08, 0.2, 0.09]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-b" position={[0.14, 0.2, 0.22]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.1, 0]}
+            scale={[0.08, 0.2, 0.09]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-b" position={[-0.14, 0.2, -0.22]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.1, 0]}
+            scale={[0.08, 0.2, 0.09]}
+            raycast={noRaycast}
+          />
+        </group>
+        <group name="gait-a" position={[0.14, 0.2, -0.22]}>
+          <mesh
+            geometry={soft}
+            material={fur}
+            position={[0, -0.1, 0]}
+            scale={[0.08, 0.2, 0.09]}
+            raycast={noRaycast}
+          />
+        </group>
+        {/* round dark eyes */}
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[-0.09, 0.7, 0.48]}
+          scale={[0.045, 0.045, 0.03]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={eye}
+          material={sharedLambert(DETAIL_COLORS.critterDark)}
+          position={[0.09, 0.7, 0.48]}
+          scale={[0.045, 0.045, 0.03]}
+          raycast={noRaycast}
+        />
+      </Detail>
+      <Detail level={level} min={4}>
+        {/* red collar + a lighter chest patch — a cared-for village dog */}
+        <mesh
+          geometry={soft}
+          material={sharedLambert('#b23a48')}
+          position={[0, 0.52, 0.36]}
+          scale={[0.26, 0.05, 0.18]}
+          raycast={noRaycast}
+        />
+        <mesh
+          geometry={soft}
+          material={sharedLambert(DETAIL_COLORS.sign)}
+          position={[0, 0.32, 0.3]}
+          scale={[0.18, 0.18, 0.04]}
           raycast={noRaycast}
         />
       </Detail>
@@ -2199,7 +2469,18 @@ function ButterflyMesh({ tint, moving, level }: SpeciesProps) {
   );
 }
 
-export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: AnimalProps) {
+/**
+ * Shared critter shell: the gait root mounts only while the critter moves or
+ * finishes its settle flourish — idle species render with zero extra objects.
+ * Used by both cubic species and the GLB animal variants.
+ */
+export function GaitedAnimal({
+  moving = false,
+  children,
+}: {
+  moving?: boolean;
+  children: React.ReactNode;
+}) {
   const gaitRoot = useRef<THREE.Group>(null);
   // The gait root also stays mounted for a short settle flourish after a
   // move ends — bounded, then the critter is a bare idle species again.
@@ -2211,9 +2492,23 @@ export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: 
   }, [moving]);
   const onSettled = useCallback(() => setSettling(false), []);
   useCritterGait(gaitRoot, moving, onSettled);
+  return moving || settling ? (
+    <group ref={gaitRoot} dispose={null}>
+      {children}
+    </group>
+  ) : (
+    children
+  );
+}
+
+export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: AnimalProps) {
   const species =
     variant === 'cat' ? (
       <CatMesh tint={tint} moving={moving} level={detailLevel} />
+    ) : variant === 'duck' ? (
+      <DuckMesh tint={tint} moving={moving} level={detailLevel} />
+    ) : variant === 'dog' ? (
+      <DogMesh tint={tint} moving={moving} level={detailLevel} />
     ) : variant === 'bird' ? (
       <BirdMesh tint={tint} moving={moving} level={detailLevel} />
     ) : variant === 'eagle' ? (
@@ -2223,13 +2518,5 @@ export function CubicAnimal({ variant, tint, moving = false, detailLevel = 1 }: 
     ) : (
       <ButterflyMesh tint={tint} moving={moving} level={detailLevel} />
     );
-  // The gait root exists only while the critter moves or settles — idle
-  // renders the bare species with zero extra objects.
-  return moving || settling ? (
-    <group ref={gaitRoot} dispose={null}>
-      {species}
-    </group>
-  ) : (
-    species
-  );
+  return <GaitedAnimal moving={moving}>{species}</GaitedAnimal>;
 }
