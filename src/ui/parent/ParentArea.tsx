@@ -10,6 +10,8 @@ import { researchPendingCount } from '../../services/research/recorder.ts';
 import type { ObserverBookmark } from '../../domain/research/types.ts';
 import { researchEndpointConfigured, submitParentFeedback } from '../../services/research/queue.ts';
 import { AvatarPortrait } from '../child/AvatarPortrait.tsx';
+import { Overlay } from '../Overlay.tsx';
+import { QUALITY_TIERS, TIER_LABEL } from '../qualityTiers.ts';
 
 const CACHE_LABEL: Record<CacheStatus, string> = {
   unsupported: '—',
@@ -22,13 +24,6 @@ const CACHE_LABEL: Record<CacheStatus, string> = {
  * Parent-only area: provenance, credits, privacy, local diagnostics and a
  * confirmed reset. No external links, no network calls, no child-visible entry.
  */
-const TIER_LABEL: Record<QualityTier, string> = {
-  'very-low': FA.qualityVeryLow,
-  low: FA.qualityLow,
-  normal: FA.qualityNormal,
-  high: FA.qualityHigh,
-  'very-high': FA.qualityVeryHigh,
-};
 
 export function ParentArea({
   state,
@@ -103,7 +98,12 @@ export function ParentArea({
   }, [researchActive, pendingNeedsRefresh]);
 
   return (
-    <div className="layer layer--overlay layer--parent" data-testid="parent-area">
+    <Overlay
+      testId="parent-area"
+      ariaLabel={FA.parentArea}
+      onDismiss={onClose}
+      overlayClass="layer--parent"
+    >
       <div className="panel panel--parent column" dir="rtl">
         <h2 className="subtitle">{FA.parentArea}</h2>
 
@@ -181,7 +181,7 @@ export function ParentArea({
         <section className="section" data-testid="parent-quality">
           <h3 className="section__title">{FA.quality}</h3>
           <div className="row" role="radiogroup" aria-label={FA.quality}>
-            {(['very-low', 'low', 'normal', 'high', 'very-high'] as const).map((tier) => (
+            {QUALITY_TIERS.map((tier) => (
               <button
                 key={tier}
                 type="button"
@@ -261,40 +261,46 @@ export function ParentArea({
         ) : null}
 
         <section className="section" data-testid="parent-info">
-          <h3 className="section__title">{FA.parentSources}</h3>
-          <p className="text text--soft">{FA.sourcesDraftBody}</p>
-          <ul className="text">
-            {SOURCE_RECORDS.map((record) => (
-              <li key={record.id} data-testid={`source-${record.id}`}>
-                <strong>{getQuestCopy(record.relatedQuestId).titleFa}</strong> —{' '}
-                {record.principleSummaryFa}
-                <br />
-                <span className="text--soft">
-                  وضعیت بازبینی: {record.review.status} · نقل‌قول: — · ارجاع: —
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <h3 className="section__title">{FA.parentCredits}</h3>
-          <p className="text text--soft">
-            قلم Vazirmatn با پروانه‌ی SIL Open Font License؛ کد بازی با پروانه‌ی MIT.
-          </p>
-          {/* Attribution lines are licence obligations — render every distinct
-              one declared in the manifest (CC BY 4.0 requires this credit). */}
-          {[...new Set(AUDIO_MANIFEST.map((a) => a.attribution).filter((a) => a !== ''))].map(
-            (line) => (
-              <p key={line} className="text text--soft" dir="ltr" data-testid="audio-credit">
-                🎵 {line}
-              </p>
-            ),
-          )}
-          <p className="text text--soft">
-            جلوه‌های صوتی با ژنراتور داخلی بازی ساخته شده‌اند و با پروانه‌ی MIT منتشر می‌شوند.
-          </p>
-
-          <h3 className="section__title">{FA.parentPrivacy}</h3>
-          <p className="text text--soft">{FA.privacyBody}</p>
+          {/* Reference material collapses — the area opens at settings height,
+              not at the bottom of a wall of provenance text. */}
+          <details>
+            <summary className="section__title">{FA.parentSources}</summary>
+            <p className="text text--soft">{FA.sourcesDraftBody}</p>
+            <ul className="text">
+              {SOURCE_RECORDS.map((record) => (
+                <li key={record.id} data-testid={`source-${record.id}`}>
+                  <strong>{getQuestCopy(record.relatedQuestId).titleFa}</strong> —{' '}
+                  {record.principleSummaryFa}
+                  <br />
+                  <span className="text--soft">
+                    وضعیت بازبینی: {record.review.status} · نقل‌قول: — · ارجاع: —
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+          <details>
+            <summary className="section__title">{FA.parentCredits}</summary>
+            <p className="text text--soft">
+              قلم Vazirmatn با پروانه‌ی SIL Open Font License؛ کد بازی با پروانه‌ی MIT.
+            </p>
+            {/* Attribution lines are licence obligations — render every distinct
+                one declared in the manifest (CC BY 4.0 requires this credit). */}
+            {[...new Set(AUDIO_MANIFEST.map((a) => a.attribution).filter((a) => a !== ''))].map(
+              (line) => (
+                <p key={line} className="text text--soft" dir="ltr" data-testid="audio-credit">
+                  🎵 {line}
+                </p>
+              ),
+            )}
+            <p className="text text--soft">
+              جلوه‌های صوتی با ژنراتور داخلی بازی ساخته شده‌اند و با پروانه‌ی MIT منتشر می‌شوند.
+            </p>
+          </details>
+          <details>
+            <summary className="section__title">{FA.parentPrivacy}</summary>
+            <p className="text text--soft">{FA.privacyBody}</p>
+          </details>
         </section>
 
         <section className="section" data-testid="parent-tools">
@@ -355,7 +361,11 @@ export function ParentArea({
                   <span className="parent-profile__meta">
                     <span className="parent-profile__identity" aria-hidden="true">
                       <span className="emoji">{profile.badge}</span>
-                      <AvatarPortrait avatarId={profile.avatarId} size={32} />
+                      <AvatarPortrait
+                        avatarId={profile.avatarId}
+                        headwear={profile.headwear}
+                        size={32}
+                      />
                     </span>
                     <input
                       className="parent-profile__name"
@@ -371,6 +381,12 @@ export function ParentArea({
                       }}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') event.currentTarget.blur();
+                        // Escape reverts the field — leaving the area is the
+                        // overlay's job and it never sees an editable Escape.
+                        if (event.key === 'Escape') {
+                          event.currentTarget.value = profile.nameFa;
+                          event.currentTarget.blur();
+                        }
                       }}
                     />
                     <span className="text--soft">⭐ {profile.stickerCount}</span>
@@ -432,21 +448,23 @@ export function ParentArea({
         ) : null}
 
         <section className="section">
-          <h3 className="section__title">{FA.parentDiagnostics}</h3>
-          <dl className="diagnostics-list text text--soft" data-testid="diagnostics">
-            <dt>وضعیت ذخیره‌سازی آفلاین</dt>
-            <dd>{CACHE_LABEL[cacheStatus]}</dd>
-            <dt>سلامت فایل ذخیره</dt>
-            <dd>{state.saveHealth}</dd>
-            <dt>نسخه‌ی طرح ذخیره</dt>
-            <dd>{state.schemaVersion}</dd>
-            <dt>کیفیت تصویر</dt>
-            <dd>{state.qualityTier}</dd>
-            <dt>پشتیبانی سه‌بعدی</dt>
-            <dd>{state.webglAvailable ? 'بله' : 'خیر'}</dd>
-            <dt>تعداد برچسب‌ها</dt>
-            <dd>{state.stickers.length}</dd>
-          </dl>
+          <details>
+            <summary className="section__title">{FA.parentDiagnostics}</summary>
+            <dl className="diagnostics-list text text--soft" data-testid="diagnostics">
+              <dt>وضعیت ذخیره‌سازی آفلاین</dt>
+              <dd>{CACHE_LABEL[cacheStatus]}</dd>
+              <dt>سلامت فایل ذخیره</dt>
+              <dd>{state.saveHealth}</dd>
+              <dt>نسخه‌ی طرح ذخیره</dt>
+              <dd>{state.schemaVersion}</dd>
+              <dt>کیفیت تصویر</dt>
+              <dd>{state.qualityTier}</dd>
+              <dt>پشتیبانی سه‌بعدی</dt>
+              <dd>{state.webglAvailable ? 'بله' : 'خیر'}</dd>
+              <dt>تعداد برچسب‌ها</dt>
+              <dd>{state.stickers.length}</dd>
+            </dl>
+          </details>
         </section>
 
         <section className="section section--danger">
@@ -482,11 +500,15 @@ export function ParentArea({
               </button>
             )}
           </div>
+        </section>
+
+        {/* Leaving is a footer, not a resident of the danger zone. */}
+        <div className="row">
           <button type="button" className="btn" onClick={onClose} data-testid="parent-close">
             {FA.parentClose}
           </button>
-        </section>
+        </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

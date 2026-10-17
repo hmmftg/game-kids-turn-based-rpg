@@ -11,6 +11,9 @@ import { QUEST_DEFINITIONS } from '../../domain/quests/definitions.ts';
 import { AVATAR_VISUALS } from '../../world/models/modelProvider.ts';
 import { BATTLE_ACTION_ELEMENT, SceneGlyph } from './SceneChoice.tsx';
 import { AvatarPortrait } from './AvatarPortrait.tsx';
+import { DialogueCard } from './DialogueCard.tsx';
+import { PauseMenu } from './PauseMenu.tsx';
+import { QUALITY_TIERS, TIER_LABEL } from '../qualityTiers.ts';
 import { sceneElementFor } from './contextInteraction.ts';
 import { AvatarSelectScreen } from './screens.tsx';
 
@@ -118,6 +121,82 @@ describe('battle objects (ball, cushion and quest keepsakes)', () => {
       expect(svg, action).not.toBeNull();
       expect(svg!.getAttribute('data-element')).toBe(element);
     }
+  });
+});
+
+describe('pause menu accessibility', () => {
+  const noop = () => {};
+  it('every quality pictogram option has its own name', () => {
+    render(
+      <PauseMenu
+        audio={{ musicMuted: false, sfxMuted: false, musicVolume: 1, sfxVolume: 1 }}
+        stickers={[]}
+        zoomFactor={1}
+        qualityTier="normal"
+        onResume={noop}
+        onAudioChange={noop}
+        onParentArea={noop}
+        onSwitchPlayer={noop}
+        onOpenAlbum={noop}
+        onOpenNearby={noop}
+        onZoom={noop}
+        onQualityChange={noop}
+      />,
+    );
+    for (const tier of QUALITY_TIERS) {
+      expect(screen.getByTestId(`child-quality-${tier}`)).toHaveAttribute(
+        'aria-label',
+        TIER_LABEL[tier],
+      );
+    }
+  });
+});
+
+describe('dialogue card keyboard parity', () => {
+  it('a skippable card is focusable and advances on Enter/Space', async () => {
+    const user = userEvent.setup();
+    let taps = 0;
+    render(
+      <DialogueCard
+        textFa="سلام"
+        onTap={() => {
+          taps += 1;
+        }}
+      />,
+    );
+    const card = screen.getByTestId('dialogue-card');
+    expect(card).toHaveAttribute('tabindex', '0');
+    card.focus();
+    await user.keyboard('{Enter}');
+    expect(taps).toBe(1);
+    await user.keyboard(' ');
+    expect(taps).toBe(2);
+  });
+
+  it('the live region is the words, not the whole card', () => {
+    const { container } = render(<DialogueCard textFa="سلام" />);
+    expect(screen.getByTestId('dialogue-card')).not.toHaveAttribute('aria-live');
+    expect(container.querySelector('.dialogue-card__text')).toHaveAttribute('aria-live', 'polite');
+  });
+});
+
+describe('composite headwear portrait', () => {
+  it('the preview draws the chosen covering onto the same kid', () => {
+    const { container } = render(
+      <>
+        <AvatarPortrait avatarId="avatar-aban" />
+        <AvatarPortrait avatarId="avatar-aban" headwear="beanie" />
+        <AvatarPortrait avatarId="avatar-aban" headwear="chador" />
+      </>,
+    );
+    const portraits = container.querySelectorAll('.avatar-portrait');
+    expect(portraits[0]).toHaveAttribute('data-headwear', 'none');
+    expect(portraits[1]).toHaveAttribute('data-headwear', 'beanie');
+    expect(portraits[2]).toHaveAttribute('data-headwear', 'chador');
+    // The covered portraits draw extra shapes beyond the bare head.
+    const shapes = (p: Element) => p.querySelectorAll('path, circle, ellipse, rect').length;
+    expect(shapes(portraits[1]!)).toBeGreaterThan(shapes(portraits[0]!));
+    expect(shapes(portraits[2]!)).toBeGreaterThan(shapes(portraits[0]!));
   });
 });
 

@@ -7,6 +7,7 @@ import { profileSlotKey } from '../services/persistence/repository.ts';
 import { MemorySaveRepository } from '../services/persistence/memoryRepository.ts';
 import { QuestCelebration } from '../ui/child/Celebration.tsx';
 import { InteractionHint } from '../ui/child/InteractionHint.tsx';
+import { ProfileSelectScreen } from '../ui/child/ProfileSelectScreen.tsx';
 import { App } from './App.tsx';
 import { GameProvider } from './GameProvider.tsx';
 
@@ -371,5 +372,82 @@ describe('UX pass', { timeout: 90000 }, () => {
     await user.click(await screen.findByTestId(`profile-card-${profile!.id}`));
     await screen.findByTestId('hud');
     expect((await repository.listProfiles())[0]?.headwear).toBe('scarf');
+  });
+
+  it('Escape is the keyboard twin of outside-tap across menus and dialogs', async () => {
+    const { user } = renderApp();
+    await reachHub(user);
+
+    // Pause menu: Escape resumes.
+    await user.click(screen.getByTestId('pause-button'));
+    expect(await screen.findByTestId('pause-menu')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('pause-menu')).toBeNull();
+    await screen.findByTestId('hud');
+
+    // Sticker album: Escape closes the sheet.
+    await user.click(screen.getByTestId('pause-button'));
+    await user.click(screen.getByTestId('sticker-shelf'));
+    expect(await screen.findByTestId('sticker-album')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('sticker-album')).toBeNull();
+
+    // Parent gate: Escape cancels back out of the gate.
+    await user.click(screen.getByTestId('pause-button'));
+    await user.click(screen.getByTestId('parent-entry-pause'));
+    expect(await screen.findByTestId('parent-gate')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('parent-gate')).toBeNull();
+    await screen.findByTestId('hud');
+  });
+
+  it('a locked album slot navigates to its quest instead of sitting inert', async () => {
+    const { user } = renderApp();
+    await reachHub(user);
+
+    await user.click(screen.getByTestId('pause-button'));
+    await user.click(screen.getByTestId('sticker-shelf'));
+    expect(await screen.findByTestId('sticker-album')).toBeInTheDocument();
+
+    // No WebGL in jsdom: the album's journey falls back to opening the
+    // quest's NPC dialogue — the same fallback the trail uses.
+    await user.click(screen.getByTestId('album-sticker-helping'));
+    expect(screen.queryByTestId('sticker-album')).toBeNull();
+    expect(await screen.findByTestId('npc-dialogue')).toBeInTheDocument();
+  });
+
+  it('marks the most recently played profile card', () => {
+    render(
+      <ProfileSelectScreen
+        profiles={[
+          {
+            id: 'older',
+            nameFa: '',
+            avatarId: 'avatar-aban',
+            badge: '🐣',
+            createdAt: 1,
+            lastPlayedAt: 10,
+            stickerCount: 1,
+          },
+          {
+            id: 'newer',
+            nameFa: '',
+            avatarId: 'avatar-arta',
+            badge: '🦊',
+            createdAt: 2,
+            lastPlayedAt: 20,
+            stickerCount: 0,
+          },
+        ]}
+        onSelect={() => {}}
+        onNew={() => {}}
+        onParent={() => {}}
+      />,
+    );
+    const badge = screen.getByTestId('profile-last-played');
+    expect(badge).toHaveTextContent(FA.lastPlayed);
+    expect(badge.closest('.profile-card')).toContainElement(
+      screen.getByTestId('profile-card-newer'),
+    );
   });
 });

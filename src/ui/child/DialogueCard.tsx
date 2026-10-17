@@ -39,9 +39,22 @@ export function DialogueCard({
         onTap ? ' dialogue-card--skippable' : ''
       }`}
       dir="rtl"
-      aria-live="polite"
       data-testid={testId ?? 'dialogue-card'}
       onClick={onTap}
+      // Skippable cards are keyboard-advanceable too: focusable + Enter/Space
+      // does what a tap does. Never required — the beat advances on its own.
+      tabIndex={onTap ? 0 : undefined}
+      onKeyDown={
+        onTap
+          ? (event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onTap();
+              }
+            }
+          : undefined
+      }
     >
       {speakerFa && !hideText ? (
         <p className="dialogue-card__speaker">
@@ -53,7 +66,13 @@ export function DialogueCard({
           {speakerFa}
         </p>
       ) : null}
-      {hideText ? null : <p className="dialogue-card__text">{textFa}</p>}
+      {hideText ? null : (
+        // Live region on the words only — a polite announcement carries the
+        // new line; interactive children aren't re-announced as text.
+        <p className="dialogue-card__text" aria-live="polite">
+          {textFa}
+        </p>
+      )}
       {scene}
       {children ? <div className="row">{children}</div> : null}
     </section>

@@ -1,18 +1,9 @@
 import { FA } from '../../content/fa/strings.ts';
 import { clampUserZoom, USER_ZOOM_MAX, USER_ZOOM_MIN } from '../../framework/index.ts';
 import type { AudioSettings, QualityTier, StickerId } from '../../domain/game/types.ts';
+import { QUALITY_GLYPH, QUALITY_TIERS, TIER_LABEL } from '../qualityTiers.ts';
+import { Overlay } from '../Overlay.tsx';
 import { StickerShelf } from './QuestTrail.tsx';
-
-const QUALITY_TIERS: readonly QualityTier[] = ['very-low', 'low', 'normal', 'high', 'very-high'];
-
-/** Pictogram scale for pre-readers: heavier picture runs slower. */
-const QUALITY_GLYPH: Record<QualityTier, string> = {
-  'very-low': '🐢',
-  low: '🚶',
-  normal: '🚲',
-  high: '🚗',
-  'very-high': '🚀',
-};
 
 /**
  * The one child-facing menu (W4): every scattered HUD control gathers here —
@@ -50,7 +41,7 @@ export function PauseMenu({
   readonly onQualityChange: (tier: QualityTier) => void;
 }) {
   return (
-    <div className="layer layer--overlay" data-testid="pause-menu">
+    <Overlay testId="pause-menu" ariaLabel={FA.pause} onDismiss={onResume}>
       <div className="panel column">
         <h2 className="subtitle">{FA.pause}</h2>
 
@@ -83,6 +74,8 @@ export function PauseMenu({
           </button>
           <StickerShelf stickers={stickers} onOpen={onOpenAlbum} />
         </div>
+
+        <hr className="menu-divider" aria-hidden="true" />
 
         {/* Zoom clamps at the 0.75–1.35 band — at a limit the button reads
             as a picture, not a verb. */}
@@ -190,7 +183,7 @@ export function PauseMenu({
               role="radio"
               className="btn btn--secondary"
               aria-checked={qualityTier === tier}
-              aria-label={FA.quality}
+              aria-label={TIER_LABEL[tier]}
               onClick={() => onQualityChange(tier)}
               data-testid={`child-quality-${tier}`}
             >
@@ -200,6 +193,8 @@ export function PauseMenu({
             </button>
           ))}
         </div>
+
+        <hr className="menu-divider" aria-hidden="true" />
 
         <div className="row">
           <button
@@ -223,6 +218,6 @@ export function PauseMenu({
           </button>
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }
