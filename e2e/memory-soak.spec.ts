@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { startGame } from './harness.ts';
+import { tapWorldAnchor, waitForWalkerIdle } from './npcTap.ts';
 
 /**
  * Memory soak: the surfaces that remount the world (pause/parent → canvas
@@ -116,11 +117,15 @@ test.describe('memory soak — remount cycles stay bounded', () => {
     expect(await critterTimersAtUnmount()).toBe(0);
 
     // Within one mounted renderer, ordinary scene updates must not leak:
-    // walk + a reactive tap + a full frame settle leaves disposal flat.
+    // a walk to another anchor and back leaves disposal flat. (Reaching the
+    // Nearby sheet now goes through the pause menu — that unmounts/remounts
+    // the canvas, which legitimately counts disposals, so the flat-check
+    // exercises a plain walk instead.)
     const marker = await disposeEvents();
-    await page.getByTestId('pause-button').click();
-    await page.getByTestId('nearby-button').click();
-    await page.getByTestId('nearby-backdrop').click({ position: { x: 8, y: 8 } });
+    await tapWorldAnchor(page, 'anchor-path-north');
+    await waitForWalkerIdle(page);
+    await tapWorldAnchor(page, 'anchor-square');
+    await waitForWalkerIdle(page);
     await page.waitForTimeout(500);
     expect(await disposeEvents()).toBe(marker);
   });

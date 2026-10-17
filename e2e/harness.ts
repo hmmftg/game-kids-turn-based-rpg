@@ -41,8 +41,9 @@ export async function seedCompletedQuests(
   page: Page,
   completed: QuestId[],
   qualityTier: QualityTier = 'very-low',
+  url = '/?research=0',
 ) {
-  await page.goto('/?research=0');
+  await page.goto(url);
   await page.evaluate(
     async ({ done, dbName, profileId, tier }) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -107,6 +108,21 @@ export async function seedCompletedQuests(
   );
   await page.reload();
   await resumeFromPicker(page);
+}
+
+/**
+ * `startGame` lands the world at whatever `detectQualityTier()` measures on
+ * the runner — and that varies by machine: 4-core CI runners report
+ * `hardwareConcurrency <= 4` → 'very-low' → detailLevel 0, which removes
+ * flora (`GROUND_DECORATIONS` minDetail) and freezes every critter reaction
+ * (`useCritters` timers). Specs that exercise detail-gated presentation must
+ * pin a tier ≥ 'low' — the same convention the GLB spec uses when it seeds
+ * 'high' for SwiftShader. This seeds an empty profile instead of clicking
+ * through the fresh-player flow; the picker resumes straight into the hub.
+ */
+export async function startGameAtTier(page: Page, tier: QualityTier = 'low', url = '/') {
+  await enableWorldProbe(page);
+  await seedCompletedQuests(page, [], tier, withoutResearch(url));
 }
 
 /** Tap each step's correct object once the choice strip is up. */
