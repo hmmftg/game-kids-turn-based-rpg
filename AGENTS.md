@@ -232,6 +232,7 @@ The child's interaction language is **the physical thing**, never an action icon
 - `AGENTS.md` — rules every agent must follow (this file).
 - `docs/ARCHITECTURE.md` — module map, invariants, budgets.
 - `docs/AUDIO.md` — audio provenance, encoding pipeline, licensing, playback lifecycle.
+- `docs/MODELS.md` — GLB model pipeline: license gate, convert-model.ts flags, source-pack survey, visual gate, tier gating, demand-render debugging playbook.
 - `docs/INTERACTION-MODEL.md` — contextual-target interaction contract.
 - `docs/ANIMATIONS.md` — semantic animation vocabulary and episode rules.
 - `docs/LIVING-WORLD.md` — presentation liveliness contract: semantic vs. presentation boundary, triggers, `arrivalNonce` invariant.
