@@ -26,6 +26,7 @@ import { Crate } from './gltf/Crate.tsx';
 import { Dog } from './gltf/Dog.tsx';
 import { Duck } from './gltf/Duck.tsx';
 import { FarmPlot } from './gltf/FarmPlot.tsx';
+import { Fence } from './gltf/Fence.tsx';
 import { Fountain } from './gltf/Fountain.tsx';
 import { HomeGate } from './gltf/HomeGate.tsx';
 import { Rocks } from './gltf/Rocks.tsx';
@@ -39,6 +40,7 @@ import {
   DOG_BOUNDS,
   DUCK_BOUNDS,
   FARM_BOUNDS,
+  FENCE_BOUNDS,
   FOUNTAIN_FIT,
   HOME_GATE_FIT,
   ROCKS_BOUNDS,
@@ -251,6 +253,7 @@ const SCENERY_GLBS: Record<
   'tree-c': { bounds: TREE_C_BOUNDS, Model: TreeC },
   rocks: { bounds: ROCKS_BOUNDS, Model: Rocks },
   farm: { bounds: FARM_BOUNDS, Model: FarmPlot, minDetail: 6 },
+  fence: { bounds: FENCE_BOUNDS, Model: Fence, minDetail: 6 },
 };
 
 function GltfScenery(props: SceneryProps) {

@@ -26,9 +26,15 @@ export interface GroundDecoration {
     | 'tree-b'
     | 'tree-c'
     | 'rocks'
-    | 'farm';
+    | 'farm'
+    | 'fence';
   readonly minDetail: DetailLevel;
   readonly scale?: number;
+  /**
+   * Directional scenery (a fence run) declares its own yaw; non-directional
+   * kinds omit it and get a deterministic per-index yaw in Hub instead.
+   */
+  readonly rotationY?: number;
 }
 
 /**
@@ -107,6 +113,13 @@ export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: 12.8, z: 6.8, kind: 'flower', minDetail: 2 },
   { x: 8.2, z: -9.6, kind: 'tree-a', minDetail: 1, scale: 1.4 },
   { x: 10, z: -5.6, kind: 'tree-c', minDetail: 2, scale: 1.3 },
+  // fence runs edge the park's north boundary, the garden's north edge and
+  // the river bank's west end — top-tier embellishment only (minDetail 5):
+  // they appear where the gltf ModelSet lives, cubic at high and the
+  // truthful fence GLB at very-high
+  { x: -12.5, z: 4.6, kind: 'fence', minDetail: 5, scale: 1.3, rotationY: 0 },
+  { x: 2.5, z: 7.5, kind: 'fence', minDetail: 5, scale: 1.3, rotationY: 0 },
+  { x: 8.0, z: 8.9, kind: 'fence', minDetail: 5, scale: 1.3, rotationY: Math.PI / 2 },
 ];
 
 /**
@@ -127,6 +140,7 @@ const KIND_FOOTPRINT: Record<GroundDecoration['kind'], number> = {
   'tree-c': 0.45,
   rocks: 0.95,
   farm: 1.0,
+  fence: 0.55,
 };
 
 export function decorationFootprint(slot: GroundDecoration): number {

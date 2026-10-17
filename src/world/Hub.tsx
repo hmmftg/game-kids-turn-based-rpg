@@ -946,15 +946,16 @@ export function Hub({
                   raycast={noRaycast}
                 />
               ) : (
-                // scenery kinds (tree-*/rocks/farm) go through the active
-                // ModelSet — a truthful GLB on high tiers, the same
-                // silhouette in cubic form below. The golden-angle yaw keeps
-                // slots sharing one GLB (both `rocks` slots use rocks.glb)
-                // from reading as stamped copies.
+                // scenery kinds (tree-*/rocks/farm/fence) go through the
+                // active ModelSet — a truthful GLB on high tiers, the same
+                // silhouette in cubic form below. Directional kinds declare
+                // `rotationY`; the rest get a golden-angle yaw so slots
+                // sharing one GLB (both `rocks` slots use rocks.glb) don't
+                // read as stamped copies.
                 <group
                   key={i}
                   position={[slot.x, 0, slot.z]}
-                  rotation={[0, i * 2.399, 0]}
+                  rotation={[0, slot.rotationY ?? i * 2.399, 0]}
                   raycast={noRaycast}
                 >
                   <models.Scenery

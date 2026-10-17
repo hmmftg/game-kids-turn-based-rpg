@@ -104,7 +104,7 @@ test.describe('gltf landmarks', () => {
     expect(names).not.toContain('farm_plot');
   });
 
-  test('very-high upgrades the farm plot to its GLB', async ({ page }) => {
+  test('very-high upgrades the farm plot and garden fence to their GLBs', async ({ page }) => {
     await enableWorldProbe(page);
     const requested = watchGlbRequests(page);
     await seedCompletedQuests(page, [], 'very-high');
@@ -113,8 +113,12 @@ test.describe('gltf landmarks', () => {
       .poll(async () => (await glbMeshNames(page)).length, { timeout: 15000 })
       .toBeGreaterThan(0);
     const urls = requested().map((u) => new URL(u).pathname.split('/').pop());
+    // both top-tier scenery GLBs in spawn-visible areas (garden)
     expect(urls).toContain('farm-plot.glb');
-    expect(await glbMeshNames(page)).toContain('farm_plot');
+    expect(urls).toContain('fence.glb');
+    const names = await glbMeshNames(page);
+    expect(names).toContain('farm_plot');
+    expect(names).toContain('fence');
   });
 
   test('the glb home-gate door still answers a knock with door-swing', async ({ page }) => {

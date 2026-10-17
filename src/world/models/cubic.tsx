@@ -2538,7 +2538,10 @@ export function CubicScenery({ variant, scale = 1, detailLevel = 2 }: SceneryPro
   const soil = useMaterial(DETAIL_COLORS.soil);
   return (
     <group scale={scale} raycast={noRaycast}>
-      {variant === 'rocks' ? (
+      {variant === 'fence' ? (
+        // one posts-and-rail run; the GLB swaps in at the top detail level
+        <FenceRun position={[0, 0, 0]} posts={4} spacing={0.35} />
+      ) : variant === 'rocks' ? (
         <>
           <mesh
             geometry={BOX}
