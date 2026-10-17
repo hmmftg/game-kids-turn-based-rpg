@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FA } from '../../content/fa/strings.ts';
 import type { GameState } from '../../domain/game/types.ts';
+import { useDismissOnEscape } from '../Overlay.tsx';
 import { worldDiag } from '../../world/diagnostics.ts';
 
 /**
@@ -32,6 +33,7 @@ export function DiagnosticsPanel({
   readonly state: GameState;
   readonly onClose: () => void;
 }) {
+  useDismissOnEscape(onClose);
   const [snap, setSnap] = useState<Snapshot>({
     fps: '—',
     drawCalls: '—',

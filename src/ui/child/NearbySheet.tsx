@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react';
 import { npcEmoji } from './emoji.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { getNpcCopy } from '../../content/fa/quests.ts';
+import { useDismissOnEscape } from '../Overlay.tsx';
 import type { NearbyNpc } from '../../world/nearby.ts';
 
 /**
@@ -21,6 +23,14 @@ export function NearbySheet({
   readonly onPick: (npcId: string) => void;
   readonly onDismiss: () => void;
 }) {
+  // The sheet is deliberately non-modal (the HUD strips stay reachable), so
+  // it takes the Escape twin of its own outside-tap rather than the modal
+  // Overlay. Focus still lands on the first row for keyboard users.
+  useDismissOnEscape(onDismiss);
+  const firstRowRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    firstRowRef.current?.focus();
+  }, []);
   return (
     <div
       className="hud__backdrop"
@@ -41,11 +51,17 @@ export function NearbySheet({
       >
         <h2 className="nearby-sheet__title">{title}</h2>
         <div className="nearby-sheet__rows">
-          {entries.map(({ npc }) => {
+          {entries.length === 0 ? (
+            <p className="text text--soft" data-testid="nearby-empty">
+              {FA.nearbyEmpty}
+            </p>
+          ) : null}
+          {entries.map(({ npc }, index) => {
             const copy = getNpcCopy(npc.id);
             return (
               <button
                 key={npc.id}
+                ref={index === 0 ? firstRowRef : undefined}
                 type="button"
                 className="btn nearby__row"
                 data-testid={`nearby-${npc.id}`}

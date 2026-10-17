@@ -1,11 +1,7 @@
 import { FA } from '../../content/fa/strings.ts';
 import type { ProfileMeta } from '../../services/persistence/repository.ts';
+import { faDigits } from '../faDigits.ts';
 import { AvatarPortrait } from './AvatarPortrait.tsx';
-import { Pictogram } from './Pictogram.tsx';
-
-function persianDigits(value: number): string {
-  return String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);
-}
 
 /**
  * «Who is playing?» picker. Pre-readers find their card by portrait — the same
@@ -24,6 +20,17 @@ export function ProfileSelectScreen({
   readonly onNew: () => void;
   readonly onParent: () => void;
 }) {
+  // "Whose card is whose" cue: the most recently played profile gets a word
+  // badge so a returning child spots their card first — text, not colour.
+  const lastPlayedId = profiles.reduce<string | null>(
+    (latest, profile) =>
+      profile.lastPlayedAt > 0 &&
+      (latest === null ||
+        profile.lastPlayedAt > (profiles.find((p) => p.id === latest)?.lastPlayedAt ?? 0))
+        ? profile.id
+        : latest,
+    null,
+  );
   return (
     <div className="layer" data-testid="profile-select">
       <h1 className="subtitle">{FA.whoIsPlaying}</h1>
@@ -37,18 +44,18 @@ export function ProfileSelectScreen({
               data-testid={`profile-card-${profile.id}`}
             >
               <span className="profile-card__avatar" aria-hidden="true">
-                <AvatarPortrait avatarId={profile.avatarId} size={64} />
+                <AvatarPortrait avatarId={profile.avatarId} headwear={profile.headwear} size={64} />
               </span>
-              {profile.headwear && profile.headwear !== 'none' ? (
-                <span className="profile-card__headwear" aria-hidden="true">
-                  <Pictogram shape={`headwear-${profile.headwear}`} size={24} />
-                </span>
-              ) : null}
               <span className="trail__title">
-                {profile.nameFa || `${FA.playerFallback} ${persianDigits(index + 1)}`}
+                {profile.nameFa || `${FA.playerFallback} ${faDigits(index + 1)}`}
               </span>
-              <span className="text--soft">⭐ {persianDigits(profile.stickerCount)}</span>
+              <span className="text--soft">⭐ {faDigits(profile.stickerCount)}</span>
             </button>
+            {profile.id === lastPlayedId ? (
+              <span className="profile-card__last" data-testid="profile-last-played">
+                {FA.lastPlayed}
+              </span>
+            ) : null}
           </div>
         ))}
         <button

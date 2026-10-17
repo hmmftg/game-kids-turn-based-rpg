@@ -33,6 +33,7 @@ import { QuestTrail } from '../ui/child/QuestTrail.tsx';
 import { SceneGlyph } from '../ui/child/SceneChoice.tsx';
 import { sceneElementFor } from '../ui/child/contextInteraction.ts';
 import { StickerAlbum } from '../ui/child/StickerAlbum.tsx';
+import { useDismissOnEscape } from '../ui/Overlay.tsx';
 import { BattleScene } from '../ui/child/BattleScene.tsx';
 import {
   AvatarSelectScreen,
@@ -277,6 +278,18 @@ export function App() {
   // worldTime — never persisted. `npcStandTicks` is the render-prop copy.
   const heldTicks = useRef(new Map<string, number>());
   const [npcStandTicks, setNpcStandTicks] = useState<ReadonlyMap<string, number>>(new Map());
+
+  // Escape is the keyboard twin of outside-tap — one leave affordance per
+  // transient surface. Modal overlays dismiss themselves via Overlay; the
+  // open sheets check themselves off here so Escape never double-fires.
+  useDismissOnEscape(() => {
+    if (nearbyOpen || albumOpen || diagOpen || celebrating !== null) return;
+    // Modal modes (paused, gates, parent area) own their Escape via Overlay.
+    if (state.mode !== 'hub' && state.mode !== 'dialogue' && state.mode !== 'encounter') return;
+    if (state.mode === 'dialogue') dispatch({ type: 'CLOSE_DIALOGUE' });
+    else if (state.mode === 'encounter') dispatch({ type: 'ABANDON_ENCOUNTER' });
+    else if (state.battle !== null) dispatch({ type: 'LEAVE_BATTLE' });
+  });
 
   const discoveries = state.discoveries;
 
@@ -1052,7 +1065,16 @@ export function App() {
       </div>
 
       {albumOpen ? (
-        <StickerAlbum stickers={state.stickers} onClose={() => setAlbumOpen(false)} />
+        <StickerAlbum
+          stickers={state.stickers}
+          onClose={() => setAlbumOpen(false)}
+          onGoQuest={(questId) => {
+            // Locked slots are the album's journey: close the overlay, then
+            // the same navigation the quest trail performs.
+            setAlbumOpen(false);
+            goToQuest(questId);
+          }}
+        />
       ) : null}
 
       {celebrating !== null && state.mode === 'hub' ? (
