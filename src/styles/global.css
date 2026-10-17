@@ -223,6 +223,17 @@ button {
   min-block-size: 0;
 }
 
+/* «آخرین بازی» badge: a small word chip under the most recent card —
+   text, never colour alone. */
+.profile-card__last {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+  padding: var(--space-1) var(--space-3);
+}
+
 /* Headwear picker: each option is one big pictogram + short label; the chosen
    one gets a ring AND a size bump so state never depends on colour alone. */
 .headwear-row {
@@ -280,6 +291,23 @@ button {
   font-weight: 700;
   margin: 0;
   color: var(--color-ink-soft);
+}
+
+/* Collapsed reference blocks inside the parent area (native disclosure —
+   no JS, keyboard-reachable for free). */
+.section details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.section details > summary {
+  cursor: pointer;
+  padding-block: var(--space-1);
+}
+
+.section details[open] > summary {
+  margin-block-end: var(--space-1);
 }
 
 /* Steps indicator: pictogram dots for multi-step flows (avatar → headwear). */
@@ -404,12 +432,6 @@ button {
 
 .headwear-preview__avatar {
   font-size: 64px;
-}
-
-.profile-card__headwear {
-  position: absolute;
-  inset-inline-start: var(--space-2);
-  inset-block-start: var(--space-2);
 }
 
 .parent-profile {

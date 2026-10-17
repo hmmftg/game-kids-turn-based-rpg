@@ -148,8 +148,9 @@ export function AvatarSelectScreen({
         <>
           <h1 className="subtitle">{FA.chooseHeadwear}</h1>
           <div className="headwear-preview" data-testid="headwear-preview" dir="rtl">
-            <AvatarPortrait avatarId={avatarId} size={72} />
-            <Pictogram shape={`headwear-${headwear}`} size={72} />
+            {/* The preview is the composite result — the same portrait the
+                profile card and the world figure will carry. */}
+            <AvatarPortrait avatarId={avatarId} headwear={headwear} size={96} />
           </div>
           <div className="row headwear-row" dir="rtl" data-testid="headwear-row">
             {HEADWEAR_IDS.map((id) => (

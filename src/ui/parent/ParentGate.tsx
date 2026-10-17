@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FA } from '../../content/fa/strings.ts';
+import { Overlay } from '../Overlay.tsx';
 
 const HOLD_MS = 3000;
 const TICK_MS = 80;
@@ -38,7 +39,7 @@ export function ParentGate({
   }, [holdingSince, onPass]);
 
   return (
-    <div className="layer layer--overlay" data-testid="parent-gate">
+    <Overlay testId="parent-gate" ariaLabel={FA.parentGateTitle} onDismiss={onCancel}>
       <div className="panel column">
         <h2 className="subtitle">{FA.parentGateTitle}</h2>
         <p className="text">{FA.parentGateHint}</p>
@@ -49,6 +50,7 @@ export function ParentGate({
           onPointerUp={release}
           onPointerLeave={release}
           onPointerCancel={release}
+          onContextMenu={(event) => event.preventDefault()}
           data-testid="parent-gate-hold"
           aria-label={FA.parentGateHint}
         >
@@ -72,6 +74,6 @@ export function ParentGate({
           {FA.parentGateCancel}
         </button>
       </div>
-    </div>
+    </Overlay>
   );
 }

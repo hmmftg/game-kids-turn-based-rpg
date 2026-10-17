@@ -3,6 +3,7 @@ import { getQuestCopy } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { getQuestDefinition } from '../../domain/quests/definitions.ts';
 import type { QuestId } from '../../domain/game/types.ts';
+import { Overlay } from '../Overlay.tsx';
 import { questEmoji } from './emoji.ts';
 import { BATTLE_ACTION_ELEMENT, SceneGlyph } from './SceneChoice.tsx';
 
@@ -26,7 +27,13 @@ export function QuestCelebration({
   // committed — this beat only *announces* it; dismissing changes nothing.
   const ability = abilityCopyFor(getQuestDefinition(questId).battleAbility);
   return (
-    <div className="layer layer--overlay celebration" data-testid="quest-celebration">
+    <Overlay
+      testId="quest-celebration"
+      ariaLabel={FA.wellDone}
+      onDismiss={onDone}
+      dismissOnOutsideTap={false}
+      overlayClass="celebration"
+    >
       <div className="panel column celebration__card" dir="rtl">
         <span className="emoji celebration__burst" aria-hidden="true">
           🎉
@@ -54,6 +61,6 @@ export function QuestCelebration({
           {FA.keepGoing}
         </button>
       </div>
-    </div>
+    </Overlay>
   );
 }

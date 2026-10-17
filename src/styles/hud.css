@@ -454,6 +454,12 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
+  /* A three-second press must not trigger the platform's long-press
+     behaviours (context menu, text selection, drag preview). */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .gate-hold .gate-progress {
@@ -607,6 +613,27 @@
 
 .album-slot:not(.album-slot--earned) .album-slot__emoji {
   filter: grayscale(1);
+}
+
+/* Locked slots are buttons — the album's journey. Same slot card, but it
+   taps (cursor + press pulse) instead of sitting inert. */
+button.album-slot--locked {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.album-slot__object {
+  opacity: 0.55;
+}
+
+/* Pause-menu grouping: a soft rule between entry groups — spacing only,
+   never a labelled section on the child surface. */
+.menu-divider {
+  inline-size: 80%;
+  border: none;
+  border-block-start: 2px solid var(--color-accent-soft);
+  margin: var(--space-1) 0;
 }
 
 /* World-space emoji marker above interactable hotspots (rendered via drei Html). */
