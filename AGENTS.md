@@ -182,7 +182,6 @@ npm run verify        # format:check + lint + typecheck + unit tests + build (in
 - All interactive elements respect `--touch-min`; no hover-only interactions, no color-only state, no tiny controls.
 - Rapid/repeated taps must not duplicate dialogs, transitions, or effects.
 - Wrong answers are never punitive: gentle retry copy and re-demonstration, no red/error styling for children.
-- Parent-only surfaces (quality tier, per-profile reset) stay behind the press-and-hold `ParentGate`.
 
 ---
 
@@ -226,7 +225,17 @@ The child's interaction language is **the physical thing**, never an action icon
 
 ---
 
-# 10. Documentation Map
+# 10. Presentation UX Enhancements (permitted)**
+- Presentation-layer enhancements (layout, spacing, typography, icon size, touch-target padding, dialog sizing, contrast) are allowed without modifying gameplay semantics.
+- All child-facing copy remains in `src/content/fa/*`; no new copy outside content files.
+- No new forced child actions or dialogue taps beyond the §9.2 interaction budget.
+- No abstract effects (pulses, rings, floating markers, wobbles); only the §9.1 closed physical animation vocabulary.
+- Interactive elements must respect `--touch-min`; no hover-only state, no color-only state, no red/error styling for children.
+- RTL/Persian visual order must be verified under both layouts; HUD stays DOM-based.
+
+---
+
+# 11. Documentation Map
 
 - `README.md` — setup, scripts, content governance.
 - `AGENTS.md` — rules every agent must follow (this file).

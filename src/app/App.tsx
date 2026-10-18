@@ -739,6 +739,8 @@ export function App() {
           }}
           onZoom={setZoomFactor}
           onQualityChange={(tier) => dispatch({ type: 'SET_QUALITY_TIER', tier })}
+          updateReady={updateReady}
+          onApplyUpdate={applyUpdate}
         />
       );
 

@@ -252,7 +252,12 @@ const ANIMAL_GLBS: Partial<
   duck: { fit: fitToSize(DUCK_BOUNDS, 0.55), Model: Duck, gait: 'gait-waddle' },
   dog: { fit: fitToSize(DOG_BOUNDS, 0.7), Model: Dog, gait: 'gait-waddle' },
   cat: { fit: fitToSize(CAT_BOUNDS, 0.85), Model: Cat, gait: 'gait-waddle', minDetail: 6 },
-  butterfly: { fit: fitToSize(BUTTERFLY_BOUNDS, 0.9), Model: Butterfly, gait: 'gait-swish', minDetail: 6 },
+  butterfly: {
+    fit: fitToSize(BUTTERFLY_BOUNDS, 0.9),
+    Model: Butterfly,
+    gait: 'gait-swish',
+    minDetail: 6,
+  },
   fish: { fit: KOI_FIT, Model: Koi, gait: 'gait-swish', minDetail: 6 },
   // 1,199 tris + a double-sided material — very-high only, like the koi.
   // The biggest critter: 1.6 trunk-to-tail ≈ 0.95 tall at the shoulder.

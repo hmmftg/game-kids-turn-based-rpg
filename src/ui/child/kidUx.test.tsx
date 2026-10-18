@@ -141,6 +141,8 @@ describe('pause menu accessibility', () => {
         onOpenNearby={noop}
         onZoom={noop}
         onQualityChange={noop}
+        updateReady={false}
+        onApplyUpdate={noop}
       />,
     );
     for (const tier of QUALITY_TIERS) {

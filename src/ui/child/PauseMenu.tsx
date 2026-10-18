@@ -26,6 +26,8 @@ export function PauseMenu({
   onOpenNearby,
   onZoom,
   onQualityChange,
+  updateReady,
+  onApplyUpdate,
 }: {
   readonly audio: AudioSettings;
   readonly stickers: readonly StickerId[];
@@ -39,6 +41,8 @@ export function PauseMenu({
   readonly onOpenNearby: () => void;
   readonly onZoom: (factor: number) => void;
   readonly onQualityChange: (tier: QualityTier) => void;
+  readonly updateReady: boolean;
+  readonly onApplyUpdate: () => void;
 }) {
   return (
     <Overlay testId="pause-menu" ariaLabel={FA.pause} onDismiss={onResume}>
@@ -142,35 +146,39 @@ export function PauseMenu({
           <span className="emoji" aria-hidden="true">
             🎵
           </span>
-          <input
-            type="range"
-            className="volume-slider"
-            min={0}
-            max={1}
-            step={0.05}
-            value={audio.musicVolume}
-            disabled={audio.musicMuted}
-            aria-label={FA.musicVolume}
-            onChange={(e) => onAudioChange({ musicVolume: Number(e.currentTarget.value) })}
-            data-testid="music-volume"
-          />
+          <div className="volume-track">
+            <input
+              type="range"
+              className="volume-slider"
+              min={0}
+              max={1}
+              step={0.05}
+              value={audio.musicVolume}
+              disabled={audio.musicMuted}
+              aria-label={FA.musicVolume}
+              onChange={(e) => onAudioChange({ musicVolume: Number(e.currentTarget.value) })}
+              data-testid="music-volume"
+            />
+          </div>
         </div>
         <div className="volume-row">
           <span className="emoji" aria-hidden="true">
             🔔
           </span>
-          <input
-            type="range"
-            className="volume-slider"
-            min={0}
-            max={1}
-            step={0.05}
-            value={audio.sfxVolume}
-            disabled={audio.sfxMuted}
-            aria-label={FA.sfxVolume}
-            onChange={(e) => onAudioChange({ sfxVolume: Number(e.currentTarget.value) })}
-            data-testid="sfx-volume"
-          />
+          <div className="volume-track">
+            <input
+              type="range"
+              className="volume-slider"
+              min={0}
+              max={1}
+              step={0.05}
+              value={audio.sfxVolume}
+              disabled={audio.sfxMuted}
+              aria-label={FA.sfxVolume}
+              onChange={(e) => onAudioChange({ sfxVolume: Number(e.currentTarget.value) })}
+              data-testid="sfx-volume"
+            />
+          </div>
         </div>
 
         {/* W5: child quality choice — a pictogram speed scale instead of the
@@ -194,6 +202,21 @@ export function PauseMenu({
           ))}
         </div>
 
+        {/* Update — offered only when a new version is ready to apply. */}
+        {updateReady ? (
+          <button
+            type="button"
+            className="btn btn--large"
+            onClick={onApplyUpdate}
+            data-testid="apply-update"
+          >
+            <span className="emoji" aria-hidden="true">
+              ⬇️
+            </span>{' '}
+            {FA.updateApply}
+          </button>
+        ) : null}
+
         <hr className="menu-divider" aria-hidden="true" />
 
         <div className="row">
@@ -214,6 +237,9 @@ export function PauseMenu({
             onClick={onParentArea}
             data-testid="parent-entry-pause"
           >
+            <span className="emoji" aria-hidden="true">
+              🔒
+            </span>{' '}
             {FA.parentArea}
           </button>
         </div>
