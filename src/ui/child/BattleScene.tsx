@@ -11,6 +11,12 @@ import { FA } from '../../content/fa/strings.ts';
 import { DialogueCard } from './DialogueCard.tsx';
 import { BATTLE_ACTION_ELEMENT, SceneGlyph } from './SceneChoice.tsx';
 
+function opponentElement(opponentId: string): 'mouse' | 'bird' | 'eagle' | 'butterfly' {
+  const kind = opponentId.split('-').pop() ?? '';
+  if (kind === 'bird' || kind === 'eagle' || kind === 'butterfly') return kind;
+  return 'mouse';
+}
+
 /**
  * Micro turn-based battle surface (PR I).
  *
@@ -217,7 +223,7 @@ export function BattleScene({
             (battle.lastOutcome === 'opponent-hit' || battle.lastOutcome === 'blocked')
           }
         >
-          <SceneGlyph element="mouse" size={96} />
+          <SceneGlyph element={opponentElement(battle.opponentId)} size={96} />
         </div>
 
         {battle.phase === 'playerChoice' ? (

@@ -266,6 +266,17 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     status: 'licensed',
   },
   {
+    id: 'model-butterfly',
+    file: 'public/models/butterfly.glb',
+    type: 'model',
+    license: 'unknown',
+    licenseUrl: '',
+    attribution: 'butterfly (downloaded pack)',
+    source: 'butterfly.zip — scene.gltf converted via scripts/convert-model.ts',
+    sha256: '833e437d957c77f380bae8d5a032720011745f506b25f5ad8eb16cba31efa461',
+    status: 'licensed',
+  },
+  {
     id: 'model-cat',
     file: 'public/models/cat.glb',
     type: 'model',

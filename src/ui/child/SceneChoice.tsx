@@ -43,7 +43,10 @@ export type SceneElement =
   | 'ball'
   | 'cushion'
   | 'crystal'
-  | 'mouse';
+  | 'mouse'
+  | 'bird'
+  | 'eagle'
+  | 'butterfly';
 
 /** The thing a step implies the child is already holding (displayed at the
  *  hand marker on the strip's start edge). Keyed by the *correct* icon. */
@@ -507,6 +510,14 @@ function renderElement(element: SceneElement) {
       return (
         <g transform="translate(24 26) scale(1.3)">
           <ObjectGlyph element="mouse" />
+        </g>
+      );
+    case 'bird':
+    case 'eagle':
+    case 'butterfly':
+      return (
+        <g transform="translate(24 24) scale(1.2)">
+          <circle cx="0" cy="0" r="8" fill="currentColor" />
         </g>
       );
   }
