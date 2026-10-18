@@ -266,6 +266,17 @@ export const ASSET_REGISTRY: readonly AssetRegistryEntry[] = [
     status: 'licensed',
   },
   {
+    id: 'model-cat',
+    file: 'public/models/cat.glb',
+    type: 'model',
+    license: 'unknown',
+    licenseUrl: '',
+    attribution: 'an_animated_cat (downloaded pack)',
+    source: 'an_animated_cat.zip — scene.gltf converted via scripts/convert-model.ts',
+    sha256: 'aea33aeae84b8aa34d8b957180d64e72e0ccd6a83361aa9fc1595b0972b26957',
+    status: 'licensed',
+  },
+  {
     id: 'model-path-cobbled',
     file: 'public/models/path-cobbled.glb',
     type: 'model',

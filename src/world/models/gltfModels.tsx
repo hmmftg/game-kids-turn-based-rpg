@@ -22,6 +22,7 @@ import type {
   SceneryVisualVariant,
 } from './modelProvider.ts';
 import { Ball } from './gltf/Ball.tsx';
+import { Cat } from './gltf/Cat.tsx';
 import { Bench } from './gltf/Bench.tsx';
 import { Bush } from './gltf/Bush.tsx';
 import { Crate } from './gltf/Crate.tsx';
@@ -225,6 +226,11 @@ const KOI_FIT: GlbFit = (() => {
   return { ...fit, position: [fit.position[0], -midY * fit.scale, fit.position[2]] };
 })();
 
+const CAT_BOUNDS: GlbExtents = {
+  min: [-29.122, -0.006, -3.873],
+  max: [14.301, 20.905, 3.873],
+};
+
 const ANIMAL_GLBS: Partial<
   Record<
     AnimalProps['variant'],
@@ -239,6 +245,7 @@ const ANIMAL_GLBS: Partial<
 > = {
   duck: { fit: fitToSize(DUCK_BOUNDS, 0.55), Model: Duck, gait: 'gait-waddle' },
   dog: { fit: fitToSize(DOG_BOUNDS, 0.7), Model: Dog, gait: 'gait-waddle' },
+  cat: { fit: fitToSize(CAT_BOUNDS, 0.85), Model: Cat, gait: 'gait-waddle', minDetail: 6 },
   fish: { fit: KOI_FIT, Model: Koi, gait: 'gait-swish', minDetail: 6 },
   // 1,199 tris + a double-sided material — very-high only, like the koi.
   // The biggest critter: 1.6 trunk-to-tail ≈ 0.95 tall at the shoulder.
