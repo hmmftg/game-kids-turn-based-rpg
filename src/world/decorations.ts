@@ -88,7 +88,7 @@ export const FACT_DECORATIONS: readonly FactDecoration[] = [
 
 export const GROUND_DECORATIONS: readonly GroundDecoration[] = [
   { x: 2, z: -2.6, kind: 'flower', minDetail: 1 },
-  { x: -2.2, z: -2.4, kind: 'bush', minDetail: 1 },
+  { x: -2.2, z: -2.4, kind: 'plant', minDetail: 1 },
   { x: 2.6, z: 2.6, kind: 'flower', minDetail: 1 },
   { x: 4, z: -2.8, kind: 'stone', minDetail: 1 },
   // rock formation instead of a pebble — same slot, same budget, taller read
