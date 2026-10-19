@@ -269,8 +269,8 @@ export const ANCHORS: readonly Anchor[] = [
   // never needs to pass through the cave to reach the challengers.
   {
     id: 'anchor-challenge-entrance',
-    x: -9.2,
-    z: 0.5,
+    x: -12,
+    z: -3,
     walkable: true,
     areaId: 'area-park',
     mapId: 'map-town',
