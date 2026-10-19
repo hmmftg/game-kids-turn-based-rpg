@@ -264,6 +264,21 @@ export const ANCHORS: readonly Anchor[] = [
     transitionId: 'transition-cave-entrance',
     labelFa: 'سنگ بزرگ',
   },
+  // The battle-arena entrance in the main neighbourhood: a second hidden rock
+  // in the park that opens directly onto the Challenge Zone, so the child
+  // never needs to pass through the cave to reach the challengers.
+  {
+    id: 'anchor-challenge-entrance',
+    x: -9.2,
+    z: 0.5,
+    walkable: true,
+    areaId: 'area-park',
+    mapId: 'map-town',
+    npcId: null,
+    landmarkId: null,
+    transitionId: 'transition-challenge-entrance',
+    labelFa: 'ورودی به زمین چالش',
+  },
   // ── map-cave: own local coordinate system, no edges to the outdoor graph ──
   {
     id: 'anchor-cave-mouth',
@@ -480,6 +495,8 @@ export const EDGES: readonly Edge[] = [
   { from: 'anchor-school', to: 'anchor-school-yard' },
   { from: 'anchor-park', to: 'anchor-cave-entrance' },
   { from: 'anchor-park-hill', to: 'anchor-cave-entrance' },
+  { from: 'anchor-park', to: 'anchor-challenge-entrance' },
+  { from: 'anchor-challenge-entrance', to: 'anchor-park' },
   // Cave-internal paths: the mouth is the hub of the little cavern.
   { from: 'anchor-cave-mouth', to: 'anchor-cave-pool' },
   { from: 'anchor-cave-mouth', to: 'anchor-cave-crystal' },

@@ -95,6 +95,16 @@ export const MAP_TRANSITIONS: readonly MapTransition[] = [
     toAnchor: 'anchor-cave-entrance',
   },
   {
+    // The battle-arena entrance in the main neighbourhood: the Challenge Zone
+    // opens directly off the park, no cave detour required.
+    id: 'transition-challenge-entrance',
+    fromMap: 'map-town',
+    fromAnchor: 'anchor-challenge-entrance',
+    toMap: 'map-challenge',
+    toAnchor: 'anchor-challenge-entry',
+    discoveryId: 'discovery-challenge-entrance',
+  },
+  {
     // The deep tunnel at the back of the cave: first arrival reveals it,
     // later arrivals travel into the Challenge Zone.
     id: 'transition-cave-challenge',

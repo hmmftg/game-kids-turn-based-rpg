@@ -42,3 +42,11 @@ export function caveEntranceRockPosition(anchor: Anchor): {
 } {
   return { x: anchor.x + CAVE_ROCK_OFFSET.x, z: anchor.z + CAVE_ROCK_OFFSET.z };
 }
+
+/** Render position of the battle-arena entrance rock for `anchor-challenge-entrance`. */
+export function challengeEntranceRockPosition(anchor: Anchor): {
+  readonly x: number;
+  readonly z: number;
+} {
+  return { x: anchor.x + CAVE_ROCK_OFFSET.x, z: anchor.z + CAVE_ROCK_OFFSET.z };
+}

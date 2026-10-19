@@ -10,6 +10,7 @@ import type { DiscoveryId } from '../../framework/index.ts';
  */
 export const DISCOVERY_IDS = [
   'discovery-cave-entrance',
+  'discovery-challenge-entrance',
   'discovery-challenge-tunnel',
   'discovery-challenge-bird',
   'discovery-challenge-eagle',

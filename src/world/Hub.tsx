@@ -51,7 +51,12 @@ import {
 } from './sceneBits.tsx';
 import { nearestWalkableAnchor } from './navigation/pathfinding.ts';
 import { noRaycast } from './models/raycast.ts';
-import { caveEntranceRockPosition, landmarkPosition, NPC_STAND_OFFSET } from './placement.ts';
+import {
+  caveEntranceRockPosition,
+  challengeEntranceRockPosition,
+  landmarkPosition,
+  NPC_STAND_OFFSET,
+} from './placement.ts';
 import { useWalker } from './useWalker.ts';
 import { useCritters } from './useCritters.ts';
 import { FOUNTAIN_BASIN } from './critters.ts';
@@ -250,6 +255,87 @@ function CaveEntranceRock({
             intensity={0}
             distance={2.6}
             position={[-0.15, 0.6, 0.9]}
+          />
+        </>
+      )}
+    </group>
+  );
+}
+
+/**
+ * Battle-arena entrance in the main neighbourhood: a second hidden rock in
+ * the park that opens directly onto the Challenge Zone. Same one-time
+ * shimmer + persisted reveal contract as the cave entrance, no abstract
+ * marker — the rock itself is the only affordance.
+ */
+function ChallengeEntranceRock({
+  revealed,
+  interactive,
+  near,
+  onApproach,
+  position,
+}: {
+  readonly revealed: boolean;
+  readonly interactive: boolean;
+  readonly near: boolean;
+  readonly onApproach: () => void;
+  readonly position: readonly [number, number, number];
+}) {
+  const rock = sharedLambert('#8a7a62');
+  const dark = sharedLambert('#241f2e');
+  const crackRef = useRef<THREE.Mesh>(null);
+  const shimmerT = useRef(0);
+  const shimmerDone = useRef(false);
+  const reduced = prefersReducedMotion();
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    if (near && !revealed && !shimmerDone.current) invalidate();
+  }, [near, revealed, invalidate]);
+
+  useFrame((_, delta) => {
+    if (!near || revealed || shimmerDone.current || !crackRef.current) return;
+    invalidate();
+    shimmerT.current = reduced ? 1 : Math.min(1, shimmerT.current + delta * 1.4);
+    const flare = Math.sin(shimmerT.current * Math.PI);
+    crackRef.current.scale.set(0.14 + 0.2 * flare, 0.9 + 0.55 * flare, 0.07);
+    if (shimmerT.current >= 1) shimmerDone.current = true;
+  });
+
+  const approach = (event: ThreeEvent<MouseEvent>) => {
+    if (!interactive || event.delta > 6) return;
+    event.stopPropagation();
+    onApproach();
+  };
+  return (
+    <group position={position} name="challenge-entrance" dispose={null}>
+      <mesh
+        geometry={BOX}
+        material={rock}
+        position={[0, 0.9, 0]}
+        scale={[1.5, 1.8, 1.1]}
+        rotation={[0, 0.4, 0.06]}
+        onClick={approach}
+      />
+      {revealed ? (
+        <mesh
+          geometry={BOX}
+          material={dark}
+          position={[-0.15, 0.62, 0.58]}
+          scale={[0.62, 1.15, 0.12]}
+          raycast={noRaycast}
+          onClick={approach}
+        />
+      ) : (
+        <>
+          <mesh
+            ref={crackRef}
+            geometry={BOX}
+            material={sharedLambert('#ffd9a0')}
+            position={[0.24, 0.6, 0.55]}
+            rotation={[0, 0.4, 0]}
+            scale={[0.14, 0.9, 0.07]}
+            raycast={noRaycast}
           />
         </>
       )}
@@ -538,6 +624,13 @@ export function Hub({
   const nearEntrance =
     entranceAnchor !== null &&
     Math.hypot(playerAnchor.x - entranceAnchor.x, playerAnchor.z - entranceAnchor.z) < 4.5;
+  const challengeEntranceAnchor = getAnchorOrNull(world, 'anchor-challenge-entrance');
+  const nearChallengeEntrance =
+    challengeEntranceAnchor !== null &&
+    Math.hypot(
+      playerAnchor.x - challengeEntranceAnchor.x,
+      playerAnchor.z - challengeEntranceAnchor.z,
+    ) < 4.5;
   useImperativeHandle(
     handleRef,
     () => ({
@@ -868,6 +961,22 @@ export function Hub({
               caveEntranceRockPosition(entranceAnchor).x,
               0,
               caveEntranceRockPosition(entranceAnchor).z,
+            ]}
+          />
+        ) : null}
+
+        {/* The battle-arena entrance in the main neighbourhood: a second
+            hidden park rock that opens directly onto the Challenge Zone. */}
+        {challengeEntranceAnchor ? (
+          <ChallengeEntranceRock
+            revealed={discoveries.includes('discovery-challenge-entrance')}
+            interactive={interactive}
+            near={nearChallengeEntrance}
+            onApproach={() => handlersRef.current.walkHere('anchor-challenge-entrance')}
+            position={[
+              challengeEntranceRockPosition(challengeEntranceAnchor).x,
+              0,
+              challengeEntranceRockPosition(challengeEntranceAnchor).z,
             ]}
           />
         ) : null}
