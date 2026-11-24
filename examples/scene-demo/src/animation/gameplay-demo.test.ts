@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createAnimationGameplayDemo,
   createAnimationMoveCommand,
+  applyAnimationProjection,
   projectGameplayAnimationChanges,
 } from './gameplay-demo.js';
 
@@ -36,5 +37,19 @@ describe('gameplay animation projection', () => {
     expect(stale.accepted).toBe(false);
     expect(stale.state).toBe(accepted.state);
     expect(projectGameplayAnimationChanges(accepted.state, stale, command)).toEqual({});
+  });
+
+  it('advances only the committed actor action revision and allows intentional repeats', () => {
+    const previous = Object.freeze({
+      traveler: Object.freeze({ action: 'idle' as const, revision: 3 }),
+      guardian: Object.freeze({ action: 'idle' as const, revision: 7 }),
+    });
+    const first = applyAnimationProjection(previous, { traveler: 'move' });
+
+    expect(first.traveler).toEqual({ action: 'move', revision: 4 });
+    expect(first.guardian).toBe(previous.guardian);
+    const repeated = applyAnimationProjection(first, { traveler: 'move' });
+    expect(repeated.traveler?.revision).toBe(5);
+    expect(applyAnimationProjection(repeated, {})).toBe(repeated);
   });
 });

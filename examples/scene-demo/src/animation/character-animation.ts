@@ -7,7 +7,15 @@ export interface CharacterAnimationOptions {
   readonly invalidate?: () => void;
 }
 
+export interface CharacterAnimationSnapshot {
+  readonly semanticAction: SemanticAction | null;
+  readonly active: boolean;
+  readonly mixerTimeSeconds: number;
+  readonly actionTimeSeconds: number | null;
+}
+
 export interface CharacterAnimationController {
+  snapshot(): CharacterAnimationSnapshot;
   /** Start a semantic clip. Idle repeats a bounded number of times for demand rendering. */
   setAction(action: SemanticAction, options?: { readonly reducedMotion?: boolean }): void;
   /** Advance only a currently active action; returns whether another frame is needed. */
@@ -51,9 +59,13 @@ export function createCharacterAnimationController(
     let clipName = record.clips[semanticAction];
     let clip = clipName ? clipsByName.get(clipName) : undefined;
     if (!clip) {
-      clipName = record.clips.idle;
-      clip = clipName ? clipsByName.get(clipName) : undefined;
-      resolvedAction = clip ? 'idle' : null;
+      if (record.fallbackAction === 'idle') {
+        clipName = record.clips.idle;
+        clip = clipName ? clipsByName.get(clipName) : undefined;
+        resolvedAction = clip ? 'idle' : null;
+      } else {
+        resolvedAction = null;
+      }
     }
     if (!clip || !resolvedAction) {
       mixer.stopAllAction();
@@ -119,6 +131,14 @@ export function createCharacterAnimationController(
   mixer.addEventListener('finished', onFinished);
 
   return {
+    snapshot() {
+      return Object.freeze({
+        semanticAction: currentSemantic,
+        active,
+        mixerTimeSeconds: mixer.time,
+        actionTimeSeconds: current?.time ?? null,
+      });
+    },
     setAction(semanticAction, { reducedMotion = false } = {}) {
       startAction(semanticAction, reducedMotion);
     },

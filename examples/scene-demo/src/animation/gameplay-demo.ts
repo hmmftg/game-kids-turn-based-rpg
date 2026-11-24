@@ -7,6 +7,27 @@ import type {
 } from 'waypoint-rpg-gameplay';
 import type { SemanticAction } from './contracts.js';
 
+export interface AnimationProjectionState {
+  readonly [instanceId: string]: { readonly action: SemanticAction; readonly revision: number };
+}
+
+/** Advance only the presentation tokens for actions emitted by accepted commands. */
+export function applyAnimationProjection(
+  previous: AnimationProjectionState,
+  changes: Readonly<Record<string, SemanticAction>>,
+): AnimationProjectionState {
+  const instanceIds = Object.keys(changes);
+  if (instanceIds.length === 0) return previous;
+
+  const next = { ...previous };
+  for (const instanceId of instanceIds) {
+    const action = changes[instanceId];
+    if (!action) continue;
+    const current = previous[instanceId] ?? { action: 'idle', revision: 0 };
+    next[instanceId] = Object.freeze({ action, revision: current.revision + 1 });
+  }
+  return Object.freeze(next);
+}
 const PLAYABLE_PARTICIPANT_ID = 'traveler';
 const DEMO_ENCOUNTER_INSTANCE = 'phase5-animation-encounter';
 

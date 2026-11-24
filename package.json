@@ -38,7 +38,7 @@
     "test:e2e": "playwright test",
     "sample:previews": "playwright test --config=playwright.previews.config.ts --project=legacy-preview",
     "sample:gallery": "node scripts/sync-sample-gallery.mjs",
-    "sample:scene:previews": "npm run example:scene-build && npm --prefix examples/scene-demo run previews",
+    "sample:scene:previews": "npm run example:scene-build && npm --prefix examples/scene-demo run previews && npm --prefix examples/scene-demo run previews:phase5",
     "sample:phase5:previews": "npm run example:scene-build && npm --prefix examples/scene-demo run previews:phase5",
     "sample:garden:dev": "npm run framework:build && npm --prefix examples/garden-adventure run dev",
     "sample:garden:build": "npm run framework:build && npm --prefix examples/garden-adventure run build",

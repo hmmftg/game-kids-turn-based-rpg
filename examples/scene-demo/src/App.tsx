@@ -15,6 +15,15 @@ import { SceneHost } from './scene-host.js';
 import { sceneRegistry } from './scenes/registry.js';
 import { subscribeDemoRuntime } from './scenes/scene-runtime.js';
 import { Phase5AssetDemo } from './animation/Phase5AssetDemo.js';
+import type { SemanticAction } from './animation/contracts.js';
+import {
+  bloodLeafLanternAwakening,
+  bloodLeafTimelineRegistry,
+} from './presentation/blood-leaf-cinematic.js';
+import { CinematicStage } from './presentation/CinematicStage.js';
+import { createTimelinePlayer } from './presentation/timeline.js';
+import type { TimelineEvent, TimelinePlayer, TimelineStatus } from './presentation/timeline.js';
+import { sceneProbe } from './probe.js';
 
 export function App() {
   if (new URLSearchParams(window.location.search).get('phase5') === 'assets')
@@ -37,26 +46,142 @@ function NarrativeDemo() {
   const canvasLive = useRef(false);
   const mainRef = useRef<HTMLElement | null>(null);
   const dialogueOpenerRef = useRef<HTMLButtonElement | null>(null);
+  const cinematicOpenerRef = useRef<HTMLButtonElement | null>(null);
+  const timelinePlayer = useMemo(() => createTimelinePlayer(bloodLeafLanternAwakening), []);
+  const timelineRef = useRef<TimelinePlayer | null>(timelinePlayer);
+  const pendingTimelineEventsRef = useRef<TimelineEvent[]>([]);
+  const invalidateRef = useRef<() => void>(() => {});
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioNodesRef = useRef(new Set<OscillatorNode>());
+  const mountedRef = useRef(false);
+  const [cinematicStatus, setCinematicStatus] = useState<TimelineStatus>('idle');
+  const [cinematicCaption, setCinematicCaption] = useState('');
+  const [cinematicLease, setCinematicLease] = useState(false);
+  const [lanternAccent, setLanternAccent] = useState(false);
+  const [guardianPresentation, setGuardianPresentation] = useState<{
+    action: SemanticAction;
+    revision: number;
+  }>({
+    action: 'idle',
+    revision: 0,
+  });
+  const [reducedMotion, setReducedMotion] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+
+  const stopCinematicAudio = useCallback(() => {
+    for (const node of audioNodesRef.current) {
+      try {
+        node.stop();
+      } catch {
+        // The audio node may have ended before its presentation lease was released.
+      }
+    }
+    audioNodesRef.current.clear();
+    const probe = sceneProbe();
+    if (probe) probe.activeAudioLeases = 0;
+  }, []);
+
+  const onCinematicEvent = useCallback(
+    (event: TimelineEvent) => {
+      if (!timelinePlayer.isCurrentExecution(event.executionId)) return;
+      if (event.cue.kind === 'dialogue') {
+        const dialogueId = event.cue.dialogueId as keyof typeof bloodLeafTimelineRegistry.dialogues;
+        const record = bloodLeafTimelineRegistry.dialogues[dialogueId];
+        if (record) setCinematicCaption(record.text);
+      } else if (event.cue.kind === 'animation' && event.cue.actorId === 'guardian') {
+        const action = event.cue.action;
+        setGuardianPresentation((current) => ({
+          action,
+          revision: current.revision + 1,
+        }));
+      } else if (event.cue.kind === 'audio' && audioContextRef.current) {
+        const context = audioContextRef.current;
+        const audioId = event.cue.audioId as keyof typeof bloodLeafTimelineRegistry.audio;
+        const record = bloodLeafTimelineRegistry.audio[audioId];
+        if (!record || context.state === 'closed') return;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(660, context.currentTime);
+        gain.gain.setValueAtTime(0.025, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + record.durationSeconds);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.onended = () => {
+          audioNodesRef.current.delete(oscillator);
+          const probe = sceneProbe();
+          if (probe) probe.activeAudioLeases = audioNodesRef.current.size;
+        };
+        audioNodesRef.current.add(oscillator);
+        const probe = sceneProbe();
+        if (probe) probe.activeAudioLeases = audioNodesRef.current.size;
+        oscillator.start();
+        oscillator.stop(context.currentTime + record.durationSeconds);
+      }
+    },
+    [timelinePlayer],
+  );
+
+  const onCinematicRelease = useCallback(() => {
+    stopCinematicAudio();
+    if (!mountedRef.current) return;
+    setCinematicCaption('');
+    setLanternAccent(false);
+    setGuardianPresentation((current) => ({ action: 'idle', revision: current.revision + 1 }));
+  }, [stopCinematicAudio]);
 
   useEffect(() => {
+    if (cinematicLease || (cinematicStatus !== 'completed' && cinematicStatus !== 'cancelled'))
+      return;
+    const opener = cinematicOpenerRef.current;
+    if (opener?.isConnected && !opener.disabled) opener.focus();
+    else mainRef.current?.focus();
+  }, [cinematicLease, cinematicStatus]);
+
+  useEffect(() => {
+    mountedRef.current = true;
     void runtime.start();
     return () => {
+      mountedRef.current = false;
       canvasLive.current = false;
+      timelinePlayer.dispose();
+      stopCinematicAudio();
+      if (audioContextRef.current) void audioContextRef.current.close();
       host.dispose();
       runtime.dispose();
     };
-  }, [host, runtime]);
+  }, [host, runtime, stopCinematicAudio, timelinePlayer]);
 
-  const onContextLost = useCallback((event: Event) => {
-    event.preventDefault();
-    if (!canvasLive.current) return;
-    canvasLive.current = false;
-    setContextLost(true);
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(preference.matches);
+    update();
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
   }, []);
 
+  const onContextLost = useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      if (!canvasLive.current) return;
+      canvasLive.current = false;
+      timelinePlayer.cancel();
+      stopCinematicAudio();
+      setCinematicStatus(timelinePlayer.snapshot().status);
+      setCinematicLease(false);
+      setLanternAccent(false);
+      setCinematicCaption('');
+      setGuardianPresentation((current) => ({ action: 'idle', revision: current.revision + 1 }));
+      setContextLost(true);
+    },
+    [stopCinematicAudio, timelinePlayer],
+  );
+
   const onCreated = useCallback(
-    ({ gl }: { gl: { domElement: HTMLCanvasElement } }) => {
+    ({ gl, invalidate }: { gl: { domElement: HTMLCanvasElement }; invalidate: () => void }) => {
       canvasLive.current = true;
+      invalidateRef.current = invalidate;
       gl.domElement.dataset.testid = 'scene-canvas';
       gl.domElement.addEventListener('webglcontextlost', onContextLost, { once: true });
     },
@@ -130,6 +255,60 @@ function NarrativeDemo() {
   const ending = narrative.endingId
     ? bloodLeafCopy.endings[narrative.endingId as keyof typeof bloodLeafCopy.endings]
     : '';
+  const dialogueOpen = Boolean(dialogue);
+  const cinematicCanRun = currentMapId === 'map-workshop' && lanternLit && !dialogueOpen;
+
+  useEffect(() => {
+    const status = timelinePlayer.snapshot().status;
+    const isActive = status === 'playing' || status === 'waiting';
+    if ((!cinematicCanRun || snapshot.pendingMapId !== null) && isActive) {
+      timelinePlayer.cancel();
+      setCinematicStatus(timelinePlayer.snapshot().status);
+      invalidateRef.current();
+    }
+  }, [cinematicCanRun, snapshot.pendingMapId, timelinePlayer]);
+
+  const onCinematicStatus = useCallback((status: TimelineStatus) => {
+    setCinematicStatus(status);
+  }, []);
+  const onCinematicEffect = useCallback(
+    (effectId: string, active: boolean) => {
+      if (effectId === 'lanternGlow') setLanternAccent(active && lanternLit);
+    },
+    [lanternLit],
+  );
+  const onCinematicLease = useCallback((active: boolean) => {
+    setCinematicLease(active);
+  }, []);
+  const playLanternSequence = useCallback(() => {
+    if (!cinematicCanRun) return;
+    cinematicOpenerRef.current = document.activeElement as HTMLButtonElement;
+    if (!audioContextRef.current && window.AudioContext)
+      audioContextRef.current = new window.AudioContext();
+    if (audioContextRef.current?.state === 'suspended')
+      void audioContextRef.current.resume().catch(() => {});
+    pendingTimelineEventsRef.current = [];
+    setCinematicCaption('');
+    const executionId = timelinePlayer.replay({ reducedMotion });
+    setCinematicStatus(timelinePlayer.snapshot().status);
+    if (timelinePlayer.isCurrentExecution(executionId)) invalidateRef.current();
+  }, [cinematicCanRun, reducedMotion, timelinePlayer]);
+  const skipLanternSequence = useCallback(() => {
+    pendingTimelineEventsRef.current.push(...timelinePlayer.skip());
+    setCinematicStatus(timelinePlayer.snapshot().status);
+    invalidateRef.current();
+  }, [timelinePlayer]);
+  const cancelLanternSequence = useCallback(() => {
+    timelinePlayer.cancel();
+    setCinematicStatus(timelinePlayer.snapshot().status);
+    invalidateRef.current();
+  }, [timelinePlayer]);
+  const continueLanternSequence = useCallback(() => {
+    const waitingFor = timelinePlayer.snapshot().waitingFor;
+    if (waitingFor) timelinePlayer.resolveWait(waitingFor);
+    setCinematicStatus(timelinePlayer.snapshot().status);
+    invalidateRef.current();
+  }, [timelinePlayer]);
 
   return (
     <>
@@ -168,7 +347,9 @@ function NarrativeDemo() {
               ref={dialogueOpenerRef}
               data-testid="dialogue-open"
               type="button"
-              disabled={!durable.ready || Boolean(dialogue) || narrative.endingId !== null}
+              disabled={
+                !durable.ready || Boolean(dialogue) || narrative.endingId !== null || cinematicLease
+              }
               onClick={() => {
                 dialogueOpenerRef.current = document.activeElement as HTMLButtonElement;
                 runtime.dispatch({ type: 'OPEN_DIALOGUE', dialogueId: dialogueToOpen });
@@ -185,7 +366,7 @@ function NarrativeDemo() {
             <button
               data-testid="start-guardian-trial"
               type="button"
-              disabled={!durable.ready || narrative.endingId !== null}
+              disabled={!durable.ready || narrative.endingId !== null || cinematicLease}
               onClick={() => runtime.dispatch({ type: 'START_ENCOUNTER' })}
             >
               {bloodLeafCopy.startTrial}
@@ -196,7 +377,9 @@ function NarrativeDemo() {
               ref={dialogueOpenerRef}
               data-testid="clue-interaction"
               type="button"
-              disabled={!durable.ready || Boolean(dialogue) || narrative.endingId !== null}
+              disabled={
+                !durable.ready || Boolean(dialogue) || narrative.endingId !== null || cinematicLease
+              }
               onClick={() => {
                 dialogueOpenerRef.current = document.activeElement as HTMLButtonElement;
                 runtime.dispatch({
@@ -213,6 +396,7 @@ function NarrativeDemo() {
             type="button"
             disabled={
               !durable.ready ||
+              cinematicLease ||
               snapshot.pendingMapId !== null ||
               Boolean(dialogue) ||
               encounterInProgress ||
@@ -231,7 +415,7 @@ function NarrativeDemo() {
           <button
             data-testid="story-reset"
             type="button"
-            disabled={!durable.ready || Boolean(dialogue)}
+            disabled={!durable.ready || Boolean(dialogue) || cinematicLease}
             onClick={() => {
               if (window.confirm(bloodLeafCopy.confirmReset)) void runtime.resetPlaythrough(true);
             }}
@@ -295,7 +479,7 @@ function NarrativeDemo() {
           <EncounterPanel
             view={encounterView}
             onAction={onGameplayCommand}
-            disabled={!durable.ready}
+            disabled={!durable.ready || cinematicLease}
           />
         )}
 
@@ -307,9 +491,27 @@ function NarrativeDemo() {
               camera={{ position: [0, 8, 9], fov: 48 }}
               onCreated={onCreated}
             >
-              <SceneFrameProbe />
+              <SceneFrameProbe key={`${active.definition.map.id}:${active.entryAnchorId}`} />
+              <CinematicStage
+                timeline={bloodLeafLanternAwakening}
+                playerRef={timelineRef}
+                pendingEventsRef={pendingTimelineEventsRef}
+                onEvent={onCinematicEvent}
+                onStatus={onCinematicStatus}
+                onEffect={onCinematicEffect}
+                onRelease={onCinematicRelease}
+                onLeaseActive={onCinematicLease}
+              />
               <SceneCamera configuration={active.definition.camera} target={target} />
-              <ActiveScene entryAnchorId={active.entryAnchorId} runtime={runtime} />
+              <ActiveScene
+                entryAnchorId={active.entryAnchorId}
+                runtime={runtime}
+                presentation={{
+                  lanternAccent,
+                  guardianAction: guardianPresentation.action,
+                  guardianActionRevision: guardianPresentation.revision,
+                }}
+              />
             </Canvas>
           ) : (
             <p className="loading" data-testid="scene-loading">
@@ -317,6 +519,76 @@ function NarrativeDemo() {
             </p>
           )}
         </section>
+
+        {cinematicCanRun && (
+          <fieldset
+            className="cinematic-controls"
+            dir="rtl"
+            lang="fa"
+            aria-label="نمایش اختیاری بیداری فانوس"
+            aria-busy={cinematicLease}
+            data-testid="lantern-cinematic-controls"
+          >
+            <legend>نمایش بیداری فانوس</legend>
+            {reducedMotion && (
+              <output data-testid="cinematic-reduced-motion">پویانمایی کاهش‌یافته</output>
+            )}
+            <button
+              ref={cinematicOpenerRef}
+              data-testid="cinematic-play"
+              type="button"
+              disabled={cinematicLease}
+              onClick={playLanternSequence}
+            >
+              {cinematicStatus === 'completed' || cinematicStatus === 'cancelled'
+                ? 'نمایش دوباره'
+                : 'تماشای نمایش'}
+            </button>
+            {(cinematicStatus === 'playing' || cinematicStatus === 'waiting') && (
+              <>
+                <button data-testid="cinematic-skip" type="button" onClick={skipLanternSequence}>
+                  رد کردن
+                </button>
+                <button
+                  data-testid="cinematic-cancel"
+                  type="button"
+                  onClick={cancelLanternSequence}
+                >
+                  بستن
+                </button>
+              </>
+            )}
+            {cinematicStatus === 'waiting' && (
+              <button
+                data-testid="cinematic-continue"
+                type="button"
+                onClick={continueLanternSequence}
+              >
+                ادامه
+              </button>
+            )}
+            <output data-testid="cinematic-status" data-status={cinematicStatus} aria-live="polite">
+              {cinematicStatus === 'waiting'
+                ? 'نمایش منتظر ادامه است'
+                : cinematicStatus === 'playing'
+                  ? 'نمایش در حال اجراست'
+                  : 'نمایش آماده است'}
+            </output>
+          </fieldset>
+        )}
+        {cinematicCaption && (
+          <section
+            className="cinematic-caption"
+            data-testid="cinematic-caption"
+            role="status"
+            aria-live="polite"
+            dir="rtl"
+            lang="fa"
+            aria-label="گفتار نگهبان"
+          >
+            <p>{cinematicCaption}</p>
+          </section>
+        )}
 
         {contextLost && (
           <div className="recovery" role="alert">

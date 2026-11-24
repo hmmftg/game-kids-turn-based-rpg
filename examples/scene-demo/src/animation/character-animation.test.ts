@@ -59,6 +59,32 @@ describe('character animation controller', () => {
     b.dispose();
   });
 
+  it('exposes a read-only per-instance mixer snapshot for lifecycle diagnostics', () => {
+    const first = character();
+    const second = character();
+    const a = createCharacterAnimationController(first.root, clips(), assetRecord);
+    const b = createCharacterAnimationController(second.root, clips(), assetRecord);
+
+    a.setAction('move');
+    b.setAction('interact');
+    a.advance(0.2);
+    const firstSnapshot = a.snapshot();
+    const secondSnapshot = b.snapshot();
+
+    expect(firstSnapshot).toMatchObject({ semanticAction: 'move', active: true });
+    expect(firstSnapshot.actionTimeSeconds).toBeCloseTo(0.2, 2);
+    expect(secondSnapshot).toMatchObject({ semanticAction: 'interact', active: true });
+    expect(secondSnapshot.actionTimeSeconds).toBe(0);
+    expect(Object.isFrozen(firstSnapshot)).toBe(true);
+
+    a.dispose();
+    expect(a.snapshot()).toMatchObject({
+      semanticAction: null,
+      active: false,
+      actionTimeSeconds: null,
+    });
+    b.dispose();
+  });
   it('interrupts a running action with a new semantic action', () => {
     const actor = character();
     const controller = createCharacterAnimationController(actor.root, clips(), assetRecord, {
@@ -106,6 +132,25 @@ describe('character animation controller', () => {
     controller.dispose();
   });
 
+  it('uses a static pose when the registered fallback is static', () => {
+    const actor = character();
+    const staticFallbackRecord = {
+      clips: { idle: 'Idle', move: 'Move' },
+      fallbackAction: 'static',
+    } as Pick<ModelAssetRecord, 'clips' | 'fallbackAction'>;
+    const controller = createCharacterAnimationController(
+      actor.root,
+      clips(),
+      staticFallbackRecord,
+      { crossFadeSeconds: 0 },
+    );
+
+    controller.setAction('defeat');
+
+    expect(controller.advance(0.25)).toBe(false);
+    expect(actor.joint.position.toArray()).toEqual([0, 0, 0]);
+    controller.dispose();
+  });
   it('applies reduced-motion poses immediately without scheduling mixer frames', () => {
     const actor = character();
     const invalidate = vi.fn();

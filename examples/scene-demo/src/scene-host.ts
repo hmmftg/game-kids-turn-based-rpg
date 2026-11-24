@@ -16,6 +16,11 @@ export type SceneCameraConfiguration =
 export interface SceneComponentProps {
   readonly entryAnchorId: AnchorId;
   readonly runtime: DemoRuntime;
+  readonly presentation?: {
+    readonly lanternAccent: boolean;
+    readonly guardianAction: 'idle' | 'move' | 'interact' | 'combat' | 'defeat';
+    readonly guardianActionRevision: number;
+  };
 }
 
 export interface SceneResource {

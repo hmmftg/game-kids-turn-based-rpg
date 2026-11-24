@@ -31,6 +31,7 @@ export function SceneCamera({ configuration, target }: SceneCameraProps) {
     if (probe) {
       probe.cameraKind = configuration.kind;
       probe.cameraIsOrthographic = camera instanceof OrthographicCamera;
+      probe.cameraPosition = camera.position.toArray();
     }
     invalidate();
   }, [configuration.kind, invalidate, set, size.height, size.width, target.x, target.z]);
