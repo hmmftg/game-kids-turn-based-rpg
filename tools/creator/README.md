@@ -97,6 +97,27 @@ framework archives. If a first-time developer-tool install has not populated
 the npm cache, bootstrap that toolchain once while online; later installs use
 the locked cache without a registry connection.
 
+## Verify generated projects independently
+
+From the repository root, run:
+
+```sh
+npm run creator:test
+npm run creator:import-consumer
+npm run framework:generated-games
+```
+
+The generated-game gate builds and packs the core, narrative, gameplay, and
+creator artifacts once, then reuses those exact archives for both generated
+consumers. The narrative fixture installs core+narrative and the tactical
+fixture installs core+gameplay; each runs outside the workspace with offline
+package installation, public-root/deep-import and source-boundary checks,
+NodeNext/Bundler declaration probes, unit tests, production build, and Chromium
+save/reload/playthrough tests. `docs/previews/creator/` receives screenshots
+from the rendered consumers. These are verification fixtures, not portfolio
+releases. CI runs this focused gate and uploads the screenshots as an artifact
+for manual review; it does not create a pull request or change release approval.
+
 Manifest validation checks package roots, locale and save declarations,
 scene/map/start-anchor consistency, local project paths, asset catalog
 references, script names, and required framework archives. Timeline references

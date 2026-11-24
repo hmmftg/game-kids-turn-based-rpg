@@ -16,16 +16,16 @@ microphone, geolocation or device identifiers. Progress lives only in the browse
 
 ## Framework roadmap
 
-**5/7 phases completed** · Next: **Phase 6 — Developer tools** · [Full roadmap and exit gates](docs/FRAMEWORK-ROADMAP.md)
+**6/9 phases completed** · Next: **Phase 7 — Five playable games** · [Full roadmap and exit gates](docs/FRAMEWORK-ROADMAP.md)
 
 ```mermaid
 flowchart LR
-  P1["1. Reusable core"] --> P2["2. World/renderer"] --> P3["3. Narrative/quests"] --> P4["4. Gameplay modules"] --> P5["5. Animation/cinematics"] --> P6["6. Developer tools"] --> P7["7. Shahnameh proof of concept"]
+  P1["1. Reusable core"] --> P2["2. World/renderer"] --> P3["3. Narrative/quests"] --> P4["4. Gameplay modules"] --> P5["5. Animation/cinematics"] --> P6["6. Creator tools"] --> P7["7. Five playable games"] --> P8["8. Individual releases"] --> P9["9. Player evaluation"]
   classDef complete fill:#dcfce7,stroke:#15803d,color:#14532d
   classDef next fill:#fef3c7,stroke:#b45309,color:#78350f
   classDef planned fill:#e5e7eb,stroke:#6b7280,color:#1f2937
-  class P1,P2,P3,P4,P5 complete
-  class P6,P7 planned
+  class P1,P2,P3,P4,P5,P6 complete
+  class P7,P8,P9 planned
 ```
 
 | Phase | Status | Evidence |
@@ -35,8 +35,10 @@ flowchart LR
 | 3. Narrative/quests | ✅ Complete | [PR #113](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/113) |
 | 4. Gameplay modules | ✅ Complete | [PR #116](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/116); [29 gameplay tests](../packages/gameplay/test/) |
 | 5. Animation/cinematics | ✅ Complete | [Phase 5 execution evidence](../.plans/phase-5-model-animation-cinematics.md); [rendered previews](previews/phase5/) |
-| 6. Developer tools | ⏳ Planned | — |
-| 7. Shahnameh proof of concept | ⏳ Planned | — |
+| 6. Creator tools | ✅ Complete | [.plans/phase-6-creator-tools.md](../.plans/phase-6-creator-tools.md); [consumer screenshots](previews/creator/) |
+| 7. Five playable games | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
+| 8. Individual releases | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
+| 9. Player evaluation | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
 
 _Generated from the canonical roadmap. Update status and evidence in [docs/FRAMEWORK-ROADMAP.md](docs/FRAMEWORK-ROADMAP.md), then run npm run roadmap:sync._
 

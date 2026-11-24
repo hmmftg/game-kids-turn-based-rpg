@@ -81,6 +81,16 @@ workspace links. The sample owns its story and state transitions. For a
 narrative-only project omit gameplay; for a tactical project select the
 gameplay package without importing narrative unless the game needs it.
 
+To verify the generated-project boundary, run
+`npm run framework:generated-games`. This focused gate generates narrative-only
+and tactical-only projects outside the repository, installs the creator and
+selected package archives offline from the prepared tool cache, imports shared
+and game-local catalog assets, rejects deep/workspace imports, checks package
+declarations with NodeNext and Bundler, and runs each app's unit, build, save,
+and Chromium acceptance tests. It saves source-rendered reference images under
+`docs/previews/creator/`. The fixtures are tool tests rather than portfolio
+games or release-approved content.
+
 ## Compose one authoritative runtime
 
 Import the package roots and keep committed game state in one application-owned

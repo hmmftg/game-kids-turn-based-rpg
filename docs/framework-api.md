@@ -36,6 +36,13 @@ and narrative roots.
 - **Root build and development tools:** Node.js `>=22.22.2 <23` and npm
   `>=10 <11`; application CI pins Node.js 22.22.2. The locked Vite,
   TypeScript, tests, and package scripts are exercised on this toolchain.
+- **Creator CLI:** `waypoint-rpg-creator` declares Node.js `>=22.0.0` for its
+  ESM CLI and manifest/catalog/import APIs. Its GLB parser dependencies are
+  tool runtime dependencies, not game-framework dependencies. Creating and
+  previewing a project uses the separate pinned React/Vite/TypeScript/Playwright
+  development toolchain and therefore follows the root build-tool Node/npm
+  floor. A generated game installs only its selected core/narrative/gameplay
+  archives; it does not depend on or bundle the creator package.
 - **Offline package installation:** the tarball has no runtime dependencies
   and installs from a local artifact with an empty npm cache. This does not
   claim that Vite or TypeScript can be newly installed offline.
@@ -212,6 +219,27 @@ The package tarball gate is `npm run framework:narrative-consumer`; it checks
 an independent offline installation, native Node ESM, NodeNext/Bundler
 declarations, public exports, and rejected deep imports. The combined 3D
 consumer is `npm run framework:scene-consumer`.
+
+## Optional developer tool: `waypoint-rpg-creator`
+
+`tools/creator/` is an optional ESM developer package and CLI, not a runtime
+framework dependency. Its public root and subpaths expose model import,
+versioned asset-catalog/readiness operations, and game-project manifest,
+validation, inspection, scaffold, and command APIs. Import supports local GLB
+and glTF with confined local resources and produces a self-contained GLB;
+FBX/OBJ/Blender inputs require the documented optional Blender conversion.
+The local preview is a separate browser tool that reuses Phase 5 model loading
+and resource ownership. Technical validation or preview never implies
+game-specific release approval.
+
+Generated projects use local framework tarballs and public package roots. The
+narrative-only and tactical-only acceptance fixtures are generated outside
+the workspace and independently install only their selected archives. Run
+`npm run framework:generated-games` to pack each archive once, verify both
+generated projects with NodeNext and Bundler declarations, tests, production
+builds, offline installs, and Chromium acceptance, and refresh the rendered
+screenshots in `docs/previews/creator/`. These fixtures verify the toolchain;
+they do not count as portfolio releases.
 
 ## World primitives
 

@@ -217,3 +217,51 @@ both consumers passed local tarball installation, NodeNext/Bundler declarations,
 production build, unit tests, Chromium browser tests, save/reload assertions,
 catalog integrity, and screenshot capture. Root creator/package and broader
 compatibility gates are recorded under P6.6 below.
+
+### P6.6 — CI, documentation and completion
+
+Added `.github/workflows/creator-tools.yml`, a focused Node 22.22.2 job for the
+creator package/importer, packed importer consumer, local preview, generated
+narrative/tactical consumers, and roadmap projection. It installs Chromium
+once, leaves the Kids RPG's existing four-shard E2E workflow unchanged, builds
+and packs the consumer archives once inside `framework:generated-games`, and
+uploads the actual creator preview PNGs for manual review. It does not create a
+PR or weaken repository protections. Updated the creator README, getting
+started, sample-game, framework API, product roadmap, canonical framework
+roadmap, generated README, and this execution record. The canonical roadmap
+now tracks Phases 1–9; Phase 6 is Complete from local acceptance, while Phase 7
+through 9 remain planned. The CI definition is not represented as a remote
+Actions result.
+
+Verification on Node 22.23.5/npm 10.9.9:
+
+- `npm run verify` passed formatting, `roadmap:check`, lint with 0 errors and 7
+  existing/new Fast Refresh warnings, 15 importer tests, core 15/15, narrative
+  34/34, gameplay 29/29, typecheck, 565 application tests, the Kids RPG
+  production/PWA/deploy checks, and hello-world/scene-demo builds. The app
+  reports 48 draft-content and 5 placeholder-asset warnings plus existing
+  large-chunk warnings; these are not test failures.
+- `npm run framework:consumer`, `npm run framework:narrative-consumer`,
+  `npm run framework:gameplay-consumer`, `npm run framework:scene-consumer`,
+  and `npm run framework:garden-consumer` all passed their installed archive,
+  declaration, build, and applicable Chromium gates.
+- `npm run framework:watch:check` passed cold/warm startup, default Vite
+  resolution, package edit propagation, failed-compile last-good output, and
+  recovery.
+- `npm run creator:test` passed 27/27; `npm run creator:build`,
+  `npm run creator:import-consumer`, and `npm run models:import:test` passed.
+  `npm run creator:preview:typecheck`, `npm run creator:preview:build`, and
+  `npm run creator:preview:test` passed, with 4/4 Chromium preview tests.
+- `npm run framework:generated-games` passed both offline installed-tarball
+  consumers with public-root/deep-import and private-source checks, NodeNext
+  and Bundler declarations, unit tests, production builds, save/reload/restart
+  and invalid-save recovery tests, browser playthroughs, catalog integrity,
+  and screenshots at `docs/previews/creator/generated-narrative-consumer.png`
+  and `docs/previews/creator/generated-tactical-consumer.png`.
+- `npm run roadmap:sync` and `npm run roadmap:check` passed.
+
+No GitHub Actions run was triggered because the requested work remains local
+and was not pushed. The known screenshot automation PR-creation permission
+issue is not bypassed; the new creator workflow uploads screenshot artifacts
+for manual review. Phase 6's implementation and independent consumer gates are
+complete locally; the new workflow's first remote result remains pending.
