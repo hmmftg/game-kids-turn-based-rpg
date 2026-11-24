@@ -16,7 +16,7 @@ microphone, geolocation or device identifiers. Progress lives only in the browse
 
 ## Framework roadmap
 
-**5/7 phases completed** · Next: **Phase 6 — Developer tools** · [Full roadmap and exit gates](docs/FRAMEWORK-ROADMAP.md)
+**4/7 phases completed** · Next: **Phase 5 — Animation/cinematics** · [Full roadmap and exit gates](docs/FRAMEWORK-ROADMAP.md)
 
 ```mermaid
 flowchart LR
@@ -24,7 +24,8 @@ flowchart LR
   classDef complete fill:#dcfce7,stroke:#15803d,color:#14532d
   classDef next fill:#fef3c7,stroke:#b45309,color:#78350f
   classDef planned fill:#e5e7eb,stroke:#6b7280,color:#1f2937
-  class P1,P2,P3,P4,P5 complete
+  class P1,P2,P3,P4 complete
+  class P5 next
   class P6,P7 planned
 ```
 
@@ -33,8 +34,8 @@ flowchart LR
 | 1. Reusable core | ✅ Complete | [PR #110](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/110) |
 | 2. World/renderer | ✅ Complete | [PR #111](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/111) |
 | 3. Narrative/quests | ✅ Complete | [PR #113](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/113) |
-| 4. Gameplay modules | ✅ Complete | [PR #116](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/116); [29 gameplay tests](../packages/gameplay/test/) |
-| 5. Animation/cinematics | ✅ Complete | [Phase 5 execution evidence](../.plans/phase-5-model-animation-cinematics.md); [rendered previews](previews/phase5/) |
+| 4. Gameplay modules | ✅ Complete | [PR #116](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/116); [29 gameplay tests](packages/gameplay/test/) |
+| 5. Animation/cinematics | 🚧 In progress | [PR #118 model work](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/118); [Phase 5 execution evidence](.plans/phase-5-model-animation-cinematics.md); [rendered previews](docs/previews/phase5/) |
 | 6. Developer tools | ⏳ Planned | — |
 | 7. Shahnameh proof of concept | ⏳ Planned | — |
 
@@ -78,6 +79,23 @@ An independent two-scene consumer demonstrating framework narrative, scene loadi
 | Village courtyard | ![Actual برگ خون — Village courtyard](docs/previews/blood-leaf/01-courtyard.png) |
 | Persian story choice | ![Actual برگ خون — Persian story choice](docs/previews/blood-leaf/02-dialogue.png) |
 | Narrative-driven lantern | ![Actual برگ خون — Narrative-driven lantern](docs/previews/blood-leaf/03-lit-lantern.png) |
+
+### Phase 5 — Animation and Cinematics — Technical demonstration
+
+The Blood Leaf scene demo also contains an example-owned static/rigged GLB adapter, independent character animation, and an optional timeline whose cues cannot change durable story state.
+
+[Game guide](examples/scene-demo/README.md) · `npm run sample:phase5:previews`
+
+| Capture | Actual browser rendering |
+| --- | --- |
+| Textured static GLB | ![Actual Phase 5 — Animation and Cinematics — Textured static GLB](docs/previews/phase5/01-static-model.png) |
+| Independent rig instances | ![Actual Phase 5 — Animation and Cinematics — Independent rig instances](docs/previews/phase5/02-two-rigged-characters.png) |
+| Guardian interaction | ![Actual Phase 5 — Animation and Cinematics — Guardian interaction](docs/previews/phase5/04-character-interaction.png) |
+| RTL cinematic dialogue | ![Actual Phase 5 — Animation and Cinematics — RTL cinematic dialogue](docs/previews/phase5/06-cinematic-dialogue.png) |
+| Reduced motion | ![Actual Phase 5 — Animation and Cinematics — Reduced motion](docs/previews/phase5/08-reduced-motion.png) |
+| Portrait viewport | ![Actual Phase 5 — Animation and Cinematics — Portrait viewport](docs/previews/phase5/09-mobile-portrait.png) |
+
+Other captures: [03-moving-character](docs/previews/phase5/03-moving-character.png) · [05-cinematic-camera](docs/previews/phase5/05-cinematic-camera.png) · [07-lantern-consequence](docs/previews/phase5/07-lantern-consequence.png).
 
 ### باغ قصه‌ها — Implemented and playable
 

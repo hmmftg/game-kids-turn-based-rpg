@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "2640e58a8c2da6f32640235a8cd1afead8507f64",
+  "sourceCommit": "25b23e66963e0e03b0759483248c382cc3ca2d48",
   "images": [
     {
       "file": "01-courtyard.png",
@@ -20,8 +20,8 @@
       "file": "03-lit-lantern.png",
       "width": 1360,
       "height": 929,
-      "bytes": 63374,
-      "sha256": "6fc79d3a10c7c78584bb6eed26e744f7f536c7646d2e5f55aa9fb625f1b97ba1"
+      "bytes": 65846,
+      "sha256": "0377542689abca8f2687b82b4fb99381e4ac23a2f6277a76a5ae44e02f96d457"
     }
   ]
 }

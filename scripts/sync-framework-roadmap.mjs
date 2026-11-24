@@ -99,7 +99,10 @@ function renderRoadmap(phases) {
 
   const rows = phases.map((phase) => {
     const title = phase.number + '. ' + phase.title;
-    const evidence = phase.evidence || '—';
+    const evidence = (phase.evidence || '—')
+      .replaceAll('](../.plans/', '](.plans/')
+      .replaceAll('](../packages/', '](packages/')
+      .replaceAll('](previews/', '](docs/previews/');
     const statusText = symbols[phase.status];
     return '| ' + title + ' | ' + statusText + ' | ' + evidence + ' |';
   });

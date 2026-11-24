@@ -440,6 +440,9 @@ try {
     .filter((asset) => ['phase5-textured-static', 'phase5-animated-guardian'].includes(asset.id))
     .map((asset) => ({
       id: asset.id,
+      sourceSha256: asset.sourceSha256,
+      licenseId: asset.rights.licenseId,
+      attribution: asset.rights.attribution,
       outputBytes: asset.metrics.outputBytes,
       triangles: asset.metrics.triangles,
       primitiveCount: asset.metrics.primitiveCount,

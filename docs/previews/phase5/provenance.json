@@ -1,39 +1,175 @@
 {
-  "schemaVersion": 1,
-  "sourceCommit": "0e89ee3fd3ca035da3b51c5fed1e8886abaffdb2",
-  "browser": "Chromium via Playwright, headless SwiftShader",
+  "schemaVersion": 2,
+  "sourceCommit": "cbb9a59ebd2131a63c88e7530de5a0e800fbb191",
+  "browser": "Chromium 153.0.8010.12 via Playwright, headless SwiftShader",
+  "testedDevices": [
+    "Headless Linux Chromium with SwiftShader only; physical mobile GPU not tested"
+  ],
   "viewport": {
-    "width": 1365,
-    "height": 1000
+    "desktop": {
+      "width": 1365,
+      "height": 1000
+    },
+    "mobilePortrait": {
+      "width": 390,
+      "height": 844
+    }
   },
   "images": [
     {
-      "file": "01-external-models.png",
+      "file": "01-static-model.png",
       "width": 1365,
-      "height": 1071,
-      "bytes": 79212,
-      "sha256": "5ccb09012d4837f30836e16408f1a7e2b4c9b462d38d45fb4e693ec5109ea01d"
+      "height": 1025,
+      "bytes": 78723,
+      "sha256": "b73f5e38d067a734bfa1a13e5ecfc847c66ff796af335aaadf5546922a342ed6"
     },
     {
-      "file": "02-guardian-cinematic.png",
+      "file": "02-two-rigged-characters.png",
       "width": 1365,
-      "height": 1172,
-      "bytes": 112966,
-      "sha256": "74a1683ba9d1e1f09b4e707be4f48ededbfa67cfa53a8ac33a0dcf5c479a35ff"
+      "height": 1025,
+      "bytes": 94805,
+      "sha256": "0c5a17cae2b912e1a2d39908b3648eaff99176ed70225d9c6912ae292e51b5a0"
+    },
+    {
+      "file": "03-moving-character.png",
+      "width": 1365,
+      "height": 1062,
+      "bytes": 93082,
+      "sha256": "9175c314983b8d0ff119088d56c2b01e10bc5070514812010418d9a1615de2de"
+    },
+    {
+      "file": "07-lantern-consequence.png",
+      "width": 1365,
+      "height": 1035,
+      "bytes": 71060,
+      "sha256": "908a635d871c8cc1bf63ccb1c8c772ccd8389038c406fe91224fab448edda8cf"
+    },
+    {
+      "file": "05-cinematic-camera.png",
+      "width": 1365,
+      "height": 1035,
+      "bytes": 73010,
+      "sha256": "f5d923b66625d64732266ce0c3dcbf3a342a8fd47ec8ea1155416ad6024d1439"
+    },
+    {
+      "file": "04-character-interaction.png",
+      "width": 1365,
+      "height": 1035,
+      "bytes": 71065,
+      "sha256": "3c04d42feccf8e1eeb7a2382fa86db75592dffa59aefcc74f6bd1a79c470148f"
+    },
+    {
+      "file": "06-cinematic-dialogue.png",
+      "width": 1365,
+      "height": 1113,
+      "bytes": 77666,
+      "sha256": "a9783cadbd4c8eda905e81720f82b61ba537d5abe879cc4722ed01ceadf6421f"
+    },
+    {
+      "file": "08-reduced-motion.png",
+      "width": 1365,
+      "height": 1113,
+      "bytes": 80503,
+      "sha256": "ce2f6f60ba7e0270db75cc706c5de2d4ce193c3afe4151c39875b72306970ebc"
+    },
+    {
+      "file": "09-mobile-portrait.png",
+      "width": 390,
+      "height": 1084,
+      "bytes": 35878,
+      "sha256": "bd0d2b2a99168ba86d623518af53f16f549858ed0081f0c85ea6f673933fac90"
     }
   ],
   "models": [
     {
-      "id": "phase5-khronos-box",
-      "sourceSha256": "ed52f7192b8311d700ac0ce80644e3852cd01537e4d62241b9acba023da3d54e",
-      "outputSha256": "a052de8729a6d1ee6cf7977664da7cc1eb6d9a80da2387f69c1e8485b1cab84b",
-      "licenseId": "CC-BY-4.0"
+      "id": "phase5-animated-guardian",
+      "sourceSha256": "efd6cff098f6e10c65d90739446b0f8411bd4e455e565b40ada5820b1e6d90eb",
+      "licenseId": "MIT",
+      "attribution": "Synthetic fixture authored in this repository; see the root LICENSE.",
+      "outputBytes": 10692,
+      "triangles": 60,
+      "primitiveCount": 1,
+      "textureCount": 1,
+      "textureBytes": 256,
+      "maxTextureDimension": 8,
+      "estimatedDecodedBytes": 7220,
+      "joints": 2,
+      "clips": [
+        {
+          "name": "idle",
+          "durationSeconds": 1
+        },
+        {
+          "name": "move",
+          "durationSeconds": 0.5
+        },
+        {
+          "name": "interact",
+          "durationSeconds": 1
+        },
+        {
+          "name": "combat",
+          "durationSeconds": 1
+        }
+      ],
+      "outputSha256": "b3a29451c19dd5fb572532681bb82dade53958268531c71952af492b204c1fa7"
     },
     {
-      "id": "phase5-khronos-rigged-figure",
-      "sourceSha256": "d6be85417d3e256861ee733eea6916093a7af7c79c16366181fd8abcaeb38cf5",
-      "outputSha256": "15fdf90c98ee6aca863d769f177c54de7639311514a29d28f30c04731697c3c0",
-      "licenseId": "CC-BY-4.0"
+      "id": "phase5-textured-static",
+      "sourceSha256": "b17052af8c6222f82f800203b300090ee2db87d51cb28ecbd074cd692722caa6",
+      "licenseId": "MIT",
+      "attribution": "Synthetic fixture authored in this repository; see the root LICENSE.",
+      "outputBytes": 2296,
+      "triangles": 12,
+      "primitiveCount": 1,
+      "textureCount": 1,
+      "textureBytes": 256,
+      "maxTextureDimension": 8,
+      "estimatedDecodedBytes": 1096,
+      "joints": 0,
+      "clips": [],
+      "outputSha256": "b17052af8c6222f82f800203b300090ee2db87d51cb28ecbd074cd692722caa6"
     }
-  ]
+  ],
+  "observedRuntime": {
+    "modelRendererMemory": {
+      "geometries": 4,
+      "textures": 5
+    },
+    "modelLoadMs": [
+      {
+        "instance": "static",
+        "assetId": "phase5-textured-static",
+        "loadDurationMs": 35
+      },
+      {
+        "instance": "traveler",
+        "assetId": "phase5-animated-guardian",
+        "loadDurationMs": 1
+      },
+      {
+        "instance": "guardian",
+        "assetId": "phase5-animated-guardian",
+        "loadDurationMs": 1
+      }
+    ],
+    "firstAcceptedMoveFrameDelta": 5,
+    "moveAnimationRenderedFrames": 33,
+    "modelIdleFrameDelta": 0,
+    "sceneRendererMemoryBeforeFiveWarmCycles": {
+      "geometries": 6,
+      "textures": 1
+    },
+    "sceneRendererMemoryAfterFiveWarmCycles": {
+      "geometries": 6,
+      "textures": 1
+    },
+    "warmedMapRoundTrips": 5,
+    "disposedScenesDuringWarmCycles": 10,
+    "toleratedMemoryGrowth": {
+      "geometries": 1,
+      "textures": 1
+    },
+    "sceneIdleFrameDelta": 0
+  }
 }
