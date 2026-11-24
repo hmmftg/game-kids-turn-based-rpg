@@ -263,7 +263,6 @@ function NarrativeDemo() {
     const isActive = status === 'playing' || status === 'waiting';
     if ((!cinematicCanRun || snapshot.pendingMapId !== null) && isActive) {
       timelinePlayer.cancel();
-      setCinematicStatus(timelinePlayer.snapshot().status);
       invalidateRef.current();
     }
   }, [cinematicCanRun, snapshot.pendingMapId, timelinePlayer]);

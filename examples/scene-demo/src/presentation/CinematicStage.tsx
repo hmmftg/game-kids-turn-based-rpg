@@ -1,7 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import { Quaternion, Vector3 } from 'three';
+import { Vector3 } from 'three';
+import type { Quaternion } from 'three';
 import type {
   CompiledTimeline,
   TimelineEvent,
@@ -53,13 +54,14 @@ export function CinematicStage({
   const previousStatus = useRef<TimelineStatus>('idle');
   const activeEffects = useRef(new Map<string, number>());
   const leaseOwned = useRef(false);
+  const releasePresentationRef = useRef<() => void>(() => {});
   const callbacks = useRef({ onEvent, onStatus, onEffect, onRelease, onLeaseActive });
 
   useEffect(() => {
     callbacks.current = { onEvent, onStatus, onEffect, onRelease, onLeaseActive };
   }, [onEvent, onStatus, onEffect, onRelease, onLeaseActive]);
 
-  const releasePresentation = () => {
+  const releasePresentation = useCallback(() => {
     if (!leaseOwned.current) return;
     leaseOwned.current = false;
     if (originalCamera.current) {
@@ -75,13 +77,17 @@ export function CinematicStage({
     activeEffects.current.clear();
     callbacks.current.onLeaseActive(false);
     callbacks.current.onRelease();
-  };
+  }, [camera, invalidate]);
+
+  useEffect(() => {
+    releasePresentationRef.current = releasePresentation;
+  }, [releasePresentation]);
 
   useEffect(
     () => () => {
       const player = playerRef.current;
       player?.cancel();
-      releasePresentation();
+      releasePresentationRef.current();
       if (player) callbacks.current.onStatus(player.snapshot().status);
     },
     [playerRef],

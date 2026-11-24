@@ -3,8 +3,6 @@ import { log } from 'node:console';
 import { chromium } from '@playwright/test';
 import { preview } from 'vite';
 
-/* global Storage, URL, URLSearchParams, document, getComputedStyle, localStorage, location, window */
-
 const server = await preview({
   preview: { host: '127.0.0.1', port: 0, strictPort: false },
 });
@@ -281,15 +279,14 @@ try {
       { timeout: 5_000 },
     );
   } catch (error) {
-    console.error(
-      'Cinematic cue probe:',
-      JSON.stringify(
+    process.stderr.write(
+      `Cinematic cue probe: ${JSON.stringify(
         await page.evaluate(() => ({
           probe: window.__sceneProbe,
           status: document.querySelector('[data-testid="cinematic-status"]')?.outerHTML,
           caption: document.querySelector('[data-testid="cinematic-caption"]')?.textContent,
         })),
-      ),
+      )}\n`,
     );
     throw error;
   }
@@ -352,6 +349,9 @@ try {
     () =>
       document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'completed',
   );
+  await page.waitForFunction(
+    () => document.activeElement === document.querySelector('[data-testid="cinematic-play"]'),
+  );
   assert.equal(await hasFocus(page.getByTestId('cinematic-play')), true);
   assert.equal(await page.evaluate(() => window.__sceneProbe?.activeAudioLeases), 0);
   assert.equal(await page.evaluate(() => window.__sceneProbe?.lanternAccent), false);
@@ -400,14 +400,31 @@ try {
     () => document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'playing',
   );
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="session-readiness"]')?.textContent === 'ready' &&
-      document.querySelector('[data-testid="active-map"]')?.textContent === 'map-workshop' &&
-      document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'idle' &&
-      window.__sceneProbe?.lampLit === true &&
-      window.__sceneProbe?.lanternAccent === false,
-  );
+  try {
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-testid="session-readiness"]')?.textContent === 'ready' &&
+        document.querySelector('[data-testid="active-map"]')?.textContent === 'map-workshop' &&
+        document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'idle' &&
+        window.__sceneProbe?.lampLit === true &&
+        window.__sceneProbe?.lanternAccent === false,
+    );
+  } catch (error) {
+    process.stderr.write(
+      `Reload recovery probe: ${JSON.stringify(
+        await page.evaluate(() => ({
+          readiness: document.querySelector('[data-testid="session-readiness"]')?.textContent,
+          map: document.querySelector('[data-testid="active-map"]')?.textContent,
+          cinematicStatus: document
+            .querySelector('[data-testid="cinematic-status"]')
+            ?.getAttribute('data-status'),
+          probe: window.__sceneProbe,
+          save: localStorage.getItem('waypoint-rpg-scene-demo:save'),
+        })),
+      )}\n`,
+    );
+    throw error;
+  }
 
   await page.waitForFunction(() => (window.__sceneProbe?.rendererMemory.geometries ?? 0) > 0);
   const disposedScenesBeforeTransitions = await page.evaluate(

@@ -1,5 +1,3 @@
-/* global window */
-
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -163,7 +161,7 @@ try {
   await assetPage.goto(`${origin}/?phase5=assets&phase5-test=1`, { waitUntil: 'networkidle' });
   await assetPage.addStyleTag({
     content:
-      '[data-testid="toggle-traveler-instance"], [data-testid="toggle-character-instances"], [data-testid="gameplay-stale-move"] { display: none !important; }',
+      '[data-testid="toggle-traveler-instance"], [data-testid="gameplay-stale-move"] { display: none !important; }',
   });
   await assetPage.waitForFunction(() =>
     ['static', 'traveler', 'guardian'].every(
@@ -198,8 +196,12 @@ try {
       (window.__phase5ModelProbe?.renderer.info.render.frame ?? 0) > initialFrame,
     frameBeforeStaticCapture,
   );
+  const hideCharacterTestControl = await assetPage.addStyleTag({
+    content: '[data-testid="toggle-character-instances"] { display: none !important; }',
+  });
   records.push(await capture(assetPage, screenshotNames[0]));
 
+  await hideCharacterTestControl.evaluate((element) => element.remove());
   const frameBeforeRiggedCapture = await assetPage.evaluate(
     () => window.__phase5ModelProbe?.renderer.info.render.frame ?? 0,
   );
@@ -214,6 +216,9 @@ try {
       (window.__phase5ModelProbe?.renderer.info.render.frame ?? 0) > initialFrame,
     );
   }, frameBeforeRiggedCapture);
+  await assetPage.addStyleTag({
+    content: '[data-testid="toggle-character-instances"] { display: none !important; }',
+  });
   const independentSkeletons = await assetPage.evaluate(() => {
     const skeletonFor = (instanceId) => {
       const root = window.__phase5ModelProbe?.scene.getObjectByName(`phase5:${instanceId}`);
