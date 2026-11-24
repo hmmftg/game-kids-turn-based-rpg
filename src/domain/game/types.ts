@@ -5,7 +5,7 @@
  * or storage APIs. Everything here is serialisable or derived from serialisable data.
  */
 
-import type { BattleActionId, BattleDefinition, BattleState } from '../../framework/index.ts';
+import type { BattleActionId, BattleDefinition, BattleState } from '../battle/types.ts';
 import type { AnchorId, DiscoveryId, MapId, NpcId, QualityTier } from '../../framework/index.ts';
 import type { NarrativeState } from 'waypoint-rpg-narrative';
 

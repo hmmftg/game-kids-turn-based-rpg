@@ -13,7 +13,7 @@ function isIdentifier(value: unknown): value is string {
   return typeof value === 'string' && SAFE_ID.test(value);
 }
 
-function validateJsonTree(
+export function validateJsonTree(
   value: unknown,
   path: string,
   diagnostics: GameplayDiagnostic[],

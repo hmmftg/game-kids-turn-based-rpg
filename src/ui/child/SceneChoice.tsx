@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { BattleActionId } from '../../framework/index.ts';
+import type { BattleActionId } from '../../domain/battle/types.ts';
 import type { IconId } from '../../domain/game/types.ts';
 import { getIcon } from '../../content/fa/icons.ts';
 import { prefersReducedMotion } from '../../services/device/capabilities.ts';

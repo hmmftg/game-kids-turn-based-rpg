@@ -1,0 +1,868 @@
+{
+  "approvals": [],
+  "assets": [
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 6864,
+        "textureCount": 0,
+        "triangleCount": 160,
+        "vertexCount": 125
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Physical ball prop used by the child micro-battle interaction.",
+      "id": "model-ball",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Mini-Game Variety Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/ball.glb",
+        "sha256": "b5e1441aa20435fe574a1891bf8bb3fd5ac1ad42de291769d98d40072d1c8b00"
+      },
+      "source": {
+        "provider": "KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com) — Models/gltf/ball.gltf.glb, simplified scripts/convert-model.ts (ratio 0.3, error 0.08)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 4400,
+        "textureCount": 0,
+        "triangleCount": 44,
+        "vertexCount": 80
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Walkable neighborhood furniture and resting landmark.",
+      "id": "model-bench",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit City Builder Bits — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/bench.glb",
+        "sha256": "e1fbafc0a294acc3bce258c216ba1fc3736143137e6cf03bd255a753a5a3d2f9"
+      },
+      "source": {
+        "provider": "KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/bench.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.4, --vcolor)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 2192,
+        "textureCount": 0,
+        "triangleCount": 44,
+        "vertexCount": 24
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static vegetation used to dress outdoor areas.",
+      "id": "model-bush",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Forest Nature Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/bush.glb",
+        "sha256": "a24641bd39269f108f76c4fdc41f8281994b8c9f09c74bf71ef903575a399356"
+      },
+      "source": {
+        "provider": "KayKit Forest Nature Pack 1.0 FREE (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Forest Nature Pack 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/Bush_2_A_Color1.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.5, --vcolor)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 59,
+        "meshCount": 6,
+        "runtimeBytes": 833448,
+        "textureCount": 0,
+        "triangleCount": 3278,
+        "vertexCount": 7524
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Animated critter used in the outdoor world.",
+      "id": "model-butterfly",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "butterfly (downloaded pack)",
+        "licenseId": "unknown",
+        "reviewState": "unverified",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/butterfly.glb",
+        "sha256": "ab497146c00d7a363495a2b90afa2c6eba95837177a6efeb9ee2c9fbb277def1"
+      },
+      "source": {
+        "provider": "butterfly.zip",
+        "reference": "butterfly.zip — scene.gltf converted via scripts/convert-model.ts"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 63,
+        "meshCount": 3,
+        "runtimeBytes": 761232,
+        "textureCount": 0,
+        "triangleCount": 3030,
+        "vertexCount": 2387
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Animated cat character used in the outdoor world.",
+      "id": "model-cat",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "an_animated_cat (downloaded pack)",
+        "licenseId": "unknown",
+        "reviewState": "unverified",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/cat.glb",
+        "sha256": "3951ea617d35e6a11cc0f2d44845c122b4109b792d109ab675eae26edb3578ab"
+      },
+      "source": {
+        "provider": "an_animated_cat.zip",
+        "reference": "an_animated_cat.zip — scene.gltf converted via scripts/convert-model.ts"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 3068,
+        "textureCount": 0,
+        "triangleCount": 32,
+        "vertexCount": 48
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static crate prop used around the neighborhood.",
+      "id": "model-crate",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit City Builder Bits — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/crate.glb",
+        "sha256": "1b36b5957825c17d4fe9136f7f3d9847cc857654edfd2a2d5a5862b3af861ade"
+      },
+      "source": {
+        "provider": "KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/box_A.gltf, texture stripped and flattened to wood tone by scripts/convert-model.ts"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 26204,
+        "textureCount": 0,
+        "triangleCount": 919,
+        "vertexCount": 493
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static dog character used in the outdoor world.",
+      "id": "model-dog",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Mini-Game Variety Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/dog.glb",
+        "sha256": "6d8076eb93fa20350f10f0956001068371a6f0a13d52a46b6ad2668c414682b0"
+      },
+      "source": {
+        "provider": "KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com) — Models/Characters/Dog/gltf/character_dog.gltf, simplified scripts/convert-model.ts (ratio 0.35, error 0.03)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 26480,
+        "textureCount": 0,
+        "triangleCount": 931,
+        "vertexCount": 498
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static duck character used near water.",
+      "id": "model-duck",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Mini-Game Variety Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/duck.glb",
+        "sha256": "6a6665c9c4049b7a3143a3f2ac39037098383b0528860cd18ed69fa45067c11e"
+      },
+      "source": {
+        "provider": "KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Mini-Game Variety Pack 1.2 (Kay Lousberg, kaylousberg.com) — Models/Characters/Duck/gltf/character_duck.gltf, simplified scripts/convert-model.ts (ratio 0.35, error 0.03)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 371824,
+        "textureCount": 0,
+        "triangleCount": 1199,
+        "vertexCount": 1543
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "High-detail static critter shown on supported graphics tiers.",
+      "id": "model-elephant",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "\"Elephant Animation Idle\" by GremorySaiyan (sketchfab.com/gremorysaiyan), CC BY 4.0 — sketchfab.com/3d-models/elephant-animation-idle-a8e7e10f005f4baab0a2f5079d759fcd",
+        "licenseId": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/elephant.glb",
+        "sha256": "defc79de7ae845e47a999391b6e16798326f413b20b1f88f8084b4dd46e6e96f"
+      },
+      "source": {
+        "provider": "Elephant Animation Idle (GremorySaiyan, sketchfab.com; mirrored as Sceneview AnimatedElephant.glb)",
+        "reference": "Elephant Animation Idle (GremorySaiyan, sketchfab.com; mirrored as Sceneview AnimatedElephant.glb) — converted scripts/convert-model.ts (--unskin bind-pose bake, --vcolor texture bake, --no-anim, --brighten 5; ratio 0.2). Source material doubleSided — shipped mesh renders with VERTEX_LAMBERT_DS."
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 34848,
+        "textureCount": 0,
+        "triangleCount": 436,
+        "vertexCount": 749
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Garden landmark used in the outdoor world.",
+      "id": "model-farm-plot",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/farm-plot.glb",
+        "sha256": "7d4013f5cd677f17fdd5fac51ba09473969a76c58b0bbe53c2a5c0efb60a95b1"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/farm_plot.gltf.glb, simplified scripts/convert-model.ts (ratio 0.5 ×2, error 0.05)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 11704,
+        "textureCount": 0,
+        "triangleCount": 146,
+        "vertexCount": 248
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static boundary pieces used around outdoor landmarks.",
+      "id": "model-fence",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Spooktober Seasonal Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/fence.glb",
+        "sha256": "9a17149c5886b431ae2306466c5364fd897d8b3aee2c6448209ed47a9d89dc09"
+      },
+      "source": {
+        "provider": "KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com) — Models/gltf/fence.gltf.glb, simplified scripts/convert-model.ts (ratio 0.7, error 0.05); material remapped to the shared wood palette"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 56704,
+        "textureCount": 0,
+        "triangleCount": 745,
+        "vertexCount": 1066
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Fountain landmark used in the neighborhood square.",
+      "id": "model-fountain",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/fountain.glb",
+        "sha256": "e6739b0129fc35491e528a33e8088d0b53b69b8e50bcc97edfa32ff6d7e0a678"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/well.gltf.glb, decimated @gltf-transform/cli 4.5.1 (ratio 0.4, error 0.01) to fit render budgets"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 58288,
+        "textureCount": 0,
+        "triangleCount": 714,
+        "vertexCount": 1103
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Home landmark with a physical door interaction target.",
+      "id": "model-home-gate",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/home-gate.glb",
+        "sha256": "6479dc4983d94425c13ecb91077a552d6c631897a523a97b29838724489b586a"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/house.gltf.glb, decimated @gltf-transform/cli 4.5.1 (ratio 0.4, error 0.01) to fit render budgets"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 129000,
+        "textureCount": 0,
+        "triangleCount": 522,
+        "vertexCount": 519
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static fish character used at the river landmark.",
+      "id": "model-koi",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "\"Koi Fish\" by 7PLUS (sketchfab.com/7plus), CC BY 4.0 — sketchfab.com/3d-models/koi-fish-236859b809984f52b70c94fd040b9c59",
+        "licenseId": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/koi.glb",
+        "sha256": "ddd89f93cd64e34bf635de157a154cff386678c655972a19e36003ce200ea2cf"
+      },
+      "source": {
+        "provider": "Koi Fish (7PLUS, sketchfab.com)",
+        "reference": "Koi Fish (7PLUS, sketchfab.com) — scene.gltf, converted scripts/convert-model.ts (--vcolor texture bake, --no-anim; ratio 1.0)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 7304,
+        "textureCount": 0,
+        "triangleCount": 190,
+        "vertexCount": 130
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static path tile used by the neighborhood ground.",
+      "id": "model-path-cobbled",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Spooktober Seasonal Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/path-cobbled.glb",
+        "sha256": "b02e29a4d6d16acbc9ffff88e9f56863f887363c565a479def341d465a31a03a"
+      },
+      "source": {
+        "provider": "KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com) — Models/gltf/pathCobbled.gltf.glb, simplified scripts/convert-model.ts (ratio 0.35, error 0.05)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 7188,
+        "textureCount": 0,
+        "triangleCount": 191,
+        "vertexCount": 127
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static path tile used by the neighborhood ground.",
+      "id": "model-path-dirt",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Spooktober Seasonal Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/path-dirt.glb",
+        "sha256": "10380349656c8cd8016b35d5a21a88f4794fbf085d286c24608c9f8a5b9ec934"
+      },
+      "source": {
+        "provider": "KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Spooktober Seasonal Pack 1.1 (Kay Lousberg, kaylousberg.com) — Models/gltf/pathDirt.gltf.glb, simplified scripts/convert-model.ts (ratio 0.35, error 0.05)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 4240,
+        "textureCount": 0,
+        "triangleCount": 42,
+        "vertexCount": 76
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static rock landmark and environmental prop.",
+      "id": "model-rock",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Forest Nature Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/rock.glb",
+        "sha256": "10dfcb83441257f416776112061fe12b1f0dbef094c415447fb8f8b2d3eab65a"
+      },
+      "source": {
+        "provider": "KayKit Forest Nature Pack 1.0 FREE (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Forest Nature Pack 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/Rock_1_A_Color1.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.5, --vcolor)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 9444,
+        "textureCount": 0,
+        "triangleCount": 246,
+        "vertexCount": 175
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static rock grouping used as an environmental landmark.",
+      "id": "model-rocks",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/rocks.glb",
+        "sha256": "2cbfbe85d67193d32b48b99b184680f27924f4fce05ad19162a204352c337c5a"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_rocks.gltf.glb, simplified scripts/convert-model.ts (ratio 0.45 + 0.5, error 0.05)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 9312,
+        "textureCount": 0,
+        "triangleCount": 276,
+        "vertexCount": 167
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Small static rocks used as environmental props.",
+      "id": "model-rocks-small",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/rocks-small.glb",
+        "sha256": "a717be34ddeefa7ae6e33f7affa2d13a2694a7b73155ab224fe20a3d00474642"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_rocks_small.gltf.glb, simplified scripts/convert-model.ts (ratio 0.5, error 0.05)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 108168,
+        "textureCount": 0,
+        "triangleCount": 1187,
+        "vertexCount": 2083
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Shop landmark used in the neighborhood market.",
+      "id": "model-shop",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/shop.glb",
+        "sha256": "8feba40901b03a9d914174641a207f8425f228c6f43f824f9d0fcc8dfb7a4915"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/market.gltf.glb, decimated @gltf-transform/cli 4.5.1 (ratio 0.4, error 0.01) to fit render budgets"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 6612,
+        "textureCount": 0,
+        "triangleCount": 94,
+        "vertexCount": 127
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static streetlight landmark used in outdoor areas.",
+      "id": "model-streetlight",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit City Builder Bits — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/streetlight.glb",
+        "sha256": "f206528e475fb4ef85f2cdbb1e9d7ec165f7a0e17e69ebc053c9a4c9a81e74bd"
+      },
+      "source": {
+        "provider": "KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit City Builder Bits 1.0 FREE (Kay Lousberg, kaylousberg.com) — Assets/gltf/streetlight.gltf, palette texture resampled into vertex colors by scripts/convert-model.ts (ratio 0.4, --vcolor)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 5416,
+        "textureCount": 0,
+        "triangleCount": 156,
+        "vertexCount": 88
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static tree landmark used in outdoor areas.",
+      "id": "model-tree-a",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/tree-a.glb",
+        "sha256": "d2e32263f68c494e8c6dbccc08831f23af7087ad6754324b2b68103bbd7c59f9"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_treeA.gltf.glb, simplified scripts/convert-model.ts (ratio 0.55, error 0.05)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 9652,
+        "textureCount": 0,
+        "triangleCount": 317,
+        "vertexCount": 170
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static tree landmark used in outdoor areas.",
+      "id": "model-tree-b",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/tree-b.glb",
+        "sha256": "78fac3aead94b12c8bc4d399b624288646bf1171d4caabb253ef29bf826b5e0a"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_treeB.gltf.glb, simplified scripts/convert-model.ts (ratio 0.55, error 0.05)"
+      },
+      "stage": "specified"
+    },
+    {
+      "budgets": {
+        "animationClipCount": 0,
+        "jointCount": 0,
+        "meshCount": 1,
+        "runtimeBytes": 6476,
+        "textureCount": 0,
+        "triangleCount": 191,
+        "vertexCount": 109
+      },
+      "category": "static-model",
+      "consumerGameIds": ["mahalle-ye-mehrabani"],
+      "description": "Static tree landmark used in outdoor areas.",
+      "id": "model-tree-c",
+      "inspection": {
+        "format": "glb",
+        "inspector": "@gltf-transform/core NodeIO"
+      },
+      "rights": {
+        "attribution": "KayKit Medieval Builder Pack — Kay Lousberg, CC0",
+        "licenseId": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "reviewState": "root-registry-recorded",
+        "rootReleaseGateStatus": "licensed"
+      },
+      "runtime": {
+        "format": "glb",
+        "path": "public/models/tree-c.glb",
+        "sha256": "b563900d234d3a1a9a09ce1645f7fa188912df02984301ebb30e0a070b01a747"
+      },
+      "source": {
+        "provider": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com)",
+        "reference": "KayKit Medieval Builder Pack 1.0 (Kay Lousberg, kaylousberg.com) — Models/objects/gltf/detail_treeC.gltf.glb, simplified scripts/convert-model.ts (ratio 0.55, error 0.05)"
+      },
+      "stage": "specified"
+    }
+  ],
+  "schemaVersion": 1
+}

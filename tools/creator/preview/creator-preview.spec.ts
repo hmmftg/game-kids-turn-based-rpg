@@ -76,15 +76,27 @@ test('imports an unapproved local record for preview, inspects it, orbits, and r
     await page.getByTestId('preview-reload').click();
     await expect(page.getByTestId('preview-primary-status')).toContainText('Ready');
     await expect(page.getByTestId('preview-secondary-status')).toContainText('Ready');
+    await expect
+      .poll(() =>
+        page.evaluate(() => window.__creatorPreviewProbe?.renderer.domElement.isConnected),
+      )
+      .toBe(true);
   }
-  const lostContext = await page.evaluate(() => {
+  const contextLoss = await page.evaluate(() => {
     const renderer = window.__creatorPreviewProbe?.renderer;
     const extension = renderer?.getContext().getExtension('WEBGL_lose_context');
-    if (!extension) return false;
-    extension.loseContext();
-    return true;
+    if (extension) {
+      extension.loseContext();
+      return { triggered: true, usedWebGlExtension: true };
+    }
+    // Some headless software WebGL implementations do not expose the loss
+    // extension. Dispatch the same cancelable DOM event the renderer emits so
+    // the preview's recovery boundary remains covered in those environments.
+    const event = new Event('webglcontextlost', { cancelable: true });
+    renderer?.domElement.dispatchEvent(event);
+    return { triggered: event.defaultPrevented, usedWebGlExtension: false };
   });
-  expect(lostContext).toBe(true);
+  expect(contextLoss.triggered).toBe(true);
   await expect(page.getByTestId('preview-context-recover')).toBeVisible();
   await page.getByTestId('preview-context-recover').click();
   await expect(page.getByTestId('preview-primary-status')).toContainText('Ready');

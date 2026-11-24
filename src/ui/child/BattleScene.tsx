@@ -1,11 +1,11 @@
 import { useEffect, useRef, type MouseEvent } from 'react';
-import { battleAchievements } from '../../framework/index.ts';
+import { battleAchievements } from '../../domain/battle/presentation.ts';
 import type {
   BattleAchievementId,
   BattleActionId,
   BattlePhase,
-  BattleState,
-} from '../../framework/index.ts';
+  BattleView,
+} from '../../domain/battle/types.ts';
 import { abilityCopyFor, type BattleCopy } from '../../content/fa/battles.ts';
 import { FA } from '../../content/fa/strings.ts';
 import { DialogueCard } from './DialogueCard.tsx';
@@ -42,7 +42,7 @@ const PASSIVE_DWELL_MS: Partial<Record<BattlePhase, number>> = {
 function outcomeLineFor(
   copy: BattleCopy,
   action: BattleActionId | null,
-  outcome: BattleState['lastOutcome'],
+  outcome: BattleView['lastOutcome'],
 ): string {
   const key = outcome ?? 'no-effect';
   if (action !== null) {
@@ -120,7 +120,7 @@ export function BattleScene({
   onChoose,
   onLeave,
 }: {
-  readonly battle: BattleState;
+  readonly battle: BattleView;
   readonly copy: BattleCopy;
   readonly hideCopy?: boolean | undefined;
   readonly onAdvance: () => void;
@@ -253,7 +253,7 @@ export function BattleScene({
           >
             {battle.phase === 'victory' ? (
               <span className="battle__badges" data-testid="battle-badges">
-                {battleAchievements(battle).map((badge) => (
+                {battleAchievements(battle.engine).map((badge) => (
                   <span
                     key={badge}
                     className="battle__badge"

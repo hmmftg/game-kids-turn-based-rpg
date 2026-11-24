@@ -1,4 +1,9 @@
-import { battleReducer } from '../../framework/index.ts';
+import {
+  advanceMahalleBattlePhase,
+  chooseMahalleBattleAction,
+  createMahalleBattle,
+} from '../battle/adapter.ts';
+import { getBattleDefinition } from '../../content/fa/battles.ts';
 import { unlockedBattleActions } from '../quests/battleAbilities.ts';
 import { advancePhase, applyChoice, createEncounter } from '../quests/encounter.ts';
 import { getQuestDefinition } from '../quests/definitions.ts';
@@ -391,30 +396,20 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // GameState guards stay here; the transition delegates to the battle
       // domain reducer like encounters delegate to `quests/encounter.ts`.
       if (state.mode !== 'hub' || state.battle !== null || state.dialogue !== null) return state;
-      // Quest-granted abilities: the authored `offeredAbilities` the child
-      // has unlocked join the base actions for this battle. The authored row
-      // stays the validation unit — winnability is proven on base actions.
-      const unlocked = unlockedBattleActions(state.quests);
-      const earned = (command.definition.offeredAbilities ?? []).filter((action) =>
-        unlocked.includes(action),
-      );
-      const definition =
-        earned.length === 0
-          ? command.definition
-          : {
-              ...command.definition,
-              availableActions: [...command.definition.availableActions, ...earned],
-            };
-      const battle = battleReducer(state.battle, { ...command, definition });
-      if (battle === state.battle || battle === null) return state;
+      const definition = getBattleDefinition(command.definition.battleId);
+      if (!definition) return state;
+      const battle = createMahalleBattle(definition, unlockedBattleActions(state.narrative));
       return { ...state, battle };
     }
 
     case 'CHOOSE_BATTLE_ACTION':
     case 'ADVANCE_BATTLE_PHASE': {
       if (state.battle === null) return state;
-      const battle = battleReducer(state.battle, command);
-      if (battle === state.battle || battle === null) return state;
+      const battle =
+        command.type === 'CHOOSE_BATTLE_ACTION'
+          ? chooseMahalleBattleAction(state.battle, command.action)
+          : advanceMahalleBattlePhase(state.battle);
+      if (battle === state.battle) return state;
       return { ...state, battle };
     }
 
@@ -427,7 +422,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // non-terminal leaves persist nothing.
       if (state.battle === null) return state;
       if (state.battle.phase === 'victory') {
-        const fact = state.battle.definition.victoryDiscoveryId;
+        const fact = getBattleDefinition(state.battle.battleId)?.victoryDiscoveryId;
         const discoveries =
           fact !== undefined && !state.discoveries.includes(fact)
             ? [...state.discoveries, fact]
@@ -435,7 +430,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
         return stable(
           state,
           {
-            battle: battleReducer(state.battle, command),
+            battle: null,
             mode: 'hub',
             resumeMode: 'hub',
             discoveries,
@@ -445,7 +440,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       }
       return {
         ...state,
-        battle: battleReducer(state.battle, command),
+        battle: null,
         mode: 'hub',
         resumeMode: 'hub',
       };

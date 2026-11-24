@@ -238,10 +238,26 @@ export async function tapNpcFigure(page: Page, npcId: string, timeout = 60000): 
       continue;
     }
     await page.mouse.click(pt.x, pt.y);
-    const opened = await dialogue
-      .waitFor({ state: 'visible', timeout: 3000 })
-      .then(() => true)
-      .catch(() => false);
+    // A figure tap may start a real walk before its dialogue can open. Do not
+    // send another world tap during that movement: it could select a new
+    // destination and replace the route's committed-arrival callback.
+    const pendingInteraction = await page
+      .waitForFunction(
+        () => {
+          const dialog = document.querySelector<HTMLElement>('[data-testid="npc-dialogue"]');
+          if (dialog?.isConnected && dialog.getClientRects().length > 0) return 'dialogue';
+          return (window as unknown as WorldProbe).__worldMoving === true ? 'moving' : false;
+        },
+        undefined,
+        { timeout: 1000 },
+      )
+      .then((handle) => handle.jsonValue())
+      .catch(() => null);
+    if (pendingInteraction === 'moving') {
+      await waitForWalkerIdle(page, Math.max(1000, deadline - Date.now())).catch(() => {});
+      await dialogue.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
+    }
+    const opened = await dialogue.isVisible().catch(() => false);
     if (opened) {
       const who = await dialogueNpc(page);
       if (who === npcId) return true;
@@ -487,6 +503,7 @@ export async function tapWorldAnchor(
   await waitForProbe(page);
   await dismissDialogue(page);
   const startMapId = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
+  const initialAnchor = (await playerAt(page)) as AnchorId | undefined;
   const tried = new Set<AnchorId>();
   for (let attempt = 0; attempt < 14; attempt += 1) {
     await dismissDialogue(page);
@@ -495,6 +512,12 @@ export async function tapWorldAnchor(
     const at = (await playerAt(page)) as AnchorId | undefined;
     const nowMap = await page.evaluate(() => (window as unknown as WorldProbe).__worldMapId);
     if (startMapId !== undefined && nowMap !== startMapId) return;
+    // A path hop may have already committed arrival at the destination. Do
+    // not tap its anchor again: landmarks can share the anchor with an NPC,
+    // and the extra click would open that NPC's dialogue instead of testing
+    // the arrival reaction. Same-anchor interactions still tap when the
+    // player was already there before this helper started.
+    if (at === anchorId && initialAnchor !== anchorId) return;
     const goalAnchor = getAnchor(source, anchorId);
     const atPos = at ? getAnchor(source, at) : undefined;
     const midPts = atPos ? await groundPointsBetween(page, atPos, goalAnchor) : [];

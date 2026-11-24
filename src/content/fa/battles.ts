@@ -1,4 +1,9 @@
-import type { BattleAbilityId, BattleDefinition, BattleOutcome } from '../../framework/index.ts';
+import type {
+  BattleAbilityId,
+  BattleDefinition,
+  BattleOutcome,
+} from '../../domain/battle/types.ts';
+import { authoredBattleOutcomes } from './battleOutcomes.ts';
 import type { ReviewMetadata } from '../types.ts';
 
 const DRAFT_REVIEW: ReviewMetadata = {
@@ -11,12 +16,11 @@ const DRAFT_REVIEW: ReviewMetadata = {
 };
 
 /**
- * Micro battle definitions — authored rows only. Rules live in
- * the framework battle module (`src/framework/modules/battle/battle.ts`); a row names the opponent NPC, the heart and
- * round budget, the child's physical actions, and the deterministic intent
- * pattern the opponent cycles through (round 1 uses pattern[0]).
+ * Micro battle definitions — authored rows only. The generic phase machine
+ * lives in waypoint-rpg-gameplay; this content supplies Mahalle's physical
+ * actions and deterministic outcome data.
  */
-export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
+const AUTHORED_BATTLES: readonly Omit<BattleDefinition, 'outcomes'>[] = [
   {
     battleId: 'battle-playful-mouse',
     opponentId: 'npc-playful-mouse',
@@ -79,6 +83,16 @@ export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = [
     victoryDiscoveryId: 'discovery-challenge-butterfly',
   },
 ];
+
+export const BATTLE_DEFINITIONS: readonly BattleDefinition[] = AUTHORED_BATTLES.map(
+  (definition) => ({
+    ...definition,
+    outcomes: authoredBattleOutcomes(
+      [...definition.availableActions, ...(definition.offeredAbilities ?? [])],
+      definition.enemyIntentPattern,
+    ),
+  }),
+);
 
 /** Child-facing copy for one battle — short iconic lines, like dialogue. */
 export interface BattleCopy {

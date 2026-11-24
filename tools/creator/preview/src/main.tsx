@@ -389,6 +389,7 @@ function PreviewApp() {
     rendererRef.current = null;
     contextLossListenerRef.current = null;
     setContextLost(false);
+    setStatuses({});
     delete window.__creatorPreviewProbe;
     setCanvasRevision((revision) => revision + 1);
   }, []);

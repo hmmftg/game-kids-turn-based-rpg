@@ -4,7 +4,11 @@ An optional, game-neutral TypeScript ESM package for validated RPG gameplay defi
 
 The package provides a versioned schema, precise authoring validation, and an immutable compiled-definition boundary. It initializes playthrough snapshots, derives progression levels and ability unlocks from experience, and applies bounded inventory grants, consumption, and equipment changes atomically. Tactical combat, status effects, encounter outcomes, and versioned save decoding are included; independent scene-demo integration remains a later Phase 4 milestone.
 
+The package also exports an optional deterministic lightweight 1v1 encounter module. Authored definitions provide action/intent outcome matrices; the library validates the matrix, applies weakness bonuses and one-turn intent overrides, and runs the `intro → playerChoice → playerResolution → enemyResolution → roundCheck → victory/defeat` state machine. Its run state is transient unless an application deliberately persists it. Tactical-grid and lightweight encounters are separate models.
+
 The package has one supported public entry, `waypoint-rpg-gameplay`. Deep imports are intentionally blocked. Definitions contain data only; executable callbacks and scripts are not supported.
+
+The lightweight encounter API is `validateLightweightEncounter`, `compileLightweightEncounter`, `createLightweightEncounter`, and `transitionLightweightEncounter`. Definitions are generic: action, intent, opponent, and outcome IDs carry no package-owned game policy. `createLightweightEncounter` accepts the application's already-authorized unlocked abilities; the UI must not use that argument as a substitute for gameplay progression checks.
 
 ## Development
 

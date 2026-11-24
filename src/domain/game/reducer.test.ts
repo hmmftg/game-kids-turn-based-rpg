@@ -3,7 +3,7 @@ import { getQuestStep } from '../quests/definitions.ts';
 import { gameReducer } from './reducer.ts';
 import { createFreshPersistedState, createInitialState, toPersistedState } from './initialState.ts';
 import { parseSave } from './save.ts';
-import { shouldAutosave } from './selectors.ts';
+import { selectIsGameFinished, shouldAutosave } from './selectors.ts';
 import { MODES } from './types.ts';
 import type { Command, GameState, QuestId } from './types.ts';
 
@@ -227,6 +227,33 @@ describe('gameReducer — idempotency', () => {
     expect(afterSecond.stickers).toEqual(afterFirst.stickers);
     expect(afterSecond.quests['quest-greeting'].completionCount).toBe(2);
     expect(afterSecond.narrative.questHistory['quest-greeting']?.completionCount).toBe(2);
+  });
+
+  it('keeps a completed finale completed after its replay is abandoned and restored', () => {
+    let state = atHub();
+    state = playQuest(state, 'quest-greeting');
+    state = playQuest(state, 'quest-helping');
+    state = playQuest(state, 'quest-tidying');
+    state = playQuest(state, 'quest-finale');
+    expect(selectIsGameFinished(state)).toBe(true);
+
+    state = gameReducer(state, { type: 'START_QUEST', questId: 'quest-finale' }, NOW);
+    expect(state.mode).toBe('encounter');
+    state = gameReducer(state, { type: 'ABANDON_ENCOUNTER' }, NOW);
+    expect(state.quests['quest-finale'].status).toBe('completed');
+    expect(state.narrative.questHistory['quest-finale']?.completionCount).toBe(1);
+
+    const parsed = parseSave(JSON.parse(JSON.stringify(toPersistedState(state))), NOW);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const restored = gameReducer(
+      createInitialState(NOW),
+      { type: 'BOOT_LOADED', persisted: parsed.state, health: 'loaded' },
+      NOW,
+    );
+    expect(restored.quests['quest-finale'].status).toBe('completed');
+    expect(restored.narrative.questHistory['quest-finale']?.completionCount).toBe(1);
+    expect(selectIsGameFinished(restored)).toBe(true);
   });
 
   it('routes only authored NPC dialogue edges through the narrative cursor', () => {

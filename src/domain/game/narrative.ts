@@ -195,10 +195,7 @@ export function getMahalleQuestProgress(state: NarrativeState): Record<QuestId, 
     };
     const libraryStatus = getQuestStatus(MAHALLE_NARRATIVE, state, definition.id);
     let status: QuestStatus;
-    if (
-      libraryStatus === 'completed' ||
-      (libraryStatus === 'active' && history.completionCount > 0)
-    ) {
+    if (libraryStatus === 'completed' || history.completionCount > 0) {
       status = 'completed';
     } else if (libraryStatus === 'active') {
       status = 'active';

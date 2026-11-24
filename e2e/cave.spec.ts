@@ -114,7 +114,9 @@ test.describe('the hidden cave', () => {
 
   test('the cave quest completes inside the cave', async ({ page }) => {
     // Full unlock chain (8 quests) + cave traversal + passive beats.
-    test.setTimeout(480000);
+    // The complete path takes longer than the 8-minute budget on software
+    // WebGL runners; keep the gameplay assertions and allow 10 minutes.
+    test.setTimeout(600000);
     await startGame(page);
 
     // The cave quest unlocks after the school answer — play the story there.

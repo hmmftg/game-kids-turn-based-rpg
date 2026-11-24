@@ -1,4 +1,4 @@
-import type { BattleActionId } from '../../framework/index.ts';
+import type { BattleActionId } from '../battle/types.ts';
 import type { IconId, LandmarkId, NpcId, QuestId, StickerId } from '../game/types.ts';
 import type { AreaId, MapId } from '../world/types.ts';
 

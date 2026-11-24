@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {
-  advanceBattlePhase,
-  chooseBattleAction,
-  createBattle,
-  damageFor,
-} from '../src/framework/index.ts';
+  advanceMahalleBattlePhase,
+  chooseMahalleBattleAction,
+  createMahalleBattle,
+} from '../src/domain/battle/adapter.ts';
+import { authoredBattleOutcomes } from '../src/content/fa/battleOutcomes.ts';
 import { gameReducer } from '../src/domain/game/reducer.ts';
 import { createInitialState } from '../src/domain/game/initialState.ts';
 import { QUEST_DEFINITIONS } from '../src/domain/quests/definitions.ts';
@@ -177,23 +177,30 @@ check(
 for (const intent of ['rest', 'attack']) {
   check(`the deterministic action outcome matrix against ${intent} intent is retained`, () => {
     for (const [action, expected] of Object.entries(outcomes[intent])) {
+      const probeActions = [...new Set([action, 'action-kite'])];
+      const probeIntents = intent === 'attack' ? ['attack', 'rest'] : ['rest'];
       const definition = {
         battleId: 'battle-migration-contract',
         opponentId: 'npc-playful-mouse',
-        hearts: 3,
-        maxRounds: 2,
-        availableActions: [action],
-        enemyIntentPattern: [intent],
+        hearts: 4,
+        maxRounds: 4,
+        availableActions: probeActions,
+        enemyIntentPattern: probeIntents,
         weakness: action,
+        outcomes: authoredBattleOutcomes(probeActions, probeIntents),
       };
-      const ready = advanceBattlePhase(createBattle(definition));
-      const resolved = chooseBattleAction(ready, action);
-      assert.equal(resolved.lastOutcome, expected, `${intent} + ${action}`);
-      const baseDamage = expected === 'opponent-hit' ? (action === 'action-crystal' ? 2 : 1) : 0;
+      let ready = createMahalleBattle(definition, []);
+      ready = advanceMahalleBattlePhase(ready);
+      const resolved = chooseMahalleBattleAction(ready, action);
+      assert.equal(resolved.lastOutcomeId, expected, `${intent} + ${action}`);
       const expectedDamage =
-        expected === 'opponent-hit' ? baseDamage + 1 : expected === 'blocked' ? 1 : 0;
+        expected === 'opponent-hit'
+          ? (action === 'action-crystal' ? 2 : 1) + 1
+          : expected === 'blocked'
+            ? 1
+            : 0;
       assert.equal(
-        damageFor(expected, action, action),
+        ready.opponentHearts - resolved.opponentHearts,
         expectedDamage,
         `${intent} + ${action} damage`,
       );
@@ -205,19 +212,48 @@ check('one-round pacifying intent and the terminal battle phase boundary are ret
   const definition = {
     battleId: 'battle-migration-pacify',
     opponentId: 'npc-playful-mouse',
-    hearts: 4,
+    hearts: 2,
     maxRounds: 3,
-    availableActions: ['action-friends'],
+    availableActions: ['action-ball'],
+    offeredAbilities: ['action-friends'],
     enemyIntentPattern: ['rest', 'attack'],
+    outcomes: authoredBattleOutcomes(['action-ball', 'action-friends'], ['rest', 'attack']),
   };
-  const ready = advanceBattlePhase(createBattle(definition));
-  const action = chooseBattleAction(ready, 'action-friends');
-  assert.equal(action.forcedIntent, 'rest');
-  const nextRound = advanceBattlePhase(advanceBattlePhase(advanceBattlePhase(action)));
+  let ready = createMahalleBattle(definition, ['action-friends']);
+  ready = advanceMahalleBattlePhase(ready);
+  const action = chooseMahalleBattleAction(ready, 'action-friends');
+  assert.equal(action.forcedIntentId, 'rest');
+  let nextRound = action;
+  for (let step = 0; step < 3; step += 1) nextRound = advanceMahalleBattlePhase(nextRound);
   assert.equal(nextRound.phase, 'playerChoice');
   assert.equal(nextRound.round, 2);
   assert.equal(nextRound.enemyIntent, 'rest');
-  assert.equal(nextRound.forcedIntent, undefined);
+  assert.equal(nextRound.forcedIntentId, undefined);
   const terminal = { ...nextRound, phase: 'victory' };
-  assert.strictEqual(advanceBattlePhase(terminal), terminal);
+  assert.strictEqual(advanceMahalleBattlePhase(terminal), terminal);
+
+  const breadDefinition = {
+    battleId: 'battle-migration-bread-pacify',
+    opponentId: 'npc-playful-mouse',
+    hearts: 4,
+    maxRounds: 4,
+    availableActions: ['action-kite'],
+    offeredAbilities: ['action-bread'],
+    enemyIntentPattern: ['attack', 'rest', 'attack'],
+    outcomes: authoredBattleOutcomes(['action-kite', 'action-bread'], ['attack', 'rest']),
+  };
+  let bread = createMahalleBattle(breadDefinition, ['action-bread']);
+  bread = advanceMahalleBattlePhase(bread);
+  bread = chooseMahalleBattleAction(bread, 'action-kite');
+  for (let step = 0; step < 3; step += 1) bread = advanceMahalleBattlePhase(bread);
+  bread = chooseMahalleBattleAction(bread, 'action-kite');
+  for (let step = 0; step < 3; step += 1) bread = advanceMahalleBattlePhase(bread);
+  assert.equal(bread.round, 3);
+  assert.equal(bread.enemyIntent, 'attack');
+  bread = chooseMahalleBattleAction(bread, 'action-bread');
+  assert.equal(bread.lastOutcomeId, 'blocked');
+  assert.equal(bread.forcedIntentId, 'rest');
+  for (let step = 0; step < 3; step += 1) bread = advanceMahalleBattlePhase(bread);
+  assert.equal(bread.round, 4);
+  assert.equal(bread.enemyIntent, 'rest');
 });
