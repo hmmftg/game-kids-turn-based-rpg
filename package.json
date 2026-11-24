@@ -56,6 +56,7 @@
     "creator:build": "npm run build --workspace=tools/creator",
     "creator:test": "npm run test --workspace=tools/creator",
     "creator:import-consumer": "npm run creator:build && node scripts/check-framework-creator-import-consumer.mjs",
+    "framework:generated-games": "node scripts/check-framework-generated-games.mjs",
     "creator:asset:import": "node tools/creator/src/cli.mjs asset import",
     "creator:game": "node tools/creator/src/cli.mjs game",
     "creator:toolchain-lock": "node scripts/generate-creator-toolchain-lock.mjs",

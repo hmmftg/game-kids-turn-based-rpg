@@ -178,3 +178,42 @@ Chromium Playwright capture. Its real source-rendered screenshot is
 approximately 1.09 MB JavaScript chunk (297 kB gzip); this is the optional
 developer template and should be measured again when a production game chooses
 its modules and assets.
+
+### P6.5 — Independent generated consumers
+
+Added `npm run framework:generated-games`. It builds and packs the core,
+narrative, gameplay, and creator archives once per run, then reuses those exact
+archives for the creator CLI host and both generated applications. The CLI is
+installed into an isolated temporary host; it generates narrative-only and
+tactical-only projects outside the repository. Each project then receives a
+small game-owned fixture, imports the same local static textured GLB as a
+shared asset and a distinct game-local asset, and writes a hash-verified
+technical catalog without release approvals. No preview or tooling step turns
+technical validation into commercial approval.
+
+The narrative consumer depends only on core+narrative and exercises two
+distinct outcomes, Persian RTL, keyboard navigation, reload/restart, and
+corrupt-save recovery with original-byte preservation. The tactical consumer
+depends only on core+gameplay and exercises inventory/equipment, a declared
+starting ability, deterministic victory/defeat/withdrawal, mid-combat restore,
+reward deduplication, and corrupt-save recovery. The gate asserts that omitted
+package roots are not installed, rejects deep imports, scans for workspace or
+sample-private imports, and type-checks declarations under both NodeNext and
+Bundler. Both games install offline outside the checkout, build, pass their
+unit tests, and pass rendered Chromium acceptance. The same shared catalog
+record is verified in both games and contains both consumer IDs; each game
+also retains its own local asset record.
+
+On Windows, Node's `os.tmpdir()` returned an 8.3 short path that Vite rejects
+for security. The gate canonicalizes the OS temp root with `realpath`, keeps
+each Vite filesystem allow list scoped to that game, and disallows reuse of an
+unrelated dev server. The starter output element is block-laid out so ending
+controls do not overlap it. Real Chromium captures are
+`docs/previews/creator/generated-narrative-consumer.png` and
+`docs/previews/creator/generated-tactical-consumer.png`.
+
+Verification: `npm run framework:generated-games` passed after these fixes;
+both consumers passed local tarball installation, NodeNext/Bundler declarations,
+production build, unit tests, Chromium browser tests, save/reload assertions,
+catalog integrity, and screenshot capture. Root creator/package and broader
+compatibility gates are recorded under P6.6 below.

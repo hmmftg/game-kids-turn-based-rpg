@@ -75,6 +75,8 @@ footer {
   padding: 1rem 0;
 }
 output {
+  display: block;
+  margin-block: 0.5rem 1rem;
   font-variant-numeric: tabular-nums;
 }
 @media (prefers-reduced-motion: reduce) {
