@@ -66,6 +66,35 @@ describe('gameReducer — boot and title', () => {
     expect(state.avatarId).toBe('avatar-arta');
     expect(state.stickers).toEqual(['sticker-greeting']);
     expect(state.mode).toBe('title');
+    expect(state.narrative.questHistory['quest-greeting']).toBeUndefined();
+  });
+
+  it('restores package quest history from the v3 projection without replaying rewards', () => {
+    const fresh = createFreshPersistedState(NOW);
+    const persisted = {
+      ...fresh,
+      avatarId: 'avatar-arta' as const,
+      quests: {
+        ...fresh.quests,
+        'quest-greeting': {
+          status: 'completed' as const,
+          completedSteps: ['greeting-1', 'greeting-2'],
+          completionCount: 2,
+        },
+      },
+      stickers: ['sticker-greeting' as const],
+    };
+    const state = gameReducer(
+      createInitialState(NOW),
+      { type: 'BOOT_LOADED', persisted, health: 'loaded', profileId: 'profile-restore' },
+      NOW,
+    );
+    expect(state.narrative.playthroughId).toContain('profile-restore');
+    expect(state.narrative.questHistory['quest-greeting']).toEqual({
+      completionCount: 2,
+      completedSteps: ['greeting-1', 'greeting-2'],
+    });
+    expect(state.stickers).toEqual(['sticker-greeting']);
   });
 
   it('flags a recovered (corrupt) save without crashing', () => {
@@ -197,6 +226,52 @@ describe('gameReducer — idempotency', () => {
     expect(afterSecond.quests['quest-greeting'].status).toBe('completed');
     expect(afterSecond.stickers).toEqual(afterFirst.stickers);
     expect(afterSecond.quests['quest-greeting'].completionCount).toBe(2);
+    expect(afterSecond.narrative.questHistory['quest-greeting']?.completionCount).toBe(2);
+  });
+
+  it('routes only authored NPC dialogue edges through the narrative cursor', () => {
+    const hub = atHub();
+    const opened = gameReducer(
+      hub,
+      { type: 'OPEN_DIALOGUE', npcId: 'npc-neighbour', nodeId: 'neighbour-intro' },
+      NOW,
+    );
+    expect(opened.narrative.activeDialogue?.nodeId).toBe('neighbour-intro');
+    expect(opened.dialogue?.nodeId).toBe('neighbour-intro');
+
+    const bypassed = gameReducer(
+      opened,
+      { type: 'OPEN_DIALOGUE', npcId: 'npc-teacher', nodeId: 'teacher-play' },
+      NOW,
+    );
+    expect(bypassed).toBe(opened);
+
+    const followed = gameReducer(
+      opened,
+      { type: 'OPEN_DIALOGUE', npcId: 'npc-neighbour', nodeId: 'neighbour-more' },
+      NOW,
+    );
+    expect(followed.narrative.activeDialogue?.nodeId).toBe('neighbour-more');
+    const closed = gameReducer(followed, { type: 'CLOSE_DIALOGUE' }, NOW);
+    expect(closed.narrative.activeDialogue).toBeNull();
+  });
+
+  it('does not advance package quest state for a wrong physical choice', () => {
+    let started = gameReducer(atHub(), { type: 'START_QUEST', questId: 'quest-greeting' }, NOW);
+    started = gameReducer(started, { type: 'ADVANCE_PHASE' }, NOW);
+    started = gameReducer(started, { type: 'ADVANCE_PHASE' }, NOW);
+    const narrativeBefore = started.narrative;
+    const wrong = gameReducer(
+      started,
+      { type: 'CHOOSE', iconId: 'icon-wave-away', correct: false },
+      NOW,
+    );
+    expect(wrong.narrative).toBe(narrativeBefore);
+    expect(wrong.quests['quest-greeting'].status).toBe('active');
+    expect(wrong.encounter?.phase).toBe('worldResponse');
+    const retried = gameReducer(wrong, { type: 'ADVANCE_PHASE' }, NOW);
+    expect(retried.encounter?.retries).toBe(1);
+    expect(retried.narrative).toBe(narrativeBefore);
   });
 });
 

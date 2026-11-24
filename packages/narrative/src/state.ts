@@ -441,9 +441,6 @@ function normalizeQuestHistory(
       }
       completedSteps.push(stepId);
     }
-    if (rawHistory.completionCount === 0 && completedSteps.length > 0) {
-      throw new TypeError(`Narrative quest history ${questId} has steps without a completion.`);
-    }
     result[questId] = {
       completionCount: rawHistory.completionCount as number,
       completedSteps,

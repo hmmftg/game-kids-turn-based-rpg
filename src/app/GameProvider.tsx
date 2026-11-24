@@ -55,7 +55,8 @@ export function GameProvider({
     const save = new SaveCoordinator({
       repository: () => profile.saveRepository,
       activeSlotKey: () => profile.slotKey,
-      syncActiveProfileMeta: (snapshot) => profile.syncActiveProfileMeta(snapshot),
+      syncActiveProfileMeta: (snapshot, slotKey) =>
+        profile.syncActiveProfileMeta(snapshot, slotKey),
     });
     return { profile, save };
   });

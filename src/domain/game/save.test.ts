@@ -144,4 +144,21 @@ describe('save parsing and migration', () => {
     expect(result.state.qualityTier).toBe('low');
     expect(result.state.checkpoint).toEqual({ kind: 'title', questId: null, at: NOW });
   });
+
+  it.each([
+    ['an unknown quest', { 'quest-future': { status: 'completed' } }, 'unknown-quest-id'],
+    [
+      'an unknown step id',
+      { 'quest-greeting': { completedSteps: ['greeting-1', 'renamed-step'] } },
+      'unsupported-quest-step-data',
+    ],
+    [
+      'duplicate completed steps',
+      { 'quest-greeting': { completedSteps: ['greeting-1', 'greeting-1'] } },
+      'unsupported-quest-step-data',
+    ],
+  ])('retains saves with %s as recoverable corrupt data', (_name, quests, reason) => {
+    const result = parseSave({ schemaVersion: SAVE_SCHEMA_VERSION, quests }, NOW);
+    expect(result).toEqual({ ok: false, reason });
+  });
 });

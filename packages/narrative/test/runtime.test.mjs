@@ -692,6 +692,20 @@ test('completed quests without repeatable policy stay terminal and seed restore 
   assert.strictEqual(replay.state, oneShot.state);
 });
 
+test('seed restore can preserve stable completed steps before the first completion', () => {
+  const compiled = compileNarrative(repeatableQuestStory());
+  const state = createNarrativeState(compiled, 'partial-quest-history', {
+    quests: { greeting: 'active' },
+    questHistory: {
+      greeting: { completionCount: 0, completedSteps: ['greeting-1'] },
+    },
+  });
+  assert.deepEqual(state.questHistory.greeting, {
+    completionCount: 0,
+    completedSteps: ['greeting-1'],
+  });
+});
+
 test('snapshot decoder accepts pre-history snapshots and validates authored step history', () => {
   const compiled = compileNarrative(repeatableQuestStory());
   const state = createNarrativeState(compiled, 'decode-playthrough');

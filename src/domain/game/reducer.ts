@@ -3,6 +3,12 @@ import { unlockedBattleActions } from '../quests/battleAbilities.ts';
 import { advancePhase, applyChoice, createEncounter } from '../quests/encounter.ts';
 import { getQuestDefinition } from '../quests/definitions.ts';
 import { canStartQuest } from '../quests/prerequisites.ts';
+import {
+  createMahalleNarrativeState,
+  getMahalleDialogueNpc,
+  getMahalleQuestProgress,
+  transitionMahalleNarrative,
+} from './narrative.ts';
 import { createCheckpoint } from './checkpoints.ts';
 import { createFreshPersistedState, SAVE_SCHEMA_VERSION } from './initialState.ts';
 import { RESUMABLE_MODES } from './types.ts';
@@ -12,7 +18,6 @@ import type {
   Mode,
   PersistedState,
   QuestId,
-  QuestProgress,
   ResumableMode,
   StickerId,
 } from './types.ts';
@@ -31,18 +36,32 @@ function stable(state: GameState, patch: Partial<GameState>, now: number): GameS
   };
 }
 
-function withQuest(
-  state: GameState,
-  questId: QuestId,
-  progress: QuestProgress,
-): Record<QuestId, QuestProgress> {
-  return { ...state.quests, [questId]: progress };
+function narrativeProjection(
+  narrative: GameState['narrative'],
+  previous?: Pick<GameState, 'narrative' | 'quests' | 'dialogue'>,
+): Pick<GameState, 'narrative' | 'quests' | 'dialogue'> {
+  if (previous?.narrative === narrative) return previous;
+  const active = narrative.activeDialogue;
+  const npcId = active ? getMahalleDialogueNpc(active.nodeId) : null;
+  return {
+    narrative,
+    quests: getMahalleQuestProgress(narrative),
+    dialogue: active && npcId ? { npcId, nodeId: active.nodeId } : null,
+  };
+}
+
+function narrativePlaythroughId(profileId: string | undefined, generation: number): string {
+  const identity = (profileId ?? 'guest').replace(/[^A-Za-z0-9._:-]/g, '-').slice(0, 96);
+  return `mahalle-${identity}-${generation}`;
 }
 
 function completeQuest(state: GameState, questId: QuestId, now: number): GameState {
   const definition = getQuestDefinition(questId);
-  const previous = state.quests[questId];
-  const completedSteps = definition.steps.map((step) => step.id);
+  const narrative = transitionMahalleNarrative(state.narrative, {
+    type: 'complete-quest',
+    questId,
+  });
+  if (!narrative) return state;
   const stickers: readonly StickerId[] = state.stickers.includes(definition.stickerId)
     ? state.stickers
     : [...state.stickers, definition.stickerId];
@@ -53,12 +72,7 @@ function completeQuest(state: GameState, questId: QuestId, now: number): GameSta
       mode: 'hub',
       resumeMode: 'hub',
       encounter: null,
-      dialogue: null,
-      quests: withQuest(state, questId, {
-        status: 'completed',
-        completedSteps,
-        completionCount: previous.completionCount + 1,
-      }),
+      ...narrativeProjection(narrative),
       stickers,
       checkpoint: createCheckpoint('questCompleted', questId, now),
     },
@@ -66,12 +80,20 @@ function completeQuest(state: GameState, questId: QuestId, now: number): GameSta
   );
 }
 
-function applyPersisted(state: GameState, persisted: PersistedState): GameState {
+function applyPersisted(
+  state: GameState,
+  persisted: PersistedState,
+  profileId?: string,
+): GameState {
+  const narrative = createMahalleNarrativeState(
+    narrativePlaythroughId(profileId, state.autosaveToken),
+    persisted,
+  );
   return {
     ...state,
     schemaVersion: SAVE_SCHEMA_VERSION,
     avatarId: persisted.avatarId,
-    quests: persisted.quests,
+    ...narrativeProjection(narrative),
     checkpoint: persisted.checkpoint,
     stickers: persisted.stickers,
     audio: persisted.audio,
@@ -124,7 +146,7 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
         saveHealth: command.health,
         corruptSaveDetected: command.health === 'recovered',
       };
-      return command.persisted ? applyPersisted(base, command.persisted) : base;
+      return command.persisted ? applyPersisted(base, command.persisted, command.profileId) : base;
     }
 
     case 'BOOT_FAILED': {
@@ -163,15 +185,28 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
         saveHealth: command.health,
         corruptSaveDetected: command.health === 'recovered',
       };
-      return persisted ? applyPersisted(base, persisted) : base;
+      if (persisted) return applyPersisted(base, persisted, command.profileId);
+      const narrative = createMahalleNarrativeState(
+        narrativePlaythroughId(command.profileId, state.autosaveToken + 1),
+      );
+      return {
+        ...base,
+        ...createFreshPersistedState(now),
+        ...narrativeProjection(narrative),
+        headwear: 'none',
+      };
     }
 
     case 'START_NEW_PLAYER': {
       if (state.mode !== 'profileSelect' && state.mode !== 'title') return state;
+      const narrative = createMahalleNarrativeState(
+        narrativePlaythroughId(undefined, state.autosaveToken + 1),
+      );
       return stable(
         {
           ...state,
           ...createFreshPersistedState(now),
+          ...narrativeProjection(narrative, state),
           encounter: null,
           dialogue: null,
           battle: null,
@@ -234,14 +269,18 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // MAP_TRANSITIONS data; the reducer just records where the child now
       // is so a reload restores the same map + safe local spawn.
       if (state.mode !== 'hub' && state.mode !== 'dialogue') return state;
+      const narrative = state.narrative.activeDialogue
+        ? transitionMahalleNarrative(state.narrative, { type: 'exit-dialogue' })
+        : state.narrative;
+      if (!narrative) return state;
       return stable(
         state,
         {
+          ...narrativeProjection(narrative, state),
           mapId: command.mapId,
           mapAnchorId: command.anchorId,
           mode: 'hub',
           resumeMode: 'hub',
-          dialogue: null,
           encounter: null,
         },
         now,
@@ -251,7 +290,17 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
     case 'ENTER_HUB': {
       if (state.mode === 'hub') return state;
       if (state.mode !== 'dialogue' && state.mode !== 'encounter') return state;
-      return { ...state, mode: 'hub', resumeMode: 'hub', dialogue: null, encounter: null };
+      const narrative = state.narrative.activeDialogue
+        ? transitionMahalleNarrative(state.narrative, { type: 'exit-dialogue' })
+        : state.narrative;
+      if (!narrative) return state;
+      return {
+        ...state,
+        ...narrativeProjection(narrative, state),
+        mode: 'hub',
+        resumeMode: 'hub',
+        encounter: null,
+      };
     }
 
     case 'OPEN_DIALOGUE': {
@@ -259,32 +308,48 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // data-driven branches (`choices`/`nextNodeId`) jump without leaving
       // the dialogue card.
       if (state.mode !== 'hub' && state.mode !== 'dialogue') return state;
+      if (getMahalleDialogueNpc(command.nodeId) !== command.npcId) return state;
+      const narrative = transitionMahalleNarrative(
+        state.narrative,
+        state.narrative.activeDialogue
+          ? { type: 'dialogue-target', nodeId: command.nodeId }
+          : { type: 'open-dialogue', nodeId: command.nodeId },
+      );
+      if (!narrative) return state;
       return {
         ...state,
+        ...narrativeProjection(narrative),
         mode: 'dialogue',
         resumeMode: 'dialogue',
-        dialogue: { npcId: command.npcId, nodeId: command.nodeId },
       };
     }
 
-    case 'CLOSE_DIALOGUE':
+    case 'CLOSE_DIALOGUE': {
       if (state.mode !== 'dialogue') return state;
-      return { ...state, mode: 'hub', resumeMode: 'hub', dialogue: null };
+      const narrative = transitionMahalleNarrative(state.narrative, { type: 'exit-dialogue' });
+      if (!narrative) return state;
+      return {
+        ...state,
+        ...narrativeProjection(narrative, state),
+        mode: 'hub',
+        resumeMode: 'hub',
+      };
+    }
 
     case 'START_QUEST': {
       if (state.mode !== 'hub' && state.mode !== 'dialogue') return state;
       if (!canStartQuest(state, command.questId)) return state;
-      const progress = state.quests[command.questId];
+      const narrative = transitionMahalleNarrative(state.narrative, {
+        type: 'start-quest',
+        questId: command.questId,
+      });
+      if (!narrative) return state;
       return {
         ...state,
+        ...narrativeProjection(narrative),
         mode: 'encounter',
         resumeMode: 'encounter',
-        dialogue: null,
         encounter: createEncounter(command.questId),
-        quests:
-          progress.status === 'completed'
-            ? state.quests
-            : withQuest(state, command.questId, { ...progress, status: 'active' }),
       };
     }
 
@@ -306,16 +371,17 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
     case 'ABANDON_ENCOUNTER': {
       if (state.mode !== 'encounter' || state.encounter === null) return state;
       const questId = state.encounter.questId;
-      const progress = state.quests[questId];
+      const narrative = transitionMahalleNarrative(state.narrative, {
+        type: 'cancel-quest',
+        questId,
+      });
+      if (!narrative) return state;
       return {
         ...state,
+        ...narrativeProjection(narrative),
         mode: 'hub',
         resumeMode: 'hub',
         encounter: null,
-        quests:
-          progress.status === 'active'
-            ? withQuest(state, questId, { ...progress, status: 'available' })
-            : state.quests,
       };
     }
 
@@ -434,10 +500,14 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       ) {
         return state;
       }
+      const narrative = createMahalleNarrativeState(
+        narrativePlaythroughId(undefined, state.autosaveToken + 1),
+      );
       return stable(
         {
           ...state,
           ...createFreshPersistedState(now),
+          ...narrativeProjection(narrative),
           encounter: null,
           dialogue: null,
           battle: null,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getDialogueView } from 'waypoint-rpg-narrative';
 import { battleForOpponent, getBattleCopy } from '../content/fa/battles.ts';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import type { NpcDefinition } from '../domain/world/types.ts';
@@ -16,6 +17,7 @@ import { FACT_DECORATIONS } from '../world/decorations.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
+import { MAHALLE_NARRATIVE } from '../domain/game/narrative.ts';
 import type { AnchorId, IconId, QuestId, QuestStatus } from '../domain/game/types.ts';
 import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { canStartQuest, nextSuggestedQuest } from '../domain/quests/prerequisites.ts';
@@ -761,7 +763,8 @@ export function App() {
 
   if (state.avatarId === null) return <LoadingScreen />;
 
-  const dialogueNode = state.dialogue ? getDialogueNode(state.dialogue.nodeId) : null;
+  const narrativeDialogue = getDialogueView(MAHALLE_NARRATIVE, state.narrative, 'fa');
+  const dialogueNode = narrativeDialogue ? getDialogueNode(narrativeDialogue.nodeId) : null;
   const offeredQuest = dialogueNode?.offersQuestId ?? null;
   // One idea per beat: nodes may carry a short line sequence; single-beat
   // nodes fall back to `textFa`. Lines stay in data, never in JSX branches.

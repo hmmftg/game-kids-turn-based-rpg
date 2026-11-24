@@ -37,7 +37,7 @@ function makeSession(repository?: SaveRepository) {
   const save = new SaveCoordinator({
     repository: () => profile.saveRepository,
     activeSlotKey: () => profile.slotKey,
-    syncActiveProfileMeta: (snapshot) => profile.syncActiveProfileMeta(snapshot),
+    syncActiveProfileMeta: (snapshot, slotKey) => profile.syncActiveProfileMeta(snapshot, slotKey),
   });
   runtime.subscribe((state) => {
     published.push(state);
@@ -318,7 +318,57 @@ describe('reload resume', () => {
     profile.selectProfile('profile-kid2', runtime.getState().mode);
     await flushMicrotasks();
     expect(runtime.getState().mode).toBe('title');
+    expect(runtime.getState().stickers).toEqual([]);
+    expect(runtime.getState().narrative.questHistory['quest-greeting']).toBeUndefined();
     profile.startNewPlayer();
     expect(runtime.getState().stickers).toEqual([]);
+  });
+
+  it('ignores an older profile load that resolves after a newer selection', async () => {
+    const storage = new MemorySaveRepository();
+    const kid2 = { ...KID1, id: 'profile-kid2', avatarId: 'avatar-arta' as const };
+    const kid1Save = { ...createFreshPersistedState(1), stickers: ['sticker-greeting'] as const };
+    const kid2Save = {
+      ...createFreshPersistedState(2),
+      avatarId: 'avatar-arta' as const,
+      stickers: ['sticker-helping'] as const,
+    };
+    await storage.writeProfiles([KID1, kid2]);
+    await storage.save(kid1Save, profileSlotKey(KID1.id));
+    await storage.save(kid2Save, profileSlotKey(kid2.id));
+
+    const pending = new Map<
+      string,
+      (result: Awaited<ReturnType<SaveRepository['load']>>) => void
+    >();
+    const delayed: SaveRepository = {
+      load: (key) =>
+        new Promise((resolve) => {
+          pending.set(key ?? LEGACY_SLOT_KEY, resolve);
+        }),
+      save: (state, key) => storage.save(state, key),
+      clear: (key) => storage.clear(key),
+      listProfiles: () => storage.listProfiles(),
+      writeProfiles: (profiles) => storage.writeProfiles(profiles),
+    };
+    const { runtime, profile } = makeSession(delayed);
+    await profile.boot();
+
+    profile.selectProfile(KID1.id, runtime.getState().mode);
+    profile.selectProfile(kid2.id, runtime.getState().mode);
+    pending.get(profileSlotKey(kid2.id))?.({
+      status: 'loaded',
+      state: kid2Save,
+    });
+    await flushMicrotasks();
+    pending.get(profileSlotKey(KID1.id))?.({
+      status: 'loaded',
+      state: kid1Save,
+    });
+    await flushMicrotasks();
+
+    expect(profile.slotKey).toBe(profileSlotKey(kid2.id));
+    expect(runtime.getState().avatarId).toBe('avatar-arta');
+    expect(runtime.getState().stickers).toEqual(['sticker-helping']);
   });
 });

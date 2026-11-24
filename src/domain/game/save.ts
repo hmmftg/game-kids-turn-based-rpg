@@ -1,5 +1,6 @@
 import { createFreshPersistedState, DEFAULT_AUDIO, SAVE_SCHEMA_VERSION } from './initialState.ts';
 import { AVATAR_IDS, QUEST_IDS } from './types.ts';
+import { getQuestDefinition } from '../quests/definitions.ts';
 import type {
   AnchorId,
   AudioSettings,
@@ -120,6 +121,28 @@ function parseCheckpoint(value: unknown, fallbackAt: number): Checkpoint {
   };
 }
 
+function unsupportedQuestData(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  for (const questId of Object.keys(value)) {
+    if (!(QUEST_IDS as readonly string[]).includes(questId)) return 'unknown-quest-id';
+    const progress = value[questId];
+    if (!isRecord(progress)) continue;
+    const count = progress['completionCount'];
+    if (typeof count === 'number' && count > Number.MAX_SAFE_INTEGER)
+      return 'unsafe-quest-completion-count';
+    const completedSteps = progress['completedSteps'];
+    if (!Array.isArray(completedSteps)) continue;
+    const allowed = new Set(getQuestDefinition(questId as QuestId).steps.map((step) => step.id));
+    const seen = new Set<string>();
+    for (const stepId of completedSteps) {
+      if (typeof stepId !== 'string') continue; // Preserve the established tolerant repair.
+      if (!allowed.has(stepId) || seen.has(stepId)) return 'unsupported-quest-step-data';
+      seen.add(stepId);
+    }
+  }
+  return null;
+}
+
 /** v1 → v2: single `muted` flag became separate music/SFX buses. */
 function migrateV1(raw: UnknownRecord, now: number): PersistedState {
   const fresh = createFreshPersistedState(now);
@@ -184,6 +207,8 @@ export function parseSave(raw: unknown, now = 0): SaveParseResult {
   if (version > SAVE_SCHEMA_VERSION) return { ok: false, reason: 'save-from-newer-version' };
   if (version <= 0) return { ok: false, reason: 'invalid-schema-version' };
   if (version === 1) return { ok: true, state: migrateV1(raw, now), migrated: true };
+  const questDataIssue = unsupportedQuestData(raw['quests']);
+  if (questDataIssue) return { ok: false, reason: questDataIssue };
   if (version === 2) return { ok: true, state: parseV2(raw, now), migrated: true };
   return {
     ok: true,
