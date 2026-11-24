@@ -79,3 +79,23 @@ Both install only needed archives, reject deep/workspace imports, pass NodeNext/
 - Five portfolio releases, a full drag-and-drop editor, direct FBX/OBJ/Blender parsing, provider APIs, AI subscriptions, generic timeline authoring, shared game runtime state, and changes to the pure package APIs are out of scope.
 - The locked browser/dev toolchain may require an online cache bootstrap; offline package installation is distinct from offline tool installation. Document this explicitly.
 - CI cannot create preview PRs under current repository settings. Artifact-based manual review is the fallback; the implementation must not claim automatic publication.
+
+## Milestone execution record
+
+### P6.1 — Portable importer
+
+Implemented `waypoint-rpg-creator` as a packable ESM workspace with the
+`waypoint-rpg asset import` CLI. The existing `scripts/import-model.mjs` is a
+compatibility wrapper retaining the scene-demo defaults. The importer now feeds
+the same validated in-memory glTF JSON and dependency bytes to NodeIO, confines
+local resource paths through realpath checks, rejects external GLB references,
+and stages both output and registry before committing with rollback. Technical
+imports can be inspected without release approval; the legacy entry point still
+requires approval by default.
+
+Verification: `npm run creator:test` passed 15/15; `npm run creator:build`,
+`npm run lint`, and the scoped Prettier check passed. `npm run
+creator:import-consumer` passed after a locked developer-toolchain install and
+warm-cache offline reinstall. The packed creator then installed offline and
+imported the static-textured and rigged fixture from a separate generated
+project directory, without the gameplay package or scene-demo source.

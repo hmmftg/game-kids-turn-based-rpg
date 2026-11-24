@@ -5,7 +5,8 @@
   "workspaces": [
     "packages/core",
     "packages/narrative",
-    "packages/gameplay"
+    "packages/gameplay",
+    "tools/creator"
   ],
   "type": "module",
   "license": "MIT",
@@ -52,6 +53,10 @@
     "validate:assets": "node --experimental-strip-types scripts/validate-assets.ts",
     "models:import": "node scripts/import-model.mjs",
     "models:import:test": "node --experimental-strip-types --test scripts/import-model.test.mjs",
+    "creator:build": "npm run build --workspace=tools/creator",
+    "creator:test": "npm run test --workspace=tools/creator",
+    "creator:import-consumer": "npm run creator:build && node scripts/check-framework-creator-import-consumer.mjs",
+    "creator:asset:import": "node tools/creator/src/cli.mjs asset import",
     "gen:model": "gltfjsx",
     "validate:assets:release": "node --experimental-strip-types scripts/validate-assets.ts --release",
     "check:budgets": "node --experimental-strip-types scripts/check-budgets.ts",

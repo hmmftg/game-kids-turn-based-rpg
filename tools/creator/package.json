@@ -1,0 +1,38 @@
+{
+  "name": "waypoint-rpg-creator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline-first asset and project creation tools for Waypoint RPG games.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "bin": {
+    "waypoint-rpg": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./model-import": {
+      "types": "./types/model-import.d.ts",
+      "import": "./src/model-import.mjs"
+    }
+  },
+  "files": [
+    "src",
+    "types",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ./scripts/check-package.mjs",
+    "test": "node --experimental-strip-types --test ../../scripts/import-model.test.mjs"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "4.1.0",
+    "@gltf-transform/extensions": "4.1.0",
+    "prettier": "3.9.7",
+    "three": "0.186.0"
+  }
+}
