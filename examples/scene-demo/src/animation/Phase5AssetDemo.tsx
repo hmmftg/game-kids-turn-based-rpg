@@ -86,6 +86,7 @@ export function Phase5AssetDemo() {
   const [previewAssetId, setPreviewAssetId] = useState(STATIC_ID);
   const [riggedAssetId, setRiggedAssetId] = useState(RIGGED_ID);
   const [showTraveler, setShowTraveler] = useState(true);
+  const [showCharacterInstances, setShowCharacterInstances] = useState(true);
   const [gameplay, setGameplay] = useState(() => createAnimationGameplayDemo());
   const staleMoveCommandRef = useRef<GameplayCommand | null>(null);
   const [actions, setActions] = useState<AnimationProjectionState>(
@@ -278,6 +279,17 @@ export function Phase5AssetDemo() {
         </button>
         {testMode && (
           <button
+            data-testid="toggle-character-instances"
+            type="button"
+            onClick={() => setShowCharacterInstances((visible) => !visible)}
+          >
+            {showCharacterInstances
+              ? 'Hide rigged characters test view'
+              : 'Show rigged characters test view'}
+          </button>
+        )}
+        {testMode && (
+          <button
             data-testid="toggle-traveler-instance"
             type="button"
             onClick={() => setShowTraveler((visible) => !visible)}
@@ -388,7 +400,7 @@ export function Phase5AssetDemo() {
               reducedMotion={reducedMotion}
               onStatus={onStatus}
             />
-            {(showTraveler || !testMode) && (
+            {showCharacterInstances && (showTraveler || !testMode) && (
               <ModelInstance
                 instanceId={TRAVELER_INSTANCE_ID}
                 key={`${TRAVELER_INSTANCE_ID}:${viewVersion}`}
@@ -401,17 +413,19 @@ export function Phase5AssetDemo() {
                 onStatus={onStatus}
               />
             )}
-            <ModelInstance
-              instanceId={GUARDIAN_INSTANCE_ID}
-              key={`${GUARDIAN_INSTANCE_ID}:${viewVersion}`}
-              assetId={riggedAssetId}
-              loader={loader}
-              position={participantPosition(gameplay.state, 'guardian')}
-              action={actions[GUARDIAN_INSTANCE_ID]?.action ?? 'idle'}
-              actionRevision={actions[GUARDIAN_INSTANCE_ID]?.revision ?? 0}
-              reducedMotion={reducedMotion}
-              onStatus={onStatus}
-            />
+            {showCharacterInstances && (
+              <ModelInstance
+                instanceId={GUARDIAN_INSTANCE_ID}
+                key={`${GUARDIAN_INSTANCE_ID}:${viewVersion}`}
+                assetId={riggedAssetId}
+                loader={loader}
+                position={participantPosition(gameplay.state, 'guardian')}
+                action={actions[GUARDIAN_INSTANCE_ID]?.action ?? 'idle'}
+                actionRevision={actions[GUARDIAN_INSTANCE_ID]?.revision ?? 0}
+                reducedMotion={reducedMotion}
+                onStatus={onStatus}
+              />
+            )}
           </Suspense>
         </Canvas>
       </section>

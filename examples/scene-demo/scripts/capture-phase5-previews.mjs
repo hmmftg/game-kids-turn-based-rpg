@@ -1,3 +1,5 @@
+/* global window */
+
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -103,7 +105,7 @@ async function openStory(browser, origin, options = {}) {
 async function reachLitLantern(page) {
   await page.getByTestId('dialogue-open').click();
   await page.getByTestId('dialogue-choice-seek-truth').click();
-  await page.getByTestId('dialogue-leave').click();
+  await page.getByTestId('dialogue-close').click();
   await page.waitForFunction(
     () => !document.querySelector('[data-testid="narrative-dialog"]')?.open,
   );
@@ -111,6 +113,7 @@ async function reachLitLantern(page) {
   await page.waitForFunction(
     () => document.querySelector('[data-testid="active-map"]')?.textContent === 'map-workshop',
   );
+  await page.getByTestId('clue-interaction').waitFor({ state: 'visible' });
   await page.getByTestId('clue-interaction').click();
   await page.getByTestId('dialogue-advance').click();
   await page.getByTestId('dialogue-choice-investigate-clue').click();
@@ -157,7 +160,11 @@ try {
 
   const assetPage = await browser.newPage({ viewport: { width: 1365, height: 1000 } });
   watchPage(assetPage, origin);
-  await assetPage.goto(`${origin}/?phase5=assets`, { waitUntil: 'networkidle' });
+  await assetPage.goto(`${origin}/?phase5=assets&phase5-test=1`, { waitUntil: 'networkidle' });
+  await assetPage.addStyleTag({
+    content:
+      '[data-testid="toggle-traveler-instance"], [data-testid="toggle-character-instances"], [data-testid="gameplay-stale-move"] { display: none !important; }',
+  });
   await assetPage.waitForFunction(() =>
     ['static', 'traveler', 'guardian'].every(
       (id) =>
@@ -175,8 +182,38 @@ try {
   await assetPage.waitForFunction(
     () => (window.__phase5ModelProbe?.renderer.info.render.frame ?? 0) > 0,
   );
+  await assetPage.waitForFunction(
+    () =>
+      window.__phase5ModelProbe?.animationSnapshot?.('traveler')?.active === false &&
+      window.__phase5ModelProbe?.animationSnapshot?.('guardian')?.active === false,
+  );
+  const frameBeforeStaticCapture = await assetPage.evaluate(
+    () => window.__phase5ModelProbe?.renderer.info.render.frame ?? 0,
+  );
+  await assetPage.getByTestId('toggle-character-instances').click();
+  await assetPage.waitForFunction(
+    (initialFrame) =>
+      window.__phase5ModelProbe?.scene.getObjectByName('phase5:traveler') === undefined &&
+      window.__phase5ModelProbe?.scene.getObjectByName('phase5:guardian') === undefined &&
+      (window.__phase5ModelProbe?.renderer.info.render.frame ?? 0) > initialFrame,
+    frameBeforeStaticCapture,
+  );
   records.push(await capture(assetPage, screenshotNames[0]));
 
+  const frameBeforeRiggedCapture = await assetPage.evaluate(
+    () => window.__phase5ModelProbe?.renderer.info.render.frame ?? 0,
+  );
+  await assetPage.getByTestId('toggle-character-instances').click();
+  await assetPage.waitForFunction((initialFrame) => {
+    const scene = window.__phase5ModelProbe?.scene;
+    const traveler = scene?.getObjectByName('phase5:traveler');
+    const guardian = scene?.getObjectByName('phase5:guardian');
+    return Boolean(
+      traveler &&
+      guardian &&
+      (window.__phase5ModelProbe?.renderer.info.render.frame ?? 0) > initialFrame,
+    );
+  }, frameBeforeRiggedCapture);
   const independentSkeletons = await assetPage.evaluate(() => {
     const skeletonFor = (instanceId) => {
       const root = window.__phase5ModelProbe?.scene.getObjectByName(`phase5:${instanceId}`);
@@ -224,11 +261,35 @@ try {
   const frameBeforeMove = await assetPage.evaluate(
     () => window.__phase5ModelProbe?.renderer.info.render.frame ?? 0,
   );
+  await assetPage.evaluate(() => {
+    const initialFrame = window.__phase5ModelProbe?.renderer.info.render.frame ?? 0;
+    let previousFrame = initialFrame;
+    let renderedFrames = 0;
+    let observedMove = false;
+    window.__phase5MoveFrameMeasurement = new Promise((resolveFrames) => {
+      const sample = () => {
+        const currentFrame = window.__phase5ModelProbe?.renderer.info.render.frame ?? previousFrame;
+        renderedFrames += Math.max(0, currentFrame - previousFrame);
+        previousFrame = currentFrame;
+        const action = window.__phase5ModelProbe?.animationSnapshot?.('traveler');
+        if (action?.semanticAction === 'move') observedMove = true;
+        if (observedMove && action?.semanticAction !== 'move') {
+          resolveFrames(renderedFrames);
+          return;
+        }
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+  });
   await assetPage.getByTestId('gameplay-move').click();
   await assetPage.waitForFunction(() =>
     document
       .querySelector('[data-testid="animation-action-traveler"]')
       ?.textContent?.includes('move'),
+  );
+  await assetPage.waitForFunction(
+    () => window.__phase5ModelProbe?.animationSnapshot?.('traveler')?.semanticAction === 'move',
   );
   await assetPage.waitForFunction(
     (initialFrame) =>
@@ -238,7 +299,16 @@ try {
   const frameAfterMove = await assetPage.evaluate(
     () => window.__phase5ModelProbe?.renderer.info.render.frame ?? 0,
   );
+  const moveAnimationRenderedFrames = await assetPage.evaluate(
+    async () => await window.__phase5MoveFrameMeasurement,
+  );
+  assert.ok(moveAnimationRenderedFrames > 0);
   records.push(await capture(assetPage, screenshotNames[2]));
+  await assetPage.waitForFunction(
+    () =>
+      window.__phase5ModelProbe?.animationSnapshot?.('traveler')?.active === false &&
+      window.__phase5ModelProbe?.animationSnapshot?.('traveler')?.semanticAction === 'idle',
+  );
   await waitForStableFrames(assetPage, 'model');
   const idleModelFrameStart = await assetPage.evaluate(
     () => window.__phase5ModelProbe?.renderer.info.render.frame ?? 0,
@@ -300,6 +370,9 @@ try {
   await storyPage.waitForFunction(
     (initialCount) => (window.__sceneProbe?.disposedScenes ?? 0) >= initialCount + 10,
     disposedScenesBeforeCycles,
+  );
+  const disposedScenesAfterCycles = await storyPage.evaluate(
+    () => window.__sceneProbe?.disposedScenes ?? 0,
   );
   await waitForStableFrames(storyPage, 'scene');
   const rendererMemoryAfterCycles = await storyPage.evaluate(
@@ -393,11 +466,13 @@ try {
         observedRuntime: {
           modelRendererMemory: modelMemory,
           modelLoadMs: modelLoads,
-          acceptedMoveRenderedFrames: frameAfterMove - frameBeforeMove,
+          firstAcceptedMoveFrameDelta: frameAfterMove - frameBeforeMove,
+          moveAnimationRenderedFrames,
           modelIdleFrameDelta: idleModelFrameEnd - idleModelFrameStart,
           sceneRendererMemoryBeforeFiveWarmCycles: rendererMemoryBeforeCycles,
           sceneRendererMemoryAfterFiveWarmCycles: rendererMemoryAfterCycles,
           warmedMapRoundTrips: 5,
+          disposedScenesDuringWarmCycles: disposedScenesAfterCycles - disposedScenesBeforeCycles,
           toleratedMemoryGrowth: { geometries: 1, textures: 1 },
           sceneIdleFrameDelta: idleSceneFrameEnd - idleSceneFrameStart,
         },
