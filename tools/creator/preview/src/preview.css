@@ -1,0 +1,213 @@
+:root {
+  color: #1b2b26;
+  background: #f3f5f2;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+button,
+select,
+input {
+  font: inherit;
+}
+button,
+select {
+  min-height: 42px;
+}
+button {
+  border: 1px solid #b4c2ba;
+  border-radius: 9px;
+  padding: 0.55rem 0.85rem;
+  color: #1c3329;
+  background: #fff;
+  cursor: pointer;
+}
+button:hover {
+  background: #edf3ef;
+}
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 3px solid #317b5b;
+  outline-offset: 2px;
+}
+select {
+  border: 1px solid #b4c2ba;
+  border-radius: 8px;
+  padding: 0.5rem;
+  background: #fff;
+  color: inherit;
+}
+.creator-preview {
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 28px clamp(16px, 3vw, 44px) 40px;
+}
+.creator-preview__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 22px;
+}
+.creator-preview__header h1 {
+  margin: 0.2rem 0 0.35rem;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+}
+.creator-preview__header p {
+  max-width: 680px;
+  margin: 0;
+  color: #52635a;
+}
+.eyebrow {
+  color: #367657 !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.preview-disclaimer {
+  max-width: 360px;
+  border-left: 4px solid #cf8a35;
+  padding: 12px 16px;
+  color: #624411;
+  background: #fff3dc;
+  border-radius: 4px 10px 10px 4px;
+}
+.creator-preview__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+  gap: 20px;
+  align-items: start;
+}
+.preview-stage {
+  overflow: hidden;
+  border: 1px solid #d5ddd6;
+  border-radius: 14px;
+  background: #e8eee8;
+  box-shadow: 0 12px 32px #1d372013;
+}
+.preview-stage canvas {
+  display: block;
+  width: 100%;
+  height: min(68vh, 650px);
+  min-height: 420px;
+  touch-action: none;
+}
+.preview-stage__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 12px 15px;
+  color: #586a5f;
+  background: #f8faf8;
+  border-top: 1px solid #d5ddd6;
+  font-size: 0.85rem;
+}
+.preview-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #d5ddd6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 32px #1d37200b;
+}
+.preview-panel label {
+  display: grid;
+  gap: 6px;
+  color: #344a3d;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+.preview-control-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.preview-checks {
+  display: grid;
+  gap: 8px;
+}
+.preview-panel .preview-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  cursor: pointer;
+}
+.preview-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #347755;
+}
+.preview-mapping-note {
+  margin: -5px 0 0;
+  color: #65746c;
+  font-size: 0.8rem;
+}
+.preview-details {
+  border-top: 1px solid #e2e8e3;
+  padding-top: 12px;
+}
+.preview-details h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+.preview-details dl {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.3fr);
+  gap: 8px 12px;
+  margin: 0;
+  font-size: 0.79rem;
+  line-height: 1.45;
+}
+.preview-details dt {
+  color: #65746c;
+}
+.preview-details dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-weight: 570;
+}
+.preview-details .hash {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.7rem;
+}
+.preview-error {
+  padding: 12px 16px;
+  border: 1px solid #bb544c;
+  border-radius: 8px;
+  color: #7a2721;
+  background: #fff0ef;
+}
+@media (max-width: 960px) {
+  .creator-preview__header {
+    align-items: start;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .creator-preview__layout {
+    grid-template-columns: 1fr;
+  }
+  .preview-stage canvas {
+    height: 55vh;
+    min-height: 360px;
+  }
+}

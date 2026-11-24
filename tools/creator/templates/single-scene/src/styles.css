@@ -1,0 +1,88 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #203b38;
+  background: #eff4ef;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+button {
+  min-height: 48px;
+  padding: 0.75rem 1.2rem;
+  border: 0;
+  border-radius: 0.8rem;
+  color: white;
+  background: #286e65;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:focus-visible {
+  outline: 3px solid #cb7545;
+  outline-offset: 3px;
+}
+.game-shell {
+  width: min(1100px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 1rem;
+}
+header h1 {
+  width: 100%;
+  margin: 0.2rem 0;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+}
+header p {
+  color: #526d68;
+}
+.eyebrow {
+  width: 100%;
+  margin: 0;
+  color: #28786f;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.scene {
+  height: min(62vh, 580px);
+  min-height: 340px;
+  overflow: hidden;
+  border: 1px solid #d2ded3;
+  border-radius: 1.2rem;
+  background: #eaf0e9;
+}
+.scene canvas {
+  display: block;
+}
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+output {
+  display: block;
+  margin-block: 0.5rem 1rem;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}

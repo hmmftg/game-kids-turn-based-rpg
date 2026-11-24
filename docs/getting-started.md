@@ -98,6 +98,21 @@ It builds and watches both packages before starting Vite with default linked
 package resolution. `npm run framework:watch:check` verifies source edits,
 last-good output during a compile failure, and recovery.
 
+## Create a portable game project
+
+The optional `waypoint-rpg-creator` tools import local models, maintain a
+provenance/readiness catalog, and generate a one-scene starter that installs
+only its selected framework package roots. Follow
+[Creating a sample game](CREATING-A-SAMPLE-GAME.md) for a complete local-tarball
+walkthrough. The focused acceptance gate is `npm run framework:generated-games`;
+it creates and tests narrative-only and tactical-only consumers outside the
+workspace and stores real Chromium screenshots in `docs/previews/creator/`.
+
+Package archives can install offline once available locally. Vite, React,
+TypeScript, and Playwright are development tools with their own locked
+toolchain; a first install may need a network/cache bootstrap. The creator
+CLI itself is never bundled into a game's production output.
+
 ## What stays in your app
 
 World content (`WorldMap`/`WorldArea`/`GraphSource` declarations), persisted

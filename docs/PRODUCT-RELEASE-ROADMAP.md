@@ -2,6 +2,23 @@
 
 This document defines a proposed five-game portfolio to validate the reusable framework. Titles, stories, audiences, and release order are planning proposals. Approve each product concept and its audience before production content or public release. The Kids RPG, `examples/scene-demo/`, and the existing Garden sample are framework references. They do not count toward the five releases.
 
+## Phase 6 creator workflow status
+
+The repository now has a local creator CLI for GLB/glTF import, a versioned
+shared asset catalog with technical readiness separate from game-specific
+release approval, a local model preview, and a versioned one-scene project
+manifest/scaffold. The independent acceptance gate generates narrative-only
+and tactical-only projects outside the workspace using installed package
+archives. Both are tooling fixtures, not shipped or approved games. Their
+source-rendered Chromium captures are
+[narrative-only](previews/creator/generated-narrative-consumer.png) and
+[tactical-only](previews/creator/generated-tactical-consumer.png). Phase 7
+remains the separate workstream for the five playable products listed below.
+The package, preview, and both generated-consumer gates passed locally on
+Node.js 22.23.5/npm 10.9.9; the focused CI workflow is ready, but its first
+remote Actions result is pending because the Phase 6 branch has not been
+published. These fixtures do not count toward the portfolio.
+
 ## Portfolio and game specifications
 
 Each sample is a separate build and launchable application with exactly one playable map. Title screens, dialogue, modal interfaces, and alternate camera staging do not add maps. Each game owns its story, runtime policy, save namespace/version, controls, production assets, and release configuration. Keep a short-session target and a complete interaction loop, not a static viewer.

@@ -1,0 +1,90 @@
+name: Creator tools and generated consumers
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/creator-tools.yml
+      - package.json
+      - package-lock.json
+      - packages/core/**
+      - packages/narrative/**
+      - packages/gameplay/**
+      - tools/creator/**
+      - scripts/import-model.mjs
+      - scripts/import-model.test.mjs
+      - scripts/check-framework-generated-games.mjs
+      - examples/scene-demo/fixtures/model-source/static-textured.glb
+      - docs/FRAMEWORK-ROADMAP.md
+      - docs/PRODUCT-RELEASE-ROADMAP.md
+      - docs/CREATING-A-SAMPLE-GAME.md
+      - docs/framework-api.md
+      - docs/getting-started.md
+      - docs/previews/creator/**
+      - .plans/phase-6-creator-tools.md
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/creator-tools.yml
+      - package.json
+      - package-lock.json
+      - packages/core/**
+      - packages/narrative/**
+      - packages/gameplay/**
+      - tools/creator/**
+      - scripts/import-model.mjs
+      - scripts/import-model.test.mjs
+      - scripts/check-framework-generated-games.mjs
+      - examples/scene-demo/fixtures/model-source/static-textured.glb
+      - docs/FRAMEWORK-ROADMAP.md
+      - docs/PRODUCT-RELEASE-ROADMAP.md
+      - docs/CREATING-A-SAMPLE-GAME.md
+      - docs/framework-api.md
+      - docs/getting-started.md
+      - docs/previews/creator/**
+      - .plans/phase-6-creator-tools.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: creator-tools-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  creator-and-generated-consumers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install the locked workspace toolchain
+        run: npm ci
+      - name: Install Chromium for creator and generated-game previews
+        run: npx playwright install --with-deps chromium
+      - name: Verify creator package and importer
+        run: |
+          npm run creator:build
+          npm run creator:test
+          npm run models:import:test
+          npm run creator:import-consumer
+      - name: Verify local creator model preview
+        run: |
+          npm run creator:preview:typecheck
+          npm run creator:preview:build
+          npm run creator:preview:test
+      - name: Generate, pack once, and verify both games outside the checkout
+        run: npm run framework:generated-games
+      - name: Check canonical roadmap projection
+        run: npm run roadmap:check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creator-tools-rendered-previews
+          path: docs/previews/creator/*.png
+          if-no-files-found: ignore
+          retention-days: 14
