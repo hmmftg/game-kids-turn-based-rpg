@@ -25,7 +25,18 @@ try {
     ],
     { cwd: repositoryRoot },
   );
+  runNpm(
+    [
+      'pack',
+      '--ignore-scripts',
+      '--workspace=packages/core',
+      '--pack-destination',
+      archiveDirectory,
+    ],
+    { cwd: repositoryRoot },
+  );
   const archive = join(archiveDirectory, 'waypoint-rpg-creator-0.1.0.tgz');
+  const coreArchive = join(archiveDirectory, 'waypoint-rpg-core-0.1.0.tgz');
   await cp(join(repositoryRoot, 'package.json'), join(consumer, 'package.json'));
   await cp(join(repositoryRoot, 'package-lock.json'), join(consumer, 'package-lock.json'));
   const packagePath = join(consumer, 'package.json');
@@ -61,8 +72,18 @@ try {
       `import assert from 'node:assert/strict';
 import { createAssetCatalog } from 'waypoint-rpg-creator';
 import { serializeAssetCatalog, parseAssetCatalog } from 'waypoint-rpg-creator/asset-catalog';
+import { createGameProject, createGameProjectManifest, validateGameProject } from 'waypoint-rpg-creator/game-project';
 const encoded = serializeAssetCatalog(createAssetCatalog());
 assert.deepEqual(parseAssetCatalog(encoded), { schemaVersion: 1, assets: [], approvals: [] });
+const temp = await (await import('node:fs/promises')).mkdtemp((await import('node:path')).join((await import('node:os')).tmpdir(), 'creator-template-tarball-'));
+try {
+  const project = (await import('node:path')).join(temp, 'generated sample');
+  const manifest = createGameProjectManifest({ id: 'outside-consumer', displayName: 'Outside consumer' });
+  assert.equal(manifest.start.anchorId, 'anchor-spawn');
+  await createGameProject({ directory: project, id: manifest.game.id, displayName: manifest.game.displayName,
+    frameworkArchives: { 'waypoint-rpg-core': ${JSON.stringify(coreArchive)} } });
+  assert.equal((await validateGameProject(project)).ok, true);
+} finally { await (await import('node:fs/promises')).rm(temp, { recursive: true, force: true }); }
 await assert.rejects(import('waypoint-rpg-creator/src/asset-catalog.mjs'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });`,
     ],
     { cwd: consumer },
@@ -71,6 +92,7 @@ await assert.rejects(import('waypoint-rpg-creator/src/asset-catalog.mjs'), { cod
   await writeFile(
     declarationFixture,
     `import { createAssetCatalog, addSpecifiedAsset, serializeAssetCatalog } from 'waypoint-rpg-creator';
+import { createGameProjectManifest, validateGameProjectManifest, type GameProjectManifest } from 'waypoint-rpg-creator/game-project';
 const catalog = addSpecifiedAsset(createAssetCatalog(), {
   id: 'preview-guardian',
   category: 'animated-model',
@@ -78,7 +100,10 @@ const catalog = addSpecifiedAsset(createAssetCatalog(), {
   consumerGameIds: ['sample-game'],
 });
 const bytes: string = serializeAssetCatalog(catalog);
+const project: GameProjectManifest = createGameProjectManifest({ id: 'typed-project', displayName: 'Typed project' });
+const valid: boolean = validateGameProjectManifest(project).ok;
 void bytes;
+void valid;
 `,
   );
   runNpm(

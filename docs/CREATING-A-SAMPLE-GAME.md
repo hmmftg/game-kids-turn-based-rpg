@@ -34,6 +34,53 @@ ones it uses. None includes a renderer, story, browser UI, or browser-storage
 implementation. Do not import package internals or copy package algorithms
 into a sample.
 
+## Generate a portable starting project
+
+Install the creator CLI and package the framework roots that the new game will
+use. The core is mandatory; narrative and gameplay are selected independently.
+The command requires a local tarball for each selected package and copies those
+archives into the new project's `vendor/` folder:
+
+```sh
+npm pack --ignore-scripts --workspace=packages/core --pack-destination ./archives
+npm pack --ignore-scripts --workspace=packages/narrative --pack-destination ./archives
+waypoint-rpg game create --directory "./games/Blood Leaf" --id blood-leaf \
+  --name "Blood Leaf" --packages core,narrative \
+  --core-tarball ./archives/waypoint-rpg-core-0.1.0.tgz \
+  --narrative-tarball ./archives/waypoint-rpg-narrative-0.1.0.tgz
+waypoint-rpg game validate "./games/Blood Leaf"
+waypoint-rpg game inspect "./games/Blood Leaf"
+```
+
+The generated `game.project.json` is versioned and game-owned. It declares the
+public framework package roots, scene/map/start anchor, asset catalog and
+runtime asset records, content references, locales, accessibility settings,
+save namespace/schema, and fixed npm script names. Timeline references remain
+disabled until their runtime API is independently verified. Manifest paths use
+portable forward slashes and must stay inside the game project. Creation does
+not overwrite an existing destination.
+
+The starter contains one actual R3F scene with an application-owned reducer,
+touch-sized DOM control, unit test, and Playwright screenshot test. It does not
+copy Garden or scene-demo internals. The starter toolchain (React/R3F, Vite,
+TypeScript, Vitest, and Playwright) is development tooling; the framework
+packages remain separate runtime dependencies. The generated lockfile pins its
+local framework archives and toolchain. With the required package bytes in npm's
+cache, install/build/test without a network connection:
+
+```sh
+cd "./games/Blood Leaf"
+npm ci --offline
+npm run build
+npm test
+npm run capture
+```
+
+The generated `package.json` refers to `vendor/waypoint-rpg-*.tgz` rather than
+workspace links. The sample owns its story and state transitions. For a
+narrative-only project omit gameplay; for a tactical project select the
+gameplay package without importing narrative unless the game needs it.
+
 ## Compose one authoritative runtime
 
 Import the package roots and keep committed game state in one application-owned

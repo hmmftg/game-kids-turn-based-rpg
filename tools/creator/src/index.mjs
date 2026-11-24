@@ -17,3 +17,15 @@ export {
   validateAssetCatalog,
   verifyAssetFiles,
 } from './asset-catalog.mjs';
+export {
+  FRAMEWORK_PACKAGE_ROOTS,
+  GAME_PROJECT_FILE,
+  GAME_PROJECT_SCHEMA_VERSION,
+  createGameProject,
+  createGameProjectManifest,
+  inspectGameProject,
+  readGameProjectManifest,
+  runGameProjectCommand,
+  validateGameProject,
+  validateGameProjectManifest,
+} from './game-project.mjs';

@@ -147,3 +147,34 @@ Verification: `npm run creator:preview:typecheck`, `npm run creator:preview:test
 reports a 1.18 MB development-tool chunk (323 kB gzip); this is isolated from
 game production bundles. ESLint reports five React Fast Refresh warnings for
 local preview components and no errors. The targeted Prettier check passed.
+
+### P6.4 — Manifest, scaffold and CLI
+
+Added the versioned `game.project.json` contract and public
+`waypoint-rpg-creator/game-project` API for validation, inspection, creation,
+and execution of fixed project scripts. `waypoint-rpg game create|validate|
+inspect|dev|build|test|preview|capture` generates a one-scene React/R3F game
+from local framework tarballs. The starter owns its state, scene, accessible DOM
+control, tests, and release policy; it imports only `waypoint-rpg-core` and does
+not copy either sample's private runtime. Timeline authoring is explicitly
+rejected until a public runtime contract exists. Creation is atomic, refuses to
+overwrite, validates path confinement and local package metadata, and writes
+deterministic lockfiles with pinned developer tooling. Documentation now
+distinguishes offline package installation from the one-time cache bootstrap
+that may be needed for development tools.
+
+The first generated-project run found two template issues before acceptance:
+TypeScript 6 needed Vite's ambient client declarations for the CSS import, and
+Vitest's default scan included the separate Playwright spec. The template now
+ships `src/vite-env.d.ts` and scopes `npm test` to `src`; browser capture remains
+the separate `npm run capture` command.
+
+Verification: `npm run creator:test` passed 27/27; `npm run creator:build` and
+`npm run creator:import-consumer` passed. From a temporary path outside the
+checkout, the generated project installed with `npm ci --offline` (142 packages
+from the populated cache), built, passed 2/2 Vitest tests, and passed 1/1
+Chromium Playwright capture. Its real source-rendered screenshot is
+`docs/previews/creator/generated-single-scene.png`. The starter build reports an
+approximately 1.09 MB JavaScript chunk (297 kB gzip); this is the optional
+developer template and should be measured again when a production game chooses
+its modules and assets.

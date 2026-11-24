@@ -58,6 +58,52 @@ source/runtime hashes, evidence-file presence, and symlink confinement. Owned
 AI-generated assets need their actual ownership evidence recorded; they are not
 implicitly CC0.
 
+## Generate and validate a game
+
+The `waypoint-rpg-creator/game-project` ESM entry defines the versioned
+`game.project.json` contract and single-scene starter. The core package is
+required; narrative and tactical gameplay packages are optional and installed
+only when selected. The starter uses a game-owned state reducer, one 3D scene,
+DOM controls, and local package tarballs. It does not copy another sample's
+runtime.
+
+Pack the desired framework modules, then pass those local archives to the
+creator. This does not contact a package registry or model provider:
+
+```sh
+npm pack --ignore-scripts --workspace=packages/core --pack-destination ./archives
+npm pack --ignore-scripts --workspace=packages/narrative --pack-destination ./archives
+waypoint-rpg game create --directory "./games/Leaf Story" --id leaf-story \
+  --name "Leaf Story" --packages core,narrative \
+  --core-tarball ./archives/waypoint-rpg-core-0.1.0.tgz \
+  --narrative-tarball ./archives/waypoint-rpg-narrative-0.1.0.tgz
+waypoint-rpg game validate "./games/Leaf Story"
+waypoint-rpg game inspect "./games/Leaf Story"
+waypoint-rpg game build "./games/Leaf Story"
+waypoint-rpg game test "./games/Leaf Story"
+waypoint-rpg game capture "./games/Leaf Story"
+```
+
+Use `--packages core` for a narrative-free project. A tactical project selects
+`--packages core,gameplay` and supplies the matching gameplay archive. Project
+paths are portable relative paths; IDs use lowercase kebab-case. Creation
+refuses to replace an existing destination. The generated `vendor/` tarballs
+are local install inputs, not published assets; `.gitignore` excludes them by
+default. Developer tools (Vite, React, TypeScript, Vitest, and Playwright) are
+separate from framework runtime packages. After the developer toolchain and
+package archives are present in the local cache, run `npm ci --offline` in the
+generated project. The generated lockfile pins the template toolchain and local
+framework archives. If a first-time developer-tool install has not populated
+the npm cache, bootstrap that toolchain once while online; later installs use
+the locked cache without a registry connection.
+
+Manifest validation checks package roots, locale and save declarations,
+scene/map/start-anchor consistency, local project paths, asset catalog
+references, script names, and required framework archives. Timeline references
+are rejected in schema version 1 because the runtime timeline contract is not
+yet public. Kids RPG World Builder v1 remains application-owned and is not
+rewritten by this template.
+
 ## Local model preview
 
 Start the creator preview from the repository root:

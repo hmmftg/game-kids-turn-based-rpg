@@ -22,16 +22,21 @@
     "./asset-catalog": {
       "types": "./types/asset-catalog.d.ts",
       "import": "./src/asset-catalog.mjs"
+    },
+    "./game-project": {
+      "types": "./types/game-project.d.ts",
+      "import": "./src/game-project.mjs"
     }
   },
   "files": [
     "src",
     "types",
+    "templates",
     "README.md"
   ],
   "scripts": {
     "build": "node ./scripts/check-package.mjs",
-    "test": "node --experimental-strip-types --test ../../scripts/import-model.test.mjs ./test/asset-catalog.test.mjs"
+    "test": "node --experimental-strip-types --test ../../scripts/import-model.test.mjs ./test/asset-catalog.test.mjs ./test/game-project.test.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "4.1.0",
