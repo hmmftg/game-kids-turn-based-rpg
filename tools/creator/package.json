@@ -18,6 +18,10 @@
     "./model-import": {
       "types": "./types/model-import.d.ts",
       "import": "./src/model-import.mjs"
+    },
+    "./asset-catalog": {
+      "types": "./types/asset-catalog.d.ts",
+      "import": "./src/asset-catalog.mjs"
     }
   },
   "files": [
@@ -27,7 +31,7 @@
   ],
   "scripts": {
     "build": "node ./scripts/check-package.mjs",
-    "test": "node --experimental-strip-types --test ../../scripts/import-model.test.mjs"
+    "test": "node --experimental-strip-types --test ../../scripts/import-model.test.mjs ./test/asset-catalog.test.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "4.1.0",

@@ -10,8 +10,15 @@ assert.equal(manifest.name, 'waypoint-rpg-creator');
 assert.equal(manifest.type, 'module');
 assert.equal(manifest.engines.node, '>=22.0.0');
 assert.equal(manifest.private, true);
-assert.deepEqual(Object.keys(manifest.exports).sort(), ['.', './model-import']);
-for (const file of ['src/index.mjs', 'src/model-import.mjs', 'src/cli.mjs', 'types/index.d.ts']) {
+assert.deepEqual(Object.keys(manifest.exports).sort(), ['.', './asset-catalog', './model-import']);
+for (const file of [
+  'src/index.mjs',
+  'src/model-import.mjs',
+  'src/asset-catalog.mjs',
+  'src/cli.mjs',
+  'types/index.d.ts',
+  'types/asset-catalog.d.ts',
+]) {
   await readFile(join(root, file));
 }
 const sourceFiles = await readdir(join(root, 'src'));

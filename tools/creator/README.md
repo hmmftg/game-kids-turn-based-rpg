@@ -28,3 +28,32 @@ to glTF/GLB with the documented optional Blender workflow first.
 The `scripts/import-model.mjs` repository command remains as a compatibility
 wrapper for the existing scene-demo registry. New projects should use this
 package CLI and their own paths.
+
+## Shared asset catalog
+
+The `waypoint-rpg-creator/asset-catalog` public ESM entry provides a versioned
+JSON catalog and immutable transition helpers. Technical inspection moves an
+asset through `specified`, `sourced/generated`, `imported`, and `validated`.
+Game approvals are stored separately and tied to the inspected runtime SHA-256;
+each consuming game must provide its own rights review and release evidence.
+Opening or previewing a model does not grant approval.
+
+```js
+import {
+  addSpecifiedAsset,
+  createAssetCatalog,
+  serializeAssetCatalog,
+} from 'waypoint-rpg-creator/asset-catalog';
+
+const catalog = addSpecifiedAsset(createAssetCatalog(), {
+  id: 'garden-guardian',
+  category: 'animated-model',
+  description: 'Guardian character for the Garden sample.',
+  consumerGameIds: ['garden-adventure'],
+});
+```
+
+Store catalog file paths relative to the catalog root. `verifyAssetFiles` checks
+source/runtime hashes, evidence-file presence, and symlink confinement. Owned
+AI-generated assets need their actual ownership evidence recorded; they are not
+implicitly CC0.

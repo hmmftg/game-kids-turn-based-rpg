@@ -54,6 +54,67 @@ try {
     { cwd: consumer },
   );
   assert.equal(existsSync(join(consumer, 'node_modules/waypoint-rpg-gameplay')), false);
+  runNode(
+    [
+      '--input-type=module',
+      '-e',
+      `import assert from 'node:assert/strict';
+import { createAssetCatalog } from 'waypoint-rpg-creator';
+import { serializeAssetCatalog, parseAssetCatalog } from 'waypoint-rpg-creator/asset-catalog';
+const encoded = serializeAssetCatalog(createAssetCatalog());
+assert.deepEqual(parseAssetCatalog(encoded), { schemaVersion: 1, assets: [], approvals: [] });
+await assert.rejects(import('waypoint-rpg-creator/src/asset-catalog.mjs'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });`,
+    ],
+    { cwd: consumer },
+  );
+  const declarationFixture = join(consumer, 'creator-api.mts');
+  await writeFile(
+    declarationFixture,
+    `import { createAssetCatalog, addSpecifiedAsset, serializeAssetCatalog } from 'waypoint-rpg-creator';
+const catalog = addSpecifiedAsset(createAssetCatalog(), {
+  id: 'preview-guardian',
+  category: 'animated-model',
+  description: 'A locally inspected character.',
+  consumerGameIds: ['sample-game'],
+});
+const bytes: string = serializeAssetCatalog(catalog);
+void bytes;
+`,
+  );
+  runNpm(
+    [
+      'exec',
+      '--',
+      'tsc',
+      '--noEmit',
+      '--strict',
+      '--target',
+      'ES2022',
+      '--module',
+      'NodeNext',
+      '--moduleResolution',
+      'NodeNext',
+      declarationFixture,
+    ],
+    { cwd: consumer },
+  );
+  runNpm(
+    [
+      'exec',
+      '--',
+      'tsc',
+      '--noEmit',
+      '--strict',
+      '--target',
+      'ES2022',
+      '--module',
+      'ESNext',
+      '--moduleResolution',
+      'Bundler',
+      declarationFixture,
+    ],
+    { cwd: consumer },
+  );
 
   const sourceDirectory = join(consumer, 'downloads');
   await mkdir(sourceDirectory);

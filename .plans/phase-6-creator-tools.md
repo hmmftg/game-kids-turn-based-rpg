@@ -99,3 +99,23 @@ creator:import-consumer` passed after a locked developer-toolchain install and
 warm-cache offline reinstall. The packed creator then installed offline and
 imported the static-textured and rigged fixture from a separate generated
 project directory, without the gameplay package or scene-demo source.
+
+### P6.2 — Shared asset catalog
+
+Added the creator package's versioned `asset-catalog` public export. Catalog
+records keep immutable technical inspection and shared consumer IDs on the
+asset, while each game's rights review and release evidence live in a separate
+approval record pinned to the runtime SHA-256. Readiness transitions are
+validated; changed bytes make existing approval evidence stale. File
+verification confines source/runtime/evidence paths to the catalog root,
+checks source and output hashes, and rejects symlink escapes. AI-generated
+ownership remains explicit and never implies CC0.
+
+Verification: `npm run creator:test` passed 21/21 (15 importer and 6 catalog
+tests); `npm run creator:build` passed its package-root and boundary checks.
+`npm run creator:import-consumer` packed and installed the creator archive
+offline outside the checkout, exercised public root and catalog exports,
+rejected a deep import, type-checked the declarations under NodeNext and
+Bundler resolution, and imported both static and rigged GLBs. Catalog tests
+cover canonical round-trip, schema/duplicate/unsafe-key errors, ordered stage
+gates, per-game approvals, stale hash rejection, and path/hash verification.
