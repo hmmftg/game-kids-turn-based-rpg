@@ -88,7 +88,7 @@ jobs:
         run: |
           patch="$RUNNER_TEMP/sample-previews.patch"
           git add -N -- README.md docs/previews/legacy-sample docs/previews/blood-leaf docs/previews/garden-adventure docs/previews/phase5
-          git diff -- README.md docs/previews/legacy-sample docs/previews/blood-leaf docs/previews/garden-adventure docs/previews/phase5 > "$patch"
+          git diff --binary --full-index -- README.md docs/previews/legacy-sample docs/previews/blood-leaf docs/previews/garden-adventure docs/previews/phase5 > "$patch"
           if [ -s "$patch" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "patch=$patch" >> "$GITHUB_OUTPUT"

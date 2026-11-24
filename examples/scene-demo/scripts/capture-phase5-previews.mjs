@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { arch, platform, release } from 'node:os';
 import { chromium } from '@playwright/test';
 import { resolve } from 'node:path';
 import { preview } from 'vite';
@@ -24,6 +25,7 @@ const errors = [];
 const externalRequests = [];
 let browser;
 let server;
+let webglRenderer;
 
 function watchPage(page, origin) {
   page.on('pageerror', (error) => errors.push(error.message));
@@ -180,6 +182,14 @@ try {
   await assetPage.waitForFunction(
     () => (window.__phase5ModelProbe?.renderer.info.render.frame ?? 0) > 0,
   );
+  webglRenderer = await assetPage.evaluate(() => {
+    const context = window.__phase5ModelProbe?.renderer.getContext();
+    if (!context) return '';
+    const debugInfo = context.getExtension('WEBGL_debug_renderer_info');
+    const rendererParameter = debugInfo?.UNMASKED_RENDERER_WEBGL ?? context.RENDERER;
+    return String(context.getParameter(rendererParameter) ?? '');
+  });
+  assert.ok(webglRenderer.trim(), 'record the renderer reported by the live WebGL context');
   await assetPage.waitForFunction(
     () =>
       window.__phase5ModelProbe?.animationSnapshot?.('traveler')?.active === false &&
@@ -304,11 +314,27 @@ try {
   const frameAfterMove = await assetPage.evaluate(
     () => window.__phase5ModelProbe?.renderer.info.render.frame ?? 0,
   );
+  const movementAtCapture = await assetPage.evaluate(() =>
+    window.__phase5ModelProbe?.animationSnapshot?.('traveler'),
+  );
+  assert.equal(
+    movementAtCapture?.semanticAction,
+    'move',
+    'the movement screenshot must be captured during the registered move action',
+  );
+  assert.equal(movementAtCapture?.active, true);
+  records.push(await capture(assetPage, screenshotNames[2]));
+  assert.equal(
+    await assetPage.evaluate(
+      () => window.__phase5ModelProbe?.animationSnapshot?.('traveler')?.semanticAction,
+    ),
+    'move',
+    'the registered move action must remain active through the screenshot capture',
+  );
   const moveAnimationRenderedFrames = await assetPage.evaluate(
     async () => await window.__phase5MoveFrameMeasurement,
   );
   assert.ok(moveAnimationRenderedFrames > 0);
-  records.push(await capture(assetPage, screenshotNames[2]));
   await assetPage.waitForFunction(
     () =>
       window.__phase5ModelProbe?.animationSnapshot?.('traveler')?.active === false &&
@@ -461,9 +487,16 @@ try {
       {
         schemaVersion: 2,
         sourceCommit,
-        browser: `Chromium ${browser.version()} via Playwright, headless SwiftShader`,
+        host: {
+          platform: platform(),
+          architecture: arch(),
+          release: release(),
+          node: process.version,
+        },
+        browser: `Chromium ${browser.version()} via Playwright`,
+        webglRenderer,
         testedDevices: [
-          'Headless Linux Chromium with SwiftShader only; physical mobile GPU not tested',
+          `${platform()} ${arch()} ${release()}, headless Chromium ${browser.version()} with ${webglRenderer}; physical mobile GPU not tested`,
         ],
         viewport: {
           desktop: { width: 1365, height: 1000 },
