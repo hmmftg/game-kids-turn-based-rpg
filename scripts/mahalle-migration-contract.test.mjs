@@ -5,7 +5,10 @@ import {
   createBattle,
   damageFor,
 } from '../src/framework/index.ts';
+import { gameReducer } from '../src/domain/game/reducer.ts';
+import { createInitialState } from '../src/domain/game/initialState.ts';
 import { QUEST_DEFINITIONS } from '../src/domain/quests/definitions.ts';
+import { getQuestStep } from '../src/domain/quests/definitions.ts';
 
 // Golden compatibility data captured from the pre-migration root game.
 const questContract = [
@@ -115,6 +118,59 @@ check(
       ]),
       questContract,
     );
+  },
+);
+
+function atHub() {
+  const now = 1_700_000_000_000;
+  let state = gameReducer(
+    createInitialState(now),
+    { type: 'BOOT_LOADED', persisted: null, health: 'fresh' },
+    now,
+  );
+  state = gameReducer(state, { type: 'START_PRESSED' }, now);
+  return gameReducer(state, { type: 'SELECT_AVATAR', avatarId: 'avatar-aban' }, now);
+}
+
+function completeQuest(state, questId) {
+  let next = gameReducer(state, { type: 'START_QUEST', questId });
+  for (let count = 0; next.mode === 'encounter' && count < 100; count += 1) {
+    if (next.encounter.phase === 'playerChoice') {
+      const step = getQuestStep(next.encounter.questId, next.encounter.stepIndex);
+      next = gameReducer(next, { type: 'CHOOSE', iconId: step.correctIconId, correct: true });
+    } else {
+      next = gameReducer(next, { type: 'ADVANCE_PHASE' });
+    }
+  }
+  assert.notEqual(next.mode, 'encounter', 'the deterministic correct-choice sequence must finish');
+  return next;
+}
+
+check(
+  'wrong choices retry without progress and completed greeting quests remain replayable',
+  () => {
+    let state = gameReducer(atHub(), { type: 'START_QUEST', questId: 'quest-greeting' });
+    state = gameReducer(state, { type: 'ADVANCE_PHASE' });
+    state = gameReducer(state, { type: 'ADVANCE_PHASE' });
+    const step = getQuestStep('quest-greeting', 0);
+    const wrongIcon = step.choiceIconIds.find((iconId) => iconId !== step.correctIconId);
+    state = gameReducer(state, { type: 'CHOOSE', iconId: wrongIcon, correct: false });
+    assert.equal(state.encounter.lastChoiceCorrect, false);
+    assert.deepEqual(state.stickers, []);
+    assert.equal(state.quests['quest-greeting'].completionCount, 0);
+
+    const first = completeQuest(atHub(), 'quest-greeting');
+    assert.deepEqual(first.quests['quest-greeting'], {
+      status: 'completed',
+      completedSteps: ['greeting-1', 'greeting-2'],
+      completionCount: 1,
+    });
+    assert.deepEqual(first.stickers, ['sticker-greeting']);
+    assert.equal(first.checkpoint.kind, 'questCompleted');
+
+    const replay = completeQuest(first, 'quest-greeting');
+    assert.equal(replay.quests['quest-greeting'].completionCount, 2);
+    assert.deepEqual(replay.stickers, ['sticker-greeting']);
   },
 );
 
