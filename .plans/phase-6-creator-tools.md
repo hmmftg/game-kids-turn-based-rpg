@@ -119,3 +119,31 @@ rejected a deep import, type-checked the declarations under NodeNext and
 Bundler resolution, and imported both static and rigged GLBs. Catalog tests
 cover canonical round-trip, schema/duplicate/unsafe-key errors, ordered stage
 gates, per-game approvals, stale hash rejection, and path/hash verification.
+
+### P6.3 — Local model preview
+
+Added an optional browser preview app under `tools/creator/preview/`. It reuses
+the Phase 5 model loader, integrity checks, lease ownership and independent
+skeleton cloning. The local UI displays provenance and rights without changing
+catalog approval, source clip inventory and semantic mappings, bounds,
+materials/textures, decoded memory estimates and observed renderer resource
+counts. It supports orbit/zoom, two independent instances and reduced motion.
+The local Vite server can read a selected game's asset manifest and public
+models without adding those preview assets to the Kids RPG production bundle.
+
+The preview aborts stale loads and releases leases on model changes and
+unmount. Renderer context-loss listeners are attached when the canvas is
+created, removed before deliberate reload, and cleaned on unmount. Loader
+replacement no longer clears the renderer probe while the canvas remains
+mounted. Chromium verifies local manifest loading, remote URL rejection,
+integrity failures, a delayed load superseded by another selection, three
+reload cycles, separate skeleton objects, orbit/zoom, reduced motion, and real
+WebGL context loss/recovery. The generated browser screenshot is
+`docs/previews/creator/rigged-asset-preview.png`.
+
+Verification: `npm run creator:preview:typecheck`, `npm run creator:preview:test`
+(4/4 Chromium tests, including SwiftShader context loss/recovery),
+`npm run creator:preview:build`, and `npm run lint` passed. The preview build
+reports a 1.18 MB development-tool chunk (323 kB gzip); this is isolated from
+game production bundles. ESLint reports five React Fast Refresh warnings for
+local preview components and no errors. The targeted Prettier check passed.

@@ -16,6 +16,7 @@ export default tseslint.config(
       'test-results-*',
       'dev-dist',
       'examples/*/dist',
+      'tools/creator/preview/dist',
     ],
   },
   js.configs.recommended,

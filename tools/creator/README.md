@@ -57,3 +57,28 @@ Store catalog file paths relative to the catalog root. `verifyAssetFiles` checks
 source/runtime hashes, evidence-file presence, and symlink confinement. Owned
 AI-generated assets need their actual ownership evidence recorded; they are not
 implicitly CC0.
+
+## Local model preview
+
+Start the creator preview from the repository root:
+
+```sh
+npm run creator:preview
+```
+
+It opens bundled technical fixtures by default. To inspect a game project, point
+the preview server at its root and open
+`http://127.0.0.1:4175/?records=/__creator/asset-records.json`:
+
+```powershell
+$env:WAYPOINT_CREATOR_GAME_ROOT = (Resolve-Path .).Path
+npm run creator:preview
+```
+
+The preview reads that project's local `assets/asset-records.json` and `public/`
+model files. It validates the local manifest, does not fetch external asset
+resources, and never changes approval metadata. Its browser panel provides
+orbit/zoom, two independent instances, source clip and semantic mapping controls,
+reduced-motion preview, geometry/material diagnostics, and observed renderer
+resource counts. Capture the verified fixture screenshot with
+`npm run creator:preview:test`.
