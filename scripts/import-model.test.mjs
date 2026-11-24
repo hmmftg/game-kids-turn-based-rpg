@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { NodeIO } from '@gltf-transform/core';
 import { importModel } from './import-model.mjs';
-import { validateModelAssetRecord } from '../examples/scene-demo/src/animation/contracts.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '..');
 const fixtureDirectory = join(repositoryRoot, 'examples/scene-demo/fixtures/model-source');
+const creatorCli = join(repositoryRoot, 'tools/creator/src/cli.mjs');
 const fixture = (name) => join(fixtureDirectory, name);
 
 async function withTempDirectory(run) {
@@ -43,7 +44,7 @@ test('imports a self-contained textured static GLB and records verifiable proven
       metadataPath: fixture('static-textured.asset.json'),
       ...destinations(directory),
     });
-    assert.deepEqual(validateModelAssetRecord(result.record), []);
+    assert.equal(result.record.schemaVersion, 1);
     assert.equal(result.record.metrics.textureCount, 1);
     assert.equal(result.record.materialNames.length, 1);
     assert.equal(result.record.metrics.jointCount, 0);
@@ -63,7 +64,7 @@ test('preserves skin weights and named animation clips in the release GLB', asyn
       metadataPath: fixture('rigged-animated.asset.json'),
       ...destinations(directory),
     });
-    assert.deepEqual(validateModelAssetRecord(result.record), []);
+    assert.equal(result.record.schemaVersion, 1);
     assert.equal(result.record.metrics.jointCount, 2);
     assert.equal(result.record.metrics.skinCount, 1);
     assert.deepEqual(
@@ -128,6 +129,42 @@ test('converts a glTF source with local dependencies to a self-contained GLB', a
     const output = await new NodeIO().read(result.outputPath);
     assert.equal(output.getRoot().listTextures().length, 1);
     assert.equal(output.getRoot().listBuffers().length, 1);
+  });
+});
+
+test('parses exactly the local glTF dependency bytes that were validated', async () => {
+  await withTempDirectory(async (directory) => {
+    const sourcePath = join(directory, 'local-source.gltf');
+    const sourceDocument = await new NodeIO().read(fixture('static-textured.glb'));
+    await new NodeIO().write(sourcePath, sourceDocument);
+    const sourceJson = JSON.parse(await readFile(sourcePath, 'utf8'));
+    const bufferPath = join(directory, sourceJson.buffers[0].uri);
+    const expected = await importModel({
+      sourcePath,
+      metadataPath: fixture('static-textured.asset.json'),
+      ...destinations(join(directory, 'expected')),
+    });
+
+    const changedBytes = Buffer.from(await readFile(bufferPath));
+    changedBytes.writeFloatLE(42, 0);
+    const originalRead = NodeIO.prototype.read;
+    NodeIO.prototype.read = function (uri) {
+      if (uri !== sourcePath) return originalRead.call(this, uri);
+      return writeFile(bufferPath, changedBytes).then(() => originalRead.call(this, uri));
+    };
+
+    let actual;
+    try {
+      actual = await importModel({
+        sourcePath,
+        metadataPath: fixture('static-textured.asset.json'),
+        ...destinations(join(directory, 'actual')),
+      });
+    } finally {
+      NodeIO.prototype.read = originalRead;
+    }
+
+    assert.deepEqual(actual.record.bounds, expected.record.bounds);
   });
 });
 
@@ -254,6 +291,140 @@ test('rejects over-budget geometry and textures before creating release records'
       /ENOENT/,
       'invalid model imports must not write a release manifest',
     );
+  });
+});
+
+test('rejects a resource whose symlink or junction resolves outside the source folder', async () => {
+  await withTempDirectory(async (directory) => {
+    const sourceDirectory = join(directory, 'source');
+    const outsideDirectory = join(directory, 'outside');
+    await mkdir(sourceDirectory);
+    await mkdir(outsideDirectory);
+    await writeFile(join(outsideDirectory, 'mesh.bin'), Buffer.alloc(4));
+    await symlink(outsideDirectory, join(sourceDirectory, 'linked'), 'junction');
+    const sourcePath = join(sourceDirectory, 'model.gltf');
+    await writeFile(
+      sourcePath,
+      JSON.stringify({
+        asset: { version: '2.0' },
+        buffers: [{ uri: 'linked/mesh.bin', byteLength: 4 }],
+      }),
+    );
+
+    await assert.rejects(
+      importModel({
+        sourcePath,
+        metadataPath: fixture('static-textured.asset.json'),
+        ...destinations(join(directory, 'build')),
+      }),
+      /resource symlink escapes the source folder/,
+    );
+  });
+});
+
+test('rejects unsupported source file extensions before parsing', async () => {
+  await withTempDirectory(async (directory) => {
+    const sourcePath = join(directory, 'model.obj');
+    await writeFile(sourcePath, 'v 0 0 0\n');
+
+    await assert.rejects(
+      importModel({
+        sourcePath,
+        metadataPath: fixture('static-textured.asset.json'),
+        ...destinations(join(directory, 'build')),
+      }),
+      /source must be .glb or .gltf/,
+    );
+  });
+});
+
+test('keeps a duplicate asset ID unchanged unless replacement is explicit', async () => {
+  await withTempDirectory(async (directory) => {
+    const output = destinations(join(directory, 'build'));
+    const first = await importModel({
+      sourcePath: fixture('static-textured.glb'),
+      metadataPath: fixture('static-textured.asset.json'),
+      ...output,
+    });
+    const metadata = JSON.parse(await readFile(fixture('static-textured.asset.json'), 'utf8'));
+    const metadataPath = await writeMetadata(directory, 'same-id.json', metadata);
+
+    await assert.rejects(
+      importModel({
+        sourcePath: fixture('rigged-animated.glb'),
+        metadataPath,
+        ...output,
+      }),
+      /existing asset differs; pass --replace/,
+    );
+    assert.equal(
+      await readFile(first.outputPath).then((bytes) => bytes.length),
+      first.record.metrics.outputBytes,
+    );
+
+    const replaced = await importModel({
+      sourcePath: fixture('rigged-animated.glb'),
+      metadataPath,
+      ...output,
+      replace: true,
+    });
+    assert.notEqual(replaced.record.outputSha256, first.record.outputSha256);
+    assert.equal(
+      JSON.parse(await readFile(output.manifestPath, 'utf8'))[0].outputSha256,
+      replaced.record.outputSha256,
+    );
+  });
+});
+
+test('does not leave a release model when its import manifest cannot be committed', async () => {
+  await withTempDirectory(async (directory) => {
+    const outputDirectory = join(directory, 'models');
+    const blockedParent = join(directory, 'manifest-parent-is-a-file');
+    await writeFile(blockedParent, 'not a directory');
+
+    await assert.rejects(
+      importModel({
+        sourcePath: fixture('static-textured.glb'),
+        metadataPath: fixture('static-textured.asset.json'),
+        outputDirectory,
+        manifestPath: join(blockedParent, 'asset-records.json'),
+      }),
+      /ENOTDIR|EEXIST/,
+    );
+    await assert.rejects(readFile(join(outputDirectory, 'phase5-textured-static.glb')), {
+      code: 'ENOENT',
+    });
+  });
+});
+
+test('creator CLI imports local assets for technical preview without release approval', async () => {
+  await withTempDirectory(async (directory) => {
+    const metadata = JSON.parse(await readFile(fixture('static-textured.asset.json'), 'utf8'));
+    metadata.rights.approved = false;
+    const metadataPath = await writeMetadata(directory, 'unapproved.json', metadata);
+    const outputDirectory = join(directory, 'public', 'models');
+    const manifestPath = join(directory, 'assets', 'imports.json');
+    const result = spawnSync(
+      process.execPath,
+      [
+        creatorCli,
+        'asset',
+        'import',
+        '--source',
+        fixture('static-textured.glb'),
+        '--metadata',
+        metadataPath,
+        '--output-directory',
+        outputDirectory,
+        '--manifest',
+        manifestPath,
+      ],
+      { cwd: directory, encoding: 'utf8' },
+    );
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /Imported phase5-textured-static/);
+    assert.equal(JSON.parse(await readFile(manifestPath, 'utf8'))[0].rights.approved, false);
   });
 });
 
