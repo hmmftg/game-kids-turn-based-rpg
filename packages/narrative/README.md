@@ -121,6 +121,16 @@ whole command without changing state or revision. Failed and cancelled quests
 restart only when the definition opts in. The engine does not name moral
 values, rewards, movement, combat, or rendering.
 
+A quest may opt in to completed-attempt replay with `repeatable: true`; the
+default remains terminal after completion. Optional stable `stepIds` are
+recorded in `NarrativeState.questHistory` when the quest completes. History
+stores a completion count and the unique completed step IDs across attempts.
+`createNarrativeState` accepts a trusted `NarrativeStateSeed` for restoring
+facts, quest status, and quest history without replaying effects. The snapshot
+decoder accepts older narrative snapshots without `questHistory`, preserving
+completed status and deriving at least one completion for legacy completed
+quests.
+
 ## Runtime example
 
 ```ts

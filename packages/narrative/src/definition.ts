@@ -82,6 +82,24 @@ export interface QuestDefinition {
   readonly prerequisites?: NarrativeCondition;
   /** Only failed or cancelled quests may restart, and only when opted in. */
   readonly restartable?: boolean;
+  /** Completed quests may begin a new attempt only when explicitly opted in. */
+  readonly repeatable?: boolean;
+  /** Stable step ids recorded as complete whenever this quest completes. */
+  readonly stepIds?: readonly string[];
+}
+
+export interface NarrativeQuestHistory {
+  /** Number of accepted completions in this playthrough. */
+  readonly completionCount: number;
+  /** Unique stable step ids completed across all attempts. */
+  readonly completedSteps: readonly string[];
+}
+
+/** Trusted application seed for restoring generic progress without replaying effects. */
+export interface NarrativeStateSeed {
+  readonly facts?: Readonly<Record<string, JsonValue>>;
+  readonly quests?: Readonly<Record<string, PersistedQuestStatus>>;
+  readonly questHistory?: Readonly<Record<string, NarrativeQuestHistory>>;
 }
 
 export interface NarrativeTriggerDefinition {
@@ -145,6 +163,7 @@ export interface NarrativeState {
   readonly revision: number;
   readonly facts: Readonly<Record<string, JsonValue>>;
   readonly quests: Readonly<Record<string, PersistedQuestStatus>>;
+  readonly questHistory: Readonly<Record<string, NarrativeQuestHistory>>;
   readonly appliedChoiceIds: readonly string[];
   readonly appliedTriggerIds: readonly string[];
   readonly activeDialogue: ActiveDialogue | null;

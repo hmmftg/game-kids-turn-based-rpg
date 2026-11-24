@@ -448,6 +448,22 @@ export function validateNarrative(input: unknown): NarrativeValidationReport {
       validateCondition(quest.prerequisites, `${path}.prerequisites`);
     if (quest.restartable !== undefined && typeof quest.restartable !== 'boolean')
       add('quest-restartable', `${path}.restartable`, 'restartable must be boolean.');
+    if (quest.repeatable !== undefined && typeof quest.repeatable !== 'boolean')
+      add('quest-repeatable', `${path}.repeatable`, 'repeatable must be boolean.');
+    if (quest.stepIds !== undefined) {
+      if (!isArray(quest.stepIds)) {
+        add('quest-step-ids', `${path}.stepIds`, 'stepIds must be an array when present.');
+      } else {
+        const stepIds = new Set<string>();
+        for (const [stepIndex, stepId] of quest.stepIds.entries()) {
+          const stepPath = `${path}.stepIds[${stepIndex}]`;
+          if (!idField(stepId, stepPath)) continue;
+          if (stepIds.has(stepId))
+            add('duplicate-quest-step-id', stepPath, `Quest step id ${stepId} is duplicated.`);
+          stepIds.add(stepId);
+        }
+      }
+    }
   }
 
   for (const [index, dialogue] of dialogues.entries()) {

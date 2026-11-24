@@ -573,3 +573,121 @@ test('save codec preserves branch state across copy versions and rejects incompa
   assert.equal(decodeNarrativeState(compiled, { ...bytesPayload, schemaVersion: 99 }).ok, false);
   assert.equal(decodeNarrativeState(compiled, { ...bytesPayload, revision: -1 }).ok, false);
 });
+
+function repeatableQuestStory() {
+  return {
+    schemaVersion: 1,
+    id: 'repeatable-quest-story',
+    contentVersion: 'copy-1',
+    compatibilityVersion: 'repeatable-1',
+    facts: [{ key: 'trust', type: 'integer', default: 0 }],
+    entryDialogueId: 'entry',
+    quests: [
+      { id: 'greeting', repeatable: true, stepIds: ['greeting-1', 'greeting-2'] },
+      { id: 'one-shot', stepIds: ['one-shot-1'] },
+    ],
+    dialogues: [
+      {
+        id: 'entry',
+        entryNodeId: 'end',
+        exitPolicy: 'allowed',
+        nodes: [
+          {
+            id: 'end',
+            speakerId: 'guide',
+            text: { en: 'Done.' },
+            terminal: true,
+            endingId: 'ending',
+          },
+        ],
+      },
+    ],
+    triggers: [
+      {
+        id: 'start-greeting',
+        repeatable: true,
+        effects: [{ op: 'start-quest', questId: 'greeting' }],
+      },
+      {
+        id: 'complete-greeting',
+        repeatable: true,
+        effects: [{ op: 'complete-quest', questId: 'greeting' }],
+      },
+      {
+        id: 'start-one-shot',
+        repeatable: true,
+        effects: [{ op: 'start-quest', questId: 'one-shot' }],
+      },
+      {
+        id: 'complete-one-shot',
+        repeatable: true,
+        effects: [{ op: 'complete-quest', questId: 'one-shot' }],
+      },
+    ],
+  };
+}
+
+test('repeatable quests retain stable step history and count each verified completion', () => {
+  const compiled = compileNarrative(repeatableQuestStory());
+  let state = createNarrativeState(compiled, 'repeatable-playthrough');
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const started = send(compiled, state, 'trigger', { triggerId: 'start-greeting' });
+    assert.equal(started.accepted, true);
+    if (!started.accepted) return;
+    const completed = send(compiled, started.state, 'trigger', { triggerId: 'complete-greeting' });
+    assert.equal(completed.accepted, true);
+    if (!completed.accepted) return;
+    state = completed.state;
+    assert.deepEqual(state.questHistory.greeting, {
+      completionCount: attempt,
+      completedSteps: ['greeting-1', 'greeting-2'],
+    });
+    assert.equal(getQuestStatus(compiled, state, 'greeting'), 'completed');
+  }
+});
+
+test('completed quests without repeatable policy stay terminal and seed restore does not replay effects', () => {
+  const compiled = compileNarrative(repeatableQuestStory());
+  const state = createNarrativeState(compiled, 'seed-playthrough', {
+    facts: { trust: 4 },
+    quests: { greeting: 'completed' },
+    questHistory: {
+      greeting: { completionCount: 2, completedSteps: ['greeting-1', 'greeting-2'] },
+    },
+  });
+  assert.equal(getFact(state, 'trust'), 4);
+  assert.equal(getQuestStatus(compiled, state, 'greeting'), 'completed');
+  assert.deepEqual(state.questHistory.greeting, {
+    completionCount: 2,
+    completedSteps: ['greeting-1', 'greeting-2'],
+  });
+
+  let oneShot = send(compiled, state, 'trigger', { triggerId: 'start-one-shot' });
+  assert.equal(oneShot.accepted, true);
+  if (!oneShot.accepted) return;
+  oneShot = send(compiled, oneShot.state, 'trigger', { triggerId: 'complete-one-shot' });
+  assert.equal(oneShot.accepted, true);
+  if (!oneShot.accepted) return;
+  const replay = send(compiled, oneShot.state, 'trigger', { triggerId: 'start-one-shot' });
+  assert.equal(replay.accepted, false);
+  assert.strictEqual(replay.state, oneShot.state);
+});
+
+test('snapshot decoder accepts pre-history snapshots and validates authored step history', () => {
+  const compiled = compileNarrative(repeatableQuestStory());
+  const state = createNarrativeState(compiled, 'decode-playthrough');
+  const legacySnapshot = JSON.parse(JSON.stringify(state));
+  delete legacySnapshot.questHistory;
+  const restored = decodeNarrativeState(compiled, legacySnapshot);
+  assert.equal(restored.ok, true);
+  if (restored.ok) assert.deepEqual(restored.state.questHistory, {});
+
+  assert.throws(
+    () =>
+      createNarrativeState(compiled, 'invalid-seed', {
+        quests: { greeting: 'completed' },
+        questHistory: { greeting: { completionCount: 1, completedSteps: ['unknown-step'] } },
+      }),
+    /step id/i,
+  );
+});

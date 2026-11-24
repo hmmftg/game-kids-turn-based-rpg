@@ -5,7 +5,9 @@ import type {
   JsonValue,
   NarrativeFactDefinition,
   NarrativeDecodeResult,
+  NarrativeQuestHistory,
   NarrativeState,
+  NarrativeStateSeed,
   PersistedQuestStatus,
   QuestStatus,
 } from './definition.js';
@@ -29,6 +31,7 @@ const STATE_KEYS = new Set([
   'revision',
   'facts',
   'quests',
+  'questHistory',
   'appliedChoiceIds',
   'appliedTriggerIds',
   'activeDialogue',
@@ -44,6 +47,7 @@ type Draft = {
   revision: number;
   facts: Record<string, JsonValue>;
   quests: Record<string, PersistedQuestStatus>;
+  questHistory: Record<string, NarrativeQuestHistory>;
   appliedChoiceIds: string[];
   appliedTriggerIds: string[];
   activeDialogue: ActiveDialogue | null;
@@ -101,19 +105,62 @@ export function draftFromState(state: NarrativeState): Draft {
 export function createNarrativeState(
   compiled: CompiledNarrative,
   playthroughId: string,
+  seed: NarrativeStateSeed = {},
 ): NarrativeState {
-  compiledIndexes(compiled);
+  const indexes = compiledIndexes(compiled);
   if (typeof playthroughId !== 'string' || !SAFE_ID.test(playthroughId)) {
     throw new TypeError('playthroughId must be a stable ASCII identifier.');
   }
+  if (!plainRecord(seed)) throw new TypeError('Narrative seed must be a plain object.');
+
+  const facts = defaultFacts(compiled.definition.facts);
+  if (seed.facts !== undefined) {
+    if (!plainRecord(seed.facts))
+      throw new TypeError('Narrative seed facts must be a plain object.');
+    const declarations = compiled.definition.facts
+      ? new Map(compiled.definition.facts.map((fact) => [fact.key, fact]))
+      : null;
+    for (const [key, value] of Object.entries(seed.facts)) {
+      if (!SAFE_FACT_KEY.test(key) || UNSAFE_KEYS.has(key) || !validJson(value)) {
+        throw new TypeError(`Narrative seed fact ${key} is unsafe.`);
+      }
+      const declaration = declarations?.get(key);
+      if (declarations && !declaration) {
+        throw new TypeError(`Narrative seed fact ${key} is not declared.`);
+      }
+      if (declaration && !matchesFactType(value, declaration.type)) {
+        throw new TypeError(`Narrative seed fact ${key} has the wrong type.`);
+      }
+      facts[key] = cloneJson(value) as JsonValue;
+    }
+  }
+
+  const quests: Record<string, PersistedQuestStatus> = {};
+  if (seed.quests !== undefined) {
+    if (!plainRecord(seed.quests))
+      throw new TypeError('Narrative seed quests must be a plain object.');
+    for (const [questId, status] of Object.entries(seed.quests)) {
+      if (
+        !indexes.quests.has(questId) ||
+        typeof status !== 'string' ||
+        !PERSISTED_STATUSES.has(status as PersistedQuestStatus)
+      ) {
+        throw new TypeError(`Narrative seed quest ${questId} is unknown or invalid.`);
+      }
+      quests[questId] = status as PersistedQuestStatus;
+    }
+  }
+
+  const questHistory = normalizeQuestHistory(compiled, seed.questHistory, quests);
   return snapshotDraft({
     schemaVersion: 1,
     storyId: compiled.id,
     compatibilityVersion: compiled.compatibilityVersion,
     playthroughId,
     revision: 0,
-    facts: defaultFacts(compiled.definition.facts),
-    quests: {},
+    facts,
+    quests,
+    questHistory,
     appliedChoiceIds: [],
     appliedTriggerIds: [],
     activeDialogue: null,
@@ -191,7 +238,9 @@ export function decodeNarrativeState(
     !plainRecord(input) ||
     !validJson(input) ||
     Object.keys(input).some((key) => !STATE_KEYS.has(key)) ||
-    Object.keys(input).length !== STATE_KEYS.size
+    (Object.hasOwn(input, 'questHistory')
+      ? Object.keys(input).length !== STATE_KEYS.size
+      : Object.keys(input).length !== STATE_KEYS.size - 1)
   ) {
     return decodeFailure(
       'invalid-payload',
@@ -256,6 +305,15 @@ export function decodeNarrativeState(
       return decodeFailure('invalid-payload', `Quest state ${questId} is unknown or invalid.`);
     }
     quests[questId] = status as PersistedQuestStatus;
+  }
+  let questHistory: Record<string, NarrativeQuestHistory>;
+  try {
+    questHistory = normalizeQuestHistory(compiled, input.questHistory, quests);
+  } catch (error) {
+    return decodeFailure(
+      'invalid-payload',
+      error instanceof Error ? error.message : 'Quest history is invalid.',
+    );
   }
   const allChoices = new Set<string>();
   for (const dialogue of compiled.definition.dialogues)
@@ -322,6 +380,7 @@ export function decodeNarrativeState(
     revision: input.revision as number,
     facts,
     quests,
+    questHistory,
     appliedChoiceIds,
     appliedTriggerIds,
     activeDialogue,
@@ -343,6 +402,63 @@ export function decodeNarrativeState(
     }
   }
   return { ok: true, state };
+}
+
+function normalizeQuestHistory(
+  compiled: CompiledNarrative,
+  input: unknown,
+  quests: Readonly<Record<string, PersistedQuestStatus>>,
+): Record<string, NarrativeQuestHistory> {
+  const indexes = compiledIndexes(compiled);
+  if (input !== undefined && !plainRecord(input)) {
+    throw new TypeError('Narrative quest history must be a plain object.');
+  }
+  const source = (input ?? {}) as Record<string, unknown>;
+  const result: Record<string, NarrativeQuestHistory> = {};
+  for (const [questId, rawHistory] of Object.entries(source)) {
+    const quest = indexes.quests.get(questId);
+    if (!quest || !plainRecord(rawHistory)) {
+      throw new TypeError(`Narrative quest history ${questId} is unknown or invalid.`);
+    }
+    if (
+      Object.keys(rawHistory).sort().join('\0') !==
+        ['completionCount', 'completedSteps'].sort().join('\0') ||
+      !Number.isSafeInteger(rawHistory.completionCount) ||
+      (rawHistory.completionCount as number) < 0 ||
+      !Array.isArray(rawHistory.completedSteps)
+    ) {
+      throw new TypeError(`Narrative quest history ${questId} has invalid progress.`);
+    }
+    const completedSteps: string[] = [];
+    for (const stepId of rawHistory.completedSteps) {
+      if (
+        typeof stepId !== 'string' ||
+        !SAFE_ID.test(stepId) ||
+        completedSteps.includes(stepId) ||
+        (quest.stepIds !== undefined && !quest.stepIds.includes(stepId))
+      ) {
+        throw new TypeError(`Narrative quest history ${questId} has an invalid step id.`);
+      }
+      completedSteps.push(stepId);
+    }
+    if (rawHistory.completionCount === 0 && completedSteps.length > 0) {
+      throw new TypeError(`Narrative quest history ${questId} has steps without a completion.`);
+    }
+    result[questId] = {
+      completionCount: rawHistory.completionCount as number,
+      completedSteps,
+    };
+  }
+
+  // Narrative snapshots from before quest history existed can only prove that
+  // a completed quest finished at least once. Preserve that fact and any step
+  // ids authored in the compatible definition without replaying its effects.
+  for (const [questId, status] of Object.entries(quests)) {
+    if (status !== 'completed' || Object.hasOwn(result, questId)) continue;
+    const stepIds = indexes.quests.get(questId)?.stepIds ?? [];
+    result[questId] = { completionCount: 1, completedSteps: [...stepIds] };
+  }
+  return result;
 }
 
 function decodeDialoguePointer(
