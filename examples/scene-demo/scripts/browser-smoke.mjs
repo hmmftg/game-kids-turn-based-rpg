@@ -53,7 +53,9 @@ try {
   const page = await browser.newPage();
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
-  await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'networkidle' });
+  await page.goto(`http://127.0.0.1:${address.port}/?scene-test=1`, {
+    waitUntil: 'networkidle',
+  });
 
   const map = page.getByTestId('active-map');
   const camera = page.getByTestId('camera-kind');
@@ -302,6 +304,14 @@ try {
   await page.waitForFunction(
     () => document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'waiting',
   );
+  await waitForStableSceneFrames(page);
+  const cinematicWaitingFrameCount = await page.evaluate(() => window.__sceneProbe?.frameCount);
+  await waitForStableSceneFrames(page);
+  assert.equal(
+    await page.evaluate(() => window.__sceneProbe?.frameCount),
+    cinematicWaitingFrameCount,
+    'camera and effect cues pause their demand frames while the timeline waits for the player',
+  );
   assert.equal(await page.getByTestId('cinematic-continue').isEnabled(), true);
   await page.getByTestId('cinematic-continue').click();
   await page.waitForFunction(
@@ -358,6 +368,22 @@ try {
   assert.equal(
     await page.evaluate(() => localStorage.getItem('waypoint-rpg-scene-demo:save')),
     durableSaveBeforeCinematic,
+  );
+
+  const immediateSkipTriggered = await page.evaluate(() => {
+    const test = window.__sceneDemoCinematicTest;
+    if (!test) return false;
+    test.playThenSkipBeforeFrame();
+    return true;
+  });
+  assert.equal(immediateSkipTriggered, true);
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'completed' &&
+      document.querySelector('[data-testid="cinematic-caption"]') === null &&
+      document
+        .querySelector('[data-testid="lantern-cinematic-controls"]')
+        ?.getAttribute('aria-busy') === 'false',
   );
 
   const cameraBeforeCancel = await page.evaluate(() => window.__sceneProbe?.cameraPosition);
@@ -979,6 +1005,41 @@ try {
     committedGuardianPosition,
   );
 
+  const revisionBeforeAbility = await page.getByTestId('gameplay-revision').textContent();
+  await page.getByTestId('gameplay-ability').click();
+  try {
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector('[data-testid="gameplay-feedback"]')
+          ?.textContent?.startsWith('Accepted light ability') &&
+        document
+          .querySelector('[data-testid="gameplay-outcome"]')
+          ?.textContent?.includes('victory') &&
+        document
+          .querySelector('[data-testid="animation-action-traveler"]')
+          ?.textContent?.includes('combat') &&
+        document
+          .querySelector('[data-testid="animation-action-guardian"]')
+          ?.textContent?.includes('defeat'),
+    );
+  } catch (error) {
+    process.stderr.write(
+      `Gameplay ability probe: ${JSON.stringify(
+        await page.evaluate(() => ({
+          feedback: document.querySelector('[data-testid="gameplay-feedback"]')?.textContent,
+          outcome: document.querySelector('[data-testid="gameplay-outcome"]')?.textContent,
+          revision: document.querySelector('[data-testid="gameplay-revision"]')?.textContent,
+          traveler: document.querySelector('[data-testid="animation-action-traveler"]')
+            ?.textContent,
+          guardian: document.querySelector('[data-testid="animation-action-guardian"]')
+            ?.textContent,
+        })),
+      )}\n`,
+    );
+    throw error;
+  }
+  assert.notEqual(await page.getByTestId('gameplay-revision').textContent(), revisionBeforeAbility);
   await page.evaluate(() =>
     window.__phase5ModelProbe?.setAnimationAction?.('traveler', 'combat', false),
   );
@@ -1020,6 +1081,34 @@ try {
     () =>
       (window.__phase5ModelProbe?.renderer.info.memory.geometries ?? 0) >= 4 &&
       (window.__phase5ModelProbe?.renderer.info.memory.textures ?? 0) >= 5,
+  );
+  const sceneBeforeOrdinaryReload = await page.evaluate(
+    () => window.__phase5ModelProbe?.scene.uuid,
+  );
+  await page.evaluate(() => {
+    const retiredCanvas = window.__phase5ModelProbe?.renderer.domElement;
+    if (!retiredCanvas) throw new Error('The current model canvas is unavailable.');
+    window.__phase5RetiredCanvasLost = new Promise((resolve) => {
+      retiredCanvas.addEventListener('webglcontextlost', () => resolve(true), { once: true });
+    });
+  });
+  await page.getByTestId('model-reload').click();
+  await page.waitForFunction(
+    (oldSceneId) =>
+      window.__phase5ModelProbe?.scene.uuid !== oldSceneId &&
+      document.querySelector('[data-testid="model-status-static"]')?.dataset.status === 'ready' &&
+      document.querySelector('[data-testid="model-status-rigged"]')?.dataset.status === 'ready',
+    sceneBeforeOrdinaryReload,
+  );
+  await page.evaluate(async () => await window.__phase5RetiredCanvasLost);
+  assert.equal(
+    await page.getByTestId('phase5-context-recover').count(),
+    0,
+    'a retired canvas teardown event must not report context loss for the replacement renderer',
+  );
+  assert.equal(
+    await page.evaluate(() => window.__phase5ModelProbe?.renderer.getContext().isContextLost()),
+    false,
   );
   const initialRendererMemory = await page.evaluate(() => ({
     geometries: window.__phase5ModelProbe?.renderer.info.memory.geometries ?? -1,

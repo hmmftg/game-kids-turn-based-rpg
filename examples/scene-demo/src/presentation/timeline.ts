@@ -99,12 +99,16 @@ export interface TimelinePlayer {
   snapshot(): TimelineSnapshot;
   isCurrentExecution(executionId: number): boolean;
   play(options?: { readonly reducedMotion?: boolean }): number;
-  skip(): readonly TimelineEvent[];
-  cancel(): void;
+  skip(executionId: number): readonly TimelineEvent[];
+  cancel(executionId: number): void;
   replay(options?: { readonly reducedMotion?: boolean }): number;
-  resolveWait(waitId: string, choiceId?: string): TimelineWaitResolution | null;
+  resolveWait(
+    executionId: number,
+    waitId: string,
+    choiceId?: string,
+  ): TimelineWaitResolution | null;
   /** Advance deterministic time and return registered cues whose time has arrived. */
-  advance(deltaSeconds: number): readonly TimelineEvent[];
+  advance(executionId: number, deltaSeconds: number): readonly TimelineEvent[];
   dispose(): void;
 }
 
@@ -321,13 +325,18 @@ export function compileTimeline(
     .map((cue) => cueSpan(cue, registry))
     .filter((span): span is readonly [number, number, string] => span !== null)
     .sort((left, right) => left[0] - right[0]);
-  for (let index = 1; index < spans.length; index += 1) {
-    const previous = spans[index - 1]!;
-    const current = spans[index]!;
+  const lastSpanByOwner = new Map<string, readonly [number, number]>();
+  for (const current of spans) {
+    const previous = lastSpanByOwner.get(current[2]);
     const pointCollision =
-      current[0] === previous[0] && current[0] === current[1] && previous[0] === previous[1];
-    if (previous[2] === current[2] && (current[0] < previous[1] || pointCollision))
+      previous !== undefined &&
+      current[0] === previous[0] &&
+      current[0] === current[1] &&
+      previous[0] === previous[1];
+    if (previous && (current[0] < previous[1] || pointCollision))
       throw new Error(`Timeline cues have overlapping ownership (${current[2]}).`);
+    if (!previous || current[1] > previous[1])
+      lastSpanByOwner.set(current[2], [current[0], current[1]]);
   }
 
   return Object.freeze({
@@ -372,26 +381,33 @@ export function createTimelinePlayer(timeline: CompiledTimeline): TimelinePlayer
   const ensureNotDisposed = () => {
     if (status === 'disposed') throw new Error('Timeline player has been disposed.');
   };
+  const isActiveExecution = (id: number) =>
+    id === executionId && (status === 'playing' || status === 'waiting');
+  const startExecution = (options: { readonly reducedMotion?: boolean } = {}) => {
+    ensureNotDisposed();
+    executionId += 1;
+    status = 'playing';
+    timeSeconds = 0;
+    nextCueIndex = 0;
+    waitingFor = null;
+    activeWait = null;
+    reducedMotion = options.reducedMotion ?? false;
+    return executionId;
+  };
 
   const player: TimelinePlayer = {
     snapshot,
     isCurrentExecution(id) {
-      return status !== 'disposed' && id === executionId;
+      return id === executionId && status !== 'cancelled' && status !== 'disposed';
     },
     play(options = {}) {
       ensureNotDisposed();
-      executionId += 1;
-      status = 'playing';
-      timeSeconds = 0;
-      nextCueIndex = 0;
-      waitingFor = null;
-      activeWait = null;
-      reducedMotion = options.reducedMotion ?? false;
-      return executionId;
+      if (status === 'playing' || status === 'waiting') return executionId;
+      return startExecution(options);
     },
-    skip() {
+    skip(id) {
       ensureNotDisposed();
-      if (status !== 'playing' && status !== 'waiting') return [];
+      if (!isActiveExecution(id)) return [];
       const events: TimelineEvent[] = [];
       if (activeWait?.mode === 'choice') return [];
       activeWait = null;
@@ -413,17 +429,18 @@ export function createTimelinePlayer(timeline: CompiledTimeline): TimelinePlayer
       status = 'completed';
       return Object.freeze(events);
     },
-    cancel() {
-      if (status === 'disposed' || status === 'completed' || status === 'cancelled') return;
+    cancel(id) {
+      if (!isActiveExecution(id)) return;
       status = 'cancelled';
       waitingFor = null;
       activeWait = null;
     },
     replay(options = {}) {
-      return player.play(options);
+      return startExecution(options);
     },
-    resolveWait(waitId, choiceId) {
-      if (status !== 'waiting' || activeWait?.waitId !== waitId) return null;
+    resolveWait(id, waitId, choiceId) {
+      if (!isActiveExecution(id) || status !== 'waiting' || activeWait?.waitId !== waitId)
+        return null;
       if (activeWait.mode === 'continue' && choiceId !== undefined) return null;
       if (activeWait.mode === 'choice' && (!choiceId || !activeWait.choiceIds?.includes(choiceId)))
         return null;
@@ -433,8 +450,9 @@ export function createTimelinePlayer(timeline: CompiledTimeline): TimelinePlayer
       status = 'playing';
       return resolution;
     },
-    advance(deltaSeconds) {
+    advance(id, deltaSeconds) {
       ensureNotDisposed();
+      if (!isActiveExecution(id)) return [];
       if (!Number.isFinite(deltaSeconds) || deltaSeconds < 0)
         throw new RangeError('Timeline delta must be finite and non-negative.');
       if (status !== 'playing') return [];

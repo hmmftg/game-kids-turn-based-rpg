@@ -62,7 +62,6 @@ export function CinematicStage({
   }, [onEvent, onStatus, onEffect, onRelease, onLeaseActive]);
 
   const releasePresentation = useCallback(() => {
-    if (!leaseOwned.current) return;
     leaseOwned.current = false;
     if (originalCamera.current) {
       camera.position.copy(originalCamera.current.position);
@@ -86,7 +85,7 @@ export function CinematicStage({
   useEffect(
     () => () => {
       const player = playerRef.current;
-      player?.cancel();
+      if (player) player.cancel(player.snapshot().executionId);
       releasePresentationRef.current();
       if (player) callbacks.current.onStatus(player.snapshot().status);
     },
@@ -114,7 +113,7 @@ export function CinematicStage({
 
     const events = [
       ...pendingEventsRef.current.splice(0),
-      ...(before.status === 'playing' ? player.advance(presentationDelta) : []),
+      ...(before.status === 'playing' ? player.advance(before.executionId, presentationDelta) : []),
     ];
     for (const event of events) {
       if (!player.isCurrentExecution(event.executionId)) continue;
@@ -177,8 +176,9 @@ export function CinematicStage({
     previousStatus.current = after.status;
     const probe = sceneProbe();
     if (probe) probe.cameraPosition = camera.position.toArray();
-    if (after.status === 'playing' || cameraTrack.current || activeEffects.current.size > 0)
-      invalidate();
+    // Cues pause at a wait. Their tracks resume on the user command, which
+    // explicitly invalidates the Canvas; scheduling here would spin forever.
+    if (after.status === 'playing') invalidate();
   });
 
   return null;

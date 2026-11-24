@@ -25,6 +25,12 @@ import { createTimelinePlayer } from './presentation/timeline.js';
 import type { TimelineEvent, TimelinePlayer, TimelineStatus } from './presentation/timeline.js';
 import { sceneProbe } from './probe.js';
 
+declare global {
+  interface Window {
+    __sceneDemoCinematicTest?: { readonly playThenSkipBeforeFrame: () => void };
+  }
+}
+
 export function App() {
   if (new URLSearchParams(window.location.search).get('phase5') === 'assets')
     return <Phase5AssetDemo />;
@@ -32,6 +38,7 @@ export function App() {
 }
 
 function NarrativeDemo() {
+  const cinematicTestMode = new URLSearchParams(window.location.search).get('scene-test') === '1';
   const host = useMemo(() => new SceneHost(sceneRegistry), []);
   const runtime = useMemo(() => createDemoRuntime(host, { storage: browserDemoStorage }), [host]);
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
@@ -55,6 +62,7 @@ function NarrativeDemo() {
   const audioNodesRef = useRef(new Set<OscillatorNode>());
   const mountedRef = useRef(false);
   const [cinematicStatus, setCinematicStatus] = useState<TimelineStatus>('idle');
+  const [cinematicExecutionId, setCinematicExecutionId] = useState(0);
   const [cinematicCaption, setCinematicCaption] = useState('');
   const [cinematicLease, setCinematicLease] = useState(false);
   const [lanternAccent, setLanternAccent] = useState(false);
@@ -166,7 +174,7 @@ function NarrativeDemo() {
       event.preventDefault();
       if (!canvasLive.current) return;
       canvasLive.current = false;
-      timelinePlayer.cancel();
+      timelinePlayer.cancel(timelinePlayer.snapshot().executionId);
       stopCinematicAudio();
       setCinematicStatus(timelinePlayer.snapshot().status);
       setCinematicLease(false);
@@ -262,7 +270,7 @@ function NarrativeDemo() {
     const status = timelinePlayer.snapshot().status;
     const isActive = status === 'playing' || status === 'waiting';
     if ((!cinematicCanRun || snapshot.pendingMapId !== null) && isActive) {
-      timelinePlayer.cancel();
+      timelinePlayer.cancel(timelinePlayer.snapshot().executionId);
       invalidateRef.current();
     }
   }, [cinematicCanRun, snapshot.pendingMapId, timelinePlayer]);
@@ -280,7 +288,7 @@ function NarrativeDemo() {
     setCinematicLease(active);
   }, []);
   const playLanternSequence = useCallback(() => {
-    if (!cinematicCanRun) return;
+    if (!cinematicCanRun) return null;
     cinematicOpenerRef.current = document.activeElement as HTMLButtonElement;
     if (!audioContextRef.current && window.AudioContext)
       audioContextRef.current = new window.AudioContext();
@@ -288,26 +296,45 @@ function NarrativeDemo() {
       void audioContextRef.current.resume().catch(() => {});
     pendingTimelineEventsRef.current = [];
     setCinematicCaption('');
-    const executionId = timelinePlayer.replay({ reducedMotion });
+    const executionId = timelinePlayer.play({ reducedMotion });
+    setCinematicExecutionId(executionId);
     setCinematicStatus(timelinePlayer.snapshot().status);
     if (timelinePlayer.isCurrentExecution(executionId)) invalidateRef.current();
+    return executionId;
   }, [cinematicCanRun, reducedMotion, timelinePlayer]);
-  const skipLanternSequence = useCallback(() => {
-    pendingTimelineEventsRef.current.push(...timelinePlayer.skip());
-    setCinematicStatus(timelinePlayer.snapshot().status);
-    invalidateRef.current();
-  }, [timelinePlayer]);
+  const skipLanternSequence = useCallback(
+    (executionId = cinematicExecutionId) => {
+      pendingTimelineEventsRef.current.push(...timelinePlayer.skip(executionId));
+      setCinematicStatus(timelinePlayer.snapshot().status);
+      invalidateRef.current();
+    },
+    [cinematicExecutionId, timelinePlayer],
+  );
   const cancelLanternSequence = useCallback(() => {
-    timelinePlayer.cancel();
+    timelinePlayer.cancel(cinematicExecutionId);
     setCinematicStatus(timelinePlayer.snapshot().status);
     invalidateRef.current();
-  }, [timelinePlayer]);
+  }, [cinematicExecutionId, timelinePlayer]);
   const continueLanternSequence = useCallback(() => {
     const waitingFor = timelinePlayer.snapshot().waitingFor;
-    if (waitingFor) timelinePlayer.resolveWait(waitingFor);
+    if (waitingFor) timelinePlayer.resolveWait(cinematicExecutionId, waitingFor);
     setCinematicStatus(timelinePlayer.snapshot().status);
     invalidateRef.current();
-  }, [timelinePlayer]);
+  }, [cinematicExecutionId, timelinePlayer]);
+
+  useEffect(() => {
+    if (!cinematicTestMode) return;
+    const testHook = {
+      playThenSkipBeforeFrame: () => {
+        const executionId = playLanternSequence();
+        if (executionId !== null) skipLanternSequence(executionId);
+      },
+    };
+    window.__sceneDemoCinematicTest = testHook;
+    return () => {
+      if (window.__sceneDemoCinematicTest === testHook) delete window.__sceneDemoCinematicTest;
+    };
+  }, [cinematicTestMode, playLanternSequence, skipLanternSequence]);
 
   return (
     <>
@@ -545,7 +572,11 @@ function NarrativeDemo() {
             </button>
             {(cinematicStatus === 'playing' || cinematicStatus === 'waiting') && (
               <>
-                <button data-testid="cinematic-skip" type="button" onClick={skipLanternSequence}>
+                <button
+                  data-testid="cinematic-skip"
+                  type="button"
+                  onClick={() => skipLanternSequence()}
+                >
                   رد کردن
                 </button>
                 <button

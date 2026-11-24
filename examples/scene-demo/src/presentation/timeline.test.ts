@@ -41,20 +41,27 @@ describe('cinematic timeline', () => {
     const player = createTimelinePlayer(timeline);
     const executionId = player.play();
 
-    expect(player.advance(0.3).map(({ cue }) => cue.id)).toEqual(['look', 'greet']);
-    expect(player.advance(0.3).map(({ cue }) => cue.id)).toEqual(['line']);
-    expect(player.advance(1.1).map(({ cue }) => cue.id)).toEqual(['tone', 'glow', 'continue']);
+    expect(player.advance(executionId, 0.3).map(({ cue }) => cue.id)).toEqual(['look', 'greet']);
+    expect(player.advance(executionId, 0.3).map(({ cue }) => cue.id)).toEqual(['line']);
+    expect(player.advance(executionId, 1.1).map(({ cue }) => cue.id)).toEqual([
+      'tone',
+      'glow',
+      'continue',
+    ]);
     expect(player.snapshot()).toMatchObject({
       status: 'waiting',
       timeSeconds: 1.6,
       executionId,
       waitingFor: 'continue-greeting',
     });
-    expect(player.advance(1)).toEqual([]);
-    expect(player.resolveWait('wrong-wait')).toBeNull();
-    expect(player.resolveWait('continue-greeting', 'unexpected-choice')).toBeNull();
-    expect(player.resolveWait('continue-greeting')).toMatchObject({ executionId, choiceId: null });
-    expect(player.advance(1)).toEqual([]);
+    expect(player.advance(executionId, 1)).toEqual([]);
+    expect(player.resolveWait(executionId, 'wrong-wait')).toBeNull();
+    expect(player.resolveWait(executionId, 'continue-greeting', 'unexpected-choice')).toBeNull();
+    expect(player.resolveWait(executionId, 'continue-greeting')).toMatchObject({
+      executionId,
+      choiceId: null,
+    });
+    expect(player.advance(executionId, 1)).toEqual([]);
     expect(player.snapshot().status).toBe('completed');
   });
 
@@ -78,16 +85,16 @@ describe('cinematic timeline', () => {
     );
     const player = createTimelinePlayer(choiceTimeline);
     const run = player.play();
-    const [choiceCue] = player.advance(2);
+    const [choiceCue] = player.advance(run, 2);
     expect(choiceCue?.cue.kind).toBe('wait');
     expect(player.snapshot().status).toBe('waiting');
-    expect(player.resolveWait('lantern-choice', 'unknown')).toBeNull();
-    expect(player.resolveWait('lantern-choice', 'light')).toEqual({
+    expect(player.resolveWait(run, 'lantern-choice', 'unknown')).toBeNull();
+    expect(player.resolveWait(run, 'lantern-choice', 'light')).toEqual({
       executionId: run,
       waitId: 'lantern-choice',
       choiceId: 'light',
     });
-    expect(player.advance(0.5)).toHaveLength(1);
+    expect(player.advance(run, 0.5)).toHaveLength(1);
   });
 
   it('skips transient cues but stops at a choice and never chooses for the player', () => {
@@ -110,21 +117,22 @@ describe('cinematic timeline', () => {
       registry,
     );
     const player = createTimelinePlayer(choiceTimeline);
-    player.play();
-    player.advance(0.2);
-    expect(player.skip().map(({ cue }) => cue.id)).toEqual(['choice']);
+    const executionId = player.play();
+    player.advance(executionId, 0.2);
+    expect(player.skip(executionId).map(({ cue }) => cue.id)).toEqual(['choice']);
     expect(player.snapshot().status).toBe('waiting');
-    expect(player.skip()).toEqual([]);
-    expect(player.resolveWait('choice', 'a')?.choiceId).toBe('a');
-    expect(player.advance(1).map(({ cue }) => cue.id)).toEqual(['end']);
+    expect(player.skip(executionId)).toEqual([]);
+    expect(player.resolveWait(executionId, 'choice', 'a')?.choiceId).toBe('a');
+    expect(player.advance(executionId, 1).map(({ cue }) => cue.id)).toEqual(['end']);
   });
 
   it('replay gets a new execution identity and rejects stale callbacks', () => {
     const player = createTimelinePlayer(compileTimeline(definition, registry));
     const first = player.play();
-    player.advance(0.1);
-    player.cancel();
-    player.cancel();
+    player.advance(first, 0.1);
+    player.cancel(first);
+    expect(player.isCurrentExecution(first)).toBe(false);
+    player.cancel(first);
     const second = player.replay();
 
     expect(second).toBeGreaterThan(first);
@@ -133,10 +141,48 @@ describe('cinematic timeline', () => {
     expect(player.snapshot()).toMatchObject({ status: 'playing', timeSeconds: 0 });
   });
 
+  it('ignores stale wait and control callbacks after a replay', () => {
+    const player = createTimelinePlayer(compileTimeline(definition, registry));
+    const firstExecution = player.play();
+    player.advance(firstExecution, 2);
+    const firstWaitId = player.snapshot().waitingFor;
+    expect(firstWaitId).toBe('continue-greeting');
+    player.cancel(firstExecution);
+
+    const secondExecution = player.replay();
+    player.advance(secondExecution, 2);
+    expect(secondExecution).toBeGreaterThan(firstExecution);
+
+    const staleWait = Reflect.apply(player.resolveWait, player, [firstExecution, firstWaitId]);
+    expect(staleWait).toBeNull();
+    expect(Reflect.apply(player.skip, player, [firstExecution])).toEqual([]);
+    Reflect.apply(player.cancel, player, [firstExecution]);
+    expect(player.snapshot().status).toBe('waiting');
+  });
+
+  it('ignores stale animation-frame advances from an earlier execution', () => {
+    const player = createTimelinePlayer(compileTimeline(definition, registry));
+    const firstExecution = player.play();
+    player.cancel(firstExecution);
+    player.replay();
+
+    expect(Reflect.apply(player.advance, player, [firstExecution, 0.3])).toEqual([]);
+    expect(player.snapshot().timeSeconds).toBe(0);
+  });
+
+  it('does not restart an active run when play is called again', () => {
+    const player = createTimelinePlayer(compileTimeline(definition, registry));
+    const executionId = player.play();
+    player.advance(executionId, 0.2);
+
+    expect(player.play()).toBe(executionId);
+    expect(player.snapshot()).toMatchObject({ status: 'playing', timeSeconds: 0.2 });
+  });
+
   it('handles rapid play/cancel/play and idempotent disposal', () => {
     const player = createTimelinePlayer(compileTimeline(definition, registry));
     const first = player.play();
-    player.cancel();
+    player.cancel(first);
     const second = player.play();
     expect(player.isCurrentExecution(first)).toBe(false);
     expect(player.isCurrentExecution(second)).toBe(true);
@@ -149,8 +195,8 @@ describe('cinematic timeline', () => {
 
   it('reduced motion keeps dialogue and deliberate waits available', () => {
     const player = createTimelinePlayer(compileTimeline(definition, registry));
-    player.play({ reducedMotion: true });
-    const events = player.advance(1 / 60);
+    const executionId = player.play({ reducedMotion: true });
+    const events = player.advance(executionId, 1 / 60);
     expect(events.map(({ cue }) => cue.kind)).toEqual([
       'camera',
       'animation',
@@ -286,13 +332,41 @@ describe('cinematic timeline', () => {
     ).toThrow(/overlapping ownership/i);
   });
 
+  it('rejects interleaved cues that overlap the same presentation owner', () => {
+    expect(() =>
+      compileTimeline(
+        {
+          ...definition,
+          cues: [
+            {
+              id: 'camera-first',
+              atSeconds: 0,
+              kind: 'camera',
+              cameraId: 'lantern',
+              durationSeconds: 2,
+            },
+            { id: 'dialogue-between', atSeconds: 0.5, kind: 'dialogue', dialogueId: 'greeting' },
+            {
+              id: 'camera-second',
+              atSeconds: 1,
+              kind: 'camera',
+              cameraId: 'game',
+              durationSeconds: 0.5,
+            },
+          ],
+        },
+        registry,
+      ),
+    ).toThrow(/overlapping ownership/i);
+  });
+
   it('does not mutate authored definitions or expose mutable compiled registries', () => {
     const authored = structuredClone(definition);
     const registryCopy = structuredClone(registry);
     const compiled = compileTimeline(authored, registryCopy);
     const player = createTimelinePlayer(compiled);
-    player.play();
-    player.advance(0.3);
+    const executionId = player.play();
+    player.advance(executionId, 0.3);
     expect(authored).toEqual(definition);
     expect(Object.isFrozen(compiled)).toBe(true);
     expect(Object.isFrozen(compiled.cues)).toBe(true);

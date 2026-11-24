@@ -21,7 +21,7 @@ export const bloodLeafLanternAwakening = compileTimeline(
   {
     id: 'blood-leaf-lantern-awakening',
     version: 1,
-    durationSeconds: 4,
+    durationSeconds: 5,
     cues: [
       {
         id: 'frame-lantern',
@@ -44,14 +44,14 @@ export const bloodLeafLanternAwakening = compileTimeline(
         atSeconds: 1.85,
         kind: 'effect',
         effectId: 'lanternGlow',
-        durationSeconds: 1.1,
+        durationSeconds: 2.5,
       },
       {
         id: 'restore-workshop-view',
         atSeconds: 3.1,
         kind: 'camera',
         cameraId: 'workshop',
-        durationSeconds: 0.6,
+        durationSeconds: 1.2,
       },
       {
         id: 'continue-story',

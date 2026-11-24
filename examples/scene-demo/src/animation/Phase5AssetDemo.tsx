@@ -7,6 +7,7 @@ import type { CharacterAnimationSnapshot } from './character-animation.js';
 import type { SemanticAction } from './contracts.js';
 import {
   applyAnimationProjection,
+  createAnimationAbilityCommand,
   createAnimationGameplayDemo,
   createAnimationMoveCommand,
   projectGameplayAnimationChanges,
@@ -148,6 +149,12 @@ export function Phase5AssetDemo() {
         'webglcontextlost',
         (event) => {
           event.preventDefault();
+          if (
+            sceneProbeRef.current !== probe ||
+            window.__phase5ModelProbe !== probe ||
+            !gl.getContext().isContextLost()
+          )
+            return;
           setContextLost(true);
         },
         { once: true },
@@ -192,6 +199,25 @@ export function Phase5AssetDemo() {
       if (Object.keys(animationProjection).length > 0)
         setActions((current) => applyAnimationProjection(current, animationProjection));
     }
+  }, [gameplay]);
+  const useLightPulse = useCallback(() => {
+    const command = createAnimationAbilityCommand(gameplay.state);
+    const result = transitionGameplay(gameplay.compiled, gameplay.state, command);
+    if (!result.accepted) {
+      setGameplayFeedback(`Rejected light ability · ${result.reason.code}`);
+      return;
+    }
+    const updates = projectGameplayAnimationChanges(
+      gameplay.state,
+      result,
+      command,
+      gameplay.compiled.definition.healthResourceId,
+    );
+    setGameplay({ compiled: gameplay.compiled, state: result.state });
+    setActions((current) => applyAnimationProjection(current, updates));
+    setGameplayFeedback(
+      `Accepted light ability · ${result.state.encounter?.outcome ?? 'in progress'}`,
+    );
   }, [gameplay]);
   const restartEncounter = useCallback(() => {
     setGameplay(createAnimationGameplayDemo(`phase5-animation-playthrough-${Date.now()}`));
@@ -305,6 +331,14 @@ export function Phase5AssetDemo() {
         >
           Move through turn-based rules
         </button>
+        <button
+          data-testid="gameplay-ability"
+          type="button"
+          disabled={gameplay.state.encounter?.outcome !== null || !traveler || !guardian}
+          onClick={useLightPulse}
+        >
+          Use the light ability
+        </button>
         <button data-testid="gameplay-reset" type="button" onClick={restartEncounter}>
           Restart encounter
         </button>
@@ -328,6 +362,9 @@ export function Phase5AssetDemo() {
         </output>
         <output data-testid="gameplay-guardian-position">
           Guardian cell {guardian?.position.x},{guardian?.position.y}
+        </output>
+        <output data-testid="gameplay-outcome">
+          Encounter outcome {gameplay.state.encounter?.outcome ?? 'active'}
         </output>
         <output data-testid="animation-action-traveler">
           Traveler action {actions[TRAVELER_INSTANCE_ID]?.action ?? 'idle'}

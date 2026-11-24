@@ -2,6 +2,7 @@ import { transitionGameplay } from 'waypoint-rpg-gameplay';
 import { describe, expect, it } from 'vitest';
 import {
   createAnimationGameplayDemo,
+  createAnimationAbilityCommand,
   createAnimationMoveCommand,
   applyAnimationProjection,
   projectGameplayAnimationChanges,
@@ -23,6 +24,20 @@ describe('gameplay animation projection', () => {
     expect(projectGameplayAnimationChanges(demo.state, result, command)).toEqual({
       traveler: 'move',
       guardian: 'move',
+    });
+  });
+
+  it('projects an accepted terminal ability outcome into combat and defeat actions', () => {
+    const demo = createAnimationGameplayDemo('animation-defeat-projection-test');
+    const command = createAnimationAbilityCommand(demo.state);
+    const result = transitionGameplay(demo.compiled, demo.state, command);
+
+    expect(result.accepted).toBe(true);
+    if (!result.accepted) return;
+    expect(result.state.encounter?.outcome).toBe('victory');
+    expect(projectGameplayAnimationChanges(demo.state, result, command)).toEqual({
+      traveler: 'combat',
+      guardian: 'defeat',
     });
   });
 

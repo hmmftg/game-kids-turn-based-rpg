@@ -443,7 +443,10 @@ export function createModelAssetLoader(
         source = await withAbort(entry.promise, signal);
       } finally {
         entry.waiters -= 1;
-        if (!entry.settled && entry.waiters === 0) entry.controller.abort();
+        if (!entry.settled && entry.waiters === 0) {
+          if (cache.get(record.id) === entry) cache.delete(record.id);
+          entry.controller.abort();
+        }
       }
       throwIfAborted(signal);
       if (disposed) throw new Error('Model asset loader is disposed.');
