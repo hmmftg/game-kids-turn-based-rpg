@@ -54,6 +54,34 @@ const games = [
     ],
   },
   {
+    name: 'Phase 5 — Animation and Cinematics',
+    status: 'Technical demonstration',
+    description:
+      'The Blood Leaf scene demo also contains an example-owned static/rigged GLB adapter, independent character animation, and an optional timeline whose cues cannot change durable story state.',
+    readme: 'examples/scene-demo/README.md',
+    run: 'npm run sample:phase5:previews',
+    folder: 'docs/previews/phase5',
+    images: [
+      '01-static-model.png',
+      '02-two-rigged-characters.png',
+      '03-moving-character.png',
+      '04-character-interaction.png',
+      '05-cinematic-camera.png',
+      '06-cinematic-dialogue.png',
+      '07-lantern-consequence.png',
+      '08-reduced-motion.png',
+      '09-mobile-portrait.png',
+    ],
+    columns: [
+      ['01-static-model.png', 'Textured static GLB'],
+      ['02-two-rigged-characters.png', 'Independent rig instances'],
+      ['04-character-interaction.png', 'Guardian interaction'],
+      ['06-cinematic-dialogue.png', 'RTL cinematic dialogue'],
+      ['08-reduced-motion.png', 'Reduced motion'],
+      ['09-mobile-portrait.png', 'Portrait viewport'],
+    ],
+  },
+  {
     name: 'باغ قصه‌ها',
     status: 'Implemented and playable',
     description:
@@ -94,8 +122,30 @@ const games = [
 function verifyImageSet(game) {
   const manifestPath = `${game.folder}/provenance.json`;
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (manifest.schemaVersion !== 1 || !/^[0-9a-f]{40}$/.test(manifest.sourceCommit)) {
+  if (
+    !Number.isInteger(manifest.schemaVersion) ||
+    manifest.schemaVersion < 1 ||
+    manifest.schemaVersion > 2 ||
+    !/^[0-9a-f]{40}$/.test(manifest.sourceCommit)
+  ) {
     throw new Error(`Invalid screenshot provenance manifest: ${manifestPath}`);
+  }
+  if (manifest.schemaVersion === 2) {
+    const models = manifest.models;
+    if (
+      !Array.isArray(models) ||
+      models.length === 0 ||
+      models.some(
+        (model) =>
+          !/^[0-9a-f]{64}$/.test(model.sourceSha256) ||
+          typeof model.licenseId !== 'string' ||
+          model.licenseId.length === 0 ||
+          typeof model.attribution !== 'string' ||
+          model.attribution.length === 0,
+      )
+    ) {
+      throw new Error(`Model source hashes and license attributions are required: ${manifestPath}`);
+    }
   }
   const records = new Map(manifest.images.map((image) => [image.file, image]));
   for (const file of game.images) {

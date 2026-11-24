@@ -57,6 +57,28 @@ export function DialogueDialog({
   }, [exitAllowed, onCommand]);
 
   useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const containTabFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !dialog.open) return;
+      const controls = [...dialog.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first || !last) return;
+      const active = dialog.ownerDocument.activeElement;
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    dialog.addEventListener('keydown', containTabFocus);
+    return () => dialog.removeEventListener('keydown', containTabFocus);
+  }, []);
+
+  useEffect(() => {
     if (activeNodeId === null || !dialogRef.current?.open) return;
     const first = dialogRef.current.querySelector<HTMLButtonElement>(
       '[data-dialogue-primary]:not(:disabled), button:not(:disabled)',

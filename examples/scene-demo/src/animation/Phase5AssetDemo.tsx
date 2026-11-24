@@ -2,19 +2,20 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Camera, Scene, WebGLRenderer } from 'three';
 import { transitionGameplay } from 'waypoint-rpg-gameplay';
+import type { GameplayCommand } from 'waypoint-rpg-gameplay';
+import type { CharacterAnimationSnapshot } from './character-animation.js';
 import type { SemanticAction } from './contracts.js';
 import {
+  applyAnimationProjection,
+  createAnimationAbilityCommand,
   createAnimationGameplayDemo,
   createAnimationMoveCommand,
   projectGameplayAnimationChanges,
 } from './gameplay-demo.js';
+import type { AnimationProjectionState } from './gameplay-demo.js';
 import { ModelInstance, type ModelLoadStatus } from './ModelInstance.js';
 import { phase5AssetRecords } from './asset-records.js';
 import { createModelAssetLoader } from './model-loader.js';
-import { CinematicStage } from '../presentation/CinematicStage.js';
-import { guardianGreetingCinematic } from '../presentation/blood-leaf-cinematic.js';
-import { createTimelinePlayer } from '../presentation/timeline.js';
-import type { TimelineCue, TimelinePlayer, TimelineStatus } from '../presentation/timeline.js';
 
 const STATIC_ID = 'phase5-textured-static';
 const RIGGED_ID = 'phase5-animated-guardian';
@@ -29,8 +30,22 @@ declare global {
       readonly scene: Scene;
       readonly renderer: WebGLRenderer;
       readonly camera: Camera;
+      readonly animationSnapshot?: (instanceId: string) => CharacterAnimationSnapshot | null;
+      readonly setAnimationAction?: (
+        instanceId: string,
+        action: SemanticAction,
+        reducedMotion?: boolean,
+      ) => boolean;
+      readonly advanceAnimation?: (instanceId: string, deltaSeconds: number) => boolean;
     };
   }
+}
+
+function createInitialAnimationProjection(): AnimationProjectionState {
+  return Object.freeze({
+    [TRAVELER_INSTANCE_ID]: Object.freeze({ action: 'idle', revision: 0 }),
+    [GUARDIAN_INSTANCE_ID]: Object.freeze({ action: 'idle', revision: 0 }),
+  });
 }
 
 function participantPosition(
@@ -47,6 +62,8 @@ function statusAttributes(status: ModelLoadStatus | undefined) {
   if (status.status !== 'ready') return { 'data-status': status.status };
   return {
     'data-status': status.status,
+    'data-asset-id': status.assetId,
+    'data-load-ms': String(status.loadDurationMs),
     'data-meshes': String(status.meshes),
     'data-skinned-meshes': String(status.skinnedMeshes),
     'data-clips': status.clips.join(','),
@@ -69,23 +86,19 @@ export function Phase5AssetDemo() {
   const [viewVersion, setViewVersion] = useState(0);
   const [previewAssetId, setPreviewAssetId] = useState(STATIC_ID);
   const [riggedAssetId, setRiggedAssetId] = useState(RIGGED_ID);
+  const [showTraveler, setShowTraveler] = useState(true);
+  const [showCharacterInstances, setShowCharacterInstances] = useState(true);
   const [gameplay, setGameplay] = useState(() => createAnimationGameplayDemo());
-  const [actions, setActions] = useState<Readonly<Record<string, SemanticAction>>>(() => ({
-    [TRAVELER_INSTANCE_ID]: 'idle',
-    [GUARDIAN_INSTANCE_ID]: 'idle',
-  }));
+  const staleMoveCommandRef = useRef<GameplayCommand | null>(null);
+  const [actions, setActions] = useState<AnimationProjectionState>(
+    createInitialAnimationProjection,
+  );
   const [gameplayFeedback, setGameplayFeedback] = useState('');
   const [contextLost, setContextLost] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
   const sceneProbeRef = useRef<Window['__phase5ModelProbe']>(undefined);
-  const timelinePlayer = useMemo(() => createTimelinePlayer(guardianGreetingCinematic), []);
-  const timelineRef = useRef<TimelinePlayer | null>(timelinePlayer);
-  const pendingCuesRef = useRef<TimelineCue[]>([]);
-  const invalidateRef = useRef<() => void>(() => {});
-  const [cinematicStatus, setCinematicStatus] = useState<TimelineStatus>('idle');
-  const [cinematicCaption, setCinematicCaption] = useState('');
   useEffect(
     () => () => {
       loader.dispose();
@@ -94,32 +107,60 @@ export function Phase5AssetDemo() {
     [loader],
   );
   const onCanvasCreated = useCallback(
-    ({
-      gl,
-      scene,
-      camera,
-      invalidate,
-    }: {
-      gl: WebGLRenderer;
-      scene: Scene;
-      camera: Camera;
-      invalidate: () => void;
-    }) => {
-      const probe = { scene, renderer: gl, camera };
+    ({ gl, scene, camera }: { gl: WebGLRenderer; scene: Scene; camera: Camera }) => {
+      const probe = {
+        scene,
+        renderer: gl,
+        camera,
+        ...(testMode
+          ? {
+              animationSnapshot: (instanceId: string) => {
+                const callback = scene.getObjectByName(`phase5:${instanceId}`)?.userData
+                  .phase5AnimationSnapshot;
+                return typeof callback === 'function'
+                  ? (callback() as CharacterAnimationSnapshot | null)
+                  : null;
+              },
+              setAnimationAction: (
+                instanceId: string,
+                action: SemanticAction,
+                reducedMotion = false,
+              ) => {
+                const control = scene.getObjectByName(`phase5:${instanceId}`)?.userData
+                  .phase5AnimationControl;
+                if (!control || typeof control.setAction !== 'function') return false;
+                control.setAction(action, reducedMotion);
+                return true;
+              },
+              advanceAnimation: (instanceId: string, deltaSeconds: number) => {
+                const control = scene.getObjectByName(`phase5:${instanceId}`)?.userData
+                  .phase5AnimationControl;
+                return typeof control?.advance === 'function'
+                  ? Boolean(control.advance(deltaSeconds))
+                  : false;
+              },
+            }
+          : {}),
+      };
       sceneProbeRef.current = probe;
       window.__phase5ModelProbe = probe;
-      invalidateRef.current = invalidate;
       gl.domElement.dataset.testid = 'phase5-model-canvas';
       gl.domElement.addEventListener(
         'webglcontextlost',
         (event) => {
           event.preventDefault();
+          if (
+            sceneProbeRef.current !== probe ||
+            window.__phase5ModelProbe !== probe ||
+            !gl.getContext().isContextLost()
+          )
+            return;
           setContextLost(true);
         },
         { once: true },
       );
     },
-    [],
+    [testMode],
   );
   const onStatus = useCallback((instanceId: string, status: ModelLoadStatus) => {
     setStatuses((current) => ({ ...current, [instanceId]: status }));
@@ -139,50 +180,51 @@ export function Phase5AssetDemo() {
       return;
     }
     const updates = projectGameplayAnimationChanges(gameplay.state, result, command);
+    staleMoveCommandRef.current = command;
     setGameplay({ compiled: gameplay.compiled, state: result.state });
-    setActions((current) => ({ ...current, ...updates }));
+    setActions((current) => applyAnimationProjection(current, updates));
     setGameplayFeedback(`Accepted movement · revision ${result.state.revision}`);
+  }, [gameplay]);
+  const rejectStaleMove = useCallback(() => {
+    const staleCommand = staleMoveCommandRef.current;
+    if (!staleCommand) return;
+    const result = transitionGameplay(gameplay.compiled, gameplay.state, staleCommand);
+    if (!result.accepted && result.state === gameplay.state) {
+      const animationProjection = projectGameplayAnimationChanges(
+        gameplay.state,
+        result,
+        staleCommand,
+      );
+      setGameplayFeedback(`Rejected stale command · ${result.reason.code}`);
+      if (Object.keys(animationProjection).length > 0)
+        setActions((current) => applyAnimationProjection(current, animationProjection));
+    }
+  }, [gameplay]);
+  const useLightPulse = useCallback(() => {
+    const command = createAnimationAbilityCommand(gameplay.state);
+    const result = transitionGameplay(gameplay.compiled, gameplay.state, command);
+    if (!result.accepted) {
+      setGameplayFeedback(`Rejected light ability · ${result.reason.code}`);
+      return;
+    }
+    const updates = projectGameplayAnimationChanges(
+      gameplay.state,
+      result,
+      command,
+      gameplay.compiled.definition.healthResourceId,
+    );
+    setGameplay({ compiled: gameplay.compiled, state: result.state });
+    setActions((current) => applyAnimationProjection(current, updates));
+    setGameplayFeedback(
+      `Accepted light ability · ${result.state.encounter?.outcome ?? 'in progress'}`,
+    );
   }, [gameplay]);
   const restartEncounter = useCallback(() => {
     setGameplay(createAnimationGameplayDemo(`phase5-animation-playthrough-${Date.now()}`));
-    setActions({ [TRAVELER_INSTANCE_ID]: 'idle', [GUARDIAN_INSTANCE_ID]: 'idle' });
+    setActions(createInitialAnimationProjection());
+    staleMoveCommandRef.current = null;
     setGameplayFeedback('A new encounter is ready.');
   }, []);
-  const onCinematicCue = useCallback((cue: TimelineCue) => {
-    if (cue.kind === 'dialogue') setCinematicCaption(cue.text);
-    if (cue.kind === 'animation') {
-      if (cue.instanceId === TRAVELER_INSTANCE_ID || cue.instanceId === GUARDIAN_INSTANCE_ID)
-        setActions((current) => ({ ...current, [cue.instanceId]: cue.action }));
-    }
-  }, []);
-  const playCinematic = useCallback(() => {
-    setActions({ [TRAVELER_INSTANCE_ID]: 'idle', [GUARDIAN_INSTANCE_ID]: 'idle' });
-    setCinematicCaption('');
-    timelinePlayer.play({ reducedMotion });
-    setCinematicStatus(timelinePlayer.snapshot().status);
-    invalidateRef.current();
-  }, [reducedMotion, timelinePlayer]);
-  const pauseCinematic = useCallback(() => {
-    timelinePlayer.pause();
-    setCinematicStatus(timelinePlayer.snapshot().status);
-  }, [timelinePlayer]);
-  const resumeCinematic = useCallback(() => {
-    timelinePlayer.resume();
-    setCinematicStatus(timelinePlayer.snapshot().status);
-    invalidateRef.current();
-  }, [timelinePlayer]);
-  const skipCinematic = useCallback(() => {
-    pendingCuesRef.current.push(...timelinePlayer.skip());
-    setCinematicStatus(timelinePlayer.snapshot().status);
-    invalidateRef.current();
-  }, [timelinePlayer]);
-  const cancelCinematic = useCallback(() => {
-    timelinePlayer.cancel();
-    setCinematicStatus(timelinePlayer.snapshot().status);
-    setActions({ [TRAVELER_INSTANCE_ID]: 'idle', [GUARDIAN_INSTANCE_ID]: 'idle' });
-    setCinematicCaption('');
-    invalidateRef.current();
-  }, [timelinePlayer]);
   const traveler = gameplay.state.encounter?.combatants.find((item) => item.id === 'traveler');
   const guardian = gameplay.state.encounter?.combatants.find((item) => item.id === 'guardian');
 
@@ -261,6 +303,26 @@ export function Phase5AssetDemo() {
         >
           Reload models
         </button>
+        {testMode && (
+          <button
+            data-testid="toggle-character-instances"
+            type="button"
+            onClick={() => setShowCharacterInstances((visible) => !visible)}
+          >
+            {showCharacterInstances
+              ? 'Hide rigged characters test view'
+              : 'Show rigged characters test view'}
+          </button>
+        )}
+        {testMode && (
+          <button
+            data-testid="toggle-traveler-instance"
+            type="button"
+            onClick={() => setShowTraveler((visible) => !visible)}
+          >
+            {showTraveler ? 'Unmount traveler test instance' : 'Mount traveler test instance'}
+          </button>
+        )}
         <button
           data-testid="gameplay-move"
           type="button"
@@ -269,38 +331,22 @@ export function Phase5AssetDemo() {
         >
           Move through turn-based rules
         </button>
+        <button
+          data-testid="gameplay-ability"
+          type="button"
+          disabled={gameplay.state.encounter?.outcome !== null || !traveler || !guardian}
+          onClick={useLightPulse}
+        >
+          Use the light ability
+        </button>
         <button data-testid="gameplay-reset" type="button" onClick={restartEncounter}>
           Restart encounter
         </button>
-        <fieldset className="cinematic-controls" aria-label="Cinematic controls">
-          <legend>Optional staged interaction</legend>
-          <button data-testid="cinematic-play" type="button" onClick={playCinematic}>
-            Play or replay
+        {testMode && (
+          <button data-testid="gameplay-stale-move" type="button" onClick={rejectStaleMove}>
+            Submit stale move test
           </button>
-          {cinematicStatus === 'playing' && (
-            <button data-testid="cinematic-pause" type="button" onClick={pauseCinematic}>
-              Pause
-            </button>
-          )}
-          {cinematicStatus === 'paused' && (
-            <button data-testid="cinematic-resume" type="button" onClick={resumeCinematic}>
-              Resume
-            </button>
-          )}
-          {(cinematicStatus === 'playing' || cinematicStatus === 'paused') && (
-            <>
-              <button data-testid="cinematic-skip" type="button" onClick={skipCinematic}>
-                Skip
-              </button>
-              <button data-testid="cinematic-cancel" type="button" onClick={cancelCinematic}>
-                Cancel
-              </button>
-            </>
-          )}
-          <output data-testid="cinematic-status" aria-live="polite">
-            Cinematic {cinematicStatus}
-          </output>
-        </fieldset>
+        )}
         <button
           data-testid="return-to-story"
           type="button"
@@ -317,11 +363,20 @@ export function Phase5AssetDemo() {
         <output data-testid="gameplay-guardian-position">
           Guardian cell {guardian?.position.x},{guardian?.position.y}
         </output>
+        <output data-testid="gameplay-outcome">
+          Encounter outcome {gameplay.state.encounter?.outcome ?? 'active'}
+        </output>
         <output data-testid="animation-action-traveler">
-          Traveler action {actions[TRAVELER_INSTANCE_ID]}
+          Traveler action {actions[TRAVELER_INSTANCE_ID]?.action ?? 'idle'}
         </output>
         <output data-testid="animation-action-guardian">
-          Guardian action {actions[GUARDIAN_INSTANCE_ID]}
+          Guardian action {actions[GUARDIAN_INSTANCE_ID]?.action ?? 'idle'}
+        </output>
+        <output data-testid="animation-revision-traveler">
+          Traveler animation revision {actions[TRAVELER_INSTANCE_ID]?.revision ?? 0}
+        </output>
+        <output data-testid="animation-revision-guardian">
+          Guardian animation revision {actions[GUARDIAN_INSTANCE_ID]?.revision ?? 0}
         </output>
         <output data-testid="reduced-motion-state" data-reduced-motion={String(reducedMotion)}>
           {reducedMotion ? 'Reduced motion' : 'Full motion'}
@@ -364,12 +419,6 @@ export function Phase5AssetDemo() {
           camera={{ position: [0, 3.1, 7], fov: 42 }}
           onCreated={onCanvasCreated}
         >
-          <CinematicStage
-            playerRef={timelineRef}
-            pendingCuesRef={pendingCuesRef}
-            onCue={onCinematicCue}
-            onStatus={setCinematicStatus}
-          />
           <color attach="background" args={['#d9e9ec']} />
           <ambientLight intensity={1.3} />
           <directionalLight position={[3, 5, 4]} intensity={2} />
@@ -384,48 +433,39 @@ export function Phase5AssetDemo() {
               loader={loader}
               position={[0, 0.02, 1.1]}
               action="idle"
-              actionRevision={gameplay.state.revision}
+              actionRevision={0}
               reducedMotion={reducedMotion}
               onStatus={onStatus}
             />
-            <ModelInstance
-              instanceId={TRAVELER_INSTANCE_ID}
-              key={`${TRAVELER_INSTANCE_ID}:${viewVersion}`}
-              assetId={riggedAssetId}
-              loader={loader}
-              position={participantPosition(gameplay.state, 'traveler')}
-              action={actions[TRAVELER_INSTANCE_ID] ?? 'idle'}
-              actionRevision={gameplay.state.revision}
-              reducedMotion={reducedMotion}
-              onStatus={onStatus}
-            />
-            <ModelInstance
-              instanceId={GUARDIAN_INSTANCE_ID}
-              key={`${GUARDIAN_INSTANCE_ID}:${viewVersion}`}
-              assetId={riggedAssetId}
-              loader={loader}
-              position={participantPosition(gameplay.state, 'guardian')}
-              action={actions[GUARDIAN_INSTANCE_ID] ?? 'idle'}
-              actionRevision={gameplay.state.revision}
-              reducedMotion={reducedMotion}
-              onStatus={onStatus}
-            />
+            {showCharacterInstances && (showTraveler || !testMode) && (
+              <ModelInstance
+                instanceId={TRAVELER_INSTANCE_ID}
+                key={`${TRAVELER_INSTANCE_ID}:${viewVersion}`}
+                assetId={riggedAssetId}
+                loader={loader}
+                position={participantPosition(gameplay.state, 'traveler')}
+                action={actions[TRAVELER_INSTANCE_ID]?.action ?? 'idle'}
+                actionRevision={actions[TRAVELER_INSTANCE_ID]?.revision ?? 0}
+                reducedMotion={reducedMotion}
+                onStatus={onStatus}
+              />
+            )}
+            {showCharacterInstances && (
+              <ModelInstance
+                instanceId={GUARDIAN_INSTANCE_ID}
+                key={`${GUARDIAN_INSTANCE_ID}:${viewVersion}`}
+                assetId={riggedAssetId}
+                loader={loader}
+                position={participantPosition(gameplay.state, 'guardian')}
+                action={actions[GUARDIAN_INSTANCE_ID]?.action ?? 'idle'}
+                actionRevision={actions[GUARDIAN_INSTANCE_ID]?.revision ?? 0}
+                reducedMotion={reducedMotion}
+                onStatus={onStatus}
+              />
+            )}
           </Suspense>
         </Canvas>
       </section>
-      {cinematicCaption && (
-        <section
-          className="cinematic-caption"
-          data-testid="cinematic-caption"
-          role="status"
-          aria-live="polite"
-          dir="rtl"
-          lang="fa"
-          aria-label="گفتار نگهبان"
-        >
-          <p>{cinematicCaption}</p>
-        </section>
-      )}
       <p className="phase5-model-provenance">
         The procedural fixtures are covered by this repository’s MIT license. The optional Box and
         Rigged Figure samples are © 2017 Cesium under CC BY 4.0; see the attribution and pinned

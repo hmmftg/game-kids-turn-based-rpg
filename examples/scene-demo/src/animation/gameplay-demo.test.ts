@@ -2,7 +2,9 @@ import { transitionGameplay } from 'waypoint-rpg-gameplay';
 import { describe, expect, it } from 'vitest';
 import {
   createAnimationGameplayDemo,
+  createAnimationAbilityCommand,
   createAnimationMoveCommand,
+  applyAnimationProjection,
   projectGameplayAnimationChanges,
 } from './gameplay-demo.js';
 
@@ -25,6 +27,20 @@ describe('gameplay animation projection', () => {
     });
   });
 
+  it('projects an accepted terminal ability outcome into combat and defeat actions', () => {
+    const demo = createAnimationGameplayDemo('animation-defeat-projection-test');
+    const command = createAnimationAbilityCommand(demo.state);
+    const result = transitionGameplay(demo.compiled, demo.state, command);
+
+    expect(result.accepted).toBe(true);
+    if (!result.accepted) return;
+    expect(result.state.encounter?.outcome).toBe('victory');
+    expect(projectGameplayAnimationChanges(demo.state, result, command)).toEqual({
+      traveler: 'combat',
+      guardian: 'defeat',
+    });
+  });
+
   it('does not project a stale rejected command as an animation', () => {
     const demo = createAnimationGameplayDemo('animation-stale-command-test');
     const command = createAnimationMoveCommand(demo.state);
@@ -36,5 +52,19 @@ describe('gameplay animation projection', () => {
     expect(stale.accepted).toBe(false);
     expect(stale.state).toBe(accepted.state);
     expect(projectGameplayAnimationChanges(accepted.state, stale, command)).toEqual({});
+  });
+
+  it('advances only the committed actor action revision and allows intentional repeats', () => {
+    const previous = Object.freeze({
+      traveler: Object.freeze({ action: 'idle' as const, revision: 3 }),
+      guardian: Object.freeze({ action: 'idle' as const, revision: 7 }),
+    });
+    const first = applyAnimationProjection(previous, { traveler: 'move' });
+
+    expect(first.traveler).toEqual({ action: 'move', revision: 4 });
+    expect(first.guardian).toBe(previous.guardian);
+    const repeated = applyAnimationProjection(first, { traveler: 'move' });
+    expect(repeated.traveler?.revision).toBe(5);
+    expect(applyAnimationProjection(repeated, {})).toBe(repeated);
   });
 });

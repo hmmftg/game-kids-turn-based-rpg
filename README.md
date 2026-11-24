@@ -81,6 +81,23 @@ An independent two-scene consumer demonstrating framework narrative, scene loadi
 | Persian story choice | ![Actual برگ خون — Persian story choice](docs/previews/blood-leaf/02-dialogue.png) |
 | Narrative-driven lantern | ![Actual برگ خون — Narrative-driven lantern](docs/previews/blood-leaf/03-lit-lantern.png) |
 
+### Phase 5 — Animation and Cinematics — Technical demonstration
+
+The Blood Leaf scene demo also contains an example-owned static/rigged GLB adapter, independent character animation, and an optional timeline whose cues cannot change durable story state.
+
+[Game guide](examples/scene-demo/README.md) · `npm run sample:phase5:previews`
+
+| Capture | Actual browser rendering |
+| --- | --- |
+| Textured static GLB | ![Actual Phase 5 — Animation and Cinematics — Textured static GLB](docs/previews/phase5/01-static-model.png) |
+| Independent rig instances | ![Actual Phase 5 — Animation and Cinematics — Independent rig instances](docs/previews/phase5/02-two-rigged-characters.png) |
+| Guardian interaction | ![Actual Phase 5 — Animation and Cinematics — Guardian interaction](docs/previews/phase5/04-character-interaction.png) |
+| RTL cinematic dialogue | ![Actual Phase 5 — Animation and Cinematics — RTL cinematic dialogue](docs/previews/phase5/06-cinematic-dialogue.png) |
+| Reduced motion | ![Actual Phase 5 — Animation and Cinematics — Reduced motion](docs/previews/phase5/08-reduced-motion.png) |
+| Portrait viewport | ![Actual Phase 5 — Animation and Cinematics — Portrait viewport](docs/previews/phase5/09-mobile-portrait.png) |
+
+Other captures: [03-moving-character](docs/previews/phase5/03-moving-character.png) · [05-cinematic-camera](docs/previews/phase5/05-cinematic-camera.png) · [07-lantern-consequence](docs/previews/phase5/07-lantern-consequence.png).
+
 ### باغ قصه‌ها — Implemented and playable
 
 A complete Persian 3D adventure using the installed public core, narrative, and gameplay packages. Two story paths include a real tactical encounter, visible garden changes, and persistent progress.

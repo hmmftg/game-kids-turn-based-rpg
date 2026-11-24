@@ -17,6 +17,9 @@ on:
       - docs/MAHALLE-LIBRARY-ADOPTION.md
       - docs/FRAMEWORK-ROADMAP.md
       - docs/CREATING-A-SAMPLE-GAME.md
+      - docs/previews/phase5/**
+      - examples/scene-demo/README.md
+      - README.md
       - package.json
       - tsconfig.node.json
   workflow_dispatch:
@@ -76,10 +79,39 @@ jobs:
             docs/previews/legacy-sample/*.png
             docs/previews/blood-leaf/**/*
             docs/previews/garden-adventure/**/*
+            docs/previews/phase5/**/*
           if-no-files-found: warn
           retention-days: 14
+      - name: Prepare a review patch when automated PR creation is disabled
+        id: fallback
+        if: github.event_name != 'pull_request' && (github.ref != 'refs/heads/main' || vars.FRAMEWORK_ROADMAP_AUTOPR != 'true')
+        run: |
+          patch="$RUNNER_TEMP/sample-previews.patch"
+          git add -N -- README.md docs/previews/legacy-sample docs/previews/blood-leaf docs/previews/garden-adventure docs/previews/phase5
+          git diff --binary --full-index -- README.md docs/previews/legacy-sample docs/previews/blood-leaf docs/previews/garden-adventure docs/previews/phase5 > "$patch"
+          if [ -s "$patch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "patch=$patch" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Sample screenshot documentation"
+              echo
+              echo "The production Chromium captures and README gallery were generated. Automated PR creation is disabled or this is not a main-branch merge, so the documentation patch is attached as an artifact for review. The workflow does not push to a protected branch."
+              echo
+              echo "If automatic documentation PRs are desired, set FRAMEWORK_ROADMAP_AUTOPR=true and enable GitHub Actions to create and approve pull requests."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No preview documentation changes were generated."
+          fi
+      - name: Upload preview documentation patch for maintainer review
+        if: steps.fallback.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-previews-documentation-patch
+          path: ${{ steps.fallback.outputs.patch }}
+          if-no-files-found: error
       - name: Propose updated visual documentation for review
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.FRAMEWORK_ROADMAP_AUTOPR == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: automation/legacy-sample-previews
@@ -89,6 +121,7 @@ jobs:
             docs/previews/legacy-sample
             docs/previews/blood-leaf
             docs/previews/garden-adventure
+            docs/previews/phase5
           commit-message: 'docs: refresh real sample game previews'
           title: 'docs: refresh playable sample screenshots'
           body: |

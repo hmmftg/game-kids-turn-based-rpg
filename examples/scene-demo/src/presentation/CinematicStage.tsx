@@ -1,102 +1,184 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import { Vector3 } from 'three';
-import type { TimelineCue, TimelinePlayer, TimelineStatus } from './timeline.js';
+import type { Quaternion } from 'three';
+import type {
+  CompiledTimeline,
+  TimelineEvent,
+  TimelinePlayer,
+  TimelineStatus,
+} from './timeline.js';
+import { sceneProbe } from '../probe.js';
+
+const MAX_PRESENTATION_FRAME_SECONDS = 0.05;
 
 interface CinematicStageProps {
+  readonly timeline: CompiledTimeline;
   readonly playerRef: MutableRefObject<TimelinePlayer | null>;
-  readonly pendingCuesRef: MutableRefObject<TimelineCue[]>;
-  readonly onCue: (cue: TimelineCue) => void;
+  readonly pendingEventsRef: MutableRefObject<TimelineEvent[]>;
+  readonly onEvent: (event: TimelineEvent) => void;
   readonly onStatus: (status: TimelineStatus) => void;
+  readonly onEffect: (effectId: string, active: boolean) => void;
+  readonly onRelease: () => void;
+  readonly onLeaseActive: (active: boolean) => void;
+}
+
+interface CameraPose {
+  readonly position: Vector3;
+  readonly quaternion: Quaternion;
+}
+
+interface CameraTrack {
+  readonly cameraId: string;
+  readonly startTime: number;
+  readonly durationSeconds: number;
+  readonly fromPosition: Vector3;
+  readonly fromLookAt: Vector3;
 }
 
 export function CinematicStage({
+  timeline,
   playerRef,
-  pendingCuesRef,
-  onCue,
+  pendingEventsRef,
+  onEvent,
   onStatus,
+  onEffect,
+  onRelease,
+  onLeaseActive,
 }: CinematicStageProps) {
   const { camera, invalidate } = useThree();
-  const initialCamera = useRef<{ position: Vector3; lookAt: Vector3 } | null>(null);
-  const cameraTrack = useRef<{
-    cue: Extract<TimelineCue, { kind: 'camera' }>;
-    startTime: number;
-    fromPosition: Vector3;
-    fromLookAt: Vector3;
-  } | null>(null);
+  const originalCamera = useRef<CameraPose | null>(null);
+  const cameraTrack = useRef<CameraTrack | null>(null);
+  const previousExecution = useRef(0);
   const previousStatus = useRef<TimelineStatus>('idle');
+  const activeEffects = useRef(new Map<string, number>());
+  const leaseOwned = useRef(false);
+  const releasePresentationRef = useRef<() => void>(() => {});
+  const callbacks = useRef({ onEvent, onStatus, onEffect, onRelease, onLeaseActive });
+
+  useEffect(() => {
+    callbacks.current = { onEvent, onStatus, onEffect, onRelease, onLeaseActive };
+  }, [onEvent, onStatus, onEffect, onRelease, onLeaseActive]);
+
+  const releasePresentation = useCallback(() => {
+    leaseOwned.current = false;
+    if (originalCamera.current) {
+      camera.position.copy(originalCamera.current.position);
+      camera.quaternion.copy(originalCamera.current.quaternion);
+      cameraTrack.current = null;
+      originalCamera.current = null;
+      camera.updateMatrixWorld();
+      invalidate();
+    }
+    for (const effectId of activeEffects.current.keys())
+      callbacks.current.onEffect(effectId, false);
+    activeEffects.current.clear();
+    callbacks.current.onLeaseActive(false);
+    callbacks.current.onRelease();
+  }, [camera, invalidate]);
+
+  useEffect(() => {
+    releasePresentationRef.current = releasePresentation;
+  }, [releasePresentation]);
 
   useEffect(
     () => () => {
       const player = playerRef.current;
-      if (!player) return;
-      player.cancel();
-      onStatus(player.snapshot().status);
+      if (player) player.cancel(player.snapshot().executionId);
+      releasePresentationRef.current();
+      if (player) callbacks.current.onStatus(player.snapshot().status);
     },
-    [onStatus, playerRef],
+    [playerRef],
   );
 
   useFrame((_, deltaSeconds) => {
     const player = playerRef.current;
     if (!player) return;
     const before = player.snapshot();
-    if (initialCamera.current === null) {
-      const direction = camera.getWorldDirection(new Vector3());
-      initialCamera.current = {
+    // A stalled browser frame must not jump over short authored presentation cues.
+    const presentationDelta = Math.min(deltaSeconds, MAX_PRESENTATION_FRAME_SECONDS);
+    const isActive = before.status === 'playing' || before.status === 'waiting';
+
+    if (isActive && before.executionId !== previousExecution.current) {
+      releasePresentation();
+      originalCamera.current = {
         position: camera.position.clone(),
-        lookAt: camera.position.clone().add(direction.multiplyScalar(5)),
+        quaternion: camera.quaternion.clone(),
       };
+      leaseOwned.current = true;
+      previousExecution.current = before.executionId;
+      callbacks.current.onLeaseActive(true);
     }
 
-    if (
-      before.status === 'playing' &&
-      previousStatus.current !== 'paused' &&
-      previousStatus.current !== 'playing'
-    ) {
-      cameraTrack.current = null;
-      camera.position.copy(initialCamera.current.position);
-      camera.lookAt(initialCamera.current.lookAt);
-    }
-
-    const cues = [...pendingCuesRef.current.splice(0), ...player.advance(deltaSeconds)];
-    for (const cue of cues) {
-      if (cue.kind === 'camera') {
+    const events = [
+      ...pendingEventsRef.current.splice(0),
+      ...(before.status === 'playing' ? player.advance(before.executionId, presentationDelta) : []),
+    ];
+    for (const event of events) {
+      if (!player.isCurrentExecution(event.executionId)) continue;
+      if (before.reducedMotion && event.cue.kind !== 'dialogue' && event.cue.kind !== 'wait')
+        continue;
+      if (event.cue.kind === 'camera') {
+        const pose = timeline.registry.cameras[event.cue.cameraId];
+        if (!pose) continue;
         const direction = camera.getWorldDirection(new Vector3());
         cameraTrack.current = {
-          cue,
-          startTime: cue.atSeconds,
+          cameraId: event.cue.cameraId,
+          startTime: event.cue.atSeconds,
+          durationSeconds: event.cue.durationSeconds,
           fromPosition: camera.position.clone(),
           fromLookAt: camera.position.clone().add(direction.multiplyScalar(5)),
         };
+      } else if (event.cue.kind === 'effect') {
+        const owner = timeline.registry.effects[event.cue.effectId];
+        if (owner) {
+          activeEffects.current.set(event.cue.effectId, event.cue.durationSeconds);
+          callbacks.current.onEffect(event.cue.effectId, true);
+        }
       } else {
-        onCue(cue);
+        callbacks.current.onEvent(event);
       }
     }
 
     const after = player.snapshot();
-    if (after.status === 'cancelled' && previousStatus.current !== 'cancelled') {
-      cameraTrack.current = null;
-      camera.position.copy(initialCamera.current.position);
-      camera.lookAt(initialCamera.current.lookAt);
-    } else if (cameraTrack.current) {
-      const track = cameraTrack.current;
-      const progress =
-        track.cue.durationSeconds === 0
-          ? 1
-          : Math.max(
-              0,
-              Math.min(1, (after.timeSeconds - track.startTime) / track.cue.durationSeconds),
-            );
-      camera.position.lerpVectors(track.fromPosition, new Vector3(...track.cue.position), progress);
-      camera.lookAt(track.fromLookAt.clone().lerp(new Vector3(...track.cue.lookAt), progress));
-      if (progress >= 1) cameraTrack.current = null;
-      else invalidate();
+    if (after.status === 'playing') {
+      for (const [effectId, remaining] of activeEffects.current) {
+        const next = remaining - presentationDelta;
+        if (next <= 0) {
+          activeEffects.current.delete(effectId);
+          callbacks.current.onEffect(effectId, false);
+        } else activeEffects.current.set(effectId, next);
+      }
     }
 
-    if (after.status === 'playing') invalidate();
-    if (after.status !== previousStatus.current) onStatus(after.status);
+    if (cameraTrack.current && after.status === 'playing') {
+      const track = cameraTrack.current;
+      const pose = timeline.registry.cameras[track.cameraId];
+      if (pose) {
+        const progress =
+          track.durationSeconds === 0
+            ? 1
+            : Math.max(
+                0,
+                Math.min(1, (after.timeSeconds - track.startTime) / track.durationSeconds),
+              );
+        camera.position.lerpVectors(track.fromPosition, new Vector3(...pose.position), progress);
+        camera.lookAt(track.fromLookAt.clone().lerp(new Vector3(...pose.lookAt), progress));
+        if (progress >= 1) cameraTrack.current = null;
+      }
+    }
+
+    if (after.status !== previousStatus.current) callbacks.current.onStatus(after.status);
+    const ended =
+      after.status === 'completed' || after.status === 'cancelled' || after.status === 'disposed';
+    if (ended && previousStatus.current !== after.status) releasePresentation();
     previousStatus.current = after.status;
+    const probe = sceneProbe();
+    if (probe) probe.cameraPosition = camera.position.toArray();
+    // Cues pause at a wait. Their tracks resume on the user command, which
+    // explicitly invalidates the Canvas; scheduling here would spin forever.
+    if (after.status === 'playing') invalidate();
   });
 
   return null;

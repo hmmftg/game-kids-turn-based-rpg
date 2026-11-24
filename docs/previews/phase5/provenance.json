@@ -1,39 +1,182 @@
 {
-  "schemaVersion": 1,
-  "sourceCommit": "0e89ee3fd3ca035da3b51c5fed1e8886abaffdb2",
-  "browser": "Chromium via Playwright, headless SwiftShader",
+  "schemaVersion": 2,
+  "sourceCommit": "127c96cdb740cf0de72e47d610681f866555fbd7",
+  "host": {
+    "platform": "win32",
+    "architecture": "x64",
+    "release": "10.0.19044",
+    "node": "v22.23.5"
+  },
+  "browser": "Chromium 153.0.8010.12 via Playwright",
+  "webglRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "testedDevices": [
+    "win32 x64 10.0.19044, headless Chromium 153.0.8010.12 with ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver); physical mobile GPU not tested"
+  ],
   "viewport": {
-    "width": 1365,
-    "height": 1000
+    "desktop": {
+      "width": 1365,
+      "height": 1000
+    },
+    "mobilePortrait": {
+      "width": 390,
+      "height": 844
+    }
   },
   "images": [
     {
-      "file": "01-external-models.png",
+      "file": "01-static-model.png",
       "width": 1365,
-      "height": 1071,
-      "bytes": 79212,
-      "sha256": "5ccb09012d4837f30836e16408f1a7e2b4c9b462d38d45fb4e693ec5109ea01d"
+      "height": 1062,
+      "bytes": 80547,
+      "sha256": "f670084ad41034337255b01439edb6509699f0cd7ed1c67e4ad39f9bd435aee7"
     },
     {
-      "file": "02-guardian-cinematic.png",
+      "file": "02-two-rigged-characters.png",
       "width": 1365,
-      "height": 1172,
-      "bytes": 112966,
-      "sha256": "74a1683ba9d1e1f09b4e707be4f48ededbfa67cfa53a8ac33a0dcf5c479a35ff"
+      "height": 1062,
+      "bytes": 96401,
+      "sha256": "9da312a8dc4d6767b3e811eff41110f3a5e24473aefdc503d343ebf7ddb620c6"
+    },
+    {
+      "file": "03-moving-character.png",
+      "width": 1365,
+      "height": 1062,
+      "bytes": 94465,
+      "sha256": "4059410a012fa4884b9faae8cbffcd3c452a6bad5d006b1ad0aea6757cf30186"
+    },
+    {
+      "file": "07-lantern-consequence.png",
+      "width": 1365,
+      "height": 1035,
+      "bytes": 71060,
+      "sha256": "908a635d871c8cc1bf63ccb1c8c772ccd8389038c406fe91224fab448edda8cf"
+    },
+    {
+      "file": "05-cinematic-camera.png",
+      "width": 1365,
+      "height": 1035,
+      "bytes": 72749,
+      "sha256": "d33da9b2fe739de6d954a8f371daff5b25ebc7f5436223526cbc800c3a750cdd"
+    },
+    {
+      "file": "04-character-interaction.png",
+      "width": 1365,
+      "height": 1035,
+      "bytes": 70922,
+      "sha256": "7b21ecad4964ecff9501a26e34222b7d53f04f67b752e2db9f1c10cb5a7ff69b"
+    },
+    {
+      "file": "06-cinematic-dialogue.png",
+      "width": 1365,
+      "height": 1113,
+      "bytes": 71649,
+      "sha256": "a84b0a33e65d0594b839783e99b97de5a34876b04dd85bf180ae815486301a9d"
+    },
+    {
+      "file": "08-reduced-motion.png",
+      "width": 1365,
+      "height": 1113,
+      "bytes": 80503,
+      "sha256": "ce2f6f60ba7e0270db75cc706c5de2d4ce193c3afe4151c39875b72306970ebc"
+    },
+    {
+      "file": "09-mobile-portrait.png",
+      "width": 390,
+      "height": 1084,
+      "bytes": 35878,
+      "sha256": "bd0d2b2a99168ba86d623518af53f16f549858ed0081f0c85ea6f673933fac90"
     }
   ],
   "models": [
     {
-      "id": "phase5-khronos-box",
-      "sourceSha256": "ed52f7192b8311d700ac0ce80644e3852cd01537e4d62241b9acba023da3d54e",
-      "outputSha256": "a052de8729a6d1ee6cf7977664da7cc1eb6d9a80da2387f69c1e8485b1cab84b",
-      "licenseId": "CC-BY-4.0"
+      "id": "phase5-animated-guardian",
+      "sourceSha256": "efd6cff098f6e10c65d90739446b0f8411bd4e455e565b40ada5820b1e6d90eb",
+      "licenseId": "MIT",
+      "attribution": "Synthetic fixture authored in this repository; see the root LICENSE.",
+      "outputBytes": 10692,
+      "triangles": 60,
+      "primitiveCount": 1,
+      "textureCount": 1,
+      "textureBytes": 256,
+      "maxTextureDimension": 8,
+      "estimatedDecodedBytes": 7220,
+      "joints": 2,
+      "clips": [
+        {
+          "name": "idle",
+          "durationSeconds": 1
+        },
+        {
+          "name": "move",
+          "durationSeconds": 0.5
+        },
+        {
+          "name": "interact",
+          "durationSeconds": 1
+        },
+        {
+          "name": "combat",
+          "durationSeconds": 1
+        }
+      ],
+      "outputSha256": "b3a29451c19dd5fb572532681bb82dade53958268531c71952af492b204c1fa7"
     },
     {
-      "id": "phase5-khronos-rigged-figure",
-      "sourceSha256": "d6be85417d3e256861ee733eea6916093a7af7c79c16366181fd8abcaeb38cf5",
-      "outputSha256": "15fdf90c98ee6aca863d769f177c54de7639311514a29d28f30c04731697c3c0",
-      "licenseId": "CC-BY-4.0"
+      "id": "phase5-textured-static",
+      "sourceSha256": "b17052af8c6222f82f800203b300090ee2db87d51cb28ecbd074cd692722caa6",
+      "licenseId": "MIT",
+      "attribution": "Synthetic fixture authored in this repository; see the root LICENSE.",
+      "outputBytes": 2296,
+      "triangles": 12,
+      "primitiveCount": 1,
+      "textureCount": 1,
+      "textureBytes": 256,
+      "maxTextureDimension": 8,
+      "estimatedDecodedBytes": 1096,
+      "joints": 0,
+      "clips": [],
+      "outputSha256": "b17052af8c6222f82f800203b300090ee2db87d51cb28ecbd074cd692722caa6"
     }
-  ]
+  ],
+  "observedRuntime": {
+    "modelRendererMemory": {
+      "geometries": 4,
+      "textures": 5
+    },
+    "modelLoadMs": [
+      {
+        "instance": "static",
+        "assetId": "phase5-textured-static",
+        "loadDurationMs": 63
+      },
+      {
+        "instance": "traveler",
+        "assetId": "phase5-animated-guardian",
+        "loadDurationMs": 2
+      },
+      {
+        "instance": "guardian",
+        "assetId": "phase5-animated-guardian",
+        "loadDurationMs": 2
+      }
+    ],
+    "firstAcceptedMoveFrameDelta": 6,
+    "moveAnimationRenderedFrames": 35,
+    "modelIdleFrameDelta": 0,
+    "sceneRendererMemoryBeforeFiveWarmCycles": {
+      "geometries": 6,
+      "textures": 1
+    },
+    "sceneRendererMemoryAfterFiveWarmCycles": {
+      "geometries": 6,
+      "textures": 1
+    },
+    "warmedMapRoundTrips": 5,
+    "disposedScenesDuringWarmCycles": 10,
+    "toleratedMemoryGrowth": {
+      "geometries": 1,
+      "textures": 1
+    },
+    "sceneIdleFrameDelta": 0
+  }
 }

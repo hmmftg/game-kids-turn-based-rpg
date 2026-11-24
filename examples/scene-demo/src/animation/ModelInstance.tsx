@@ -11,6 +11,8 @@ export type ModelLoadStatus =
   | { readonly status: 'loading' }
   | {
       readonly status: 'ready';
+      readonly assetId: string;
+      readonly loadDurationMs: number;
       readonly meshes: number;
       readonly skinnedMeshes: number;
       readonly clips: readonly string[];
@@ -74,6 +76,7 @@ export function ModelInstance({
 
   useEffect(() => {
     const controller = new AbortController();
+    const loadStartedAt = performance.now();
     let mounted = true;
     let ownedLease: ModelLease | null = null;
     let animation: CharacterAnimationController | null = null;
@@ -91,6 +94,12 @@ export function ModelInstance({
         animation = createCharacterAnimationController(loaded.root, loaded.clips, loaded.record, {
           invalidate: () => invalidateRef.current(),
         });
+        loaded.root.userData.phase5AnimationSnapshot = () => animation?.snapshot() ?? null;
+        loaded.root.userData.phase5AnimationControl = {
+          setAction: (nextAction: SemanticAction, nextReducedMotion = false) =>
+            animation?.setAction(nextAction, { reducedMotion: nextReducedMotion }),
+          advance: (deltaSeconds: number) => animation?.advance(deltaSeconds) ?? false,
+        };
         animationRef.current = { assetId, instanceId, loader, controller: animation };
         animation.setAction(presentationRef.current.action, {
           reducedMotion: presentationRef.current.reducedMotion,
@@ -104,6 +113,8 @@ export function ModelInstance({
         });
         onStatusRef.current(instanceId, {
           status: 'ready',
+          assetId: loaded.record.id,
+          loadDurationMs: Math.max(0, Math.round(performance.now() - loadStartedAt)),
           meshes,
           skinnedMeshes,
           clips: loaded.clips.map((clip) => clip.name),
@@ -121,6 +132,10 @@ export function ModelInstance({
       mounted = false;
       controller.abort();
       if (animationRef.current?.controller === animation) animationRef.current = null;
+      if (ownedLease) {
+        delete ownedLease.root.userData.phase5AnimationSnapshot;
+        delete ownedLease.root.userData.phase5AnimationControl;
+      }
       animation?.dispose();
       ownedLease?.release();
     };

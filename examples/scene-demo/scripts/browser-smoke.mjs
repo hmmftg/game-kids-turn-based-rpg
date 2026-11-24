@@ -3,8 +3,6 @@ import { log } from 'node:console';
 import { chromium } from '@playwright/test';
 import { preview } from 'vite';
 
-/* global Storage, URL, URLSearchParams, document, getComputedStyle, localStorage, location, window */
-
 const server = await preview({
   preview: { host: '127.0.0.1', port: 0, strictPort: false },
 });
@@ -12,6 +10,36 @@ let browser;
 
 async function hasFocus(locator) {
   return locator.evaluate((element) => element === document.activeElement);
+}
+
+async function waitForStableSceneFrames(page) {
+  await page.waitForFunction(async () => {
+    const first = window.__sceneProbe?.frameCount;
+    if (typeof first !== 'number') return false;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    const second = window.__sceneProbe?.frameCount;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    const third = window.__sceneProbe?.frameCount;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    return second === first && third === first && window.__sceneProbe?.frameCount === first;
+  });
+}
+
+async function waitForStableModelFrames(page) {
+  await page.waitForFunction(async () => {
+    const first = window.__phase5ModelProbe?.renderer.info.render.frame;
+    if (typeof first !== 'number') return false;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    const second = window.__phase5ModelProbe?.renderer.info.render.frame;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    const third = window.__phase5ModelProbe?.renderer.info.render.frame;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    return (
+      second === first &&
+      third === first &&
+      window.__phase5ModelProbe?.renderer.info.render.frame === first
+    );
+  });
 }
 
 try {
@@ -25,7 +53,9 @@ try {
   const page = await browser.newPage();
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
-  await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'networkidle' });
+  await page.goto(`http://127.0.0.1:${address.port}/?scene-test=1`, {
+    waitUntil: 'networkidle',
+  });
 
   const map = page.getByTestId('active-map');
   const camera = page.getByTestId('camera-kind');
@@ -49,14 +79,10 @@ try {
     window.__originalSceneCanvas = element;
   });
 
-  await page.waitForTimeout(750);
+  await waitForStableSceneFrames(page);
   const settledFrameCount = await page.evaluate(() => window.__sceneProbe?.frameCount);
-  await page.waitForTimeout(750);
-  assert.equal(
-    await page.evaluate(() => window.__sceneProbe?.frameCount),
-    settledFrameCount,
-    'demand rendering must settle while the scene is idle',
-  );
+  await waitForStableSceneFrames(page);
+  assert.equal(await page.evaluate(() => window.__sceneProbe?.frameCount), settledFrameCount);
 
   const dialog = page.getByTestId('narrative-dialog');
   const openDialogue = page.getByTestId('dialogue-open');
@@ -99,6 +125,20 @@ try {
   assert.equal(await hasFocus(page.getByTestId('dialogue-choice-seek-vengeance')), true);
   await page.keyboard.press('Tab');
   assert.equal(await hasFocus(page.getByTestId('dialogue-leave')), true);
+  await page.keyboard.press('Tab');
+  assert.equal(
+    await hasFocus(page.getByTestId('dialogue-choice-seek-truth')),
+    true,
+    'Tab from the final dialog control wraps to the first dialog control',
+  );
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await hasFocus(page.getByTestId('dialogue-leave')), true);
+  await page.evaluate(() => document.querySelector('main')?.focus());
+  assert.equal(
+    await hasFocus(page.getByTestId('dialogue-leave')),
+    true,
+    'the modal dialog keeps the background application inert to keyboard focus',
+  );
   await page.evaluate(() => {
     const main = document.querySelector('main');
     window.__backgroundClicks = 0;
@@ -210,6 +250,242 @@ try {
   assert.equal(await page.getByTestId('quest-status').getAttribute('data-status'), 'completed');
   assert.equal(await page.getByTestId('clue-status').getAttribute('data-resolved'), 'true');
   await page.waitForFunction(() => window.__sceneProbe?.lampLit === true);
+  const durableRevisionBeforeCinematic = await page.evaluate(
+    () => window.__sceneProbe?.narrativeRevision,
+  );
+  const durableSaveBeforeCinematic = await page.evaluate(() =>
+    localStorage.getItem('waypoint-rpg-scene-demo:save'),
+  );
+  await page.waitForFunction(() => (window.__sceneProbe?.cameraPosition.length ?? 0) === 3);
+  const cameraBeforeCinematic = await page.evaluate(() => window.__sceneProbe?.cameraPosition);
+  await page.getByTestId('cinematic-play').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'playing',
+  );
+  await page.getByTestId('cinematic-caption').waitFor({ state: 'visible' });
+  assert.equal(await page.getByTestId('cinematic-caption').getAttribute('dir'), 'rtl');
+  assert.equal(await page.getByTestId('cinematic-caption').getAttribute('lang'), 'fa');
+  assert.match((await page.getByTestId('cinematic-caption').textContent()) ?? '', /چراغ روشن است/);
+  await page.waitForFunction((initial) => {
+    const current = window.__sceneProbe?.cameraPosition;
+    return current?.some((value, index) => Math.abs(value - initial[index]) > 0.05);
+  }, cameraBeforeCinematic);
+  await page.waitForFunction(() => window.__sceneProbe?.guardianAction === 'interact');
+  try {
+    await page.waitForFunction(
+      () =>
+        window.__sceneProbe?.lanternAccent === true &&
+        window.__sceneProbe?.guardianAction === 'interact',
+      null,
+      { timeout: 5_000 },
+    );
+  } catch (error) {
+    process.stderr.write(
+      `Cinematic cue probe: ${JSON.stringify(
+        await page.evaluate(() => ({
+          probe: window.__sceneProbe,
+          status: document.querySelector('[data-testid="cinematic-status"]')?.outerHTML,
+          caption: document.querySelector('[data-testid="cinematic-caption"]')?.textContent,
+        })),
+      )}\n`,
+    );
+    throw error;
+  }
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="lantern-cinematic-controls"]')
+        ?.getAttribute('aria-busy') === 'true',
+  );
+  assert.equal(await page.evaluate(() => window.__sceneProbe?.lampLit), true);
+  assert.equal(await page.getByTestId('scene-transition').isDisabled(), true);
+  assert.equal(await page.getByTestId('story-reset').isDisabled(), true);
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'waiting',
+  );
+  await waitForStableSceneFrames(page);
+  const cinematicWaitingFrameCount = await page.evaluate(() => window.__sceneProbe?.frameCount);
+  await waitForStableSceneFrames(page);
+  assert.equal(
+    await page.evaluate(() => window.__sceneProbe?.frameCount),
+    cinematicWaitingFrameCount,
+    'camera and effect cues pause their demand frames while the timeline waits for the player',
+  );
+  assert.equal(await page.getByTestId('cinematic-continue').isEnabled(), true);
+  await page.getByTestId('cinematic-continue').click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'completed',
+  );
+  await page.waitForFunction(
+    (initial) =>
+      window.__sceneProbe?.cameraPosition?.every(
+        (value, index) => Math.abs(value - initial[index]) < 0.0001,
+      ),
+    cameraBeforeCinematic,
+  );
+  await waitForStableSceneFrames(page);
+  const cinematicSettledFrameCount = await page.evaluate(() => window.__sceneProbe?.frameCount);
+  await waitForStableSceneFrames(page);
+  assert.equal(
+    await page.evaluate(() => window.__sceneProbe?.frameCount),
+    cinematicSettledFrameCount,
+    'demand rendering settles after the cinematic releases its leases',
+  );
+  assert.equal(await hasFocus(page.getByTestId('cinematic-play')), true);
+  assert.equal(await page.evaluate(() => window.__sceneProbe?.lanternAccent), false);
+  assert.equal(
+    await page.evaluate(() => window.__sceneProbe?.narrativeRevision),
+    durableRevisionBeforeCinematic,
+    'presentation cues cannot advance durable narrative state',
+  );
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem('waypoint-rpg-scene-demo:save')),
+    durableSaveBeforeCinematic,
+    'presentation cues cannot write the save envelope',
+  );
+
+  await page.getByTestId('cinematic-play').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'playing',
+  );
+  await page.waitForFunction(
+    () => window.__sceneProbe?.activeAudioLeases === 1 && window.__sceneProbe?.lanternAccent,
+  );
+  await page.getByTestId('cinematic-skip').click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'completed',
+  );
+  await page.waitForFunction(
+    () => document.activeElement === document.querySelector('[data-testid="cinematic-play"]'),
+  );
+  assert.equal(await hasFocus(page.getByTestId('cinematic-play')), true);
+  assert.equal(await page.evaluate(() => window.__sceneProbe?.activeAudioLeases), 0);
+  assert.equal(await page.evaluate(() => window.__sceneProbe?.lanternAccent), false);
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem('waypoint-rpg-scene-demo:save')),
+    durableSaveBeforeCinematic,
+  );
+
+  const immediateSkipTriggered = await page.evaluate(() => {
+    const test = window.__sceneDemoCinematicTest;
+    if (!test) return false;
+    test.playThenSkipBeforeFrame();
+    return true;
+  });
+  assert.equal(immediateSkipTriggered, true);
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'completed' &&
+      document.querySelector('[data-testid="cinematic-caption"]') === null &&
+      document
+        .querySelector('[data-testid="lantern-cinematic-controls"]')
+        ?.getAttribute('aria-busy') === 'false',
+  );
+
+  const cameraBeforeCancel = await page.evaluate(() => window.__sceneProbe?.cameraPosition);
+  await page.getByTestId('cinematic-play').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'playing',
+  );
+  await page.waitForFunction(
+    () =>
+      window.__sceneProbe?.activeAudioLeases === 1 &&
+      window.__sceneProbe?.lanternAccent === true &&
+      window.__sceneProbe?.guardianAction === 'interact' &&
+      document.querySelector('[data-testid="cinematic-caption"]') !== null,
+  );
+  await page.waitForFunction((initial) => {
+    const current = window.__sceneProbe?.cameraPosition;
+    return current?.some((value, index) => Math.abs(value - initial[index]) > 0.05);
+  }, cameraBeforeCancel);
+  await page.getByTestId('cinematic-cancel').click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'cancelled',
+  );
+  await page.waitForFunction(() => window.__sceneProbe?.activeAudioLeases === 0);
+  await page.waitForFunction(() => window.__sceneProbe?.guardianAction === 'idle');
+  await page.waitForFunction(
+    (initial) =>
+      window.__sceneProbe?.cameraPosition?.every(
+        (value, index) => Math.abs(value - initial[index]) < 0.0001,
+      ),
+    cameraBeforeCancel,
+  );
+  assert.equal(await hasFocus(page.getByTestId('cinematic-play')), true);
+  assert.equal(await page.evaluate(() => window.__sceneProbe?.lampLit), true);
+
+  await page.getByTestId('cinematic-play').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'playing',
+  );
+  await page.reload({ waitUntil: 'networkidle' });
+  try {
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-testid="session-readiness"]')?.textContent === 'ready' &&
+        document.querySelector('[data-testid="active-map"]')?.textContent === 'map-workshop' &&
+        document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'idle' &&
+        window.__sceneProbe?.lampLit === true &&
+        window.__sceneProbe?.lanternAccent === false,
+    );
+  } catch (error) {
+    process.stderr.write(
+      `Reload recovery probe: ${JSON.stringify(
+        await page.evaluate(() => ({
+          readiness: document.querySelector('[data-testid="session-readiness"]')?.textContent,
+          map: document.querySelector('[data-testid="active-map"]')?.textContent,
+          cinematicStatus: document
+            .querySelector('[data-testid="cinematic-status"]')
+            ?.getAttribute('data-status'),
+          probe: window.__sceneProbe,
+          save: localStorage.getItem('waypoint-rpg-scene-demo:save'),
+        })),
+      )}\n`,
+    );
+    throw error;
+  }
+
+  await page.waitForFunction(() => (window.__sceneProbe?.rendererMemory.geometries ?? 0) > 0);
+  const disposedScenesBeforeTransitions = await page.evaluate(
+    () => window.__sceneProbe?.disposedScenes ?? 0,
+  );
+  const rendererMemoryBeforeTransitions = await page.evaluate(
+    () => window.__sceneProbe?.rendererMemory,
+  );
+  assert.ok(
+    rendererMemoryBeforeTransitions && rendererMemoryBeforeTransitions.geometries > 0,
+    `renderer memory probe did not report the committed scene: ${JSON.stringify(await page.evaluate(() => window.__sceneProbe))}`,
+  );
+  for (let cycle = 0; cycle < 5; cycle += 1) {
+    await page.getByTestId('scene-transition').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="active-map"]')?.textContent === 'map-courtyard',
+    );
+    await page.getByTestId('scene-transition').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="active-map"]')?.textContent === 'map-workshop',
+    );
+  }
+  await page.waitForFunction(
+    (count) => (window.__sceneProbe?.disposedScenes ?? 0) >= count + 10,
+    disposedScenesBeforeTransitions,
+  );
+  const rendererMemoryAfterTransitions = await page.evaluate(
+    () => window.__sceneProbe?.rendererMemory,
+  );
+  assert.ok(rendererMemoryBeforeTransitions && rendererMemoryAfterTransitions);
+  assert.ok(
+    rendererMemoryAfterTransitions.geometries <= rendererMemoryBeforeTransitions.geometries + 1 &&
+      rendererMemoryAfterTransitions.textures <= rendererMemoryBeforeTransitions.textures + 1,
+    `five warmed map transition cycles exceeded the measured renderer tolerance: ${JSON.stringify({ rendererMemoryBeforeTransitions, rendererMemoryAfterTransitions })}`,
+  );
   const workshopSubscriptions = await page.evaluate(
     () => window.__sceneProbe?.runtimeSubscriptions,
   );
@@ -412,7 +688,14 @@ try {
   await page.goto(`http://127.0.0.1:${address.port}/?phase5=assets&phase5-test=1`, {
     waitUntil: 'networkidle',
   });
-  await page.waitForTimeout(1500);
+  await page.waitForFunction(() =>
+    ['static', 'traveler', 'guardian'].every(
+      (id) =>
+        document
+          .querySelector(`[data-testid="model-status-${id}"]`)
+          ?.getAttribute('data-status') === 'ready',
+    ),
+  );
   const modelReadiness = await page.evaluate(() =>
     Object.fromEntries(
       ['static', 'traveler', 'guardian'].map((id) => {
@@ -453,7 +736,12 @@ try {
   await page.waitForFunction(
     () =>
       document.querySelector('[data-testid="model-status-static"]')?.getAttribute('data-status') ===
-      'ready',
+        'ready' &&
+      document
+        .querySelector('[data-testid="model-status-static"]')
+        ?.getAttribute('data-asset-id') === 'phase5-khronos-box' &&
+      document.querySelector('[data-testid="model-status-static"]')?.getAttribute('data-meshes') ===
+        '1',
   );
   assert.equal(await page.getByTestId('model-status-static').getAttribute('data-meshes'), '1');
   await page.getByTestId('model-asset-select').selectOption('phase5-khronos-rigged-figure');
@@ -461,7 +749,12 @@ try {
     () =>
       document
         .querySelector('[data-testid="model-status-static"]')
-        ?.getAttribute('data-skinned-meshes') === '1',
+        ?.getAttribute('data-asset-id') === 'phase5-khronos-rigged-figure' &&
+      document
+        .querySelector('[data-testid="model-status-static"]')
+        ?.getAttribute('data-skinned-meshes') === '1' &&
+      document.querySelector('[data-testid="model-status-static"]')?.getAttribute('data-clips') ===
+        'clip-1',
   );
   assert.deepEqual(
     (await page.getByTestId('model-status-static').getAttribute('data-clips'))?.split(','),
@@ -474,8 +767,20 @@ try {
         .querySelector('[data-testid="model-status-traveler"]')
         ?.getAttribute('data-status') === 'ready' &&
       document
+        .querySelector('[data-testid="model-status-traveler"]')
+        ?.getAttribute('data-asset-id') === 'phase5-khronos-rigged-figure' &&
+      document
+        .querySelector('[data-testid="model-status-traveler"]')
+        ?.getAttribute('data-clips') === 'clip-1' &&
+      document
         .querySelector('[data-testid="model-status-guardian"]')
-        ?.getAttribute('data-status') === 'ready',
+        ?.getAttribute('data-status') === 'ready' &&
+      document
+        .querySelector('[data-testid="model-status-guardian"]')
+        ?.getAttribute('data-asset-id') === 'phase5-khronos-rigged-figure' &&
+      document
+        .querySelector('[data-testid="model-status-guardian"]')
+        ?.getAttribute('data-clips') === 'clip-1',
   );
   assert.deepEqual(
     (await page.getByTestId('model-status-traveler').getAttribute('data-clips'))?.split(','),
@@ -501,6 +806,55 @@ try {
     true,
     'external rigged clones must own separate skeletons',
   );
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="reduced-motion-state"]')?.dataset.reducedMotion ===
+      'false',
+  );
+  const isolatedMixerClocks = await page.evaluate(() => {
+    const probe = window.__phase5ModelProbe;
+    const travelerSet = probe?.setAnimationAction?.('traveler', 'move', false) ?? false;
+    const guardianSet = probe?.setAnimationAction?.('guardian', 'idle', true) ?? false;
+    const guardianBefore = probe?.animationSnapshot?.('guardian')?.mixerTimeSeconds ?? -1;
+    probe?.advanceAnimation?.('traveler', 0.25);
+    return {
+      travelerSet,
+      guardianSet,
+      traveler: probe?.animationSnapshot?.('traveler'),
+      guardian: probe?.animationSnapshot?.('guardian'),
+      guardianBefore,
+    };
+  });
+  assert.equal(isolatedMixerClocks.travelerSet, true);
+  assert.equal(isolatedMixerClocks.guardianSet, true);
+  assert.ok((isolatedMixerClocks.traveler?.mixerTimeSeconds ?? 0) >= 0.24);
+  assert.equal(isolatedMixerClocks.guardian?.mixerTimeSeconds, isolatedMixerClocks.guardianBefore);
+  assert.equal(isolatedMixerClocks.guardian?.active, false);
+  await page.getByTestId('toggle-traveler-instance').click();
+  await page.waitForFunction(
+    () =>
+      window.__phase5ModelProbe?.scene.getObjectByName('phase5:traveler') === undefined &&
+      window.__phase5ModelProbe?.scene.getObjectByName('phase5:guardian') !== undefined,
+  );
+  const remainingGuardianClock = await page.evaluate(
+    () => window.__phase5ModelProbe?.animationSnapshot?.('guardian')?.mixerTimeSeconds ?? -1,
+  );
+  await page.evaluate(() =>
+    window.__phase5ModelProbe?.setAnimationAction?.('guardian', 'move', false),
+  );
+  await page.waitForFunction(
+    (before) =>
+      (window.__phase5ModelProbe?.animationSnapshot?.('guardian')?.mixerTimeSeconds ?? before) >
+      before,
+    remainingGuardianClock,
+  );
+  await page.getByTestId('toggle-traveler-instance').click();
+  await page.waitForFunction(
+    () =>
+      window.__phase5ModelProbe?.scene.getObjectByName('phase5:traveler') !== undefined &&
+      document.querySelector('[data-testid="model-status-traveler"]')?.dataset.status === 'ready',
+  );
   await page.getByTestId('model-asset-select').selectOption('phase5-textured-static');
   await page.waitForFunction(
     () =>
@@ -517,6 +871,12 @@ try {
       document
         .querySelector('[data-testid="model-status-guardian"]')
         ?.getAttribute('data-status') === 'ready',
+  );
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="reduced-motion-state"]')?.dataset.reducedMotion ===
+      'true',
   );
   assert.equal(
     await page.getByTestId('reduced-motion-state').getAttribute('data-reduced-motion'),
@@ -600,134 +960,97 @@ try {
   assert.match((await page.getByTestId('animation-action-traveler').textContent()) ?? '', /move/);
   assert.match((await page.getByTestId('animation-action-guardian').textContent()) ?? '', /move/);
 
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="reduced-motion-state"]')?.dataset.reducedMotion ===
-      'false',
-  );
-  const activateByKeyboard = async (testId) => {
-    const control = page.getByTestId(testId);
-    await control.focus();
-    await page.keyboard.press('Enter');
-  };
-  const initialCameraPosition = await page.evaluate(() =>
-    window.__phase5ModelProbe?.camera.position.toArray(),
-  );
-  await activateByKeyboard('cinematic-play');
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic playing',
-  );
-  await activateByKeyboard('cinematic-pause');
-  assert.equal(await page.getByTestId('cinematic-status').textContent(), 'Cinematic paused');
-  await page.waitForTimeout(250);
-  assert.equal(await page.getByTestId('cinematic-status').textContent(), 'Cinematic paused');
-  await activateByKeyboard('cinematic-resume');
-  const caption = page.getByTestId('cinematic-caption');
-  await caption.waitFor({ state: 'visible' });
-  assert.equal(await caption.getAttribute('dir'), 'rtl');
-  assert.equal(await caption.getAttribute('lang'), 'fa');
-  assert.match((await caption.textContent()) ?? '', /نگهبان/);
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic completed',
-  );
-  const stagedCameraPosition = await page.evaluate(() =>
-    window.__phase5ModelProbe?.camera.position.toArray(),
-  );
-  assert.notDeepEqual(
-    stagedCameraPosition,
-    initialCameraPosition,
-    'camera cue must stage the shot',
-  );
-
-  await activateByKeyboard('cinematic-play');
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic playing',
-  );
-  await activateByKeyboard('cinematic-skip');
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic completed',
-  );
-  await page.getByTestId('cinematic-caption').waitFor({ state: 'visible' });
-
-  await activateByKeyboard('cinematic-play');
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic playing',
-  );
-  await activateByKeyboard('cinematic-cancel');
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic cancelled',
-  );
-  assert.equal(await page.getByTestId('cinematic-caption').count(), 0);
-  await page.waitForFunction((initial) => {
-    const current = window.__phase5ModelProbe?.camera.position.toArray();
-    return current?.every((value, index) => Math.abs(value - initial[index]) < 0.0001);
-  }, initialCameraPosition);
-  const restoredCameraPosition = await page.evaluate(() =>
-    window.__phase5ModelProbe?.camera.position.toArray(),
-  );
-  assert.deepEqual(
-    restoredCameraPosition,
-    initialCameraPosition,
-    'cancel restores camera ownership',
-  );
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.waitForFunction(
     () =>
       document.querySelector('[data-testid="reduced-motion-state"]')?.dataset.reducedMotion ===
       'true',
   );
-  await activateByKeyboard('cinematic-play');
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic completed',
+  const committedGameplayRevision = await page.getByTestId('gameplay-revision').textContent();
+  const travelerAnimationRevision = await page
+    .getByTestId('animation-revision-traveler')
+    .textContent();
+  const guardianAnimationRevision = await page
+    .getByTestId('animation-revision-guardian')
+    .textContent();
+  const committedTravelerPosition = await page
+    .getByTestId('gameplay-traveler-position')
+    .textContent();
+  const committedGuardianPosition = await page
+    .getByTestId('gameplay-guardian-position')
+    .textContent();
+  await page.getByTestId('gameplay-stale-move').click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector('[data-testid="gameplay-feedback"]')
+      ?.textContent?.startsWith('Rejected stale command'),
   );
-  assert.equal(await page.getByTestId('cinematic-caption').isVisible(), true);
+  assert.equal(
+    await page.getByTestId('gameplay-revision').textContent(),
+    committedGameplayRevision,
+  );
+  assert.equal(
+    await page.getByTestId('animation-revision-traveler').textContent(),
+    travelerAnimationRevision,
+  );
+  assert.equal(
+    await page.getByTestId('animation-revision-guardian').textContent(),
+    guardianAnimationRevision,
+  );
+  assert.equal(
+    await page.getByTestId('gameplay-traveler-position').textContent(),
+    committedTravelerPosition,
+  );
+  assert.equal(
+    await page.getByTestId('gameplay-guardian-position').textContent(),
+    committedGuardianPosition,
+  );
 
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="reduced-motion-state"]')?.dataset.reducedMotion ===
-      'false',
+  const revisionBeforeAbility = await page.getByTestId('gameplay-revision').textContent();
+  await page.getByTestId('gameplay-ability').click();
+  try {
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector('[data-testid="gameplay-feedback"]')
+          ?.textContent?.startsWith('Accepted light ability') &&
+        document
+          .querySelector('[data-testid="gameplay-outcome"]')
+          ?.textContent?.includes('victory') &&
+        document
+          .querySelector('[data-testid="animation-action-traveler"]')
+          ?.textContent?.includes('combat') &&
+        document
+          .querySelector('[data-testid="animation-action-guardian"]')
+          ?.textContent?.includes('defeat'),
+    );
+  } catch (error) {
+    process.stderr.write(
+      `Gameplay ability probe: ${JSON.stringify(
+        await page.evaluate(() => ({
+          feedback: document.querySelector('[data-testid="gameplay-feedback"]')?.textContent,
+          outcome: document.querySelector('[data-testid="gameplay-outcome"]')?.textContent,
+          revision: document.querySelector('[data-testid="gameplay-revision"]')?.textContent,
+          traveler: document.querySelector('[data-testid="animation-action-traveler"]')
+            ?.textContent,
+          guardian: document.querySelector('[data-testid="animation-action-guardian"]')
+            ?.textContent,
+        })),
+      )}\n`,
+    );
+    throw error;
+  }
+  assert.notEqual(await page.getByTestId('gameplay-revision').textContent(), revisionBeforeAbility);
+  await page.evaluate(() =>
+    window.__phase5ModelProbe?.setAnimationAction?.('traveler', 'combat', false),
   );
-  const sceneBeforeInterruptedReload = await page.evaluate(
-    () => window.__phase5ModelProbe?.scene.uuid,
-  );
-  await activateByKeyboard('cinematic-play');
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-      'Cinematic playing',
-  );
-  await activateByKeyboard('model-reload');
-  await page.waitForFunction(
-    (oldSceneId) =>
-      document.querySelector('[data-testid="cinematic-status"]')?.textContent ===
-        'Cinematic cancelled' &&
-      window.__phase5ModelProbe?.scene.uuid !== oldSceneId &&
-      document.querySelector('[data-testid="model-status-rigged"]')?.getAttribute('data-status') ===
-        'ready',
-    sceneBeforeInterruptedReload,
-  );
-
+  await page.waitForFunction(() => {
+    const state = window.__phase5ModelProbe?.animationSnapshot?.('traveler');
+    return state?.semanticAction === 'combat' && state.active;
+  });
   const sceneBeforeContextLoss = await page.evaluate(() => window.__phase5ModelProbe?.scene.uuid);
   await page.evaluate(() => window.__phase5ModelProbe?.renderer.forceContextLoss());
   await page.getByTestId('phase5-context-recover').waitFor({ state: 'visible' });
-  await activateByKeyboard('phase5-context-recover');
+  await page.getByTestId('phase5-context-recover').click();
   await page.waitForFunction(
     (oldSceneId) =>
       window.__phase5ModelProbe?.scene.uuid !== oldSceneId &&
@@ -738,10 +1061,54 @@ try {
     sceneBeforeContextLoss,
   );
 
+  await page.waitForFunction(() => {
+    const traveler = window.__phase5ModelProbe?.animationSnapshot?.('traveler');
+    const guardian = window.__phase5ModelProbe?.animationSnapshot?.('guardian');
+    return traveler?.active === false && guardian?.active === false;
+  });
+  await waitForStableModelFrames(page);
+  const idleRenderFrame = await page.evaluate(
+    () => window.__phase5ModelProbe?.renderer.info.render.frame,
+  );
+  await waitForStableModelFrames(page);
+  assert.equal(
+    await page.evaluate(() => window.__phase5ModelProbe?.renderer.info.render.frame),
+    idleRenderFrame,
+    'bounded animation settles and demand rendering stops while both characters are idle',
+  );
+
   await page.waitForFunction(
     () =>
       (window.__phase5ModelProbe?.renderer.info.memory.geometries ?? 0) >= 4 &&
       (window.__phase5ModelProbe?.renderer.info.memory.textures ?? 0) >= 5,
+  );
+  const sceneBeforeOrdinaryReload = await page.evaluate(
+    () => window.__phase5ModelProbe?.scene.uuid,
+  );
+  await page.evaluate(() => {
+    const retiredCanvas = window.__phase5ModelProbe?.renderer.domElement;
+    if (!retiredCanvas) throw new Error('The current model canvas is unavailable.');
+    window.__phase5RetiredCanvasLost = new Promise((resolve) => {
+      retiredCanvas.addEventListener('webglcontextlost', () => resolve(true), { once: true });
+    });
+  });
+  await page.getByTestId('model-reload').click();
+  await page.waitForFunction(
+    (oldSceneId) =>
+      window.__phase5ModelProbe?.scene.uuid !== oldSceneId &&
+      document.querySelector('[data-testid="model-status-static"]')?.dataset.status === 'ready' &&
+      document.querySelector('[data-testid="model-status-rigged"]')?.dataset.status === 'ready',
+    sceneBeforeOrdinaryReload,
+  );
+  await page.evaluate(async () => await window.__phase5RetiredCanvasLost);
+  assert.equal(
+    await page.getByTestId('phase5-context-recover').count(),
+    0,
+    'a retired canvas teardown event must not report context loss for the replacement renderer',
+  );
+  assert.equal(
+    await page.evaluate(() => window.__phase5ModelProbe?.renderer.getContext().isContextLost()),
+    false,
   );
   const initialRendererMemory = await page.evaluate(() => ({
     geometries: window.__phase5ModelProbe?.renderer.info.memory.geometries ?? -1,
@@ -752,7 +1119,7 @@ try {
     [],
     'model loading must not contact a remote asset service',
   );
-  for (let cycle = 0; cycle < 3; cycle += 1) {
+  for (let cycle = 0; cycle < 5; cycle += 1) {
     const previousSceneId = await page.evaluate(() => window.__phase5ModelProbe?.scene.uuid);
     await page.getByTestId('model-reload').click();
     await page.waitForFunction(

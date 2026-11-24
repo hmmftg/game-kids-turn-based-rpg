@@ -263,4 +263,44 @@ describe('example model asset loader', () => {
     await vi.waitFor(() => expect(sourceGeometryDispose).toHaveBeenCalledTimes(1));
     loader.dispose();
   });
+
+  it('starts a fresh same-ID request while an abandoned parse is still finishing', async () => {
+    let resolveOldParse: ((gltf: GLTF) => void) | undefined;
+    let notifyOldParseStarted: (() => void) | undefined;
+    const oldParseStarted = new Promise<void>((resolve) => {
+      notifyOldParseStarted = resolve;
+    });
+    let parseCalls = 0;
+    const fetcher = vi.fn(async () => response());
+    const loader = createModelAssetLoader([record], {
+      fetcher,
+      parse: async () => {
+        parseCalls += 1;
+        if (parseCalls > 1) return fakeGltf();
+        notifyOldParseStarted?.();
+        return new Promise<GLTF>((resolve) => {
+          resolveOldParse = resolve;
+        });
+      },
+      digest: async () => record.outputSha256,
+      baseUrl: () => 'http://localhost/',
+    });
+    const controller = new AbortController();
+    const abandoned = loader.load(record.id, controller.signal);
+    await oldParseStarted;
+    controller.abort();
+    await expect(abandoned).rejects.toMatchObject({ name: 'AbortError' });
+
+    const retryPromise = loader.load(record.id, new AbortController().signal);
+    try {
+      await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2), { timeout: 100 });
+      const retry = await retryPromise;
+      expect(parseCalls).toBe(2);
+      retry.release();
+    } finally {
+      resolveOldParse?.(fakeGltf());
+      await Promise.allSettled([abandoned, retryPromise]);
+      loader.dispose();
+    }
+  });
 });

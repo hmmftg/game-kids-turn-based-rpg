@@ -86,15 +86,28 @@ license records and upstream links are stored beside the source GLBs in
 runtime records are in `src/animation/asset-records.json`. These local-only
 fixtures do not enter the Kids RPG registry or PWA precache.
 
-After committing scene-demo runtime changes, run `npm run sample:phase5:previews`
-from the repository root to build the production app and capture real Chromium
-screenshots of the external models and guardian cinematic. The capture manifest
-records the source commit, viewport, browser, asset hashes, and screenshot
-hashes under `docs/previews/phase5/`.
+From the repository root, `npm run sample:phase5:previews` builds the production
+consumer and captures nine real Chromium states. `npm run
+sample:scene:previews` captures both the Blood Leaf gallery and these Phase 5
+screenshots. The script waits for committed scene readiness, model loading, or
+timeline events instead of using fixed sleeps. It checks WebGL frames, image
+signatures, dimensions, and minimum file size. The provenance manifest records
+the source commit, viewport, Chromium version, fixture hashes and licenses,
+measured model size/triangle/texture/joint/clip data, load durations, observed
+renderer memory, five warmed scene round trips, and each PNG's SHA-256 under
+`docs/previews/phase5/`.
 
-![Production Chromium preview of the external Box and two Rigged Figure instances](../../docs/previews/phase5/01-external-models.png)
-
-![Production Chromium preview of the Persian guardian cinematic](../../docs/previews/phase5/02-guardian-cinematic.png)
+| Capture                                                                                          | Production-rendered state                        |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| ![Textured static model](../../docs/previews/phase5/01-static-model.png)                         | Textured static GLB                              |
+| ![Two independent rigged characters](../../docs/previews/phase5/02-two-rigged-characters.png)    | Independent skeleton instances                   |
+| ![Character after an accepted gameplay move](../../docs/previews/phase5/03-moving-character.png) | Gameplay-driven movement                         |
+| ![Guardian interaction animation](../../docs/previews/phase5/04-character-interaction.png)       | Registered interaction action                    |
+| ![Cinematic camera cue](../../docs/previews/phase5/05-cinematic-camera.png)                      | Lantern camera staging                           |
+| ![Persian cinematic dialogue](../../docs/previews/phase5/06-cinematic-dialogue.png)              | Accessible RTL DOM dialogue                      |
+| ![Narrative-driven lantern consequence](../../docs/previews/phase5/07-lantern-consequence.png)   | Lantern rendered from a committed narrative fact |
+| ![Reduced-motion presentation](../../docs/previews/phase5/08-reduced-motion.png)                 | Dialogue and continuation remain available       |
+| ![Portrait mobile layout](../../docs/previews/phase5/09-mobile-portrait.png)                     | 390×844 viewport                                 |
 
 To regenerate the source fixtures and import them into the demo, run from the
 repository root:
@@ -127,11 +140,29 @@ pose. Reduced motion applies a static final pose and stops frame invalidation.
 Changing an instance's asset ID removes the old model immediately while the new
 lease loads, so released resources are never rendered.
 
-The same preview route offers an optional staged guardian greeting. Its
-example-owned timeline emits validated camera, imported-animation, Persian
-dialogue, and audio-cue records in stable order. Play/replay, pause/resume,
-skip, and cancel are keyboard-operable; cancel restores the camera and idle
-pose, and unmount cancels the active sequence. Reduced motion applies the same
-story cue immediately without an animation loop. This demo has no approved
-sound asset, so it authors no audio playback cue. The timeline changes no
-durable narrative or gameplay state.
+The timeline lives under `src/presentation/` and remains private to this
+consumer. `compileTimeline` validates a versioned JSON-compatible definition
+against registered camera, actor, dialogue, effect, and audio IDs. It rejects
+invalid references, duplicate IDs, non-finite camera values, bad cue ordering,
+unbounded durations, and conflicting ownership. Authored cues are data only;
+they cannot run JavaScript or mutate narrative/gameplay state.
+
+`createTimelinePlayer` exposes deterministic `play`, `skip`, `cancel`,
+`replay`, `resolveWait`, `advance`, and `dispose` operations. Every playback
+gets a new execution ID, and stale callbacks are ignored. Skip completes
+presentation cues but never accepts a wait or player choice on its own. The
+lantern sequence uses an explicit continue wait; any future game choice must
+still pass through the existing command boundary. Durable lantern state is
+committed by the narrative runtime before the timeline is offered.
+
+`CinematicStage` temporarily owns camera and input leases and releases them on
+completion, skip, cancel, unmount, or context invalidation. It restores the
+prior camera, clears transient light and animation cues, stops its local Web
+Audio oscillator, and returns focus to the opener (or the main landmark if the
+opener disappeared). Reduced motion skips decorative interpolation, while
+the Persian dialogue and explicit continue control remain. The sound is a
+short local oscillator cue; no remote audio or asset service is used.
+
+The browser smoke uses Chromium with headless SwiftShader. Its renderer-memory
+measurements apply to that environment only; this demo has not been certified
+on physical mobile GPUs or other browsers.
