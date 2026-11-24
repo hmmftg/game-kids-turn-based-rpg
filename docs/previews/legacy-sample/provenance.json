@@ -1,55 +1,55 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "0498429b580caf413e67ab45dd9abc4d039c1162",
+  "sourceCommit": "7da2f42e7f8f3a7d6673c545a7c9f0414a7ee074",
   "images": [
     {
       "file": "01-title.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 181083,
-      "sha256": "1ef013631107974616b57b0ee703e230eea5d8b01f64ec5d185dcb96f4f52aff"
+      "bytes": 203845,
+      "sha256": "51b2662fd493c5d04214a6de6fd29f88d8605cabea1baa17c620ed652a467b37"
     },
     {
       "file": "02-avatar-select.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 151948,
-      "sha256": "3a27c422bf1d03fa36d7c520b7e8fb53690369ae0f4be353bb77860fa236fceb"
+      "bytes": 143887,
+      "sha256": "c4a0f0c02f9b28c4573f806f6d83342ac853078c511062df8a1596dcf21ea457"
     },
     {
       "file": "03-headwear-select.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 207475,
-      "sha256": "d1e59e31b43a96fe2aaabe33fa70cbd19098ed588b3c087b33f5729579cfc52a"
+      "bytes": 192981,
+      "sha256": "e43c0c636b151ac54a50f3aff622de10b180e961c862a6fad1cf2de77a2df3f6"
     },
     {
       "file": "04-town-hub.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 2151766,
-      "sha256": "d77354477080675cadf3e27e60c51ab8ba8b41e3201d74eb1dafa98678c86f4a"
+      "bytes": 2006250,
+      "sha256": "8ff730c6e76898da10154694d51866a4a807b2b57b9fff26e3297d601780e135"
     },
     {
       "file": "05-town-portrait.png",
       "width": 1620,
       "height": 3600,
-      "bytes": 1708854,
-      "sha256": "bebec249901065778cce6684205f1dc51d164188bc6ad5a1ebc2222e2a7f7eab"
+      "bytes": 1622427,
+      "sha256": "a626870998c8366c47ff6393a3b9c8c5e9148742e64cabb8158ab354c1afa74f"
     },
     {
       "file": "06-guardian-dialogue.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1279902,
-      "sha256": "eeee65852f71a1ba59ab2857dc9dc6890c9e6518d100bddfea38e6e68d35831b"
+      "bytes": 1229197,
+      "sha256": "1a9045cae68744587b6531562b8ed69d096d7109fa600bd85d79fa4680a0bf53"
     },
     {
       "file": "07-encounter-choice.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1145887,
-      "sha256": "60ae6c0bcb52e116dfca2350c1925ed958cf16e71ca2669dbd6fd8b2c45d1a4c"
+      "bytes": 1096230,
+      "sha256": "64e9cbb6525d0160d4d7c90b3a9192687dc2bdf907a72785fa30e6484b3e9ceb"
     }
   ]
 }

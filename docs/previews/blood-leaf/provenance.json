@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "2640e58a8c2da6f32640235a8cd1afead8507f64",
+  "sourceCommit": "7da2f42e7f8f3a7d6673c545a7c9f0414a7ee074",
   "images": [
     {
       "file": "01-courtyard.png",
       "width": 1360,
-      "height": 929,
-      "bytes": 47782,
-      "sha256": "2cd04509e1d7e150f1958c22c643ad545fc967309875f002345695fdc0934728"
+      "height": 915,
+      "bytes": 64684,
+      "sha256": "f23ffbcd19b0e7119e5985e578d076dc0a13abc0a6300f330ecf55851c1df85b"
     },
     {
       "file": "02-dialogue.png",
       "width": 1360,
-      "height": 929,
-      "bytes": 56419,
-      "sha256": "80ef12305c19a04c8180270264c08074ad97e9251792acbcbfe7dad3a582d249"
+      "height": 916,
+      "bytes": 73807,
+      "sha256": "df1555a5265effb13090a20cd74e0deb8e2d89fe9733aa23f976c1445720ba94"
     },
     {
       "file": "03-lit-lantern.png",
       "width": 1360,
-      "height": 929,
-      "bytes": 63374,
-      "sha256": "6fc79d3a10c7c78584bb6eed26e744f7f536c7646d2e5f55aa9fb625f1b97ba1"
+      "height": 916,
+      "bytes": 81376,
+      "sha256": "1d94219baf7899e50bd3accfb73a5db203e4955e024415ba7f8c093620e7a1d3"
     }
   ]
 }

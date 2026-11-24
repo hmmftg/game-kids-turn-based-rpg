@@ -1,90 +1,90 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "0e3d2b9eca45d0a00eca64874863949f0795b4a2",
+  "sourceCommit": "7da2f42e7f8f3a7d6673c545a7c9f0414a7ee074",
   "images": [
     {
       "file": "01-title.png",
       "width": 1440,
       "height": 900,
-      "bytes": 37212,
-      "sha256": "07814f9d2e2fce9864707e5233821872d7b78026c61bcdf1e37e9d971f3337ac"
+      "bytes": 38158,
+      "sha256": "d269a4d22bfb1f52ab1fa4787bf939bb87a6ecbda6ac4446922b988fca5243ca"
     },
     {
       "file": "02-village.png",
       "width": 1440,
       "height": 1094,
-      "bytes": 79919,
-      "sha256": "6525aadafd451c2a7a1a32958f3b102d36c77fd60a16f3a67a22fc21c2190b43"
+      "bytes": 77145,
+      "sha256": "90e7cdb6d74132f1b8b021b0a56712eae600cf2c971b1d6d6f422964f36659b6"
     },
     {
       "file": "03-dialogue.png",
       "width": 1440,
       "height": 1094,
-      "bytes": 93952,
-      "sha256": "cb92e12a105c65f94373b4dec71710633116e87e910c6df802a516a418b7af8d"
+      "bytes": 90033,
+      "sha256": "aac72de5d4d0cd2525cac4bce1b980af34ca6059d10b1aa5a042a01558cbbfa6"
     },
     {
       "file": "04-inventory.png",
       "width": 1440,
       "height": 1360,
-      "bytes": 107693,
-      "sha256": "185128616aa88d73e59f4dd46d5da8eccbaba36161e388d7a98c26a2171a976a"
+      "bytes": 105506,
+      "sha256": "df92ec3babc792091aa2cf7fc01bafbb1dc8f5cddbbe736e4affc3863f31b631"
     },
     {
       "file": "05-garden-before.png",
       "width": 1440,
       "height": 1094,
-      "bytes": 77336,
-      "sha256": "4b6a416eec22cfdecc3a284aab2b510d6fdd1a3f9832141976030f395197f0f4"
+      "bytes": 74413,
+      "sha256": "0ae4dc06a9c687a413c14e85d32103f29ea180e90b8c0ffcfee58fcd25f81ec2"
     },
     {
       "file": "06-garden-restored.png",
       "width": 1440,
       "height": 1158,
-      "bytes": 86968,
-      "sha256": "570eba67c7f3161cecd534900a17370e93ea929f726778d30872e0a146fe5414"
+      "bytes": 85184,
+      "sha256": "3a5178ace4e63e8e43769d7e5faf3b152cc4a1ff9e7039dabbea8aa5c42dc758"
     },
     {
       "file": "07-tactical-battle.png",
       "width": 1440,
       "height": 1094,
-      "bytes": 89206,
-      "sha256": "3f77b64dab22a40e9a2906bdc4b8206a63b1d5640be6fdb0fc1b50fcbfbf8350"
+      "bytes": 82914,
+      "sha256": "aca7304642ff109626127310b84e8fd9d767e1d9737ac35b1f61252252289b3c"
     },
     {
       "file": "08-ability-effect.png",
       "width": 1440,
       "height": 1094,
-      "bytes": 97327,
-      "sha256": "3b5ff5e00db7e66b7a25aae43771a6f55c9895bf0d7f31a391ce5c6e559fb1cd"
+      "bytes": 88606,
+      "sha256": "5b4c4e62a05d95f80951afc75b89a460a673df88cca8feba61cac34f6bed212a"
     },
     {
       "file": "09-guardian-outcome.png",
       "width": 1440,
       "height": 1158,
-      "bytes": 93961,
-      "sha256": "d11c78269d5cfd43e2d70bc0d557ac7680e27efd185f1c5eca9a7bc692974828"
+      "bytes": 90648,
+      "sha256": "0582daa50c22a9fd6102bd4476c0fe7621133c806a66ca8d0a98d976dd4fd921"
     },
     {
       "file": "10-ending.png",
       "width": 1440,
       "height": 1158,
-      "bytes": 101050,
-      "sha256": "ed869fc1b47df22594530fa0868ce6a3598c02adddb0bca229f60ad004136f9f"
+      "bytes": 93971,
+      "sha256": "15f34537b5fe47b8e6824ed241e58f4e83ce6e02479f6399b8266f00b953835a"
     },
     {
       "file": "11-mobile.png",
       "width": 390,
       "height": 1381,
-      "bytes": 76489,
-      "sha256": "8ad2716f3d7b5be56d6a85d127c92970579e07d1f1608b4399e381c91ac125de"
+      "bytes": 74395,
+      "sha256": "bf684d631037b11ab01746dd5468abd2460c6783eeccdff8f1d29e6e9a036f59"
     },
     {
       "file": "12-restored.png",
       "width": 1440,
       "height": 1094,
-      "bytes": 93834,
-      "sha256": "00831d766c4cbf937b35df5b632fc9007e0dc6d6d258646f938e89bf49ee4f74"
+      "bytes": 87316,
+      "sha256": "d07dc033bb93fbb272eb7c5fbca967de3278aa765e1912146ce90c48a7322ecb"
     }
   ]
 }
