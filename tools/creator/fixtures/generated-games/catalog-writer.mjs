@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
+import console from 'node:console';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import process from 'node:process';
 import { NodeIO } from '@gltf-transform/core';
 import {
   addSpecifiedAsset,

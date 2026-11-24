@@ -67,7 +67,7 @@ function createCreatorHostLock(creatorArchive) {
     const entry = packageLock.packages[ownerKey];
     for (const name of Object.keys(entry.dependencies ?? {})) enqueue(name, ownerKey);
     for (const name of Object.keys(entry.optionalDependencies ?? {})) enqueue(name, ownerKey, true);
-    for (const [name, version] of Object.entries(entry.peerDependencies ?? {}))
+    for (const name of Object.keys(entry.peerDependencies ?? {}))
       enqueue(name, ownerKey, entry.peerDependenciesMeta?.[name]?.optional === true);
   }
 
