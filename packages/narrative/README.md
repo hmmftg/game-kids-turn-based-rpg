@@ -167,6 +167,10 @@ the same conversation can resume without reapplying a choice. An authored
 `closesDialogue` node exposes `close-dialogue`: it clears active and suspended
 cursors without assigning a story ending or reapplying effects. Only that
 explicit endpoint can close this way; ordinary exit continues to suspend.
+`open-dialogue` may name a `startNodeId` in the selected dialogue graph so an
+application can route a validated physical interaction to the matching
+authored node; absent that field, the engine resumes a suspended cursor or
+uses the dialogue entry node.
 
 ## Persistence and external events
 

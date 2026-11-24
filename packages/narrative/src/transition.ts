@@ -79,10 +79,9 @@ export function transitionNarrative(
           'dialogue-suspended',
           'Resume or finish the suspended dialogue before opening another one.',
         );
-      const suspendedNodeId = state.suspendedDialogue?.nodeId;
-      const entry = dialogue.nodes.find(
-        (node) => node.id === (suspendedNodeId ?? dialogue.entryNodeId),
-      );
+      const startNodeId =
+        command.startNodeId ?? state.suspendedDialogue?.nodeId ?? dialogue.entryNodeId;
+      const entry = dialogue.nodes.find((node) => node.id === startNodeId);
       if (!entry || (entry.when && !evaluateCondition(entry.when, state)))
         return reject(state, 'node-unavailable', 'Dialogue entry node is unavailable.');
       draft.activeDialogue = { dialogueId: dialogue.id, nodeId: entry.id };

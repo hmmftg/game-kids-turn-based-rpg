@@ -179,7 +179,12 @@ export interface NarrativeCommandBase {
 
 export type NarrativeCommand = NarrativeCommandBase &
   (
-    | { readonly type: 'open-dialogue'; readonly dialogueId: string }
+    | {
+        readonly type: 'open-dialogue';
+        readonly dialogueId: string;
+        /** Optional app-validated node within the dialogue's authored graph. */
+        readonly startNodeId?: string;
+      }
     | { readonly type: 'advance' }
     | { readonly type: 'choose'; readonly choiceId: string }
     | { readonly type: 'exit-dialogue' }

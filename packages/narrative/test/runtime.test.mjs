@@ -691,3 +691,22 @@ test('snapshot decoder accepts pre-history snapshots and validates authored step
     /step id/i,
   );
 });
+
+test('open-dialogue may start at a known authored node and rejects unknown cursors unchanged', () => {
+  const compiled = compileNarrative(story());
+  const state = createNarrativeState(compiled, 'targeted-dialogue');
+  const opened = send(compiled, state, 'open-dialogue', {
+    dialogueId: 'guardian-dialogue',
+    startNodeId: 'truth',
+  });
+  assert.equal(opened.accepted, true);
+  if (!opened.accepted) return;
+  assert.equal(opened.state.activeDialogue?.nodeId, 'truth');
+
+  const invalid = send(compiled, state, 'open-dialogue', {
+    dialogueId: 'guardian-dialogue',
+    startNodeId: 'unregistered',
+  });
+  assert.equal(invalid.accepted, false);
+  assert.strictEqual(invalid.state, state);
+});
