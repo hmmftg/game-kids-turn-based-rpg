@@ -28,6 +28,8 @@ export type NarrativeCondition =
       readonly questId: string;
       readonly status: PersistedQuestStatus;
     }
+  /** True once a repeatable quest has completed at least one attempt. */
+  | { readonly op: 'quest-completed'; readonly questId: string }
   | { readonly op: 'all' | 'any'; readonly conditions: readonly NarrativeCondition[] }
   | { readonly op: 'not'; readonly condition: NarrativeCondition };
 

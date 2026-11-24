@@ -75,6 +75,20 @@ function evaluate(condition: unknown, state: NarrativeState): Evaluation {
         value: record(state.quests) && state.quests[condition.questId] === condition.status,
       };
     }
+    case 'quest-completed': {
+      if (typeof condition.questId !== 'string') return { valid: false, value: false };
+      const history = record(state.questHistory)
+        ? state.questHistory[condition.questId]
+        : undefined;
+      return {
+        valid: true,
+        value:
+          (record(history) &&
+            typeof history.completionCount === 'number' &&
+            history.completionCount > 0) ||
+          (record(state.quests) && state.quests[condition.questId] === 'completed'),
+      };
+    }
     case 'not': {
       const child = evaluate(condition.condition, state);
       return child.valid ? { valid: true, value: !child.value } : { valid: false, value: false };

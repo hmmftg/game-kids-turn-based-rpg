@@ -585,6 +585,10 @@ function repeatableQuestStory() {
     quests: [
       { id: 'greeting', repeatable: true, stepIds: ['greeting-1', 'greeting-2'] },
       { id: 'one-shot', stepIds: ['one-shot-1'] },
+      {
+        id: 'follow-up',
+        prerequisites: { op: 'quest-completed', questId: 'greeting' },
+      },
     ],
     dialogues: [
       {
@@ -644,6 +648,21 @@ test('repeatable quests retain stable step history and count each verified compl
     });
     assert.equal(getQuestStatus(compiled, state, 'greeting'), 'completed');
   }
+});
+
+test('quest-completed prerequisites remain open after a repeatable attempt restarts', () => {
+  const compiled = compileNarrative(repeatableQuestStory());
+  let state = createNarrativeState(compiled, 'repeatable-prerequisite');
+  assert.equal(getQuestStatus(compiled, state, 'follow-up'), 'locked');
+
+  state = send(compiled, state, 'trigger', { triggerId: 'start-greeting' }).state;
+  state = send(compiled, state, 'trigger', { triggerId: 'complete-greeting' }).state;
+  assert.equal(getQuestStatus(compiled, state, 'follow-up'), 'available');
+
+  const replay = send(compiled, state, 'trigger', { triggerId: 'start-greeting' });
+  assert.equal(replay.accepted, true);
+  if (!replay.accepted) return;
+  assert.equal(getQuestStatus(compiled, replay.state, 'follow-up'), 'available');
 });
 
 test('completed quests without repeatable policy stay terminal and seed restore does not replay effects', () => {

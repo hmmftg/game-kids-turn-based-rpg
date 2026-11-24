@@ -103,7 +103,9 @@ localized text field.
 ## Conditions and effects
 
 Conditions include boolean flags, primitive `eq`/`neq`, safe-integer ordering,
-persisted quest statuses, `all`, `any`, and `not`. Missing facts are absent:
+persisted quest statuses, historical `quest-completed`, `all`, `any`, and `not`.
+`quest-completed` remains true after a repeatable attempt restarts because it
+queries completion history rather than the current attempt status. Missing facts are absent:
 flag checks and equality are false; `neq` is true only when a fact exists and
 differs, so it is not the same as `not(eq)`. Ordered comparisons require a
 safe integer fact and a safe integer operand; no coercion occurs. Quest

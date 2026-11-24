@@ -367,6 +367,9 @@ export function validateNarrative(input: unknown): NarrativeValidationReport {
           );
         }
         break;
+      case 'quest-completed':
+        idField(raw.questId, `${path}.questId`);
+        break;
       case 'all':
       case 'any':
         if (!isArray(raw.conditions) || raw.conditions.length === 0)
@@ -740,7 +743,10 @@ export function validateNarrative(input: unknown): NarrativeValidationReport {
   }
   function validateConditionReferences(condition: NarrativeCondition, path: string): void {
     if (!isObject(condition)) return;
-    if (condition.op === 'quest-status' && !questIds.has(condition.questId))
+    if (
+      (condition.op === 'quest-status' || condition.op === 'quest-completed') &&
+      !questIds.has(condition.questId)
+    )
       add(
         'unknown-quest-reference',
         path,
@@ -767,6 +773,7 @@ function report(diagnostics: NarrativeDiagnostic[]): NarrativeValidationReport {
 
 function questDependencies(condition: NarrativeCondition, mandatory: boolean): Set<string> {
   if (!isObject(condition)) return new Set();
+  if (condition.op === 'quest-completed') return new Set([condition.questId]);
   if (condition.op === 'quest-status' && STATUSES.has(condition.status))
     return new Set([condition.questId]);
   if (condition.op === 'not') return new Set();
