@@ -141,3 +141,55 @@ Mahalle root application
 - Existing save bytes remain available after corruption, newer versions or failed migration.
 - Consumer uses installed tarballs only and does not resolve workspace source.
 - Any status/gallery claims are backed by actual test and screenshot evidence.
+
+## Execution and acceptance results
+
+Implementation commit: `737f2bb2124c3cfa90091e8a661e6e7d24312776`.
+
+- All nine authored quests now use the narrative package as the authoritative
+  progression state, with repeatable completion history projected losslessly
+  into the existing schema-v3 save fields. No narrative effects replay during
+  restore.
+- Mahalle's specialized child micro-battle rules were replaced by the optional
+  generic deterministic 1v1 module in `waypoint-rpg-gameplay`. Mahalle retains
+  its authored actions, intent policy, physical reactions, and
+  discovery-at-victory-exit boundary. The previous application-local battle
+  engine was removed after differential outcome checks.
+- The actual root application passed the isolated three-tarball consumer; all
+  five existing package/sample consumers, generated-game consumers, and the
+  linked-development watch/recovery gate passed.
+- `npm run verify` passed, including 577 root unit tests, 15 core tests, 40
+  narrative tests, 35 gameplay tests, migration contracts, validators,
+  budgets, deploy shape, and existing example builds.
+- Four Kids RPG Chromium shards passed 257 tests with 13 expected skips. The
+  separately gated release rollback test passed 1/1. Creator preview browser
+  tests passed 4/4.
+- `npm run sample:previews` passed 1/1 and captured seven production-rendered
+  images at source SHA `737f2bb2124c3cfa90091e8a661e6e7d24312776`; the PNG
+  provenance manifest records dimensions, byte sizes, and SHA-256 hashes.
+- `README.md` lists the root Mahalle application in Samples / Playable Games;
+  `npm run roadmap:check` and the sample gallery validator pass without moving
+  roadmap phase statuses.
+- Root toolchain verification ran under Node 22.23.5, while framework package
+  engine declarations remain `>=22.0.0` and the root toolchain requirement is
+  `>=22.22.2 <23`. The exact Node 22.0.0 runtime was not separately run.
+- Browser coverage was Chromium with software WebGL; physical mobile hardware
+  remains unverified. Existing draft-content warnings and two unverified legacy
+  model-license entries remain as before.
+
+### Task status
+
+- Task 1 — M0 baseline and parity fixtures: complete (`dae97a8`, `3b02fcc`).
+- Task 2 — M1 independent installed-package consumer: complete; included in
+  implementation commit `737f2bb`.
+- Task 3 — M2 repeatable narrative contract and pilot: complete (`6e17d7c`,
+  `f7fba52`, `92a0310`).
+- Task 4 — M3 full narrative migration: complete; included in `737f2bb`.
+- Task 5 — M4 generic micro-battle package migration: complete; included in
+  `737f2bb`.
+- Task 6 — M5 state/save compatibility: complete; existing v3 payload shape
+  remains unchanged and migration/restore contract tests pass.
+- Task 7 — M6 catalog and renderer boundary review: complete; catalog is
+  generated, unknown rights stay unapproved, and renderer remains game-owned.
+- Task 8 — M7 regression, screenshot, and documentation acceptance: complete;
+  final documentation/evidence commit is recorded in the handoff.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "0498429b580caf413e67ab45dd9abc4d039c1162",
+  "sourceCommit": "737f2bb2124c3cfa90091e8a661e6e7d24312776",
   "images": [
     {
       "file": "01-title.png",
@@ -13,43 +13,43 @@
       "file": "02-avatar-select.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 151948,
-      "sha256": "3a27c422bf1d03fa36d7c520b7e8fb53690369ae0f4be353bb77860fa236fceb"
+      "bytes": 151923,
+      "sha256": "1b319524bbf41084c330f76bb38767c4ebfc9843a0416857ced5f65e5b8814a6"
     },
     {
       "file": "03-headwear-select.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 207475,
-      "sha256": "d1e59e31b43a96fe2aaabe33fa70cbd19098ed588b3c087b33f5729579cfc52a"
+      "bytes": 207743,
+      "sha256": "029ed32e1a8092c9aadd3423983e21a66186d811034122997ee5797dfc1162fc"
     },
     {
       "file": "04-town-hub.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 2151766,
-      "sha256": "d77354477080675cadf3e27e60c51ab8ba8b41e3201d74eb1dafa98678c86f4a"
+      "bytes": 2007756,
+      "sha256": "ddfaf169424322f198f08ae39da8fa4747db9b6c5810b53bc8be3b09903ae2a2"
     },
     {
       "file": "05-town-portrait.png",
       "width": 1620,
       "height": 3600,
-      "bytes": 1708854,
-      "sha256": "bebec249901065778cce6684205f1dc51d164188bc6ad5a1ebc2222e2a7f7eab"
+      "bytes": 1636938,
+      "sha256": "6fbf14525520d9c886b71e9feafc1f9399cc83af98b48b2043e335a4dca42f35"
     },
     {
       "file": "06-guardian-dialogue.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1279902,
-      "sha256": "eeee65852f71a1ba59ab2857dc9dc6890c9e6518d100bddfea38e6e68d35831b"
+      "bytes": 1215806,
+      "sha256": "582c3e5fa8213700226aa64b570ef9e3acd2498c8ca05addee73a478bd83617d"
     },
     {
       "file": "07-encounter-choice.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1145887,
-      "sha256": "60ae6c0bcb52e116dfca2350c1925ed958cf16e71ca2669dbd6fd8b2c45d1a4c"
+      "bytes": 1100255,
+      "sha256": "696675797feb8a26b851df2d69faff7d00e68670c1aa1a36f9add44f344a48aa"
     }
   ]
 }

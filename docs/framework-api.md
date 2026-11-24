@@ -55,14 +55,14 @@ and narrative roots.
 
 ## Export status (audit — who validates what)
 
-| Export group                                                                                                                           | Kids RPG app              | hello-world | Independent tarball consumer                                               |
-| -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------- | -------------------------------------------------------------------------- |
-| Core identifiers, world DTOs, graph/pathfinding, runtime and persistence contracts                                                     | ✓ via app facade          | ✓           | ✓ Node runtime, NodeNext/Bundler types, Vite bundle and Chromium execution |
-| Optional narrative definitions, conditions, effects, dialogue, quests, and state transitions                                           | —                         | —           | ✓ narrative tarball plus the combined 3D consumer                          |
-| Quality/capabilities                                                                                                                   | ✓ (app-owned facade)      | —           | Not in the core package                                                    |
-| Camera math (`three/`)                                                                                                                 | ✓ (app-owned facade)      | —           | Not in the core package; validate with a 3D consumer in Phase 2            |
-| Battle module (`createBattle`/`chooseBattleAction`/`advanceBattlePhase`/`enemyIntentFor`, `battleReducer`, `validateBattleDefinition`) | ✓ (app-owned)             | —           | Optional game module, not in the core package                              |
-| `perfProbe`                                                                                                                            | loaded via dynamic import | —           | Deliberately not re-exported — lazy chunk, precache-excluded               |
+| Export group                                                                                                                                                   | Kids RPG app                  | hello-world | Independent tarball consumer                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ----------- | -------------------------------------------------------------------------- |
+| Core identifiers, world DTOs, graph/pathfinding, runtime and persistence contracts                                                                             | ✓ via app facade              | ✓           | ✓ Node runtime, NodeNext/Bundler types, Vite bundle and Chromium execution |
+| Optional narrative definitions, conditions, effects, dialogue, quests, and state transitions                                                                   | —                             | —           | ✓ narrative tarball plus the combined 3D consumer                          |
+| Quality/capabilities                                                                                                                                           | ✓ (app-owned facade)          | —           | Not in the core package                                                    |
+| Camera math (`three/`)                                                                                                                                         | ✓ (app-owned facade)          | —           | Not in the core package; validate with a 3D consumer in Phase 2            |
+| Generic lightweight 1v1 encounter (`validateLightweightEncounter`/`compileLightweightEncounter`/`createLightweightEncounter`/`transitionLightweightEncounter`) | ✓ via `waypoint-rpg-gameplay` | —           | Optional module in the gameplay tarball                                    |
+| `perfProbe`                                                                                                                                                    | loaded via dynamic import     | —           | Deliberately not re-exported — lazy chunk, precache-excluded               |
 
 Each package root exports only its own generic API. The app facade also exports
 game-owned optional surfaces; these do not become core-package dependencies.
@@ -264,11 +264,15 @@ Pure math only: `ISO_OFFSET`, zoom clamps (`clampZoom`, `clampUserZoom`,
 `resolveCameraSource`, `shouldApplyPan`, focus-override types. No renderer
 objects — the app's `CameraRig` consumes them.
 
-## Optional module: battle
+## Optional module: lightweight encounters
 
-`src/framework/modules/battle/` — `createBattle`, `chooseBattleAction`,
-`advanceBattlePhase`, `battleReducer`, `validateBattleDefinition` + types.
-Reusable, not required by a consumer.
+The 1v1 phase machine is exported by `waypoint-rpg-gameplay` through its
+public package root. It consumes data-only action/intent outcome matrices and
+owns deterministic phase transitions, weakness bonuses, intent overrides,
+revision checks, and immutable state snapshots. Mahalle's action IDs, Persian
+copy, physical policy, quest unlocks, child achievements, and discovery-at-exit
+rule remain application-owned in `src/domain/battle/` and `src/content/fa/`.
+This module is independent of the gameplay package's tactical grid model.
 
 ## `examples/hello-world` — the workspace consumer
 

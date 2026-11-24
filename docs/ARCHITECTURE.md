@@ -95,7 +95,9 @@ Lifecycle is probed, not assumed: `__worldDisposeEvents` counts real
   only a real tap on the concrete object fires `CHOOSE`.
 - **Commands**: child taps dispatch `CHOOSE(iconId, correct)` — interaction visuals are
   _implementation details on top_, never a second action system.
-- **Battle machine** (`framework/modules/battle/`): session-only `GameState.battle` (never persisted,
+- **Battle adapter** (`domain/battle/`): app-owned actions, outcome definitions,
+  discovery policy and child UI around the generic session-only
+  `LightweightEncounterState` from `waypoint-rpg-gameplay` (never persisted,
   never a `Mode`). `intro → playerChoice → playerResolution → enemyResolution →
 roundCheck → playerChoice | victory | defeat`; terminal victory/defeat exit only via
   `LEAVE_BATTLE`. Deterministic outcome matrix, one child action/round. While

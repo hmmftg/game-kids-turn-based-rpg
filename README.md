@@ -33,9 +33,9 @@ flowchart LR
 | 1. Reusable core | ✅ Complete | [PR #110](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/110) |
 | 2. World/renderer | ✅ Complete | [PR #111](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/111) |
 | 3. Narrative/quests | ✅ Complete | [PR #113](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/113) |
-| 4. Gameplay modules | ✅ Complete | [PR #116](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/116); [29 gameplay tests](../packages/gameplay/test/) |
-| 5. Animation/cinematics | ✅ Complete | [Phase 5 execution evidence](../.plans/phase-5-model-animation-cinematics.md); [rendered previews](previews/phase5/) |
-| 6. Creator tools | ✅ Complete | [.plans/phase-6-creator-tools.md](../.plans/phase-6-creator-tools.md); [consumer screenshots](previews/creator/) |
+| 4. Gameplay modules | ✅ Complete | [PR #116](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/116); [29 gameplay tests](packages/gameplay/test/) |
+| 5. Animation/cinematics | ✅ Complete | [Phase 5 execution evidence](.plans/phase-5-model-animation-cinematics.md); [rendered previews](docs/previews/phase5/) |
+| 6. Creator tools | ✅ Complete | [.plans/phase-6-creator-tools.md](.plans/phase-6-creator-tools.md); [consumer screenshots](docs/previews/creator/) |
 | 7. Five playable games | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
 | 8. Individual releases | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
 | 9. Player evaluation | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
@@ -54,7 +54,7 @@ These independent samples show how the reusable packages fit into different game
 
 ### محله مهربانی — Implemented and playable
 
-The existing child-oriented reference RPG. Its runtime and navigation consume `waypoint-rpg-core`; game-specific quests and rendering remain owned by the app.
+The production reference game consumes public `waypoint-rpg-core`, `waypoint-rpg-narrative`, and `waypoint-rpg-gameplay` for runtime/navigation, replayable quest progression, and deterministic child micro-battles. Its physical interaction policy, rendering, and profile persistence remain app-owned.
 
 [Game guide](README.md) · `npm ci && npm run dev`
 
@@ -126,17 +126,28 @@ Other captures: [01-title](docs/previews/garden-adventure/01-title.png) · [11-m
 
 ## Library-backed reference game
 
-This repository's root app, **محله مهربانی**, is a real first-party
-`waypoint-rpg-core` consumer for its runtime and navigation, not a separate
-mock scene. Its child-specific dialogue, replayable quests, battle rules,
-renderer, IndexedDB profile saves, and content policy remain game-owned until
-tested equivalent library APIs are adopted.
+The root production app, **محله مهربانی**, is a first-party consumer of the
+public `waypoint-rpg-core`, `waypoint-rpg-narrative`, and
+`waypoint-rpg-gameplay` package roots. It remains the same application at the
+repository root and is also listed in the Samples gallery above. The
+`framework:mahalle-consumer` gate builds a copied root app against three
+independently packed and installed tarballs outside the checkout.
 
-See the [library adoption matrix](docs/MAHALLE-LIBRARY-ADOPTION.md) for what is
-already integrated and what remains to migrate. Real source-rendered screenshots
-for the Kids RPG, the independent Blood Leaf demonstration, and Garden of Stories
-are captured with Playwright on merges to `main`, uploaded as Actions artifacts,
-and proposed with the gallery through one reviewable documentation PR.
+| Consumer     | Core                          | Narrative                                 | Gameplay                                               | Main integration boundary                                                               |
+| ------------ | ----------------------------- | ----------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| محله مهربانی | Runtime and navigation        | Nine replayable quests and dialogue graph | Generic deterministic child micro-battles              | Physical quest choreography, profile saves, renderer, and product policy stay app-owned |
+| برگ خون      | Runtime and scene integration | Authored story and world facts            | —                                                      | Independent 3D technical demonstration                                                  |
+| باغ قصه‌ها   | Runtime and navigation        | Branching story and quests                | Progression, inventory, equipment, and tactical combat | Game-owned transaction coordinator and 3D host                                          |
+
+See the [Mahalle adoption report](docs/MAHALLE-LIBRARY-ADOPTION.md) for the
+compatibility adapter, persistence boundary, creator asset catalog, and actual
+verification evidence. The root renderer, IndexedDB profile saves, physical
+child interactions, and content policy remain game-owned.
+
+Real source-rendered screenshots for the Kids RPG, the independent Blood Leaf
+demonstration, and Garden of Stories are captured with Playwright on merges to
+`main`, uploaded as Actions artifacts, and proposed with the gallery through
+one reviewable documentation PR.
 
 To capture them locally after installing Chromium, run
 `npm run build && npm run sample:previews`. This capture suite is separate
