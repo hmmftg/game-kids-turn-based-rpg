@@ -6,22 +6,26 @@ persistence contracts. Its only public entry is the `waypoint-rpg-core`
 package root; package-side checks reject external dependencies and deep
 imports. `packages/narrative/` is a separate optional, renderer-independent
 package for validated narrative definitions and deterministic story
-transitions. It does not depend on the core, React, Three.js, DOM, or storage;
-future consumers can use the core without installing narrative.
+transitions. It does not depend on the core, React, Three.js, DOM, or storage.
+`packages/gameplay/` provides optional progression and tactical contracts.
+`packages/three/` is an optional Three.js peer package for verified GLB loading
+and resource leases, independent character-animation controllers, and
+validated cinematic timeline playback; it is not a complete renderer or game
+engine.
 
 The Kids RPG composes the core API with game-owned capabilities, quality
 policy, camera math, and battle modules through `src/framework/index.ts`.
-Application imports use this facade; `examples/hello-world` imports the core
-root, while `examples/scene-demo` independently installs and consumes the core
-and narrative roots.
+Application imports use this facade. Garden is the flagship consumer of all
+four packages; `examples/hello-world` imports only the core root. The
+scene-demo remains an independent narrative, gameplay, Three.js, and lifecycle
+verification fixture.
 
-> Phase 1 delivers a reusable core library, not a complete Three.js RPG
-> engine. `examples/hello-world` verifies the workspace consumer path; the
-> separately installed tarball fixtures verify package isolation, exports,
-> declarations, runtime behavior, and browser bundling. Phase 3's
-> `examples/scene-demo` is a narrative validation consumer, not a renderer
-> package or complete general-purpose Three.js RPG engine. Registry
-> publication is deferred.
+> The framework remains a set of reusable contracts, not a complete RPG
+> engine. Hello World verifies the minimal core path; installed-tarball and
+> generated narrative-only/tactical-only fixtures verify package isolation,
+> exports, declarations, optional-module omission, and browser bundling. Garden
+> is the flagship integration sample. The scene-demo remains a technical
+> acceptance consumer. Registry publication is deferred.
 
 ## Compatibility boundaries
 
@@ -62,12 +66,15 @@ and narrative roots.
 | Quality/capabilities                                                                                                                                           | ✓ (app-owned facade)          | —           | Not in the core package                                                    |
 | Camera math (`three/`)                                                                                                                                         | ✓ (app-owned facade)          | —           | Not in the core package; validate with a 3D consumer in Phase 2            |
 | Generic lightweight 1v1 encounter (`validateLightweightEncounter`/`compileLightweightEncounter`/`createLightweightEncounter`/`transitionLightweightEncounter`) | ✓ via `waypoint-rpg-gameplay` | —           | Optional module in the gameplay tarball                                    |
+| Verified GLB loading, resource leases, semantic animation, and cinematic timeline                                                                              | —                             | —           | `waypoint-rpg-three`; Garden and scene-demo public-root consumers          |
 | `perfProbe`                                                                                                                                                    | loaded via dynamic import     | —           | Deliberately not re-exported — lazy chunk, precache-excluded               |
 
 Each package root exports only its own generic API. The app facade also exports
 game-owned optional surfaces; these do not become core-package dependencies.
-The independent 3D consumer now validates the optional narrative package, but
-its renderer and scene host remain example-owned.
+The independent 3D consumer validates optional narrative, gameplay, and Three
+packages while its scene host, camera direction, and presentation remain
+example-owned. The optional Three package does not impose Garden choreography
+or game policy.
 
 ## Ownership model
 

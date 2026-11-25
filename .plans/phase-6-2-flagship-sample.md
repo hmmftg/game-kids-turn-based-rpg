@@ -21,8 +21,17 @@ The implementation starts at `11e62f6902c5979ef3bee830614b4f9e19822ff3`, the Mes
 ## Execution ledger
 
 - [x] Reviewed baseline and capability audit
-- [ ] Asset intake, release gate and private development isolation
-- [ ] Shared Phase 5 animation and cinematic controllers
-- [ ] Garden chapter and presentation integration
-- [ ] Commands, docs, roadmaps and real screenshots
-- [ ] Final acceptance and local commit review
+- [x] Asset intake, release gate and private development isolation
+- [x] Shared Phase 5 animation and cinematic controllers
+- [x] Garden chapter and presentation integration
+- [x] Commands, docs, roadmaps and real screenshots
+- [x] Final acceptance and local commit review
+
+## Acceptance record
+
+- `npm run verify` passed: formatting, roadmap sync, lint, importer and asset gates, package boundaries/builds, 580 root tests, 15 core tests, 40 narrative tests, 35 gameplay tests, 27 Three tests, 26 Garden tests, the Mahalle migration contract, and all production builds. Lint reported nine existing Fast Refresh warnings; builds reported existing large Three.js bundle warnings.
+- `npm run sample:garden:e2e` passed all 23 production Chromium tests, including both endings, save restoration, timeline cancellation, real model loading, procedural fallbacks, offline startup, and reduced motion.
+- `npm run sample:garden:previews` passed both capture checks and recorded 12 real production screenshots in `docs/previews/garden-adventure/`; provenance binds them to `b52fb3a575d98c916da114f5f32f58ed80b69949`.
+- The linked watch check passed cold and warm starts, dual-package updates, browser reloads, last-good output preservation after a compile error, and recovery. Installed-tarball, omission, generated narrative/tactical, Mahalle, Garden, creator preview/importer, and private Meshy integrity checks passed locally.
+- `npm run sample:garden:release:check` correctly refuses release while independent approval evidence is absent for the two exact Garden asset hashes. This consolidation establishes the gate; it does not grant release approval.
+- Local implementation commits: `2642eba` (Garden and reusable Three integration), `b52fb3a` (asset importer and private pilot hardening), plus this documentation and roadmap commit. No push or remote CI run was performed.

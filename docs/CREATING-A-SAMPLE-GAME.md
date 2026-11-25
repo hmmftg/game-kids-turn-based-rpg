@@ -12,6 +12,7 @@ packages for generic state-machine behavior.
 | `waypoint-rpg-core`      | `createGameRuntime`, world/map/anchor types, navigation graphs, pathfinding, generic persistence contracts                                                      | Application state and commands, movement rules, arrival and interaction checks, browser storage                     |
 | `waypoint-rpg-narrative` | Definition validation/compilation, typed conditions and effects, dialogue, quest transitions, replay protection, snapshot decoding and selectors                | Characters, quests, dialogue text, trigger eligibility, narrative-to-world policy                                   |
 | `waypoint-rpg-gameplay`  | Progression, experience, inventory, equipment, derived attributes, abilities, statuses, deterministic tactical combat, rewards, outcome markers, snapshot codec | Items and combat definitions, encounter eligibility, trusted rewards, UI, mapping combat outcomes into story events |
+| `waypoint-rpg-three`     | Verified GLB loading and leases, independent rig cloning, semantic animation controller, validated cinematic timeline                                           | Game-specific asset mappings, animation choreography, camera direction, dialogue and cue presentation               |
 
 ```mermaid
 flowchart TD
@@ -19,6 +20,7 @@ flowchart TD
   G --> C[waypoint-rpg-core]
   G --> N[waypoint-rpg-narrative]
   G --> P[waypoint-rpg-gameplay]
+  G --> T[waypoint-rpg-three optional]
   A[Game-owned story and gameplay definitions] --> N
   A --> P
   G --> X[Cross-package transaction coordinator]
@@ -34,14 +36,16 @@ ones it uses. None includes a renderer, story, browser UI, or browser-storage
 implementation. Do not import package internals or copy package algorithms
 into a sample.
 
-The production reference at the repository root, [محله مهربانی](MAHALLE-LIBRARY-ADOPTION.md),
-demonstrates all three packages with a child-specific interaction contract:
-core hosts its runtime and navigation, narrative owns the replayable quest
-history, and gameplay owns generic deterministic one-on-one battle transitions.
-The game keeps physical choices, profile saves, and its renderer in application
-code. Use it to understand package boundaries, but build a new game's state
-adapter and authored content from this guide instead of importing its private
-source files.
+[Garden of Stories](SAMPLE-VERIFICATION.md) is the single flagship framework
+sample and composes all four public packages with game-owned chapter content,
+assets, animation, timelines, and persistence. The root
+[محله مهربانی](MAHALLE-LIBRARY-ADOPTION.md) application remains a separate
+first-party product with its child-specific interaction contract: core hosts
+its runtime/navigation, narrative owns quest history, and gameplay owns generic
+deterministic child-battle transitions. Use both to understand package
+boundaries, but build a new game's state adapter and authored content from this
+guide instead of importing their private source files. Five earlier concepts
+remain deferred proposals pending Phase 9 evaluation.
 
 ## Generate a portable starting project
 

@@ -11,20 +11,24 @@ built to the specification in [`.plans/1st.md`](.plans/1st.md).
 No backend, accounts, analytics, ads, third-party runtime requests, remote fonts, combat,
 microphone, geolocation or device identifiers. Progress lives only in the browser's IndexedDB.
 
+**Flagship framework sample:** [باغ قصه‌ها — Garden of Stories](examples/garden-adventure/README.md)
+integrates the core, narrative, gameplay, and Three.js packages in one connected Persian RPG.
+Run it with `npm run sample:garden:dev`. The root Mahalle game remains a separate first-party product.
+
 <!-- framework-roadmap:begin -->
 <!-- prettier-ignore-start -->
 
 ## Framework roadmap
 
-**6/9 phases completed** · Next: **Phase 7 — Five playable games** · [Full roadmap and exit gates](docs/FRAMEWORK-ROADMAP.md)
+**7/10 phases completed** · Next: **Phase 7 — Rich flagship RPG adventure** · [Full roadmap and exit gates](docs/FRAMEWORK-ROADMAP.md)
 
 ```mermaid
 flowchart LR
-  P1["1. Reusable core"] --> P2["2. World/renderer"] --> P3["3. Narrative/quests"] --> P4["4. Gameplay modules"] --> P5["5. Animation/cinematics"] --> P6["6. Creator tools"] --> P7["7. Five playable games"] --> P8["8. Individual releases"] --> P9["9. Player evaluation"]
+  P1["1. Reusable core"] --> P2["2. World/renderer"] --> P3["3. Narrative/quests"] --> P4["4. Gameplay modules"] --> P5["5. Animation/cinematics"] --> P6["6. Creator tools"] --> P6_2["6.2. Sample consolidation and release hardening"] --> P7["7. Rich flagship RPG adventure"] --> P8["8. Flagship release and acceptance"] --> P9["9. Player evaluation and future independent game decisions"]
   classDef complete fill:#dcfce7,stroke:#15803d,color:#14532d
   classDef next fill:#fef3c7,stroke:#b45309,color:#78350f
   classDef planned fill:#e5e7eb,stroke:#6b7280,color:#1f2937
-  class P1,P2,P3,P4,P5,P6 complete
+  class P1,P2,P3,P4,P5,P6,P6_2 complete
   class P7,P8,P9 planned
 ```
 
@@ -36,9 +40,10 @@ flowchart LR
 | 4. Gameplay modules | ✅ Complete | [PR #116](https://github.com/hmmftg/game-kids-turn-based-rpg/pull/116); [29 gameplay tests](packages/gameplay/test/) |
 | 5. Animation/cinematics | ✅ Complete | [Phase 5 execution evidence](.plans/phase-5-model-animation-cinematics.md); [rendered previews](docs/previews/phase5/) |
 | 6. Creator tools | ✅ Complete | [.plans/phase-6-creator-tools.md](.plans/phase-6-creator-tools.md); [consumer screenshots](docs/previews/creator/) |
-| 7. Five playable games | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
-| 8. Individual releases | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
-| 9. Player evaluation | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
+| 6.2. Sample consolidation and release hardening | ✅ Complete | [Phase 6.2 execution ledger](.plans/phase-6-2-flagship-sample.md); [developer verification guide](SAMPLE-VERIFICATION.md) |
+| 7. Rich flagship RPG adventure | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
+| 8. Flagship release and acceptance | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
+| 9. Player evaluation and future independent game decisions | ⏳ Planned | [Product and release roadmap](PRODUCT-RELEASE-ROADMAP.md) |
 
 _Generated from the canonical roadmap. Update status and evidence in [docs/FRAMEWORK-ROADMAP.md](docs/FRAMEWORK-ROADMAP.md), then run npm run roadmap:sync._
 
@@ -48,13 +53,34 @@ _Generated from the canonical roadmap. Update status and evidence in [docs/FRAME
 <!-- sample-games:begin -->
 <!-- prettier-ignore-start -->
 
-## Samples / Playable Games
+## Flagship Sample and First-Party Product
 
-These independent samples show how the reusable packages fit into different games. Screenshots below come from Chromium rendering each production build. Captures are documentation previews, not pixel-perfect regression baselines.
+Garden of Stories is the one flagship framework sample. Mahalle remains a separate first-party product. Screenshots come from Chromium rendering the actual production builds; they are documentation previews, not pixel-perfect regression baselines. Other consumers and screenshots remain in the developer verification guide as technical fixtures.
 
-### محله مهربانی — Implemented and playable
+### باغ قصه‌ها — Flagship framework sample
 
-The production reference game consumes public `waypoint-rpg-core`, `waypoint-rpg-narrative`, and `waypoint-rpg-gameplay` for runtime/navigation, replayable quest progression, and deterministic child micro-battles. Its physical interaction policy, rendering, and profile persistence remain app-owned.
+The single flagship sample integrates public `waypoint-rpg-core`, `waypoint-rpg-narrative`, and `waypoint-rpg-gameplay`, plus `waypoint-rpg-three`. Its connected maps, branching story, tactical challenge, progression, GLB loading, character animation, and ending cinematics are composed by Garden-owned content and presentation.
+
+[Game guide](examples/garden-adventure/README.md) · `npm run sample:garden:dev`
+
+| Capture | Actual browser rendering |
+| --- | --- |
+| Connected village map | ![Actual باغ قصه‌ها — Connected village map](docs/previews/garden-adventure/02-village.png) |
+| Persian NPC dialogue | ![Actual باغ قصه‌ها — Persian NPC dialogue](docs/previews/garden-adventure/03-dialogue.png) |
+| Inventory and equipment | ![Actual باغ قصه‌ها — Inventory and equipment](docs/previews/garden-adventure/04-inventory.png) |
+| Garden before the objective | ![Actual باغ قصه‌ها — Garden before the objective](docs/previews/garden-adventure/05-garden-before.png) |
+| Gardener path | ![Actual باغ قصه‌ها — Gardener path](docs/previews/garden-adventure/06-garden-restored.png) |
+| Tactical encounter | ![Actual باغ قصه‌ها — Tactical encounter](docs/previews/garden-adventure/07-tactical-battle.png) |
+| Ability and status effect | ![Actual باغ قصه‌ها — Ability and status effect](docs/previews/garden-adventure/08-ability-effect.png) |
+| Guardian path | ![Actual باغ قصه‌ها — Guardian path](docs/previews/garden-adventure/09-guardian-outcome.png) |
+| Story ending and cinematic | ![Actual باغ قصه‌ها — Story ending and cinematic](docs/previews/garden-adventure/10-ending.png) |
+| Restored saved adventure | ![Actual باغ قصه‌ها — Restored saved adventure](docs/previews/garden-adventure/12-restored.png) |
+
+Other captures: [01-title](docs/previews/garden-adventure/01-title.png) · [11-mobile](docs/previews/garden-adventure/11-mobile.png).
+
+### محله مهربانی — Separate first-party product
+
+The original nonviolent, offline-first Persian game remains a distinct first-party product with its own child interaction rules, rendering, and IndexedDB profiles.
 
 [Game guide](README.md) · `npm ci && npm run dev`
 
@@ -75,85 +101,34 @@ Other captures: [01-title](docs/previews/legacy-sample/01-title.png) · [02-avat
 
 > **Draft content.** The existing game still contains educational and religious placeholders that require review; its screenshots do not imply content approval.
 
-### برگ خون — Technical demonstration
-
-An independent two-scene consumer demonstrating framework narrative, scene loading, transitions, persistence, and runtime-fact projection.
-
-[Game guide](examples/scene-demo/README.md) · `npm run example:scene-build`
-
-| Capture | Actual browser rendering |
-| --- | --- |
-| Village courtyard | ![Actual برگ خون — Village courtyard](docs/previews/blood-leaf/01-courtyard.png) |
-| Persian story choice | ![Actual برگ خون — Persian story choice](docs/previews/blood-leaf/02-dialogue.png) |
-| Narrative-driven lantern | ![Actual برگ خون — Narrative-driven lantern](docs/previews/blood-leaf/03-lit-lantern.png) |
-
-### Phase 5 — Animation and Cinematics — Technical demonstration
-
-The Blood Leaf scene demo also contains an example-owned static/rigged GLB adapter, independent character animation, and an optional timeline whose cues cannot change durable story state.
-
-[Game guide](examples/scene-demo/README.md) · `npm run sample:phase5:previews`
-
-| Capture | Actual browser rendering |
-| --- | --- |
-| Textured static GLB | ![Actual Phase 5 — Animation and Cinematics — Textured static GLB](docs/previews/phase5/01-static-model.png) |
-| Independent rig instances | ![Actual Phase 5 — Animation and Cinematics — Independent rig instances](docs/previews/phase5/02-two-rigged-characters.png) |
-| Guardian interaction | ![Actual Phase 5 — Animation and Cinematics — Guardian interaction](docs/previews/phase5/04-character-interaction.png) |
-| RTL cinematic dialogue | ![Actual Phase 5 — Animation and Cinematics — RTL cinematic dialogue](docs/previews/phase5/06-cinematic-dialogue.png) |
-| Reduced motion | ![Actual Phase 5 — Animation and Cinematics — Reduced motion](docs/previews/phase5/08-reduced-motion.png) |
-| Portrait viewport | ![Actual Phase 5 — Animation and Cinematics — Portrait viewport](docs/previews/phase5/09-mobile-portrait.png) |
-
-Other captures: [03-moving-character](docs/previews/phase5/03-moving-character.png) · [05-cinematic-camera](docs/previews/phase5/05-cinematic-camera.png) · [07-lantern-consequence](docs/previews/phase5/07-lantern-consequence.png).
-
-### باغ قصه‌ها — Implemented and playable
-
-A complete Persian 3D adventure using the installed public core, narrative, and gameplay packages. Two story paths include a real tactical encounter, visible garden changes, and persistent progress.
-
-[Game guide](examples/garden-adventure/README.md) · `npm run sample:garden:dev`
-
-| Capture | Actual browser rendering |
-| --- | --- |
-| Village | ![Actual باغ قصه‌ها — Village](docs/previews/garden-adventure/02-village.png) |
-| Persian NPC dialogue | ![Actual باغ قصه‌ها — Persian NPC dialogue](docs/previews/garden-adventure/03-dialogue.png) |
-| Inventory and equipment | ![Actual باغ قصه‌ها — Inventory and equipment](docs/previews/garden-adventure/04-inventory.png) |
-| Garden before the objective | ![Actual باغ قصه‌ها — Garden before the objective](docs/previews/garden-adventure/05-garden-before.png) |
-| Garden · gardener path | ![Actual باغ قصه‌ها — Garden · gardener path](docs/previews/garden-adventure/06-garden-restored.png) |
-| 5×5 tactical battle | ![Actual باغ قصه‌ها — 5×5 tactical battle](docs/previews/garden-adventure/07-tactical-battle.png) |
-| Ability and status effect | ![Actual باغ قصه‌ها — Ability and status effect](docs/previews/garden-adventure/08-ability-effect.png) |
-| Garden · guardian path | ![Actual باغ قصه‌ها — Garden · guardian path](docs/previews/garden-adventure/09-guardian-outcome.png) |
-| Story ending | ![Actual باغ قصه‌ها — Story ending](docs/previews/garden-adventure/10-ending.png) |
-| Restored saved garden | ![Actual باغ قصه‌ها — Restored saved garden](docs/previews/garden-adventure/12-restored.png) |
-
-Other captures: [01-title](docs/previews/garden-adventure/01-title.png) · [11-mobile](docs/previews/garden-adventure/11-mobile.png).
-
-**Status key:** Implemented and playable means the sample can be completed; Technical demonstration means it focuses on framework integration. The Shahnameh proof of concept is **Planned**. Verification beyond Chromium with software WebGL and on physical devices is **Not yet verified**.
+[Developer verification guide](docs/SAMPLE-VERIFICATION.md) lists the retained independent consumers, package fixtures, importer and creator checks. Garden is verified in Chromium with software WebGL; other browsers and physical touch devices remain unverified.
 
 <!-- prettier-ignore-end -->
 <!-- sample-games:end -->
 
-## Library-backed reference game
+## Separate Mahalle product and framework consumers
 
 The root production app, **محله مهربانی**, is a first-party consumer of the
 public `waypoint-rpg-core`, `waypoint-rpg-narrative`, and
 `waypoint-rpg-gameplay` package roots. It remains the same application at the
-repository root and is also listed in the Samples gallery above. The
+repository root and remains separate from the Garden flagship sample. The
 `framework:mahalle-consumer` gate builds a copied root app against three
 independently packed and installed tarballs outside the checkout.
 
-| Consumer     | Core                          | Narrative                                 | Gameplay                                               | Main integration boundary                                                               |
-| ------------ | ----------------------------- | ----------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| محله مهربانی | Runtime and navigation        | Nine replayable quests and dialogue graph | Generic deterministic child micro-battles              | Physical quest choreography, profile saves, renderer, and product policy stay app-owned |
-| برگ خون      | Runtime and scene integration | Authored story and world facts            | —                                                      | Independent 3D technical demonstration                                                  |
-| باغ قصه‌ها   | Runtime and navigation        | Branching story and quests                | Progression, inventory, equipment, and tactical combat | Game-owned transaction coordinator and 3D host                                          |
+| Consumer     | Role                           | Core                          | Narrative                                 | Gameplay                                               | Three                                              |
+| ------------ | ------------------------------ | ----------------------------- | ----------------------------------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| باغ قصه‌ها   | Sole flagship framework sample | Runtime and navigation        | Branching story and quests                | Progression, inventory, equipment, and tactical combat | Verified models, animation, and cinematic timeline |
+| محله مهربانی | Separate first-party product   | Runtime and navigation        | Nine replayable quests and dialogue graph | Generic deterministic child micro-battles              | —                                                  |
+| برگ خون      | Technical acceptance fixture   | Runtime and scene integration | Authored story and world facts            | Transaction regression only                            | Model, animation, timeline, and lifecycle fixture  |
 
 See the [Mahalle adoption report](docs/MAHALLE-LIBRARY-ADOPTION.md) for the
 compatibility adapter, persistence boundary, creator asset catalog, and actual
 verification evidence. The root renderer, IndexedDB profile saves, physical
 child interactions, and content policy remain game-owned.
 
-Real source-rendered screenshots for the Kids RPG, the independent Blood Leaf
-demonstration, and Garden of Stories are captured with Playwright on merges to
-`main`, uploaded as Actions artifacts, and proposed with the gallery through
-one reviewable documentation PR.
+The public README gallery presents the Garden flagship and Mahalle product.
+The Playwright workflow also retains Blood Leaf and Phase 5 technical captures
+as developer artifacts; they are documented in [the verification guide](docs/SAMPLE-VERIFICATION.md).
 
 To capture them locally after installing Chromium, run
 `npm run build && npm run sample:previews`. This capture suite is separate
@@ -173,28 +148,32 @@ npm run dev          # http://localhost:5173
 
 ## Scripts
 
-| Script                              | Purpose                                                                   |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| `npm run dev`                       | Vite dev server                                                           |
-| `npm run dev:linked`                | Package watch build followed by Vite, for live core-library edits         |
-| `npm run framework:watch:check`     | Chromium check for linked updates, failed-build preservation and recovery |
-| `npm run build`                     | Content validation → strict `tsc -b` → production bundle → budget check   |
-| `npm run preview`                   | Serve `dist/` on port 4173 (used by Playwright)                           |
-| `npm run typecheck`                 | Strict TypeScript project build                                           |
-| `npm run lint` / `lint:fix`         | ESLint (flat config, type-aware)                                          |
-| `npm run format` / `format:check`   | Prettier                                                                  |
-| `npm test`                          | Vitest unit + component tests (jsdom)                                     |
-| `npm run test:e2e`                  | Playwright golden paths against the production preview                    |
-| `npm run validate:content`          | Content/provenance validation (development mode: drafts warn)             |
-| `npm run validate:content:release`  | Release gate: **fails** while any reachable record is not `approved`      |
-| `npm run check:budgets`             | Gzip transfer budgets over `dist/`                                        |
-| `npm run framework:build`           | Compile the dependency-free ESM core package                              |
-| `npm run framework:consumer`        | Pack and verify an isolated tarball consumer                              |
-| `npm run sample:garden:dev`         | Play the Persian Garden adventure locally                                 |
-| `npm run sample:garden:e2e`         | Run the Garden production-browser gameplay suite                          |
-| `npm run sample:garden:previews`    | Capture real Garden gameplay screenshots                                  |
-| `npm run framework:garden-consumer` | Verify Garden against installed core and narrative tarballs               |
-| `npm run verify`                    | format:check → lint → package boundary/build/tests → app gates            |
+| Script                                | Purpose                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| `npm run dev`                         | Vite dev server                                                           |
+| `npm run dev:linked`                  | Package watch build followed by Vite, for live core-library edits         |
+| `npm run framework:watch:check`       | Chromium check for linked updates, failed-build preservation and recovery |
+| `npm run build`                       | Content validation → strict `tsc -b` → production bundle → budget check   |
+| `npm run preview`                     | Serve `dist/` on port 4173 (used by Playwright)                           |
+| `npm run typecheck`                   | Strict TypeScript project build                                           |
+| `npm run lint` / `lint:fix`           | ESLint (flat config, type-aware)                                          |
+| `npm run format` / `format:check`     | Prettier                                                                  |
+| `npm test`                            | Vitest unit + component tests (jsdom)                                     |
+| `npm run test:e2e`                    | Playwright golden paths against the production preview                    |
+| `npm run validate:content`            | Content/provenance validation (development mode: drafts warn)             |
+| `npm run validate:content:release`    | Release gate: **fails** while any reachable record is not `approved`      |
+| `npm run check:budgets`               | Gzip transfer budgets over `dist/`                                        |
+| `npm run framework:build`             | Compile the dependency-free ESM core package                              |
+| `npm run framework:consumer`          | Pack and verify an isolated tarball consumer                              |
+| `npm run sample:garden:dev`           | Run the Persian Garden flagship sample locally                            |
+| `npm run sample:garden:preview`       | Build and preview the Garden production sample                            |
+| `npm run sample:garden:e2e`           | Run the Garden production-browser gameplay suite                          |
+| `npm run sample:garden:previews`      | Capture real Garden gameplay screenshots                                  |
+| `npm run sample:garden:asset-check`   | Verify Garden asset bytes and game-specific technical budgets             |
+| `npm run sample:garden:release:check` | Check independent Garden asset release approvals                          |
+| `npm run creator:preview`             | Run the local creator asset preview                                       |
+| `npm run framework:garden-consumer`   | Verify Garden against all four installed framework tarballs               |
+| `npm run verify`                      | format:check → lint → package boundary/build/tests → app gates            |
 
 ## Architecture
 

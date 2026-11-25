@@ -10,10 +10,10 @@ const tick = String.fromCharCode(96);
 
 const games = [
   {
-    name: 'محله مهربانی',
-    status: 'Implemented and playable',
+    name: 'باغ قصه‌ها',
+    status: 'Flagship framework sample',
     description:
-      'The production reference game consumes public ' +
+      'The single flagship sample integrates public ' +
       tick +
       'waypoint-rpg-core' +
       tick +
@@ -25,7 +25,46 @@ const games = [
       tick +
       'waypoint-rpg-gameplay' +
       tick +
-      ' for runtime/navigation, replayable quest progression, and deterministic child micro-battles. Its physical interaction policy, rendering, and profile persistence remain app-owned.',
+      ', plus ' +
+      tick +
+      'waypoint-rpg-three' +
+      tick +
+      '. Its connected maps, branching story, tactical challenge, progression, GLB loading, character animation, and ending cinematics are composed by Garden-owned content and presentation.',
+    readme: 'examples/garden-adventure/README.md',
+    run: 'npm run sample:garden:dev',
+    folder: 'docs/previews/garden-adventure',
+    images: [
+      '01-title.png',
+      '02-village.png',
+      '03-dialogue.png',
+      '04-inventory.png',
+      '05-garden-before.png',
+      '06-garden-restored.png',
+      '07-tactical-battle.png',
+      '08-ability-effect.png',
+      '09-guardian-outcome.png',
+      '10-ending.png',
+      '11-mobile.png',
+      '12-restored.png',
+    ],
+    columns: [
+      ['02-village.png', 'Connected village map'],
+      ['03-dialogue.png', 'Persian NPC dialogue'],
+      ['04-inventory.png', 'Inventory and equipment'],
+      ['05-garden-before.png', 'Garden before the objective'],
+      ['06-garden-restored.png', 'Gardener path'],
+      ['07-tactical-battle.png', 'Tactical encounter'],
+      ['08-ability-effect.png', 'Ability and status effect'],
+      ['09-guardian-outcome.png', 'Guardian path'],
+      ['10-ending.png', 'Story ending and cinematic'],
+      ['12-restored.png', 'Restored saved adventure'],
+    ],
+  },
+  {
+    name: 'محله مهربانی',
+    status: 'Separate first-party product',
+    description:
+      'The original nonviolent, offline-first Persian game remains a distinct first-party product with its own child interaction rules, rendering, and IndexedDB profiles.',
     readme: 'README.md',
     run: 'npm ci && npm run dev',
     folder: 'docs/previews/legacy-sample',
@@ -55,86 +94,6 @@ const games = [
       ['11-lightweight-battle.png', 'Real micro-battle'],
       ['12-world-discovery.png', 'Persistent world discovery'],
       ['13-restored-profile.png', 'Restored profile progress'],
-    ],
-  },
-  {
-    name: 'برگ خون',
-    status: 'Technical demonstration',
-    description:
-      'An independent two-scene consumer demonstrating framework narrative, scene loading, ' +
-      'transitions, persistence, and runtime-fact projection.',
-    readme: 'examples/scene-demo/README.md',
-    run: 'npm run example:scene-build',
-    folder: 'docs/previews/blood-leaf',
-    images: ['01-courtyard.png', '02-dialogue.png', '03-lit-lantern.png'],
-    columns: [
-      ['01-courtyard.png', 'Village courtyard'],
-      ['02-dialogue.png', 'Persian story choice'],
-      ['03-lit-lantern.png', 'Narrative-driven lantern'],
-    ],
-  },
-  {
-    name: 'Phase 5 — Animation and Cinematics',
-    status: 'Technical demonstration',
-    description:
-      'The Blood Leaf scene demo also contains an example-owned static/rigged GLB adapter, independent character animation, and an optional timeline whose cues cannot change durable story state.',
-    readme: 'examples/scene-demo/README.md',
-    run: 'npm run sample:phase5:previews',
-    folder: 'docs/previews/phase5',
-    images: [
-      '01-static-model.png',
-      '02-two-rigged-characters.png',
-      '03-moving-character.png',
-      '04-character-interaction.png',
-      '05-cinematic-camera.png',
-      '06-cinematic-dialogue.png',
-      '07-lantern-consequence.png',
-      '08-reduced-motion.png',
-      '09-mobile-portrait.png',
-    ],
-    columns: [
-      ['01-static-model.png', 'Textured static GLB'],
-      ['02-two-rigged-characters.png', 'Independent rig instances'],
-      ['04-character-interaction.png', 'Guardian interaction'],
-      ['06-cinematic-dialogue.png', 'RTL cinematic dialogue'],
-      ['08-reduced-motion.png', 'Reduced motion'],
-      ['09-mobile-portrait.png', 'Portrait viewport'],
-    ],
-  },
-  {
-    name: 'باغ قصه‌ها',
-    status: 'Implemented and playable',
-    description:
-      'A complete Persian 3D adventure using the installed public core, narrative, and gameplay packages. ' +
-      'Two story paths include a real tactical encounter, visible garden changes, and persistent progress.',
-    readme: 'examples/garden-adventure/README.md',
-    run: 'npm run sample:garden:dev',
-    folder: 'docs/previews/garden-adventure',
-    images: [
-      '01-title.png',
-      '02-village.png',
-      '03-dialogue.png',
-      '04-inventory.png',
-      '05-garden-before.png',
-      '06-garden-restored.png',
-      '07-tactical-battle.png',
-      '08-ability-effect.png',
-      '09-guardian-outcome.png',
-      '10-ending.png',
-      '11-mobile.png',
-      '12-restored.png',
-    ],
-    columns: [
-      ['02-village.png', 'Village'],
-      ['03-dialogue.png', 'Persian NPC dialogue'],
-      ['04-inventory.png', 'Inventory and equipment'],
-      ['05-garden-before.png', 'Garden before the objective'],
-      ['06-garden-restored.png', 'Garden · gardener path'],
-      ['07-tactical-battle.png', '5×5 tactical battle'],
-      ['08-ability-effect.png', 'Ability and status effect'],
-      ['09-guardian-outcome.png', 'Garden · guardian path'],
-      ['10-ending.png', 'Story ending'],
-      ['12-restored.png', 'Restored saved garden'],
     ],
   },
 ];
@@ -210,11 +169,11 @@ const section = [
   start,
   '<!-- prettier-ignore-start -->',
   '',
-  '## Samples / Playable Games',
+  '## Flagship Sample and First-Party Product',
   '',
-  'These independent samples show how the reusable packages fit into different games. ' +
-    'Screenshots below come from Chromium rendering each production build. Captures are ' +
-    'documentation previews, not pixel-perfect regression baselines.',
+  'Garden of Stories is the one flagship framework sample. Mahalle remains a separate first-party product. ' +
+    'Screenshots come from Chromium rendering the actual production builds; they are documentation previews, not pixel-perfect regression baselines. ' +
+    'Other consumers and screenshots remain in the developer verification guide as technical fixtures.',
   '',
   ...games.flatMap((game) => [
     '### ' + game.name + ' — ' + game.status,
@@ -241,8 +200,8 @@ const section = [
       : '',
     '',
   ]),
-  '**Status key:** Implemented and playable means the sample can be completed; Technical demonstration means it focuses on framework integration. ' +
-    'The Shahnameh proof of concept is **Planned**. Verification beyond Chromium with software WebGL and on physical devices is **Not yet verified**.',
+  '[Developer verification guide](docs/SAMPLE-VERIFICATION.md) lists the retained independent consumers, package fixtures, importer and creator checks. ' +
+    'Garden is verified in Chromium with software WebGL; other browsers and physical touch devices remain unverified.',
   '',
   '<!-- prettier-ignore-end -->',
   end,

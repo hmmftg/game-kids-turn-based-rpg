@@ -33,20 +33,25 @@ function extractPhases(markdown) {
     const cells = line.split('|').slice(1, -1);
     const values = cells.map((cell) => cell.trim());
     if (values.length !== 5) throw new Error('Expected five columns');
-    const match = /^(\d+)\.\s+(.+)$/.exec(values[0]);
+    const match = /^(\d+(?:\.\d+)?)\.\s+(.+)$/.exec(values[0]);
     if (!match) throw new Error('Invalid phase identifier');
-    const number = Number(match[1]);
-    if (number !== phases.length + 1) {
-      throw new Error('Phases must be sequential, starting at 1');
+    const id = match[1];
+    const order = Number(id);
+    if (
+      (phases.length === 0 && order !== 1) ||
+      (phases.length > 0 && order <= phases.at(-1).order)
+    ) {
+      throw new Error('Phases must be ordered, starting at 1');
     }
     if (!allowed.has(values[1])) {
-      throw new Error('Unsupported status for phase ' + number);
+      throw new Error('Unsupported status for phase ' + id);
     }
     if (!values[2] || !values[3]) {
       throw new Error('Missing deliverable or exit gate');
     }
     phases.push({
-      number,
+      id,
+      order,
       title: match[2],
       status: values[1],
       evidence: values[4],
@@ -67,15 +72,16 @@ function renderRoadmap(phases) {
   let summary = '**' + complete.length + '/' + phases.length;
   summary += ' phases completed**';
   if (upcoming) {
-    const label = 'Phase ' + upcoming.number + ' — ' + upcoming.title;
+    const label = 'Phase ' + upcoming.id + ' — ' + upcoming.title;
     summary += ' · Next: **' + label + '**';
   }
 
   const nodes = [];
   for (const phase of phases) {
     const title = phase.title.replace(/["<>]/g, '');
-    const label = phase.number + '. ' + title;
-    nodes.push('P' + phase.number + '["' + label + '"]');
+    const label = phase.id + '. ' + title;
+    const nodeId = 'P' + phase.id.replace('.', '_');
+    nodes.push(nodeId + '["' + label + '"]');
   }
   const diagram = [
     'flowchart LR',
@@ -93,12 +99,12 @@ function renderRoadmap(phases) {
   ];
   for (const [status, css] of classes) {
     const matching = phases.filter((phase) => phase.status === status);
-    const ids = matching.map((phase) => 'P' + phase.number);
+    const ids = matching.map((phase) => 'P' + phase.id.replace('.', '_'));
     if (ids.length) diagram.push('  class ' + ids.join(',') + ' ' + css);
   }
 
   const rows = phases.map((phase) => {
-    const title = phase.number + '. ' + phase.title;
+    const title = phase.id + '. ' + phase.title;
     const evidence = (phase.evidence || '—')
       .replaceAll('](../.plans/', '](.plans/')
       .replaceAll('](../packages/', '](packages/')
