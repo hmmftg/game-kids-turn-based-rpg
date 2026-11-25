@@ -64,6 +64,12 @@ The production reference game consumes public `waypoint-rpg-core`, `waypoint-rpg
 | Town hub · portrait | ![Actual محله مهربانی — Town hub · portrait](docs/previews/legacy-sample/05-town-portrait.png) |
 | Persian NPC dialogue | ![Actual محله مهربانی — Persian NPC dialogue](docs/previews/legacy-sample/06-guardian-dialogue.png) |
 | Encounter choice | ![Actual محله مهربانی — Encounter choice](docs/previews/legacy-sample/07-encounter-choice.png) |
+| Completed physical interaction | ![Actual محله مهربانی — Completed physical interaction](docs/previews/legacy-sample/08-physical-interaction.png) |
+| Sticker reward | ![Actual محله مهربانی — Sticker reward](docs/previews/legacy-sample/09-sticker-reward.png) |
+| Completed quest replay | ![Actual محله مهربانی — Completed quest replay](docs/previews/legacy-sample/10-replayed-quest.png) |
+| Real micro-battle | ![Actual محله مهربانی — Real micro-battle](docs/previews/legacy-sample/11-lightweight-battle.png) |
+| Persistent world discovery | ![Actual محله مهربانی — Persistent world discovery](docs/previews/legacy-sample/12-world-discovery.png) |
+| Restored profile progress | ![Actual محله مهربانی — Restored profile progress](docs/previews/legacy-sample/13-restored-profile.png) |
 
 Other captures: [01-title](docs/previews/legacy-sample/01-title.png) · [02-avatar-select](docs/previews/legacy-sample/02-avatar-select.png) · [03-headwear-select](docs/previews/legacy-sample/03-headwear-select.png).
 

@@ -1,55 +1,110 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "737f2bb2124c3cfa90091e8a661e6e7d24312776",
+  "sourceCommit": "6fbc210c521b6b1ae92437542cf3d782ef6ac407",
   "images": [
     {
       "file": "01-title.png",
       "width": 3960,
       "height": 1890,
       "bytes": 181083,
-      "sha256": "1ef013631107974616b57b0ee703e230eea5d8b01f64ec5d185dcb96f4f52aff"
+      "sha256": "1ef013631107974616b57b0ee703e230eea5d8b01f64ec5d185dcb96f4f52aff",
+      "checkpoint": "title screen is ready"
     },
     {
       "file": "02-avatar-select.png",
       "width": 3960,
       "height": 1890,
       "bytes": 151923,
-      "sha256": "1b319524bbf41084c330f76bb38767c4ebfc9843a0416857ced5f65e5b8814a6"
+      "sha256": "1b319524bbf41084c330f76bb38767c4ebfc9843a0416857ced5f65e5b8814a6",
+      "checkpoint": "avatar selection is ready"
     },
     {
       "file": "03-headwear-select.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 207743,
-      "sha256": "029ed32e1a8092c9aadd3423983e21a66186d811034122997ee5797dfc1162fc"
+      "bytes": 207475,
+      "sha256": "d1e59e31b43a96fe2aaabe33fa70cbd19098ed588b3c087b33f5729579cfc52a",
+      "checkpoint": "headwear selection is ready"
     },
     {
       "file": "04-town-hub.png",
       "width": 3960,
       "height": 1890,
       "bytes": 2007756,
-      "sha256": "ddfaf169424322f198f08ae39da8fa4747db9b6c5810b53bc8be3b09903ae2a2"
+      "sha256": "ddfaf169424322f198f08ae39da8fa4747db9b6c5810b53bc8be3b09903ae2a2",
+      "checkpoint": "village canvas is rendered"
     },
     {
       "file": "05-town-portrait.png",
       "width": 1620,
       "height": 3600,
       "bytes": 1636938,
-      "sha256": "6fbf14525520d9c886b71e9feafc1f9399cc83af98b48b2043e335a4dca42f35"
+      "sha256": "6fbf14525520d9c886b71e9feafc1f9399cc83af98b48b2043e335a4dca42f35",
+      "checkpoint": "portrait HUD remains visible"
     },
     {
       "file": "06-guardian-dialogue.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1215806,
-      "sha256": "582c3e5fa8213700226aa64b570ef9e3acd2498c8ca05addee73a478bd83617d"
+      "bytes": 1215356,
+      "sha256": "da483e436023176b5616694f187ef2e6783437788cc22e8dfec3569d2ff0a2ce",
+      "checkpoint": "greeting NPC dialogue is open"
     },
     {
       "file": "07-encounter-choice.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1100255,
-      "sha256": "696675797feb8a26b851df2d69faff7d00e68670c1aa1a36f9add44f344a48aa"
+      "bytes": 1099110,
+      "sha256": "a1f8378200619ab3f7e514b531d41bfd66c4315c69e3de1f12bb8ab64c1f13f6",
+      "checkpoint": "greeting quest asks for its physical choice"
+    },
+    {
+      "file": "08-physical-interaction.png",
+      "width": 3960,
+      "height": 1890,
+      "bytes": 1237792,
+      "sha256": "8fff693b72d567545d5079e707f827a649cac8ca5f793b765f0447bdaa9ffced",
+      "checkpoint": "correct physical choice committed: greeting-1"
+    },
+    {
+      "file": "09-sticker-reward.png",
+      "width": 3960,
+      "height": 1890,
+      "bytes": 1082302,
+      "sha256": "8e0a2561f8722c2d2615170cebe6f211f852c2c4fc7f3488caf3600acf61f37f",
+      "checkpoint": "greeting quest completion and sticker reward"
+    },
+    {
+      "file": "10-replayed-quest.png",
+      "width": 3960,
+      "height": 1890,
+      "bytes": 1093651,
+      "sha256": "adeb17ed9ca6d48565af779dc4cc173ffb2ef59ea7c3a5ac3d47edb9f69d143d",
+      "checkpoint": "previously completed greeting quest has been replayed into a real encounter"
+    },
+    {
+      "file": "11-lightweight-battle.png",
+      "width": 3960,
+      "height": 1890,
+      "bytes": 778731,
+      "sha256": "a815ebc8cb4f6a867893d7b90eb021f76c8378d50ff862bfb69d3a044bc9327b",
+      "checkpoint": "real bird encounter is at playerChoice"
+    },
+    {
+      "file": "12-world-discovery.png",
+      "width": 3960,
+      "height": 1890,
+      "bytes": 1856375,
+      "sha256": "31a01c13d73a7ba0290e775accbc5b4a31491af4eece3a50cd1cbd32557d2511",
+      "checkpoint": "cave entrance discovery is committed in town"
+    },
+    {
+      "file": "13-restored-profile.png",
+      "width": 3960,
+      "height": 1890,
+      "bytes": 1190480,
+      "sha256": "59b5e87ae5fafcad2794372db92ee55d8c2d6f31babee82c477f946f1b9aba88",
+      "checkpoint": "reloaded profile restores quest and discoveries"
     }
   ]
 }
