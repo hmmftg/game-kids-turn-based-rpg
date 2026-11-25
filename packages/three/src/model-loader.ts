@@ -757,37 +757,37 @@ export function createModelAssetLoader(
           `Loading asset ${record.id} would use ${cachedGeometryBytes()} decoded geometry bytes; the shared geometry limit is ${policy.maxDecodedGeometryBytes}.`,
         );
       const gltf = await parse(bytes, sourceBase);
-      if (controller.signal.aborted) {
+      try {
+        throwIfAborted(controller.signal);
+        const parsedGeometry = measureParsedGeometry(gltf.scene);
+        if (parsedGeometry.triangles !== record.metrics.triangles)
+          throw new Error(
+            `Asset ${record.id} record reports ${record.metrics.triangles} runtime triangles but the parsed scene contains ${parsedGeometry.triangles}.`,
+          );
+        if (parsedGeometry.primitiveCount !== record.metrics.primitiveCount)
+          throw new Error(
+            `Asset ${record.id} record reports ${record.metrics.primitiveCount} runtime primitives but the parsed scene contains ${parsedGeometry.primitiveCount}.`,
+          );
+        if (parsedGeometry.triangles > policy.maxTrianglesPerAsset) {
+          throw new Error(
+            `Asset ${record.id} has ${parsedGeometry.triangles} runtime triangles; the per-asset limit is ${policy.maxTrianglesPerAsset}.`,
+          );
+        }
+        entry.triangles = parsedGeometry.triangles;
+        entry.decodedGeometryBytes = Math.max(
+          measured.decodedGeometryBytes,
+          parsedGeometry.decodedGeometryBytes,
+        );
+        if (cachedGeometryBytes() > policy.maxDecodedGeometryBytes) {
+          throw new Error(
+            `Loading asset ${record.id} would use ${cachedGeometryBytes()} decoded geometry bytes; the shared geometry limit is ${policy.maxDecodedGeometryBytes}.`,
+          );
+        }
+        return gltf;
+      } catch (error) {
         disposeSource(gltf);
-        throw abortError();
+        throw error;
       }
-      const parsedGeometry = measureParsedGeometry(gltf.scene);
-      if (parsedGeometry.triangles !== record.metrics.triangles)
-        throw new Error(
-          `Asset ${record.id} record reports ${record.metrics.triangles} runtime triangles but the parsed scene contains ${parsedGeometry.triangles}.`,
-        );
-      if (parsedGeometry.primitiveCount !== record.metrics.primitiveCount)
-        throw new Error(
-          `Asset ${record.id} record reports ${record.metrics.primitiveCount} runtime primitives but the parsed scene contains ${parsedGeometry.primitiveCount}.`,
-        );
-      if (parsedGeometry.triangles > policy.maxTrianglesPerAsset) {
-        disposeSource(gltf);
-        throw new Error(
-          `Asset ${record.id} has ${parsedGeometry.triangles} runtime triangles; the per-asset limit is ${policy.maxTrianglesPerAsset}.`,
-        );
-      }
-      entry.triangles = parsedGeometry.triangles;
-      entry.decodedGeometryBytes = Math.max(
-        measured.decodedGeometryBytes,
-        parsedGeometry.decodedGeometryBytes,
-      );
-      if (cachedGeometryBytes() > policy.maxDecodedGeometryBytes) {
-        disposeSource(gltf);
-        throw new Error(
-          `Loading asset ${record.id} would use ${cachedGeometryBytes()} decoded geometry bytes; the shared geometry limit is ${policy.maxDecodedGeometryBytes}.`,
-        );
-      }
-      return gltf;
     })()
       .then((gltf) => {
         entry.settled = true;

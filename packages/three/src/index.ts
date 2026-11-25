@@ -23,3 +23,25 @@ export type {
   ModelLease,
   ModelLoaderDependencies,
 } from './model-loader.js';
+export { createCharacterAnimationController } from './character-animation.js';
+export type {
+  CharacterAnimationController,
+  CharacterAnimationOptions,
+  CharacterAnimationSnapshot,
+} from './character-animation.js';
+export { compileTimeline, createTimelinePlayer } from './timeline.js';
+export type {
+  CompiledTimeline,
+  TimelineAudioRecord,
+  TimelineCameraPreset,
+  TimelineCue,
+  TimelineDefinition,
+  TimelineDialogueRecord,
+  TimelineEffectRecord,
+  TimelineEvent,
+  TimelinePlayer,
+  TimelineRegistry,
+  TimelineSnapshot,
+  TimelineStatus,
+  TimelineWaitResolution,
+} from './timeline.js';

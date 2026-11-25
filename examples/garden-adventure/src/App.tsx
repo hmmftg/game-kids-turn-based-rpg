@@ -15,6 +15,7 @@ import {
   type GameplayPlayerIntent,
 } from 'waypoint-rpg-gameplay';
 import { getDialogueView, getFact, getQuestStatus } from 'waypoint-rpg-narrative';
+import type { SemanticAction, TimelineEvent } from 'waypoint-rpg-three';
 import { faUi } from './content/fa/ui.js';
 import {
   createGardenRuntime,
@@ -36,8 +37,15 @@ import {
 import { registerGardenServiceWorker } from './pwa.js';
 import { GardenScene } from './scenes/GardenScene.js';
 import { GardenMeshyPilotProvider } from './scenes/MeshyPilot.js';
+import { GardenModelProvider } from './models/GardenModel.js';
+import type { GardenEndingId } from './presentation/ending-cinematic.js';
 import type { GardenSceneReadiness } from './scenes/probe.js';
 import { gardenTargets, getGardenTarget, type GardenTargetId } from './world/world.js';
+
+interface GardenCinematicRequest {
+  readonly endingId: GardenEndingId;
+  readonly requestId: string;
+}
 
 export function App() {
   const runtime = useMemo(() => createGardenRuntime(), []);
@@ -48,6 +56,12 @@ export function App() {
   const [sceneReadiness, setSceneReadiness] = useState<GardenSceneReadiness | null>(null);
   const [manualRecapOpen, setManualRecapOpen] = useState(false);
   const [dismissedEndingId, setDismissedEndingId] = useState<string | null>(null);
+  const [cinematicRequest, setCinematicRequest] = useState<GardenCinematicRequest | null>(null);
+  const cinematicRequestRef = useRef<GardenCinematicRequest | null>(null);
+  const [cinematicActions, setCinematicActions] = useState<
+    Readonly<Record<string, SemanticAction>>
+  >({});
+  const [cinematicDialogueId, setCinematicDialogueId] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [initialInspection] = useState<GardenSaveInspection>(() => {
     try {
@@ -191,8 +205,45 @@ export function App() {
 
   const closeRecap = useCallback(() => {
     setManualRecapOpen(false);
+    cinematicRequestRef.current = null;
+    setCinematicRequest(null);
+    setCinematicActions({});
+    setCinematicDialogueId(null);
     if (endingId) setDismissedEndingId(endingId);
   }, [endingId]);
+
+  const requestEndingCinematic = useCallback(
+    (before: GardenState) => {
+      const committedEnding = runtime.getState().narrative.endingId;
+      if (before.narrative.endingId || !committedEnding) return;
+      if (committedEnding !== 'ending-garden' && committedEnding !== 'ending-lantern') return;
+      const next = runtime.getState();
+      setCinematicActions({});
+      setCinematicDialogueId(null);
+      const request = {
+        endingId: committedEnding,
+        requestId: `${next.narrative.playthroughId}:${next.gameplay.revision}:${committedEnding}`,
+      } satisfies GardenCinematicRequest;
+      cinematicRequestRef.current = request;
+      setCinematicRequest(request);
+    },
+    [runtime],
+  );
+
+  const onCinematicEvent = useCallback((event: TimelineEvent) => {
+    if (event.cue.kind === 'animation') {
+      const { actorId, action } = event.cue;
+      setCinematicActions((actions) => ({ ...actions, [actorId]: action }));
+    } else if (event.cue.kind === 'dialogue') setCinematicDialogueId(event.cue.dialogueId);
+  }, []);
+
+  const onCinematicComplete = useCallback((requestId: string) => {
+    if (cinematicRequestRef.current?.requestId !== requestId) return;
+    cinematicRequestRef.current = null;
+    setCinematicRequest(null);
+    setCinematicActions({});
+    setCinematicDialogueId(null);
+  }, []);
 
   useEffect(() => {
     if (!activeEncounter) return;
@@ -220,6 +271,10 @@ export function App() {
       setSaveFeedback(mode === 'session-only' ? faUi.sessionOnly : '');
       setManualRecapOpen(false);
       setDismissedEndingId(null);
+      cinematicRequestRef.current = null;
+      setCinematicRequest(null);
+      setCinematicActions({});
+      setCinematicDialogueId(null);
       lastSavedFingerprint.current = null;
       runtime.dispatch({ type: 'NEW_GAME' });
       setBattleNotice('');
@@ -302,9 +357,10 @@ export function App() {
           { type: 'move' | 'use-ability' | 'wait' | 'withdraw' }
         >,
       });
+      requestEndingCinematic(current);
       setBattleNotice(runtime.getState() === current ? faUi.invalidBattleAction : '');
     },
-    [runtime],
+    [requestEndingCinematic, runtime],
   );
 
   const onTargetPress = useCallback(
@@ -319,11 +375,12 @@ export function App() {
           return;
         }
         runtime.dispatch({ type: 'INTERACT', targetId });
+        requestEndingCinematic(current);
         return;
       }
       runtime.dispatch({ type: 'MOVE_TO', targetId });
     },
-    [runtime],
+    [requestEndingCinematic, runtime],
   );
 
   const mapLabel = faUi[state.mapId];
@@ -460,28 +517,34 @@ export function App() {
       ) : (
         <section className="game-shell" aria-label={mapLabel} data-active-scene={state.mapId}>
           <div className="scene-frame" data-testid={`scene-${state.mapId}`}>
-            <GardenMeshyPilotProvider>
-              <Canvas
-                data-testid="garden-canvas-wrapper"
-                frameloop="demand"
-                camera={{ position: [0, 12, 14], fov: 42 }}
-                onCreated={({ gl }) => {
-                  gl.domElement.dataset.testid = 'garden-canvas';
-                  gl.domElement.dataset.cameraKind = 'loading';
-                  setCanvasElement(gl.domElement);
-                  setRendererReady(true);
-                }}
-              >
-                <GardenScene
-                  key={`${state.mapId}:${sceneGeneration}`}
-                  runtime={runtime}
-                  state={state}
-                  sceneGeneration={sceneGeneration}
-                  onTargetPress={onTargetPress}
-                  onSceneReady={onSceneReady}
-                />
-              </Canvas>
-            </GardenMeshyPilotProvider>
+            <GardenModelProvider>
+              <GardenMeshyPilotProvider>
+                <Canvas
+                  data-testid="garden-canvas-wrapper"
+                  frameloop="demand"
+                  camera={{ position: [0, 12, 14], fov: 42 }}
+                  onCreated={({ gl }) => {
+                    gl.domElement.dataset.testid = 'garden-canvas';
+                    gl.domElement.dataset.cameraKind = 'loading';
+                    setCanvasElement(gl.domElement);
+                    setRendererReady(true);
+                  }}
+                >
+                  <GardenScene
+                    key={`${state.mapId}:${sceneGeneration}`}
+                    runtime={runtime}
+                    state={state}
+                    sceneGeneration={sceneGeneration}
+                    onTargetPress={onTargetPress}
+                    onSceneReady={onSceneReady}
+                    cinematicRequest={cinematicRequest}
+                    cinematicActions={cinematicActions}
+                    onCinematicEvent={onCinematicEvent}
+                    onCinematicComplete={onCinematicComplete}
+                  />
+                </Canvas>
+              </GardenMeshyPilotProvider>
+            </GardenModelProvider>
             {!rendererReady ? (
               <div className="loading-message" role="status">
                 {faUi.loading}
@@ -641,6 +704,7 @@ export function App() {
                 <h2 id="garden-ending-heading">
                   {endingId === 'ending-garden' ? faUi.gardenerEnding : faUi.lanternEnding}
                 </h2>
+                <span hidden data-cinematic-dialogue={cinematicDialogueId ?? undefined} />
                 <p>{questObjective}</p>
                 <button
                   className="primary-button"

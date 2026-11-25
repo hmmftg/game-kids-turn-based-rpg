@@ -615,6 +615,35 @@ describe('shared model asset loader', () => {
     loader.dispose();
   });
 
+  it('disposes a rejected parsed model and permits a fresh load within the same budget', async () => {
+    const rejected = fakePositionOnlyGltf(1);
+    const mesh = rejected.scene.children[0] as Mesh<BufferGeometry, MeshStandardMaterial>;
+    const disposeGeometry = vi.spyOn(mesh.geometry, 'dispose');
+    const disposeMaterial = vi.spyOn(mesh.material, 'dispose');
+    const parse = vi
+      .fn()
+      .mockResolvedValueOnce(rejected)
+      .mockImplementation(async () => fakeGltf());
+    const loader = createModelAssetLoader([record], {
+      fetcher: async () => response(),
+      parse,
+      digest: async () => record.outputSha256,
+      baseUrl: () => 'http://localhost/',
+      policy: { maxTrianglesPerAsset: 12, maxSceneTriangles: 12 },
+    });
+
+    await expect(loader.load(record.id, new AbortController().signal)).rejects.toThrow(
+      'runtime triangles',
+    );
+    expect(disposeGeometry).toHaveBeenCalledTimes(1);
+    expect(disposeMaterial).toHaveBeenCalledTimes(1);
+    const lease = await loader.load(record.id, new AbortController().signal);
+    expect(parse).toHaveBeenCalledTimes(2);
+    lease.release();
+    loader.dispose();
+    expect(disposeGeometry).toHaveBeenCalledTimes(1);
+  });
+
   it('disposes a parsed result that arrives after its request was cancelled', async () => {
     const source = fakeGltf();
     const sourceMesh = source.scene.children[0] as Mesh;

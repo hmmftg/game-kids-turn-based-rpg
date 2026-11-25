@@ -39,7 +39,11 @@ without invalidating leases on the previous hash.
 Static GLBs need no animation metadata. Animated leases expose their original
 clips and stable source-order IDs (`clip-1`, `clip-2`, …); semantic mappings may
 also use a unique original clip name. Duplicate or unnamed source names must be
-addressed by stable ID.
+addressed by stable ID. `createCharacterAnimationController` gives each scene
+instance independent semantic state, bounded idle playback, cross-fades,
+interruptions, reduced-motion poses, and explicit cleanup. The exported
+timeline compiler/player validates game-owned camera, animation, dialogue,
+audio, effect, and wait cues; games own the choreography and cue presentation.
 
 The optional runtime policy is trusted application configuration. Records and
 URL parameters never alter it. Defaults retain the 60,000-triangle per-asset

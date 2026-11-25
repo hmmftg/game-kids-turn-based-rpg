@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileTimeline, createTimelinePlayer } from './timeline.js';
+import { compileTimeline, createTimelinePlayer } from '../src/timeline.js';
 
 const registry = {
   cameras: {

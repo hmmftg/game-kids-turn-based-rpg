@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 const saveKey = 'waypoint-rpg:garden-adventure:save';
 
 async function start(page: Page) {
-  await page.goto('/');
+  await page.goto('/?cinematicprobe=1');
   await expect(page.getByTestId('garden-start')).toBeVisible();
   await page.getByTestId('garden-start').click();
   await expect(page.getByTestId('garden-canvas')).toBeVisible();
@@ -76,6 +76,50 @@ test('completes the gardener path using package inventory, progression and equip
   await expect(page.getByTestId('ending-panel')).toContainText('دانه جوانه زد و باغ دوباره سبز شد');
   await expect
     .poll(() =>
+      page.evaluate(
+        () =>
+          document
+            .querySelector('[data-testid="ending-panel"] [data-cinematic-dialogue]')
+            ?.getAttribute('data-cinematic-dialogue') === 'tree-ending',
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const probe = window.__gardenEndingCinematicProbe;
+        return (
+          probe?.endingId === 'ending-garden' &&
+          probe.status === 'playing' &&
+          Math.hypot(
+            probe.cameraPosition[0] - probe.initialCameraPosition[0],
+            probe.cameraPosition[1] - probe.initialCameraPosition[1],
+            probe.cameraPosition[2] - probe.initialCameraPosition[2],
+          ) > 1
+        );
+      }),
+    )
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__gardenEndingCinematicProbe?.status))
+    .toBe('completed');
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const probe = window.__gardenEndingCinematicProbe;
+        return (
+          probe?.status === 'completed' &&
+          Math.hypot(
+            probe.cameraPosition[0] - probe.initialCameraPosition[0],
+            probe.cameraPosition[1] - probe.initialCameraPosition[1],
+            probe.cameraPosition[2] - probe.initialCameraPosition[2],
+          ) < 0.01
+        );
+      }),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
       page.evaluate(() => window.__gardenProbe?.renderedConsequences.includes('grown-tree')),
     )
     .toBe(true);
@@ -120,6 +164,53 @@ test('completes the gardener path using package inventory, progression and equip
   expect(pageErrors).toEqual([]);
 });
 
+test('dismissing the ending recap cancels the running camera timeline and restores the scene view', async ({
+  page,
+}) => {
+  await start(page);
+  await interact(page, 'gardener');
+  await page.getByTestId('dialogue-choice-listen-gardener').click();
+  await page.getByTestId('dialogue-choice-help-gardener').click();
+  await interact(page, 'seed-basket');
+  await enterGarden(page);
+  await interact(page, 'planting-bed');
+  await expect(page.getByTestId('ending-panel')).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document
+            .querySelector('[data-testid="ending-panel"] [data-cinematic-dialogue]')
+            ?.getAttribute('data-cinematic-dialogue') === 'tree-ending',
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__gardenEndingCinematicProbe?.status))
+    .toBe('playing');
+
+  await page.getByTestId('ending-close').click();
+  await expect(page.getByTestId('ending-panel')).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => window.__gardenEndingCinematicProbe?.status))
+    .toBe('cancelled');
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const probe = window.__gardenEndingCinematicProbe;
+        return (
+          probe?.status === 'cancelled' &&
+          Math.hypot(
+            probe.cameraPosition[0] - probe.initialCameraPosition[0],
+            probe.cameraPosition[1] - probe.initialCameraPosition[1],
+            probe.cameraPosition[2] - probe.initialCameraPosition[2],
+          ) < 0.01
+        );
+      }),
+    )
+    .toBe(true);
+});
+
 test('wins a real 5x5 guardian trial and commits its package outcome into the story', async ({
   page,
 }) => {
@@ -155,6 +246,25 @@ test('wins a real 5x5 guardian trial and commits its package outcome into the st
   await page.getByTestId('battle-ability-light-ray').click();
 
   await expect(page.getByTestId('ending-panel')).toContainText('فانوس روشن شد و نور به باغ برگشت');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document
+            .querySelector('[data-testid="ending-panel"] [data-cinematic-dialogue]')
+            ?.getAttribute('data-cinematic-dialogue') === 'lantern-ending',
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          window.__gardenEndingCinematicProbe?.endingId === 'ending-lantern' &&
+          ['playing', 'completed'].includes(window.__gardenEndingCinematicProbe.status),
+      ),
+    )
+    .toBe(true);
   await expect
     .poll(() =>
       page.evaluate(() => window.__gardenProbe?.renderedConsequences.includes('lit-lantern')),

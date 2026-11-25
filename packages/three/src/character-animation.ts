@@ -4,7 +4,7 @@ import {
   findAnimationByClipReference,
   type ModelAssetRecord,
   type SemanticAction,
-} from 'waypoint-rpg-three';
+} from './contracts.js';
 
 export interface CharacterAnimationOptions {
   readonly crossFadeSeconds?: number;

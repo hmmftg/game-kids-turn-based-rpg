@@ -1,4 +1,4 @@
-import { compileTimeline } from './timeline.js';
+import { compileTimeline } from 'waypoint-rpg-three';
 
 /** The sequence is offered only after the saved narrative fact lantern-lit is true. */
 export const bloodLeafTimelineRegistry = {

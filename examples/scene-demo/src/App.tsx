@@ -15,14 +15,18 @@ import { SceneHost } from './scene-host.js';
 import { sceneRegistry } from './scenes/registry.js';
 import { subscribeDemoRuntime } from './scenes/scene-runtime.js';
 import { Phase5AssetDemo } from './animation/Phase5AssetDemo.js';
-import type { SemanticAction } from 'waypoint-rpg-three';
+import {
+  createTimelinePlayer,
+  type SemanticAction,
+  type TimelineEvent,
+  type TimelinePlayer,
+  type TimelineStatus,
+} from 'waypoint-rpg-three';
 import {
   bloodLeafLanternAwakening,
   bloodLeafTimelineRegistry,
 } from './presentation/blood-leaf-cinematic.js';
 import { CinematicStage } from './presentation/CinematicStage.js';
-import { createTimelinePlayer } from './presentation/timeline.js';
-import type { TimelineEvent, TimelinePlayer, TimelineStatus } from './presentation/timeline.js';
 import { sceneProbe } from './probe.js';
 
 declare global {

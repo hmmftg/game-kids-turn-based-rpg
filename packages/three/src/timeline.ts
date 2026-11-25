@@ -1,4 +1,4 @@
-import type { SemanticAction } from 'waypoint-rpg-three';
+import type { SemanticAction } from './contracts.js';
 
 export interface TimelineCameraPreset {
   readonly position: readonly [number, number, number];

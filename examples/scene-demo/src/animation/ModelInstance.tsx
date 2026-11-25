@@ -1,8 +1,12 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
-import type { CharacterAnimationController } from './character-animation.js';
-import { createCharacterAnimationController } from './character-animation.js';
-import type { ModelAssetLoader, ModelLease, SemanticAction } from 'waypoint-rpg-three';
+import {
+  createCharacterAnimationController,
+  type CharacterAnimationController,
+  type ModelAssetLoader,
+  type ModelLease,
+  type SemanticAction,
+} from 'waypoint-rpg-three';
 import type { LoadedModelLease } from './model-instance-lease.js';
 import { modelLeaseForRequest } from './model-instance-lease.js';
 

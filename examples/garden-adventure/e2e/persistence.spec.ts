@@ -1,19 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
-declare global {
-  interface Window {
-    __gardenSaveWrites?: Array<{
-      readonly mapId: string | null;
-      readonly anchorId: string | null;
-      readonly playerAtAnchor: boolean;
-    }>;
-  }
-}
-
 const saveKey = 'waypoint-rpg:garden-adventure:save';
 
-async function startFresh(page: Page) {
-  await page.goto('/');
+async function startFresh(page: Page, query = '') {
+  await page.goto(`/${query}`);
   await expect(page.getByTestId('garden-start')).toBeVisible();
   await page.getByTestId('garden-start').click();
   await expect(page.getByTestId('garden-canvas')).toBeVisible();
@@ -39,7 +29,7 @@ async function completeGardenerEnding(page: Page) {
 }
 
 test('continues a saved ending on its map and restores its rendered tree', async ({ page }) => {
-  await startFresh(page);
+  await startFresh(page, '?cinematicprobe=1');
   await completeGardenerEnding(page);
   await page.getByTestId('ending-close').click();
   await expect
@@ -76,6 +66,7 @@ test('continues a saved ending on its map and restores its rendered tree', async
   await page.getByTestId('garden-continue').click();
   await expect(page.getByTestId('scene-garden')).toBeVisible();
   await expect(page.getByTestId('ending-panel')).toContainText('دانه جوانه زد');
+  expect(await page.evaluate(() => window.__gardenEndingCinematicProbe)).toBeUndefined();
   await expect
     .poll(() =>
       page.evaluate(() => window.__gardenProbe?.renderedConsequences.includes('grown-tree')),

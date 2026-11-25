@@ -29,7 +29,7 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: 'npm run build && vite preview --host 127.0.0.1 --port 4182',
+    command: 'vite --host 127.0.0.1 --port 4182',
     port: 4182,
     reuseExistingServer: false,
     timeout: 120_000,

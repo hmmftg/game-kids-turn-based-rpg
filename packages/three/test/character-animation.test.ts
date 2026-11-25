@@ -1,7 +1,7 @@
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import { createCharacterAnimationController } from './character-animation.js';
-import type { ModelAssetRecord, SemanticAction } from 'waypoint-rpg-three';
+import { createCharacterAnimationController } from '../src/character-animation.js';
+import type { ModelAssetRecord, SemanticAction } from '../src/contracts.js';
 
 const assetRecord = {
   clips: {
