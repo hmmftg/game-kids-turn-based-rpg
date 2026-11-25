@@ -11,6 +11,9 @@ const repositoryRoot = resolve(previewRoot, '../../..');
 const projectRoot = resolve(
   process.env.WAYPOINT_CREATOR_GAME_ROOT ?? resolve(repositoryRoot, 'examples/scene-demo'),
 );
+const frameworkPackageRoots = ['core', 'narrative', 'gameplay', 'three'].map((name) =>
+  resolve(repositoryRoot, 'packages', name, 'dist'),
+);
 
 function localAssetRecordRoute(): Plugin {
   return {
@@ -68,7 +71,7 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 4175,
     strictPort: true,
-    fs: { allow: [repositoryRoot, projectRoot] },
+    fs: { strict: true, allow: [previewRoot, projectRoot, ...frameworkPackageRoots] },
   },
   build: { target: 'es2022', outDir: resolve(previewRoot, 'dist'), emptyOutDir: true },
 });

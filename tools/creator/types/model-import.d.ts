@@ -49,3 +49,6 @@ export interface ImportResult {
 export declare const DEFAULT_BUDGET: Readonly<ImportBudget>;
 export declare const LOCAL_PILOT_MAX_TRIANGLES: 400000;
 export declare function importModel(options: ImportModelOptions): Promise<ImportResult>;
+export declare function inspectModel(
+  options: Pick<ImportModelOptions, 'sourcePath' | 'metadataPath' | 'budget' | 'requireApproval'>,
+): Promise<ImportedAssetRecord>;

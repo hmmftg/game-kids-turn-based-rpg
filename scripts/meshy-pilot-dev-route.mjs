@@ -166,9 +166,7 @@ export function createMeshyPilotRoutePlugin(configuredDirectory) {
     enforce: 'pre',
     config(config) {
       config.server = { ...config.server, host: '127.0.0.1' };
-      config.preview = { ...config.preview, host: '127.0.0.1' };
     },
     configureServer: installPrivateRoute,
-    configurePreviewServer: installPrivateRoute,
   };
 }

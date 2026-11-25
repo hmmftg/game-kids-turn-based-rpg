@@ -17,7 +17,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const result = await importModel({
       ...legacyDefaults,
-      ...parseArguments(process.argv.slice(2)),
+      ...(await parseArguments(process.argv.slice(2))),
     });
     console.log(`Imported ${result.record.id} to ${result.record.runtimePath}`);
     console.log(`Output SHA-256: ${result.record.outputSha256}`);

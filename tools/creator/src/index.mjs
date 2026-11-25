@@ -1,4 +1,4 @@
-export { DEFAULT_BUDGET, importModel } from './model-import.mjs';
+export { DEFAULT_BUDGET, importModel, inspectModel } from './model-import.mjs';
 export {
   ASSET_CATALOG_SCHEMA_VERSION,
   ASSET_STAGES,

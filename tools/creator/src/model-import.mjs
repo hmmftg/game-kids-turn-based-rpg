@@ -690,12 +690,9 @@ async function commitFiles({
   if (backupPath) await rm(backupPath, { force: true });
 }
 
-export async function importModel({
+async function prepareModel({
   sourcePath,
   metadataPath,
-  outputDirectory = defaultOutputDirectory,
-  manifestPath = defaultManifestPath,
-  replace = false,
   budget = {},
   requireApproval = true,
   preserveGlbBytes = false,
@@ -746,7 +743,22 @@ export async function importModel({
     outputSha256: sha256(outputBytes),
   };
 
-  const outputPath = resolve(outputDirectory, `${metadata.id}.glb`);
+  return { outputBytes, record: recordWithHashes };
+}
+
+/** Inspect local GLB bytes without writing a model, manifest or staging files. */
+export async function inspectModel(options) {
+  return (await prepareModel({ ...options, preserveGlbBytes: true })).record;
+}
+
+export async function importModel({
+  outputDirectory = defaultOutputDirectory,
+  manifestPath = defaultManifestPath,
+  replace = false,
+  ...options
+}) {
+  const { outputBytes, record: recordWithHashes } = await prepareModel(options);
+  const outputPath = resolve(outputDirectory, `${recordWithHashes.id}.glb`);
   const manifestFile = resolve(manifestPath);
   const existingOutput = await readFile(outputPath).catch(() => null);
   if (existingOutput && sha256(existingOutput) !== recordWithHashes.outputSha256 && !replace)
@@ -758,7 +770,7 @@ export async function importModel({
     const parsed = parseAnyJson(oldManifest.toString('utf8'), manifestFile);
     if (!Array.isArray(parsed) || !parsed.every(isPlainObject))
       fail(`${manifestFile}: expected an array of asset records.`);
-    records = parsed.filter((entry) => entry.id !== metadata.id);
+    records = parsed.filter((entry) => entry.id !== recordWithHashes.id);
   }
   records.push(recordWithHashes);
   records.sort((left, right) => left.id.localeCompare(right.id));
@@ -783,37 +795,45 @@ export async function importModel({
   return { outputPath, manifestPath: manifestFile, record: recordWithHashes };
 }
 
-function parseArguments(args) {
-  const options = { replace: false };
+async function parseArguments(args, defaults = {}) {
+  const options = { replace: false, ...defaults };
+  const fields = {
+    '--source': 'sourcePath',
+    '--metadata': 'metadataPath',
+    '--output-directory': 'outputDirectory',
+    '--manifest': 'manifestPath',
+    '--budget-policy': 'budgetPolicyPath',
+  };
+  const flags = {
+    '--replace': 'replace',
+    '--preserve-glb-bytes': 'preserveGlbBytes',
+    '--require-release-approval': 'requireApproval',
+  };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (argument === '--replace') {
-      options.replace = true;
+    if (Object.hasOwn(flags, argument)) {
+      options[flags[argument]] = true;
       continue;
     }
-    if (!['--source', '--metadata', '--output-directory', '--manifest'].includes(argument))
-      fail(`Unknown argument: ${argument}`);
+    if (!Object.hasOwn(fields, argument)) fail(`Unknown argument: ${argument}`);
     const value = args[index + 1];
     if (!value || value.startsWith('--')) fail(`Missing value for ${argument}.`);
-    const key = {
-      '--source': 'sourcePath',
-      '--metadata': 'metadataPath',
-      '--output-directory': 'outputDirectory',
-      '--manifest': 'manifestPath',
-    }[argument];
-    options[key] = resolve(value);
+    options[fields[argument]] = resolve(value);
     index += 1;
   }
   if (!options.sourcePath || !options.metadataPath)
     fail(
-      'Usage: node scripts/import-model.mjs --source <local.glb|local.gltf> --metadata <asset.json> [--replace]',
+      'Asset import requires --source <local.glb|local.gltf> --metadata <asset.json>. Optional: --output-directory, --manifest, --replace, --preserve-glb-bytes, --budget-policy <json-file>, --require-release-approval.',
     );
-  return options;
+  const { budgetPolicyPath, ...importOptions } = options;
+  if (budgetPolicyPath)
+    importOptions.budget = parseJson(await readFile(budgetPolicyPath, 'utf8'), budgetPolicyPath);
+  return importOptions;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
-    const result = await importModel(parseArguments(process.argv.slice(2)));
+    const result = await importModel(await parseArguments(process.argv.slice(2)));
     log(`Imported ${result.record.id} to ${result.record.runtimePath}`);
     log(`Output SHA-256: ${result.record.outputSha256}`);
     log(`Metrics: ${JSON.stringify(result.record.metrics)}`);

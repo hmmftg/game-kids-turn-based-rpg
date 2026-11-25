@@ -98,6 +98,45 @@ test('imports a self-contained textured static GLB and records verifiable proven
   });
 });
 
+test('both asset CLIs support byte preservation and a trusted budget policy', async () => {
+  await withTempDirectory(async (directory) => {
+    const source = fixture('static-textured.glb');
+    const metadata = fixture('static-textured.asset.json');
+    const policy = await writeMetadata(directory, 'budget.json', { maxTriangles: 20 });
+    for (const [script, command] of [
+      [creatorCli, ['asset', 'import']],
+      [join(repositoryRoot, 'scripts/import-model.mjs'), []],
+    ]) {
+      const outputDirectory = join(directory, command.length ? 'creator' : 'legacy');
+      const result = spawnSync(
+        process.execPath,
+        [
+          script,
+          ...command,
+          '--source',
+          source,
+          '--metadata',
+          metadata,
+          '--output-directory',
+          outputDirectory,
+          '--manifest',
+          join(outputDirectory, 'manifest.json'),
+          '--preserve-glb-bytes',
+          '--budget-policy',
+          policy,
+        ],
+        { encoding: 'utf8' },
+      );
+      assert.equal(result.status, 0, result.stderr);
+      const files = JSON.parse(await readFile(join(outputDirectory, 'manifest.json'), 'utf8'));
+      assert.deepEqual(
+        await readFile(join(outputDirectory, files[0].runtimePath.split('/').at(-1))),
+        await readFile(source),
+      );
+    }
+  });
+});
+
 test('preserves self-contained GLB bytes and hashes when byte preservation is requested', async () => {
   await withTempDirectory(async (directory) => {
     const sourcePath = join(directory, 'byte-preservation.glb');

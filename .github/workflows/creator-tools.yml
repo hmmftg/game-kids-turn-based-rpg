@@ -9,9 +9,13 @@ on:
       - packages/core/**
       - packages/narrative/**
       - packages/gameplay/**
+      - packages/three/**
       - tools/creator/**
       - scripts/import-model.mjs
       - scripts/import-model.test.mjs
+      - scripts/import-meshy-pilot*.mjs
+      - scripts/meshy-pilot-*.mjs
+      - scripts/validate-garden-assets*.mjs
       - scripts/check-framework-generated-games.mjs
       - examples/scene-demo/fixtures/model-source/static-textured.glb
       - docs/FRAMEWORK-ROADMAP.md
@@ -30,9 +34,13 @@ on:
       - packages/core/**
       - packages/narrative/**
       - packages/gameplay/**
+      - packages/three/**
       - tools/creator/**
       - scripts/import-model.mjs
       - scripts/import-model.test.mjs
+      - scripts/import-meshy-pilot*.mjs
+      - scripts/meshy-pilot-*.mjs
+      - scripts/validate-garden-assets*.mjs
       - scripts/check-framework-generated-games.mjs
       - examples/scene-demo/fixtures/model-source/static-textured.glb
       - docs/FRAMEWORK-ROADMAP.md
