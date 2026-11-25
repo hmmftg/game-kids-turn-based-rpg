@@ -15,7 +15,10 @@ import {
 import { SceneCamera } from './SceneCamera.js';
 import { isGardenMeshyPilotRequested, MeshyModelVisual } from './MeshyPilot.js';
 import { GardenModelVisual } from '../models/GardenModel.js';
-import { GARDEN_MODEL_IDS } from '../models/asset-records.js';
+import {
+  gardenModelInstanceIdForTarget,
+  gardenPlayerModelInstanceId,
+} from '../models/asset-records.js';
 import { GardenEndingCinematic } from '../presentation/GardenEndingCinematic.js';
 import type { GardenEndingId } from '../presentation/ending-cinematic.js';
 import { sceneForMap } from './registry.js';
@@ -533,8 +536,8 @@ function PlayerCharacter({
   return (
     <group ref={groupRef} position={[anchor.x, 0, anchor.z]} name="garden-player">
       <GardenModelVisual
-        assetId={GARDEN_MODEL_IDS.animatedCharacter}
-        instanceId="garden-hero"
+        instanceId={gardenPlayerModelInstanceId()}
+        mapId={mapId}
         action={action}
         modelPosition={[0, 0.7, 0]}
         modelScale={[1.2, 1.2, 1.2]}
@@ -572,7 +575,12 @@ function WorldTarget({
 
   return (
     <group position={target.position} name={`world-target-${target.id}`}>
-      <TargetModel kind={target.kind} lanternLit={lanternLit} guardianAction={guardianAction} />
+      <TargetModel
+        kind={target.kind}
+        mapId={target.mapId}
+        lanternLit={lanternLit}
+        guardianAction={guardianAction}
+      />
       <mesh position={[0, 0.9, 0]} onClick={click}>
         <sphereGeometry args={[0.9, 12, 10]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -583,10 +591,12 @@ function WorldTarget({
 
 function TargetModel({
   kind,
+  mapId,
   lanternLit,
   guardianAction,
 }: {
   readonly kind: GardenTarget['kind'];
+  readonly mapId: GardenMapId;
   readonly lanternLit: boolean;
   readonly guardianAction: SemanticAction;
 }) {
@@ -612,8 +622,8 @@ function TargetModel({
     return (
       <MeshyModelVisual modelKey="guardian">
         <GardenModelVisual
-          assetId={GARDEN_MODEL_IDS.animatedCharacter}
-          instanceId="garden-guardian"
+          instanceId={gardenModelInstanceIdForTarget('guardian')}
+          mapId={mapId}
           action={guardianAction}
           modelPosition={[0, 0.7, 0]}
           modelScale={[1.2, 1.2, 1.2]}
@@ -622,7 +632,7 @@ function TargetModel({
         </GardenModelVisual>
       </MeshyModelVisual>
     );
-  if (kind === 'lantern') return <LanternModel lit={lanternLit} />;
+  if (kind === 'lantern') return <LanternModel lit={lanternLit} mapId={mapId} />;
   return <BenchModel />;
 }
 
@@ -768,11 +778,11 @@ function ClueStoneModel() {
   );
 }
 
-function LanternModel({ lit }: { readonly lit: boolean }) {
+function LanternModel({ lit, mapId }: { readonly lit: boolean; readonly mapId: GardenMapId }) {
   return (
     <group>
       <group position={[0, 0.12, 0]} scale={[1.25, 0.18, 1.25]}>
-        <GardenModelVisual assetId={GARDEN_MODEL_IDS.lanternBase} instanceId="garden-lantern-base">
+        <GardenModelVisual instanceId={gardenModelInstanceIdForTarget('lantern')} mapId={mapId}>
           <mesh position={[0, 0.5, 0]}>
             <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial color="#967d59" />

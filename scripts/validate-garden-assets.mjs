@@ -48,15 +48,25 @@ function validatePolicy(policy, records, errors) {
     !runtime ||
     runtime.allowUnapproved !== false ||
     !Number.isSafeInteger(runtime.maxTrianglesPerAsset) ||
+    runtime.maxTrianglesPerAsset < 1 ||
     !Number.isSafeInteger(runtime.maxLoadedAssets) ||
+    runtime.maxLoadedAssets < 1 ||
     !Number.isSafeInteger(runtime.maxDecodedGeometryBytes) ||
-    !Number.isSafeInteger(runtime.maxSceneTriangles)
+    runtime.maxDecodedGeometryBytes < 1 ||
+    !Number.isSafeInteger(runtime.maxSceneTriangles) ||
+    runtime.maxSceneTriangles < 1
   ) {
     errors.push('model-budget-policy.json: runtime model limits must be positive integers.');
-    return null;
   }
 
   const policyAssets = Array.isArray(policy.assets) ? policy.assets : [];
+  const positiveAssetLimits = [
+    'maxFileBytes',
+    'maxTriangles',
+    'maxTextureBytes',
+    'maxTextureDimension',
+    'maxDecodedBytes',
+  ];
   const budgets = new Map();
   for (const asset of policyAssets) {
     if (!asset || !SAFE_ID.test(asset.id ?? '') || budgets.has(asset.id)) {
@@ -64,6 +74,12 @@ function validatePolicy(policy, records, errors) {
       continue;
     }
     budgets.set(asset.id, asset);
+    for (const field of positiveAssetLimits)
+      if (!Number.isSafeInteger(asset[field]) || asset[field] < 1)
+        errors.push(`${asset.id}: ${field} must be a positive integer.`);
+    for (const field of ['maxJoints', 'maxClips'])
+      if (!Number.isSafeInteger(asset[field]) || asset[field] < 0)
+        errors.push(`${asset.id}: ${field} must be a non-negative integer.`);
   }
   const recordIds = new Set(records.map((record) => record?.id));
   for (const id of recordIds)
@@ -71,7 +87,70 @@ function validatePolicy(policy, records, errors) {
   for (const id of budgets.keys())
     if (!recordIds.has(id)) errors.push(`Budget entry ${id} has no model record.`);
 
-  for (const [mapId, map] of Object.entries(policy.maps ?? {})) {
+  const mapBudgets =
+    policy.maps && typeof policy.maps === 'object' && !Array.isArray(policy.maps)
+      ? policy.maps
+      : {};
+  if (mapBudgets !== policy.maps)
+    errors.push('model-budget-policy.json: maps must be an object of map budgets.');
+  const declaredInstances = new Map(Object.keys(mapBudgets).map((mapId) => [mapId, {}]));
+  const bindings = policy.bindings;
+  if (!bindings || typeof bindings !== 'object' || Array.isArray(bindings)) {
+    errors.push('model-budget-policy.json: bindings must declare runtime model instances.');
+  } else {
+    for (const [instanceId, binding] of Object.entries(bindings)) {
+      if (!SAFE_ID.test(instanceId))
+        errors.push(`Model binding ${instanceId}: instance ID must be stable.`);
+      if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
+        errors.push(`Model binding ${instanceId} must be an object.`);
+        continue;
+      }
+      if (!recordIds.has(binding.assetId))
+        errors.push(`Model binding ${instanceId} references unknown asset ${binding.assetId}.`);
+      if (!Array.isArray(binding.mapIds) || binding.mapIds.length === 0) {
+        errors.push(`Model binding ${instanceId} must name at least one map.`);
+        continue;
+      }
+      if (new Set(binding.mapIds).size !== binding.mapIds.length)
+        errors.push(`Model binding ${instanceId} repeats a map ID.`);
+      for (const mapId of binding.mapIds) {
+        const counts = declaredInstances.get(mapId);
+        if (!counts) {
+          errors.push(`Model binding ${instanceId} references unknown map ${mapId}.`);
+          continue;
+        }
+        counts[binding.assetId] = (counts[binding.assetId] ?? 0) + 1;
+      }
+      const placement = binding.placement;
+      if (
+        !placement ||
+        !(
+          placement.kind === 'player' ||
+          (placement.kind === 'target' && SAFE_ID.test(placement.targetKind ?? ''))
+        )
+      )
+        errors.push(`Model binding ${instanceId} must declare a player or target placement.`);
+    }
+  }
+
+  for (const [mapId, expected] of declaredInstances) {
+    const actual = mapBudgets[mapId]?.modelInstances;
+    if (JSON.stringify(stableJson(actual ?? {})) !== JSON.stringify(stableJson(expected)))
+      errors.push(`Map ${mapId}: modelInstances do not match the declared model bindings.`);
+  }
+
+  const positiveMapLimits = [
+    'maxUniqueAssets',
+    'maxAssetInstances',
+    'maxTriangles',
+    'maxEncodedModelBytes',
+    'maxDecodedGeometryBytes',
+  ];
+  for (const [mapId, map] of Object.entries(mapBudgets)) {
+    if (!SAFE_ID.test(mapId)) errors.push(`Map ${mapId}: map ID must be stable.`);
+    for (const field of positiveMapLimits)
+      if (!Number.isSafeInteger(map?.[field]) || map[field] < 1)
+        errors.push(`Map ${mapId}: ${field} must be a positive integer.`);
     const instances = map?.modelInstances;
     if (!instances || typeof instances !== 'object' || Array.isArray(instances)) {
       errors.push(`Map ${mapId}: modelInstances must be an object of asset counts.`);
@@ -106,6 +185,10 @@ function validatePolicy(policy, records, errors) {
       errors.push(`Map ${mapId}: encoded-byte budget exceeded.`);
     if (decodedBytes > map.maxDecodedGeometryBytes)
       errors.push(`Map ${mapId}: decoded-geometry budget exceeded.`);
+    if (decodedBytes > (runtime?.maxDecodedGeometryBytes ?? 0))
+      errors.push(`Map ${mapId}: runtime decoded-geometry limit exceeded.`);
+    if (uniqueIds.length > (runtime?.maxLoadedAssets ?? 0))
+      errors.push(`Map ${mapId}: runtime loaded-asset limit exceeded.`);
     if (totalTriangles > runtime.maxSceneTriangles)
       errors.push(`Map ${mapId}: runtime scene triangle limit exceeded.`);
   }
@@ -244,7 +327,7 @@ export async function validateGardenAssets({
         errors.push(`${record.id}: joint budget exceeded.`);
       if (actual.clipInventory.length > budget.maxClips)
         errors.push(`${record.id}: clip budget exceeded.`);
-      if (metrics.triangles > policy.runtimePolicy.maxTrianglesPerAsset)
+      if (metrics.triangles > (policy.runtimePolicy?.maxTrianglesPerAsset ?? 0))
         errors.push(`${record.id}: runtime per-asset triangle limit exceeded.`);
       if (!actual.rights.commercialUse || !actual.rights.redistribution || !actual.rights.approved)
         errors.push(`${record.id}: approved commercial redistribution rights are required.`);

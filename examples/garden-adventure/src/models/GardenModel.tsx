@@ -8,7 +8,13 @@ import {
   type ModelLease,
   type SemanticAction,
 } from 'waypoint-rpg-three';
-import { GARDEN_MODEL_RUNTIME_POLICY, gardenModelRecords } from './asset-records.js';
+import {
+  GARDEN_MODEL_BINDINGS,
+  GARDEN_MODEL_RUNTIME_POLICY,
+  gardenModelRecords,
+  type GardenModelInstanceId,
+} from './asset-records.js';
+import type { GardenMapId } from '../world/world.js';
 
 const GardenModelContext = createContext<ModelAssetLoader | null>(null);
 
@@ -41,27 +47,30 @@ export function GardenModelProvider({ children }: { readonly children: ReactNode
 }
 
 export function GardenModelVisual({
-  assetId,
   instanceId,
+  mapId,
   action = 'idle',
   modelPosition = [0, 0, 0],
   modelScale = [1, 1, 1],
   children,
 }: {
-  readonly assetId: string;
-  readonly instanceId: string;
+  readonly instanceId: GardenModelInstanceId;
+  readonly mapId: GardenMapId;
   readonly action?: SemanticAction;
   readonly modelPosition?: readonly [number, number, number];
   readonly modelScale?: readonly [number, number, number];
   readonly children: ReactNode;
 }) {
+  const binding = GARDEN_MODEL_BINDINGS[instanceId];
+  const assetId = binding.assetId;
+  const allowedOnMap = binding.mapIds.includes(mapId);
   const loader = useContext(GardenModelContext);
   const { invalidate } = useThree();
   const [lease, setLease] = useState<ModelLease | null>(null);
   const animationController = useRef<CharacterAnimationController | null>(null);
 
   useEffect(() => {
-    if (!loader) return;
+    if (!loader || !allowedOnMap) return;
     const request = new AbortController();
     let activeLease: ModelLease | null = null;
     reportModel(instanceId, assetId, 'loading');
@@ -90,7 +99,7 @@ export function GardenModelVisual({
       activeLease?.release();
       setLease(null);
     };
-  }, [assetId, instanceId, invalidate, loader]);
+  }, [allowedOnMap, assetId, instanceId, invalidate, loader]);
 
   useEffect(() => {
     if (!lease || lease.clips.length === 0) return;
