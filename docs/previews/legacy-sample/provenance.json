@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "6fbc210c521b6b1ae92437542cf3d782ef6ac407",
+  "sourceCommit": "8b5d07e4a3164756f9435cf96dfe5d34ebd579ab",
   "images": [
     {
       "file": "01-title.png",
@@ -46,56 +46,56 @@
       "file": "06-guardian-dialogue.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1215356,
-      "sha256": "da483e436023176b5616694f187ef2e6783437788cc22e8dfec3569d2ff0a2ce",
+      "bytes": 1224003,
+      "sha256": "aea25eff776ff8cd8ef0e7b68f9bd9ffe129c2780ee5a56097fc803ede801542",
       "checkpoint": "greeting NPC dialogue is open"
     },
     {
       "file": "07-encounter-choice.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1099110,
-      "sha256": "a1f8378200619ab3f7e514b531d41bfd66c4315c69e3de1f12bb8ab64c1f13f6",
+      "bytes": 1096362,
+      "sha256": "f783a6bb95b7d0973858fe601820e8fd41101788894b5223f8516088a0ad45ad",
       "checkpoint": "greeting quest asks for its physical choice"
     },
     {
       "file": "08-physical-interaction.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1237792,
-      "sha256": "8fff693b72d567545d5079e707f827a649cac8ca5f793b765f0447bdaa9ffced",
+      "bytes": 1236528,
+      "sha256": "8e35b2082684c804098c4ddd7b5544c222ab7379ce1800c7efc42a8c7e1eaaf7",
       "checkpoint": "correct physical choice committed: greeting-1"
     },
     {
       "file": "09-sticker-reward.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1082302,
-      "sha256": "8e0a2561f8722c2d2615170cebe6f211f852c2c4fc7f3488caf3600acf61f37f",
+      "bytes": 1079657,
+      "sha256": "ccf7b65c308b7d034543b6ff4cec5e15d0da1998ec3d482555798cef3943d6c3",
       "checkpoint": "greeting quest completion and sticker reward"
     },
     {
       "file": "10-replayed-quest.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1093651,
-      "sha256": "adeb17ed9ca6d48565af779dc4cc173ffb2ef59ea7c3a5ac3d47edb9f69d143d",
+      "bytes": 1095004,
+      "sha256": "6d1092b952602b2132b3aad98f3a58338085965abad07aeccf1dcf0e62a50b13",
       "checkpoint": "previously completed greeting quest has been replayed into a real encounter"
     },
     {
       "file": "11-lightweight-battle.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 778731,
-      "sha256": "a815ebc8cb4f6a867893d7b90eb021f76c8378d50ff862bfb69d3a044bc9327b",
+      "bytes": 778531,
+      "sha256": "296344a75a52aec1207d26d42d6a9348e9294f0cb623ed6055ce8d5720f8b186",
       "checkpoint": "real bird encounter is at playerChoice"
     },
     {
       "file": "12-world-discovery.png",
       "width": 3960,
       "height": 1890,
-      "bytes": 1856375,
-      "sha256": "31a01c13d73a7ba0290e775accbc5b4a31491af4eece3a50cd1cbd32557d2511",
+      "bytes": 1875219,
+      "sha256": "ac27c42006d8e062c43820f0ff87f5777839a53ec88c0af65cb25d39a7c96564",
       "checkpoint": "cave entrance discovery is committed in town"
     },
     {
