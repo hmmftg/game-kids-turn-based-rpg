@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ModelAssetLoader, ModelLease } from './model-loader.js';
+import type { ModelAssetLoader, ModelLease } from 'waypoint-rpg-three';
 import { modelLeaseForRequest } from './model-instance-lease.js';
 
 const loader = {} as ModelAssetLoader;

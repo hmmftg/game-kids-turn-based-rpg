@@ -20,7 +20,8 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "three": "0.186.0",
-    "waypoint-rpg-gameplay": "file:../../packages/gameplay"
+    "waypoint-rpg-gameplay": "file:../../packages/gameplay",
+    "waypoint-rpg-three": "file:../../packages/three"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

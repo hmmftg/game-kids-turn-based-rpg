@@ -29,6 +29,7 @@ export interface GardenSceneProbe {
   readonly cameraKind: 'orthographic' | 'unknown';
   readonly visibleMeshCount: number;
   readonly frameCount: number;
+  readonly totalFrameCount: number;
   readonly cleanupCount: number;
   readonly playerPosition: GardenWorldPoint;
   readonly playerAtAnchor: boolean;
@@ -50,9 +51,24 @@ export interface GardenSceneReadiness {
   readonly playerAtAnchor: boolean;
 }
 
+export interface GardenRendererResourceSnapshot {
+  readonly mapId: GardenMapId;
+  readonly sceneGeneration: number;
+  readonly geometryCount: number;
+  readonly textureCount: number;
+  readonly drawCalls: number;
+  readonly triangles: number;
+  readonly sampledAt: number;
+}
+
+export interface GardenRendererResourceProbe {
+  sample(): GardenRendererResourceSnapshot;
+}
+
 declare global {
   interface Window {
     __gardenProbe?: GardenSceneProbe;
+    __gardenRendererResourceProbe?: GardenRendererResourceProbe;
   }
 }
 

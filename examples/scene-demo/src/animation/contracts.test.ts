@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   MODEL_ASSET_SCHEMA_VERSION,
   MODEL_IMPORT_BUDGET,
+  animationClipId,
+  findAnimationByClipReference,
   resolveSemanticClip,
   validateModelAssetRecord,
+  type ModelRuntimePolicy,
   type ModelAssetRecord,
-} from './contracts.js';
+} from 'waypoint-rpg-three';
 
 const validRecord: ModelAssetRecord = {
   schemaVersion: MODEL_ASSET_SCHEMA_VERSION,
@@ -96,6 +99,30 @@ describe('model asset contracts', () => {
     expect(paths).toContain('rights.approved');
   });
 
+  it('allows an explicitly trusted local pilot policy without mutating unapproved records', () => {
+    const localPilotRecord = {
+      ...validRecord,
+      metrics: { ...validRecord.metrics, triangles: 60_001 },
+      rights: { ...validRecord.rights, approved: false },
+    };
+    const pilotPolicy: Pick<ModelRuntimePolicy, 'maxTrianglesPerAsset' | 'allowUnapproved'> = {
+      maxTrianglesPerAsset: 400_000,
+      allowUnapproved: true,
+    };
+
+    expect(validateModelAssetRecord(localPilotRecord).map(({ path }) => path)).toEqual([
+      'rights.approved',
+      'metrics.triangles',
+    ]);
+    const triangleDiagnostic = validateModelAssetRecord(localPilotRecord).find(
+      ({ path }) => path === 'metrics.triangles',
+    );
+    expect(triangleDiagnostic?.message).toContain('60001');
+    expect(triangleDiagnostic?.message).toContain('60000');
+    expect(validateModelAssetRecord(localPilotRecord, pilotPolicy)).toEqual([]);
+    expect(localPilotRecord.rights.approved).toBe(false);
+  });
+
   it('requires finite ordered bounds, a supported coordinate convention, and semantic clip names', () => {
     const invalid = {
       ...validRecord,
@@ -112,6 +139,37 @@ describe('model asset contracts', () => {
   it('uses an authored idle fallback for absent action clips', () => {
     expect(resolveSemanticClip(validRecord, 'combat')).toBe('Idle');
     expect(resolveSemanticClip({ clips: {}, fallbackAction: 'static' }, 'move')).toBeNull();
+  });
+
+  it('maps unnamed and duplicate source animations by stable source index', () => {
+    const clips = [{ name: '' }, { name: 'Walk' }, { name: 'Walk' }];
+    expect(animationClipId(0)).toBe('clip-1');
+    expect(animationClipId(2)).toBe('clip-3');
+    expect(findAnimationByClipReference(clips, 'clip-1')).toBe(clips[0]);
+    expect(findAnimationByClipReference(clips, 'clip-3')).toBe(clips[2]);
+    expect(findAnimationByClipReference(clips, 'Walk')).toBeNull();
+    expect(findAnimationByClipReference(clips, 'missing')).toBeNull();
+  });
+
+  it('allows stable clip IDs in semantic mappings when source names are absent or duplicated', () => {
+    const indexedRecord = {
+      ...validRecord,
+      clipInventory: [
+        { name: '', durationSeconds: 1 },
+        { name: 'Walk', durationSeconds: 0.8 },
+        { name: 'Walk', durationSeconds: 0.9 },
+      ],
+      clips: { idle: 'clip-1', move: 'clip-3' },
+    };
+    expect(validateModelAssetRecord(indexedRecord)).toEqual([]);
+
+    const ambiguousRecord = {
+      ...indexedRecord,
+      clips: { idle: 'Walk' },
+    };
+    expect(
+      validateModelAssetRecord(ambiguousRecord).map((diagnostic) => diagnostic.path),
+    ).toContain('clips.idle');
   });
 
   it('rejects records that would strip rig data, use invalid axis transforms, or map missing clips', () => {

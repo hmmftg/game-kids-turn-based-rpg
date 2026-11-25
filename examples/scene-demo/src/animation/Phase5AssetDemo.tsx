@@ -4,7 +4,7 @@ import type { Camera, Scene, WebGLRenderer } from 'three';
 import { transitionGameplay } from 'waypoint-rpg-gameplay';
 import type { GameplayCommand } from 'waypoint-rpg-gameplay';
 import type { CharacterAnimationSnapshot } from './character-animation.js';
-import type { SemanticAction } from './contracts.js';
+import type { SemanticAction } from 'waypoint-rpg-three';
 import {
   applyAnimationProjection,
   createAnimationAbilityCommand,
@@ -15,7 +15,7 @@ import {
 import type { AnimationProjectionState } from './gameplay-demo.js';
 import { ModelInstance, type ModelLoadStatus } from './ModelInstance.js';
 import { phase5AssetRecords } from './asset-records.js';
-import { createModelAssetLoader } from './model-loader.js';
+import { createModelAssetLoader } from 'waypoint-rpg-three';
 
 const STATIC_ID = 'phase5-textured-static';
 const RIGGED_ID = 'phase5-animated-guardian';
@@ -78,8 +78,16 @@ export function Phase5AssetDemo() {
     if (!staticRecord) throw new Error('The Phase 5 static fixture is missing.');
     return createModelAssetLoader([
       ...phase5AssetRecords,
-      { ...staticRecord, id: 'phase5-slow-static' },
-      { ...staticRecord, id: 'phase5-error-static' },
+      {
+        ...staticRecord,
+        id: 'phase5-slow-static',
+        runtimePath: 'models/phase5-slow-static.glb',
+      },
+      {
+        ...staticRecord,
+        id: 'phase5-error-static',
+        runtimePath: 'models/phase5-error-static.glb',
+      },
     ]);
   }, [testMode]);
   const [statuses, setStatuses] = useState<Readonly<Record<string, ModelLoadStatus>>>({});

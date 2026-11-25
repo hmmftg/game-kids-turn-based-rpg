@@ -13,16 +13,13 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type {
-  ModelAssetRecord,
-  SemanticAction,
-} from '../../../../examples/scene-demo/src/animation/contracts.js';
-import { validateModelAssetRecord } from '../../../../examples/scene-demo/src/animation/contracts.js';
-import type {
-  ModelAssetLoader,
-  ModelLease,
-} from '../../../../examples/scene-demo/src/animation/model-loader.js';
-import { createModelAssetLoader } from '../../../../examples/scene-demo/src/animation/model-loader.js';
+import type { ModelAssetRecord, ModelRuntimePolicy, SemanticAction } from 'waypoint-rpg-three';
+import {
+  createModelAssetLoader,
+  DEFAULT_MODEL_RUNTIME_POLICY,
+  validateModelAssetRecord,
+} from 'waypoint-rpg-three';
+import type { ModelAssetLoader, ModelLease } from 'waypoint-rpg-three';
 import fixtureRecords from '../../../../examples/scene-demo/src/animation/asset-records.json';
 import './preview.css';
 
@@ -64,17 +61,14 @@ declare global {
 
 const defaultRecords = fixtureRecords as unknown as readonly ModelAssetRecord[];
 
-function previewLoaderRecords(records: readonly ModelAssetRecord[]): readonly ModelAssetRecord[] {
-  return records.map((record) => ({
-    ...record,
-    // The scene-demo loader is a release consumer and requires approved records.
-    // This transient copy is only for local technical preview; the authored rights
-    // shown in the UI and catalog are never changed or written back.
-    rights: { ...record.rights, approved: true },
-  }));
+interface PreviewRecordResult {
+  readonly records: readonly ModelAssetRecord[];
+  readonly policy?: Partial<ModelRuntimePolicy>;
+  readonly baseUrl?: string;
+  readonly diagnostics: readonly string[];
 }
 
-async function readRecordsFromUrl(manifestUrl: string): Promise<readonly ModelAssetRecord[]> {
+async function readRecordsFromUrl(manifestUrl: string): Promise<PreviewRecordResult> {
   const url = new URL(manifestUrl, window.location.href);
   if (url.origin !== window.location.origin)
     throw new Error('Preview manifests must be loaded from this local origin.');
@@ -87,17 +81,34 @@ async function readRecordsFromUrl(manifestUrl: string): Promise<readonly ModelAs
   const parsed: unknown = await response.json();
   if (!Array.isArray(parsed))
     throw new Error('Model manifest must contain an array of asset records.');
+  const pilotEnabled = response.headers.get('X-Waypoint-Meshy-Pilot') === 'enabled';
+  const policy: ModelRuntimePolicy = pilotEnabled
+    ? {
+        maxTrianglesPerAsset: 400_000,
+        maxLoadedAssets: 5,
+        maxDecodedGeometryBytes: 32 * 1024 * 1024,
+        maxSceneTriangles: 1_500_000,
+        allowUnapproved: true,
+      }
+    : { ...DEFAULT_MODEL_RUNTIME_POLICY, allowUnapproved: true };
+  const records: ModelAssetRecord[] = [];
+  const diagnostics: string[] = [];
   for (const [index, record] of parsed.entries()) {
-    const diagnostics = validateModelAssetRecord({
-      ...(record as ModelAssetRecord),
-      rights: { ...(record as ModelAssetRecord).rights, approved: true },
-    });
-    if (diagnostics.length > 0)
-      throw new Error(
-        `Manifest record ${index + 1} is invalid: ${diagnostics.map((item) => item.path).join(', ')}.`,
+    const recordDiagnostics = validateModelAssetRecord(record, policy);
+    if (recordDiagnostics.length > 0) {
+      diagnostics.push(
+        `Manifest record ${index + 1} is invalid: ${recordDiagnostics.map((item) => item.path).join(', ')}.`,
       );
+      continue;
+    }
+    records.push(record as ModelAssetRecord);
   }
-  return parsed as ModelAssetRecord[];
+  return {
+    records,
+    policy,
+    diagnostics,
+    ...(pilotEnabled ? { baseUrl: new URL('.', url).href } : {}),
+  };
 }
 
 function defaultAsset(records: readonly ModelAssetRecord[]): ModelAssetRecord {
@@ -285,6 +296,8 @@ function ResourceStats({
 
 function PreviewApp() {
   const [records, setRecords] = useState<readonly ModelAssetRecord[]>([]);
+  const [runtimePolicy, setRuntimePolicy] = useState<Partial<ModelRuntimePolicy>>();
+  const [runtimeBaseUrl, setRuntimeBaseUrl] = useState<string>();
   const [loadError, setLoadError] = useState('');
   const [selectedAssetId, setSelectedAssetId] = useState('');
   const [semanticAction, setSemanticAction] = useState<SemanticAction>('idle');
@@ -303,8 +316,14 @@ function PreviewApp() {
   const contextLossListenerRef = useRef<((event: Event) => void) | null>(null);
   const previewManifestUrl = new URLSearchParams(window.location.search).get('records');
   const loader = useMemo(
-    () => (records.length ? createModelAssetLoader(previewLoaderRecords(records)) : null),
-    [records],
+    () =>
+      records.length
+        ? createModelAssetLoader(records, {
+            ...(runtimePolicy ? { policy: runtimePolicy } : {}),
+            ...(runtimeBaseUrl ? { baseUrl: () => runtimeBaseUrl } : {}),
+          })
+        : null,
+    [records, runtimePolicy, runtimeBaseUrl],
   );
   const record = records.find((asset) => asset.id === selectedAssetId) ?? null;
   const clipInventory = record?.clipInventory ?? [];
@@ -315,13 +334,17 @@ function PreviewApp() {
 
   useEffect(() => {
     let active = true;
-    const loading = previewManifestUrl
+    const loading: Promise<PreviewRecordResult> = previewManifestUrl
       ? readRecordsFromUrl(previewManifestUrl)
-      : Promise.resolve(defaultRecords);
+      : Promise.resolve({ records: defaultRecords, diagnostics: [] });
     void loading
-      .then((nextRecords) => {
+      .then((result) => {
         if (!active) return;
+        const nextRecords = result.records;
         setRecords(nextRecords);
+        setRuntimePolicy(result.policy);
+        setRuntimeBaseUrl(result.baseUrl);
+        setLoadError(result.diagnostics.join(' '));
         const first = defaultAsset(nextRecords);
         if (first) {
           setSelectedAssetId(first.id);

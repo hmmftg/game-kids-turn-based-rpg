@@ -1,4 +1,4 @@
-import type { ModelAssetLoader, ModelLease } from './model-loader.js';
+import type { ModelAssetLoader, ModelLease } from 'waypoint-rpg-three';
 
 export interface LoadedModelLease {
   readonly assetId: string;

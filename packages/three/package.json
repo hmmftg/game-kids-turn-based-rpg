@@ -1,0 +1,33 @@
+{
+  "name": "waypoint-rpg-three",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verified Three.js GLB loading and shared model resource ownership for Waypoint RPG consumers.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "three": ">=0.186.0 <0.187.0"
+  },
+  "devDependencies": {
+    "three": "0.186.0",
+    "typescript": "6.0.3"
+  }
+}

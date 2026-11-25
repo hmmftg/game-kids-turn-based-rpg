@@ -15,7 +15,7 @@ import { SceneHost } from './scene-host.js';
 import { sceneRegistry } from './scenes/registry.js';
 import { subscribeDemoRuntime } from './scenes/scene-runtime.js';
 import { Phase5AssetDemo } from './animation/Phase5AssetDemo.js';
-import type { SemanticAction } from './animation/contracts.js';
+import type { SemanticAction } from 'waypoint-rpg-three';
 import {
   bloodLeafLanternAwakening,
   bloodLeafTimelineRegistry,

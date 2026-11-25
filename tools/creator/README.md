@@ -22,6 +22,14 @@ Use `--replace` to intentionally replace a changed model with the same stable
 asset ID. `--require-release-approval` enforces the legacy release approval
 flag; otherwise import is a technical step and does not grant release approval.
 
+Trusted local tooling may call `importModel` with `preserveGlbBytes: true` for a
+self-contained GLB. This inspects the source while copying its bytes unchanged,
+so the source and runtime SHA-256 values must match. The default per-asset limit
+is 60,000 triangles. A local pilot may explicitly pass `budget: {
+maxTriangles: 400000 }`; all other resource limits remain at or below their
+hard defaults. Budget values must come from trusted developer configuration,
+not asset metadata.
+
 FBX, OBJ, and Blender source files are not parsed directly. Convert them locally
 to glTF/GLB with the documented optional Blender workflow first.
 

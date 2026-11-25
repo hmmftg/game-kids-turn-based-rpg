@@ -17,6 +17,8 @@ export interface ImportModelOptions {
   readonly replace?: boolean;
   readonly budget?: Partial<ImportBudget>;
   readonly requireApproval?: boolean;
+  /** Copy a self-contained GLB's original bytes without reserializing its content. */
+  readonly preserveGlbBytes?: boolean;
 }
 
 export interface ImportedAssetRecord {
@@ -29,7 +31,10 @@ export interface ImportedAssetRecord {
   readonly outputSha256: string;
   readonly rights: Readonly<Record<string, unknown>>;
   readonly clipInventory: readonly {
+    readonly id: string;
+    readonly animationIndex: number;
     readonly name: string;
+    readonly sourceName: string;
     readonly durationSeconds: number;
   }[];
   readonly metrics: Readonly<Record<string, number | readonly string[]>>;
@@ -42,4 +47,5 @@ export interface ImportResult {
 }
 
 export declare const DEFAULT_BUDGET: Readonly<ImportBudget>;
+export declare const LOCAL_PILOT_MAX_TRIANGLES: 400000;
 export declare function importModel(options: ImportModelOptions): Promise<ImportResult>;

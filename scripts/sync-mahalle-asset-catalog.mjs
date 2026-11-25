@@ -152,9 +152,10 @@ export async function syncMahalleAssetCatalog(mode = 'check') {
   }
 
   const actual = await readFile(OUTPUT, 'utf8');
+  const normalizeLineEndings = (value) => value.replaceAll('\r\n', '\n');
   assert.equal(
-    actual,
-    expected,
+    normalizeLineEndings(actual),
+    normalizeLineEndings(expected),
     'Mahalle creator catalog is stale; run npm run creator:mahalle-catalog:write.',
   );
   console.log('Mahalle creator catalog matches the shipped asset registry and GLB metrics.');

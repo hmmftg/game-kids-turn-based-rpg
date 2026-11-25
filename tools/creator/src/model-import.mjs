@@ -24,6 +24,7 @@ const DEFAULT_BUDGET = Object.freeze({
   maxClips: 16,
   maxClipSeconds: 180,
 });
+const LOCAL_PILOT_MAX_TRIANGLES = 400_000;
 const UNSUPPORTED_EXTENSIONS = new Set([
   'KHR_draco_mesh_compression',
   'KHR_texture_basisu',
@@ -58,6 +59,24 @@ function isPlainObject(value) {
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function resolveBudget(budget) {
+  if (!isPlainObject(budget)) fail('Budget must be an object of trusted resource limits.');
+  const resolved = { ...DEFAULT_BUDGET };
+  for (const [name, value] of Object.entries(budget)) {
+    if (!Object.hasOwn(DEFAULT_BUDGET, name)) fail(`Unknown importer budget ${name}.`);
+    if (!Number.isSafeInteger(value) || value <= 0)
+      fail(`${name} must be a positive safe integer.`);
+    const hardLimit = name === 'maxTriangles' ? LOCAL_PILOT_MAX_TRIANGLES : DEFAULT_BUDGET[name];
+    if (value > hardLimit) {
+      if (name === 'maxTriangles')
+        fail(`maxTriangles cannot exceed the local pilot limit ${LOCAL_PILOT_MAX_TRIANGLES}.`);
+      fail(`${name} cannot exceed its hard limit ${hardLimit}.`);
+    }
+    resolved[name] = value;
+  }
+  return Object.freeze(resolved);
 }
 
 function parseGlbJson(bytes, sourcePath) {
@@ -419,7 +438,15 @@ function checkTexturedPrimitives(root, sourcePath) {
   }
 }
 
-function inspectDocument(document, sourcePath, metadata, sourceBytes, outputBytes, budget) {
+function inspectDocument(
+  document,
+  sourcePath,
+  metadata,
+  sourceBytes,
+  outputBytes,
+  budget,
+  preserveGlbBytes,
+) {
   const root = document.getRoot();
   checkFiniteAccessors(root, sourcePath);
   checkTexturedPrimitives(root, sourcePath);
@@ -488,7 +515,8 @@ function inspectDocument(document, sourcePath, metadata, sourceBytes, outputByte
     fail(`${sourcePath}: ${jointCount} joints exceed the limit ${budget.maxJoints}.`);
 
   const clipInventory = root.listAnimations().map((animation, index) => {
-    const name = animation.getName().trim() || `clip-${index + 1}`;
+    const sourceName = animation.getName();
+    const name = sourceName.trim() || `clip-${index + 1}`;
     let durationSeconds = 0;
     for (const channel of animation.listChannels()) {
       const times = channel.getSampler()?.getInput()?.getArray();
@@ -501,14 +529,28 @@ function inspectDocument(document, sourcePath, metadata, sourceBytes, outputByte
       durationSeconds > budget.maxClipSeconds
     )
       fail(`${sourcePath}: animation ${name} has an invalid or over-budget duration.`);
-    return { name, durationSeconds: Number(durationSeconds.toFixed(4)) };
+    return {
+      id: `clip-${index + 1}`,
+      animationIndex: index,
+      name,
+      sourceName,
+      durationSeconds: Number(durationSeconds.toFixed(4)),
+    };
   });
   if (clipInventory.length > budget.maxClips) fail(`${sourcePath}: too many animation clips.`);
-  if (new Set(clipInventory.map((clip) => clip.name)).size !== clipInventory.length)
+  if (
+    !preserveGlbBytes &&
+    new Set(clipInventory.map((clip) => clip.name)).size !== clipInventory.length
+  )
     fail(`${sourcePath}: animation clip names must be unique.`);
   for (const [action, clipName] of Object.entries(metadata.clips)) {
-    if (!clipInventory.some((clip) => clip.name === clipName))
+    const byId = clipInventory.find((clip) => clip.id === clipName);
+    const byName = clipInventory.filter((clip) => clip.name === clipName);
+    const matches = byId ? [byId] : byName;
+    if (matches.length === 0)
       fail(`${sourcePath}: semantic action ${action} references missing clip ${clipName}.`);
+    if (matches.length > 1)
+      fail(`${sourcePath}: semantic action ${action} references ambiguous clip name ${clipName}.`);
   }
 
   const textures = root.listTextures();
@@ -654,11 +696,15 @@ export async function importModel({
   outputDirectory = defaultOutputDirectory,
   manifestPath = defaultManifestPath,
   replace = false,
-  budget = DEFAULT_BUDGET,
+  budget = {},
   requireApproval = true,
+  preserveGlbBytes = false,
 }) {
   const absoluteSource = resolve(sourcePath);
   const absoluteMetadata = resolve(metadataPath);
+  budget = resolveBudget(budget);
+  if (preserveGlbBytes && extname(absoluteSource).toLowerCase() !== '.glb')
+    fail(`${absoluteSource}: byte preservation is supported only for self-contained GLB sources.`);
   const source = await inspectSource(absoluteSource, budget);
   const metadata = parseJson((await readFile(absoluteMetadata)).toString('utf8'), absoluteMetadata);
   const normalizedMetadata = validateMetadata(absoluteMetadata, metadata, requireApproval);
@@ -674,11 +720,13 @@ export async function importModel({
       `${absoluteSource}: glTF parser rejected the file (${error instanceof Error ? error.message : String(error)}).`,
     );
   }
-  for (const [index, animation] of document.getRoot().listAnimations().entries()) {
-    if (animation.getName().trim() === '') animation.setName(`clip-${index + 1}`);
+  if (!preserveGlbBytes) {
+    for (const [index, animation] of document.getRoot().listAnimations().entries()) {
+      if (animation.getName().trim() === '') animation.setName(`clip-${index + 1}`);
+    }
   }
-  const outputBytes = await io.writeBinary(document);
-  const outputDocument = await io.readBinary(outputBytes);
+  const outputBytes = preserveGlbBytes ? source.bytes : await io.writeBinary(document);
+  const outputDocument = preserveGlbBytes ? document : await io.readBinary(outputBytes);
   const record = inspectDocument(
     outputDocument,
     absoluteSource,
@@ -686,6 +734,7 @@ export async function importModel({
     source.sourceBytes,
     outputBytes,
     budget,
+    preserveGlbBytes,
   );
   validateRuntimeRecord(record, absoluteSource, budget);
   const recordWithHashes = {
@@ -774,4 +823,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   }
 }
 
-export { DEFAULT_BUDGET, parseGlbJson, parseArguments };
+export { DEFAULT_BUDGET, LOCAL_PILOT_MAX_TRIANGLES, parseGlbJson, parseArguments };

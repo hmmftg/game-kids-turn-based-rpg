@@ -1,6 +1,10 @@
 import { AnimationMixer, LoopOnce, LoopRepeat } from 'three';
 import type { AnimationAction, AnimationClip, Object3D } from 'three';
-import type { ModelAssetRecord, SemanticAction } from './contracts.js';
+import {
+  findAnimationByClipReference,
+  type ModelAssetRecord,
+  type SemanticAction,
+} from 'waypoint-rpg-three';
 
 export interface CharacterAnimationOptions {
   readonly crossFadeSeconds?: number;
@@ -33,7 +37,6 @@ export function createCharacterAnimationController(
   options: CharacterAnimationOptions = {},
 ): CharacterAnimationController {
   const mixer = new AnimationMixer(root);
-  const clipsByName = new Map(clips.map((clip) => [clip.name, clip]));
   const crossFadeSeconds = options.crossFadeSeconds ?? DEFAULT_CROSS_FADE_SECONDS;
   if (!Number.isFinite(crossFadeSeconds) || crossFadeSeconds < 0 || crossFadeSeconds > 2)
     throw new RangeError('Animation crossfade must be between zero and two seconds.');
@@ -57,11 +60,11 @@ export function createCharacterAnimationController(
 
     let resolvedAction: SemanticAction | null = semanticAction;
     let clipName = record.clips[semanticAction];
-    let clip = clipName ? clipsByName.get(clipName) : undefined;
+    let clip = clipName ? (findAnimationByClipReference(clips, clipName) ?? undefined) : undefined;
     if (!clip) {
       if (record.fallbackAction === 'idle') {
         clipName = record.clips.idle;
-        clip = clipName ? clipsByName.get(clipName) : undefined;
+        clip = clipName ? (findAnimationByClipReference(clips, clipName) ?? undefined) : undefined;
         resolvedAction = clip ? 'idle' : null;
       } else {
         resolvedAction = null;

@@ -55,7 +55,12 @@ export async function checkFrameworkSceneConsumer() {
     const manifestPath = path.join(consumerRoot, 'package.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
     manifest.dependencies = { ...manifest.dependencies };
-    const packageNames = ['waypoint-rpg-core', 'waypoint-rpg-narrative', 'waypoint-rpg-gameplay'];
+    const packageNames = [
+      'waypoint-rpg-core',
+      'waypoint-rpg-narrative',
+      'waypoint-rpg-gameplay',
+      'waypoint-rpg-three',
+    ];
     for (const packageName of packageNames) delete manifest.dependencies[packageName];
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     runNpm(['ci', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: consumerRoot });
@@ -76,6 +81,11 @@ export async function checkFrameworkSceneConsumer() {
         name: 'waypoint-rpg-gameplay',
         workspace: 'packages/gameplay',
         outputVariable: 'GAMEPLAY_TARBALL_OUTPUT',
+      },
+      {
+        name: 'waypoint-rpg-three',
+        workspace: 'packages/three',
+        outputVariable: 'THREE_TARBALL_OUTPUT',
       },
     ];
     for (const packageToInstall of tarballs) {
@@ -129,7 +139,7 @@ export async function checkFrameworkSceneConsumer() {
     runNpm(['run', 'build'], { cwd: consumerRoot });
     runNpm(['run', 'test:e2e'], { cwd: consumerRoot });
     log(
-      'framework scene consumer: offline core+narrative+gameplay tarball install, typecheck, unit tests, Vite build, and Chromium narrative/lifecycle/model smoke passed',
+      'framework scene consumer: offline core+narrative+gameplay+three tarball install, typecheck, unit tests, Vite build, and Chromium narrative/lifecycle/model smoke passed',
     );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });

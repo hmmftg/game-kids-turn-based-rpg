@@ -1,7 +1,7 @@
 import { AnimationClip, Bone, Group, VectorKeyframeTrack } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { createCharacterAnimationController } from './character-animation.js';
-import type { ModelAssetRecord, SemanticAction } from './contracts.js';
+import type { ModelAssetRecord, SemanticAction } from 'waypoint-rpg-three';
 
 const assetRecord = {
   clips: {
@@ -151,6 +151,38 @@ describe('character animation controller', () => {
     expect(actor.joint.position.toArray()).toEqual([0, 0, 0]);
     controller.dispose();
   });
+
+  it('maps semantic actions by stable IDs when original source clip names are blank or duplicated', () => {
+    const actor = character();
+    const sourceClips = [
+      new AnimationClip('', 1, [
+        new VectorKeyframeTrack('Character root joint.position', [0, 1], [0, 0, 0, 0, 1, 0]),
+      ]),
+      new AnimationClip('Walk', 1, [
+        new VectorKeyframeTrack('Character root joint.position', [0, 1], [0, 0, 0, 1, 0, 0]),
+      ]),
+      new AnimationClip('Walk', 1, [
+        new VectorKeyframeTrack('Character root joint.position', [0, 1], [0, 0, 0, 0, 0, 1]),
+      ]),
+    ];
+    const indexedRecord = {
+      clips: { idle: 'clip-1', move: 'clip-3' },
+      fallbackAction: 'idle',
+    } as Pick<ModelAssetRecord, 'clips' | 'fallbackAction'>;
+    const controller = createCharacterAnimationController(actor.root, sourceClips, indexedRecord, {
+      crossFadeSeconds: 0,
+    });
+
+    controller.setAction('move');
+    controller.advance(0.5);
+    expect(actor.joint.position.z).toBeCloseTo(0.5, 2);
+    controller.setAction('interact');
+    controller.advance(0.25);
+    expect(actor.joint.position.y).toBeCloseTo(0.25, 2);
+
+    controller.dispose();
+  });
+
   it('applies reduced-motion poses immediately without scheduling mixer frames', () => {
     const actor = character();
     const invalidate = vi.fn();

@@ -13,6 +13,7 @@ const frameworkPackages = [
   { name: 'waypoint-rpg-core', workspace: 'packages/core' },
   { name: 'waypoint-rpg-narrative', workspace: 'packages/narrative' },
   { name: 'waypoint-rpg-gameplay', workspace: 'packages/gameplay' },
+  { name: 'waypoint-rpg-three', workspace: 'packages/three' },
 ];
 
 async function packFrameworkPackage(artifactRoot, { name, workspace }) {
@@ -84,6 +85,7 @@ async function verifyEachArchiveIndependently(consumerRoot, temporaryRoot, archi
     'waypoint-rpg-core': `import { createGameRuntime, findPath, type WorldMap } from 'waypoint-rpg-core';\nvoid createGameRuntime; void findPath; const map: WorldMap | undefined = undefined; void map;\n`,
     'waypoint-rpg-narrative': `import { compileNarrative, createNarrativeState, decodeNarrativeState, getDialogueView, getFact, getQuestStatus, transitionNarrative, validateNarrative } from 'waypoint-rpg-narrative';\nvoid [compileNarrative, createNarrativeState, decodeNarrativeState, getDialogueView, getFact, getQuestStatus, transitionNarrative, validateNarrative];\n`,
     'waypoint-rpg-gameplay': `import { applyGameplayGrant, compileGameplay, createGameplayState, decodeGameplayState, encodeGameplayState, getCharacterLevel, getCharacterAttributes, getEffectiveCharacterAttributes, getInventorySlotCount, getUnlockedAbilityIds, transitionGameplay, validateGameplay } from 'waypoint-rpg-gameplay';\nvoid [applyGameplayGrant, compileGameplay, createGameplayState, decodeGameplayState, encodeGameplayState, getCharacterLevel, getCharacterAttributes, getEffectiveCharacterAttributes, getInventorySlotCount, getUnlockedAbilityIds, transitionGameplay, validateGameplay];\n`,
+    'waypoint-rpg-three': `import { animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord } from 'waypoint-rpg-three';\nvoid [animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord];\n`,
   };
 
   for (const archive of archives) {
@@ -98,6 +100,16 @@ async function verifyEachArchiveIndependently(consumerRoot, temporaryRoot, archi
           type: 'module',
           dependencies: {
             [archive.name]: `file:${path.relative(probeRoot, archive.archive).replaceAll(path.sep, '/')}`,
+            ...(archive.name === 'waypoint-rpg-three'
+              ? {
+                  three: `file:${path
+                    .relative(probeRoot, path.resolve(repoRoot, '../../node_modules/three'))
+                    .replaceAll(path.sep, '/')}`,
+                  '@types/three': `file:${path
+                    .relative(probeRoot, path.resolve(repoRoot, '../../node_modules/@types/three'))
+                    .replaceAll(path.sep, '/')}`,
+                }
+              : {}),
           },
         },
         null,
@@ -151,12 +163,12 @@ async function checkPublicImports(consumerRoot) {
     const source = await readFile(file, 'utf8');
     assert.doesNotMatch(
       source,
-      /(?:from\s*|import\s*\()["']waypoint-rpg-(?:core|narrative|gameplay)\//,
+      /(?:from\s*|import\s*\()["']waypoint-rpg-(?:core|narrative|gameplay|three)\//,
       `Framework deep imports are not public APIs: ${path.relative(consumerRoot, file)}`,
     );
     assert.doesNotMatch(
       source,
-      /(?:from\s*|import\s*\()["'][^"']*(?:scene-demo|src\/framework|packages\/(?:core|narrative|gameplay)\/src)/,
+      /(?:from\s*|import\s*\()["'][^"']*(?:scene-demo|src\/framework|packages\/(?:core|narrative|gameplay|three)\/src)/,
       `The sample must not import repository-private implementation: ${path.relative(consumerRoot, file)}`,
     );
   }
@@ -195,7 +207,7 @@ export async function checkFrameworkGardenConsumer() {
       [
         '--input-type=module',
         '-e',
-        "import { createGameRuntime, findPath } from 'waypoint-rpg-core'; import { compileNarrative, validateNarrative } from 'waypoint-rpg-narrative'; if (![createGameRuntime, findPath, compileNarrative, validateNarrative].every((item) => typeof item === 'function')) process.exit(1);",
+        "import { createGameRuntime, findPath } from 'waypoint-rpg-core'; import { compileNarrative, validateNarrative } from 'waypoint-rpg-narrative'; import { animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord } from 'waypoint-rpg-three'; if (![createGameRuntime, findPath, compileNarrative, validateNarrative, animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord].every((item) => typeof item === 'function')) process.exit(1);",
       ],
       { cwd: consumerRoot },
     );
@@ -213,7 +225,7 @@ export async function checkFrameworkGardenConsumer() {
 
     runNpm(['run', 'test:e2e'], { cwd: consumerRoot });
     log(
-      'framework Garden consumer: independent source copy, locked toolchain, offline core+narrative+gameplay archives, isolated ESM/declaration probes, tests, production build, and Chromium smoke passed',
+      'framework Garden consumer: independent source copy, locked toolchain, offline core+narrative+gameplay+three archives, isolated ESM/declaration probes, tests, production build, and Chromium smoke passed',
     );
   } catch (error) {
     try {
