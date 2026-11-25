@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getDialogueView } from 'waypoint-rpg-narrative';
 import { battleForOpponent, getBattleCopy } from '../content/fa/battles.ts';
+import { getMahalleBattleView } from '../domain/battle/presentation.ts';
 import { DIALOGUE_NODES, getDialogueNode } from '../content/fa/dialogue.ts';
 import type { NpcDefinition } from '../domain/world/types.ts';
 import {
@@ -16,6 +18,7 @@ import { FACT_DECORATIONS } from '../world/decorations.ts';
 import { getNpcCopy, getQuestCopy } from '../content/fa/quests.ts';
 import { FA } from '../content/fa/strings.ts';
 import { selectCompletedQuestCount, selectQuestStatuses } from '../domain/game/selectors.ts';
+import { MAHALLE_NARRATIVE } from '../domain/game/narrative.ts';
 import type { AnchorId, IconId, QuestId, QuestStatus } from '../domain/game/types.ts';
 import { getQuestDefinition, QUEST_DEFINITIONS } from '../domain/quests/definitions.ts';
 import { canStartQuest, nextSuggestedQuest } from '../domain/quests/prerequisites.ts';
@@ -154,6 +157,7 @@ export function App() {
   const completed = selectCompletedQuestCount(state);
   const suggestedQuestId = nextSuggestedQuest(state);
   const battleCopy = state.battle !== null ? getBattleCopy(state.battle.battleId) : null;
+  const battleView = state.battle !== null ? getMahalleBattleView(state.battle) : null;
   // Session-only UI affordances: never persisted, never part of game state.
   const [worldHintSeen, setWorldHintSeen] = useState(false);
   // Kid-test URL flags (?kidtest=nocopy,noactionicons, repeatable/comma-
@@ -207,6 +211,7 @@ export function App() {
   const [arrivalNonce, setArrivalNonce] = useState(0);
   const arrivalNonceRef = useRef(0);
   const suppressNoticeForRef = useRef<string | null>(null);
+  const pendingNpcTapRef = useRef<{ npcId: string; anchor: AnchorId } | null>(null);
   const previousCompletedRef = useRef<number | null>(null);
   // Highest checkpoint timestamp observed this session. Persisted checkpoints
   // carry the earlier session's completion time and re-hydrated ones repeat a
@@ -442,6 +447,9 @@ export function App() {
 
   const onArrive = useCallback(
     (anchor: AnchorId) => {
+      const pendingNpcTap = pendingNpcTapRef.current;
+      if (pendingNpcTap !== null && pendingNpcTap.anchor !== anchor)
+        pendingNpcTapRef.current = null;
       setWorldHintSeen(true);
       playSfx('sfx-arrive');
       // Every completed avatar arrival gets exactly one identity —
@@ -525,6 +533,12 @@ export function App() {
     [playSfx, discoveries, dispatch, statuses],
   );
 
+  // A route-to-NPC interaction is transient. Pause, dialogue, and map changes
+  // release it so a stale callback cannot swallow the next deliberate tap.
+  useEffect(() => {
+    pendingNpcTapRef.current = null;
+  }, [state.mode, state.mapId]);
+
   // Tapping a person (not just a place) talks to them where they stand:
   // walk to their current routine spot, then hear the line for what they
   // are doing there. Falls back to opening the dialogue directly when the
@@ -532,6 +546,7 @@ export function App() {
   const onNpcTap = useCallback(
     (npcId: string) => {
       if (state.battle !== null) return;
+      if (pendingNpcTapRef.current?.npcId === npcId) return;
       // A battle opponent launches its micro battle directly — the tap on
       // the figure IS the launch; walking up never starts it.
       const battle = battleForOpponent(npcId);
@@ -552,9 +567,13 @@ export function App() {
       // so the walk itself cannot change which line the child hears.
       const node = nodeForNpc(npc, npcTick, statuses);
       const open = () => {
+        const pending = pendingNpcTapRef.current;
+        if (pending?.npcId !== npcId || pending.anchor !== anchor) return;
+        pendingNpcTapRef.current = null;
         skipArrivalTick.current = false;
         openNpc(node);
       };
+      pendingNpcTapRef.current = { npcId, anchor };
       skipArrivalTick.current = true;
       suppressNoticeForRef.current = npcId;
       // The greeting plays in parallel with the walk/dialogue — the NPC
@@ -761,7 +780,8 @@ export function App() {
 
   if (state.avatarId === null) return <LoadingScreen />;
 
-  const dialogueNode = state.dialogue ? getDialogueNode(state.dialogue.nodeId) : null;
+  const narrativeDialogue = getDialogueView(MAHALLE_NARRATIVE, state.narrative, 'fa');
+  const dialogueNode = narrativeDialogue ? getDialogueNode(narrativeDialogue.nodeId) : null;
   const offeredQuest = dialogueNode?.offersQuestId ?? null;
   // One idea per beat: nodes may carry a short line sequence; single-beat
   // nodes fall back to `textFa`. Lines stay in data, never in JSX branches.
@@ -1036,9 +1056,9 @@ export function App() {
         {/* Micro battle (PR I): `mode` stays 'hub' while battle !== null
             owns every child input — the overlay covers trail/pause/world
             alike, and the reducer guards the same commands server-side. */}
-        {state.battle !== null && battleCopy !== null ? (
+        {battleView !== null && battleCopy !== null ? (
           <BattleScene
-            battle={state.battle}
+            battle={battleView}
             copy={battleCopy}
             hideCopy={noCopyTest}
             onAdvance={() => dispatch({ type: 'ADVANCE_BATTLE_PHASE' })}

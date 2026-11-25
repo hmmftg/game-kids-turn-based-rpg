@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { BATTLE_ACTION_IDS } from '../../framework/index.ts';
+import { BATTLE_ACTION_IDS } from '../../domain/battle/types.ts';
 import { ICONS } from '../../content/fa/icons.ts';
 import { QUEST_COPY } from '../../content/fa/quests.ts';
 import { FA } from '../../content/fa/strings.ts';

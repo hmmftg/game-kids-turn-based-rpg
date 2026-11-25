@@ -13,11 +13,19 @@ const games = [
     name: 'محله مهربانی',
     status: 'Implemented and playable',
     description:
-      'The existing child-oriented reference RPG. Its runtime and navigation consume ' +
+      'The production reference game consumes public ' +
       tick +
       'waypoint-rpg-core' +
       tick +
-      '; game-specific quests and rendering remain owned by the app.',
+      ', ' +
+      tick +
+      'waypoint-rpg-narrative' +
+      tick +
+      ', and ' +
+      tick +
+      'waypoint-rpg-gameplay' +
+      tick +
+      ' for runtime/navigation, replayable quest progression, and deterministic child micro-battles. Its physical interaction policy, rendering, and profile persistence remain app-owned.',
     readme: 'README.md',
     run: 'npm ci && npm run dev',
     folder: 'docs/previews/legacy-sample',

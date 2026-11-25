@@ -1,4 +1,5 @@
-import { BATTLE_ABILITY_IDS, validateBattleDefinition } from '../framework/index.ts';
+import { BATTLE_ABILITY_IDS } from '../domain/battle/types.ts';
+import { validateBattleDefinition } from '../domain/battle/validation.ts';
 import { QUEST_DEFINITIONS, getQuestDefinition } from '../domain/quests/definitions.ts';
 import {
   allDialogueReports,

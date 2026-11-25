@@ -59,6 +59,7 @@ export class ProfileCoordinator {
   private activeProfileId: string | null = null;
   private activeSlotKey: string | null = null;
   private cancelled = false;
+  private profileLoadGeneration = 0;
 
   constructor(private readonly options: ProfileCoordinatorOptions) {
     this.repository = options.repository ?? null;
@@ -76,6 +77,7 @@ export class ProfileCoordinator {
   /** Async boot work checks this before dispatching (React unmount guard). */
   cancel(): void {
     this.cancelled = true;
+    this.profileLoadGeneration += 1;
   }
 
   private setProfiles(next: readonly ProfileMeta[]): void {
@@ -159,6 +161,7 @@ export class ProfileCoordinator {
                 type: 'BOOT_LOADED',
                 persisted,
                 health: healthFromLoadResult(legacy),
+                profileId: meta.id,
               });
             }
             return;
@@ -190,15 +193,18 @@ export class ProfileCoordinator {
   selectProfile(id: string, mode: Mode): void {
     const repo = this.repository;
     if (!repo || mode !== 'profileSelect') return;
+    const generation = ++this.profileLoadGeneration;
     const { dispatch } = this.options;
     void repo
       .load(profileSlotKey(id))
       .then((result) => {
+        if (this.cancelled || generation !== this.profileLoadGeneration) return;
         this.setActiveProfile(id);
         dispatch({
           type: 'SELECT_PROFILE',
           persisted: persistedFromLoadResult(result),
           health: healthFromLoadResult(result),
+          profileId: id,
         });
         // The index card carries the cosmetic pick; the save slot doesn't.
         const meta = this.profiles.find((entry) => entry.id === id);
@@ -208,12 +214,14 @@ export class ProfileCoordinator {
         }
       })
       .catch(() => {
-        dispatch({ type: 'FATAL_ERROR', reason: 'profile-load-failed' });
+        if (!this.cancelled && generation === this.profileLoadGeneration)
+          dispatch({ type: 'FATAL_ERROR', reason: 'profile-load-failed' });
       });
   }
 
   /** Clears the in-memory player and opens avatar + headwear select. */
   startNewPlayer(): void {
+    this.profileLoadGeneration += 1;
     this.setActiveProfile(null);
     this.options.dispatch({ type: 'START_NEW_PLAYER' });
   }
@@ -238,6 +246,7 @@ export class ProfileCoordinator {
 
   /** Wipes one profile's progress but keeps its card (avatar, badge, name). */
   resetProfile(id: string): void {
+    this.profileLoadGeneration += 1;
     const repo = this.repository;
     const meta = this.profiles.find((entry) => entry.id === id);
     if (!repo || !meta) return;
@@ -257,6 +266,7 @@ export class ProfileCoordinator {
 
   /** Removes a profile card AND its save slot entirely — no undo. */
   deleteProfile(id: string): void {
+    this.profileLoadGeneration += 1;
     this.writeProfileList(this.profiles.filter((entry) => entry.id !== id));
     void this.repository?.clear(profileSlotKey(id)).catch(() => {
       /* storage may be evicted */
@@ -276,6 +286,7 @@ export class ProfileCoordinator {
 
   /** Full reset: clears the legacy and active slots, then restarts fresh. */
   resetProgress(): void {
+    this.profileLoadGeneration += 1;
     const repo = this.repository;
     const { dispatch } = this.options;
     if (!repo) {
@@ -293,9 +304,9 @@ export class ProfileCoordinator {
    * Keeps a profile's picker card (sticker count, recency) in step with saves.
    * Called by the save coordinator after each successful write.
    */
-  syncActiveProfileMeta(snapshot: GameState): void {
+  syncActiveProfileMeta(snapshot: GameState, slotKey = this.activeSlotKey): void {
     const id = this.activeProfileId;
-    if (id === null) return;
+    if (id === null || slotKey !== this.activeSlotKey || slotKey !== profileSlotKey(id)) return;
     const current = this.profiles;
     const meta = current.find((entry) => entry.id === id);
     if (

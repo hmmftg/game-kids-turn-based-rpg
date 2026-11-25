@@ -5,8 +5,9 @@
  * or storage APIs. Everything here is serialisable or derived from serialisable data.
  */
 
-import type { BattleActionId, BattleDefinition, BattleState } from '../../framework/index.ts';
+import type { BattleActionId, BattleDefinition, BattleState } from '../battle/types.ts';
 import type { AnchorId, DiscoveryId, MapId, NpcId, QualityTier } from '../../framework/index.ts';
+import type { NarrativeState } from 'waypoint-rpg-narrative';
 
 // Generic world identifiers and the quality dial live in the framework; they
 // are re-exported here so existing `domain/game/types.ts` imports keep working.
@@ -155,6 +156,8 @@ export interface PersistedState {
 }
 
 export interface GameState extends PersistedState {
+  /** Package-owned quest/dialogue state; `quests` below is its v3 save/UI projection. */
+  readonly narrative: NarrativeState;
   readonly mode: Mode;
   /** Mode to return to when an overlay closes. */
   readonly resumeMode: ResumableMode;
@@ -187,6 +190,8 @@ export type Command =
       readonly type: 'BOOT_LOADED';
       readonly persisted: PersistedState | null;
       readonly health: SaveHealth;
+      /** App-owned identity for restoring package state into this runtime session. */
+      readonly profileId?: string;
       /** True when at least one player profile exists → land on the picker. */
       readonly hasProfiles?: boolean;
     }
@@ -197,6 +202,8 @@ export type Command =
       readonly type: 'SELECT_PROFILE';
       readonly persisted: PersistedState | null;
       readonly health: SaveHealth;
+      /** App-owned identity for restoring package state into this runtime session. */
+      readonly profileId?: string;
     }
   | { readonly type: 'START_NEW_PLAYER' }
   | { readonly type: 'SWITCH_PLAYER' }

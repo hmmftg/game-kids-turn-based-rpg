@@ -10,7 +10,7 @@ an RPG engine — battle edits neither world structure nor quest structure.
 - `GameState.battle: BattleState | null` is **session-only**: never persisted,
   never part of `PersistedState`, never a `Mode` — `mode` stays `'hub'` for
   the whole battle.
-- Battle state lives in `src/framework/modules/battle/` (pure — no React/DOM/timers).
+- Battle state is `LightweightEncounterState` from `waypoint-rpg-gameplay`; it is transient in the root app and is not included in the save projection.
 - The battle owns all child input: the `BattleScene` overlay covers world,
   trail and pause, **and** the game reducer returns the same object for
   `OPEN_DIALOGUE`, `START_QUEST`, `CHANGE_MAP`, `DISCOVER`, `PAUSE`,
@@ -22,7 +22,7 @@ an RPG engine — battle edits neither world structure nor quest structure.
   figure (`onNpcTap` → `battleForOpponent(npcId)` → `START_BATTLE`). Arriving
   near the fountain never starts it.
 
-## State machine (`src/framework/modules/battle/`)
+## State machine (`packages/gameplay/src/lightweight-encounter.ts`)
 
 ```
 intro → playerChoice → playerResolution → enemyResolution → roundCheck
@@ -55,8 +55,8 @@ failure — defeat only when the round limit expires.
 
 ### Weakness (W7a)
 
-Each opponent fears exactly one action: `BattleDefinition.weakness` adds
-**+1 heart** to any _effective_ weak-to action (`damageFor`):
+Each opponent fears exactly one action. The game authors the weakness and the
+generic package adds its configured bonus to any effective result for it:
 
 - `opponent-hit` deals 2 hearts instead of 1 (a feared thing lands harder),
 - `blocked` deals 1 instead of 0 (a feared thing turns the attacker's
@@ -70,25 +70,23 @@ the strip) and recoils harder when it lands (`data-weak`) — never an icon
 or text label. Every current opponent fears a **quest keepsake** (below):
 the mouse fears the basket, the bird the kite, the eagle the crystal, the
 butterfly the shell; a feared hit on the 2-heart challengers ends in one
-good bonk. `validateBattleDefinition` rejects a `weakness` that is not
-offerable — not in `availableActions` ∪ `offeredAbilities`
-(`weakness-not-offered`), and winnability sums `damagePotential()` — the
-engine's own matrix — over `maxRounds` on **base actions only**, so a
-keepsake weakness can never be load-bearing.
+good bonk. `src/domain/battle/validation.ts` checks Mahalle's base-action and
+keepsake policies, then delegates outcome coverage and base-action
+winnability to `validateLightweightEncounter` in the gameplay package.
 
 ## Quest keepsake abilities
 
 Completing a quest grants its **battle ability** — a physical keepsake
 object (`QuestDefinition.battleAbility`, one per quest, all 9 covered).
-Nothing is persisted for this: at `START_BATTLE` the game reducer derives
-the child's unlocked abilities from `state.quests` (status `completed`,
-quest order) and intersects them with the opponent's authored
+Nothing is persisted separately for abilities: at `START_BATTLE` the app
+derives unlocked abilities from narrative-package completion history and
+intersects them with the opponent's authored
 `offeredAbilities` — the earned subset joins `availableActions` on the
 effective `BattleState.definition`. A child without the feared keepsake
 still wins with ball and cushion; the keepsake is a reward, never a gate.
 
-Every ability carries its own row in `OUTCOME_MATRIX` (`battle.ts`) — one
-deterministic rule a child can learn:
+Every ability carries its own authored rows in `src/content/fa/battleOutcomes.ts` —
+one deterministic rule a child can learn:
 
 | Ability          | Quest         | `rest`    | `attack`  | Extra                          |
 | ---------------- | ------------- | --------- | --------- | ------------------------------ |
@@ -102,7 +100,7 @@ deterministic rule a child can learn:
 | `action-book`    | school-answer | hit       | no-effect | calm scorer                    |
 | `action-crystal` | cave-crystal  | hit       | whiffed   | **hits for 2**                 |
 
-Pacify sets `BattleState.forcedIntent`, consumed once at the next
+Pacify authors a `forcedNextIntentId`, consumed once at the next
 `roundCheck` — the opponent settles for exactly one round. The crystal's
 bonus stacks with weakness (a feared crystal lands for 3).
 
@@ -122,19 +120,18 @@ bidirectionality (`missing-ability-copy`/`orphan-ability-copy`).
   `offeredAbilities`, `weakness`, `enemyIntentPattern` — round N uses
   `pattern[(N-1) % len]`) plus a `BattleCopy` row (`introFa`, `promptFa`,
   `outcomeFa`, `intentFa`, `victoryFa`, `defeatFa`) and the
-  `BATTLE_ABILITY_COPY` table.
+  `BATTLE_ABILITY_COPY` table. `battleOutcomes.ts` contains the game-owned
+  action/intent consequence matrix; `src/domain/battle/adapter.ts` compiles
+  it through the installed gameplay package.
 - `validate:content` checks: unique ids, opponent is a real NPC, positive
   budgets, non-empty actions/pattern, definition↔copy bidirectionality,
   **winnability** (base actions only — an ability must never be
   load-bearing, since keepsakes may be unearned), quest→ability coverage
   and copy coverage, and the usual child-copy text rules.
-  Definition-level rules live in `src/framework/modules/battle/validation.ts`
-  (`validateBattleDefinition`); winnability reuses `enemyIntentFor`, so the
-  pattern **cycles** — `[rest, attack]` over 6 rounds yields three scorable
-  rounds, not one literal entry. `src/framework/modules/battle/reducer.ts`
-  (`battleReducer` over `BattleState | null`) is the seam the game reducer
-  delegates `START_BATTLE`/`CHOOSE_BATTLE_ACTION`/`ADVANCE_BATTLE_PHASE`/
-  `LEAVE_BATTLE` to — same shape as the encounter delegation.
+  Generic matrix validation and cyclic winnability are implemented by
+  `waypoint-rpg-gameplay`; the app adapter resolves starts only through the
+  registered battle definitions. App-owned reducer commands drive package
+  transitions. `LEAVE_BATTLE` and victory-discovery policy remain app-owned.
 - The playful mouse (`npc-playful-mouse`) is the MVP opponent —
   `archetype: 'critter'`, rendered through the animal slot in
   `ChallengeWorld.tsx` (it moved to the Challenge Zone with the zone PR).
@@ -165,7 +162,8 @@ bidirectionality (`missing-ability-copy`/`orphan-ability-copy`).
   remain, emptied slots stay pale — and round **dots** (elapsed filled,
   current ringed, future hollow); never bare numerals. The leave button
   sits alongside; the opponent is a physical presence (`SceneGlyph 'mouse'`).
-- Session-only badges on the victory card (W7b): `battleAchievements`
+- Session-only badges on the victory card (W7b): app-owned
+  `battleAchievements`
   derives 🏅 `won`, 💡 `found-the-fear` (the feared action landed
   effectively), and 🎯 `steady` (no whiffed/shrugged rounds) from the
   `rounds` log — presentation only, never persisted; the persisted

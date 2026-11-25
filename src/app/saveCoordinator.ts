@@ -9,7 +9,7 @@ export interface SaveCoordinatorOptions {
   /** The active profile's slot key, or null before a player is picked. */
   readonly activeSlotKey: () => string | null;
   /** Keeps the picker card (sticker count, recency) in step with saves. */
-  readonly syncActiveProfileMeta: (snapshot: GameState) => void;
+  readonly syncActiveProfileMeta: (snapshot: GameState, slotKey: string) => void;
 }
 
 /**
@@ -23,6 +23,8 @@ export interface SaveCoordinatorOptions {
 export class SaveCoordinator {
   private previous: GameState | null = null;
   private lastSavedToken: number | null = null;
+  private saveGeneration = 0;
+  private writeQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: SaveCoordinatorOptions) {}
 
@@ -39,10 +41,17 @@ export class SaveCoordinator {
     const key = this.options.activeSlotKey();
     if (key === null) return; // no player yet: the first real save flushes later
     this.lastSavedToken = state.autosaveToken;
-    void this.options
-      .repository()
-      ?.save(toPersistedState(state), key)
-      .then(() => this.options.syncActiveProfileMeta(state))
+    const repository = this.options.repository();
+    if (!repository) return;
+    const generation = ++this.saveGeneration;
+    const snapshot = toPersistedState(state);
+    this.writeQueue = this.writeQueue
+      .catch(() => undefined)
+      .then(() => repository.save(snapshot, key))
+      .then(() => {
+        if (generation === this.saveGeneration && key === this.options.activeSlotKey())
+          this.options.syncActiveProfileMeta(state, key);
+      })
       .catch(() => {
         /* storage may be evicted; the game stays playable */
       });

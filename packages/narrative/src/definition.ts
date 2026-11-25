@@ -28,6 +28,8 @@ export type NarrativeCondition =
       readonly questId: string;
       readonly status: PersistedQuestStatus;
     }
+  /** True once a repeatable quest has completed at least one attempt. */
+  | { readonly op: 'quest-completed'; readonly questId: string }
   | { readonly op: 'all' | 'any'; readonly conditions: readonly NarrativeCondition[] }
   | { readonly op: 'not'; readonly condition: NarrativeCondition };
 
@@ -82,6 +84,24 @@ export interface QuestDefinition {
   readonly prerequisites?: NarrativeCondition;
   /** Only failed or cancelled quests may restart, and only when opted in. */
   readonly restartable?: boolean;
+  /** Completed quests may begin a new attempt only when explicitly opted in. */
+  readonly repeatable?: boolean;
+  /** Stable step ids recorded as complete whenever this quest completes. */
+  readonly stepIds?: readonly string[];
+}
+
+export interface NarrativeQuestHistory {
+  /** Number of accepted completions in this playthrough. */
+  readonly completionCount: number;
+  /** Unique stable step ids completed across all attempts. */
+  readonly completedSteps: readonly string[];
+}
+
+/** Trusted application seed for restoring generic progress without replaying effects. */
+export interface NarrativeStateSeed {
+  readonly facts?: Readonly<Record<string, JsonValue>>;
+  readonly quests?: Readonly<Record<string, PersistedQuestStatus>>;
+  readonly questHistory?: Readonly<Record<string, NarrativeQuestHistory>>;
 }
 
 export interface NarrativeTriggerDefinition {
@@ -145,6 +165,7 @@ export interface NarrativeState {
   readonly revision: number;
   readonly facts: Readonly<Record<string, JsonValue>>;
   readonly quests: Readonly<Record<string, PersistedQuestStatus>>;
+  readonly questHistory: Readonly<Record<string, NarrativeQuestHistory>>;
   readonly appliedChoiceIds: readonly string[];
   readonly appliedTriggerIds: readonly string[];
   readonly activeDialogue: ActiveDialogue | null;
@@ -160,7 +181,12 @@ export interface NarrativeCommandBase {
 
 export type NarrativeCommand = NarrativeCommandBase &
   (
-    | { readonly type: 'open-dialogue'; readonly dialogueId: string }
+    | {
+        readonly type: 'open-dialogue';
+        readonly dialogueId: string;
+        /** Optional app-validated node within the dialogue's authored graph. */
+        readonly startNodeId?: string;
+      }
     | { readonly type: 'advance' }
     | { readonly type: 'choose'; readonly choiceId: string }
     | { readonly type: 'exit-dialogue' }

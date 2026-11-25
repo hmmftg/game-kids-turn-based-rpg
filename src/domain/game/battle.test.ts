@@ -2,27 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { gameReducer } from './reducer.ts';
 import { createInitialState } from './initialState.ts';
 import type { GameState, QuestId } from './types.ts';
-import type { BattleDefinition } from '../../framework/index.ts';
+import { getBattleDefinition } from '../../content/fa/battles.ts';
+import { createFreshPersistedState } from './initialState.ts';
+import { createMahalleNarrativeState } from './narrative.ts';
+import type { BattleDefinition } from '../battle/types.ts';
 
-const DEFINITION: BattleDefinition = {
-  battleId: 'battle-playful-mouse',
-  opponentId: 'npc-playful-mouse',
-  hearts: 3,
-  maxRounds: 3,
-  availableActions: ['action-ball', 'action-shield'],
-  enemyIntentPattern: ['rest', 'rest', 'rest'],
-};
+const DEFINITION = getBattleDefinition('battle-playful-mouse')!;
 
 function hubState(patch: Partial<GameState> = {}): GameState {
   return { ...createInitialState(), mode: 'hub', resumeMode: 'hub', ...patch };
 }
 
 function withCompletedQuests(state: GameState, questIds: readonly QuestId[]): GameState {
-  const quests = { ...state.quests };
+  const persisted = createFreshPersistedState();
+  const quests = { ...persisted.quests };
   for (const questId of questIds) {
     quests[questId] = { status: 'completed', completedSteps: [], completionCount: 1 };
   }
-  return { ...state, quests };
+  const narrative = createMahalleNarrativeState(state.narrative.playthroughId, {
+    ...persisted,
+    quests,
+  });
+  return { ...state, narrative };
 }
 
 describe('game reducer battle boundary', () => {
@@ -84,11 +85,7 @@ describe('game reducer battle boundary', () => {
 });
 
 describe('quest-granted battle abilities', () => {
-  const MOUSE: BattleDefinition = {
-    ...DEFINITION,
-    offeredAbilities: ['action-basket', 'action-book'],
-    weakness: 'action-basket',
-  };
+  const MOUSE = DEFINITION;
 
   it('unlocked abilities the opponent offers join the action strip', () => {
     // quest-helping grants the basket; quest-school-answer grants the book.
@@ -105,8 +102,8 @@ describe('quest-granted battle abilities', () => {
   it('locked abilities stay off the strip', () => {
     const next = gameReducer(hubState(), { type: 'START_BATTLE', definition: MOUSE });
     expect(next.battle?.definition.availableActions).toEqual(['action-ball', 'action-shield']);
-    // Identical definition object when nothing is earned — no enrichment.
-    expect(next.battle?.definition).toBe(MOUSE);
+    // The authored object is unchanged; the engine stores its own immutable data snapshot.
+    expect(MOUSE.availableActions).toEqual(['action-ball', 'action-shield']);
   });
 
   it('an ability the opponent does not offer stays locked away', () => {
@@ -121,16 +118,13 @@ describe('quest-granted battle abilities', () => {
     let next = gameReducer(state, { type: 'START_BATTLE', definition: MOUSE });
     next = gameReducer(next, { type: 'ADVANCE_BATTLE_PHASE' }); // → playerChoice
     next = gameReducer(next, { type: 'CHOOSE_BATTLE_ACTION', action: 'action-basket' });
-    expect(next.battle?.lastOutcome).toBe('opponent-hit');
+    expect(next.battle?.lastOutcomeId).toBe('opponent-hit');
     expect(next.battle?.opponentHearts).toBe(1); // 3 − 2
   });
 });
 
 describe('LEAVE_BATTLE discovery recording', () => {
-  const FACT_DEFINITION: BattleDefinition = {
-    ...DEFINITION,
-    victoryDiscoveryId: 'discovery-challenge-bird',
-  };
+  const FACT_DEFINITION = getBattleDefinition('battle-challenge-bird')!;
 
   /** Drives a started battle to victory and back to hub via LEAVE_BATTLE. */
   function winAndLeave(definition: BattleDefinition, from: GameState): GameState {

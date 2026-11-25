@@ -1,5 +1,6 @@
 import { QUEST_IDS } from './types.ts';
 import type { AudioSettings, GameState, PersistedState, QuestId, QuestProgress } from './types.ts';
+import { createMahalleNarrativeState, getMahalleQuestProgress } from './narrative.ts';
 
 export const SAVE_SCHEMA_VERSION = 3;
 
@@ -34,9 +35,12 @@ export function createFreshPersistedState(now = 0): PersistedState {
   };
 }
 
-export function createInitialState(now = 0): GameState {
+export function createInitialState(now = 0, playthroughId = 'mahalle-session-0'): GameState {
+  const narrative = createMahalleNarrativeState(playthroughId);
   return {
     ...createFreshPersistedState(now),
+    narrative,
+    quests: getMahalleQuestProgress(narrative),
     mode: 'boot',
     resumeMode: 'title',
     encounter: null,

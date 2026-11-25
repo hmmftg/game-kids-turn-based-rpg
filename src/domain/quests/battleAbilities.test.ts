@@ -1,22 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { BATTLE_ABILITY_IDS } from '../../framework/index.ts';
-import { createEmptyQuests } from '../game/initialState.ts';
-import type { QuestId } from '../game/types.ts';
+import { BATTLE_ABILITY_IDS } from '../battle/types.ts';
+import { createFreshPersistedState } from '../game/initialState.ts';
+import { createMahalleNarrativeState } from '../game/narrative.ts';
+import type { PersistedState, QuestId } from '../game/types.ts';
 import { unlockedBattleActions } from './battleAbilities.ts';
 import { QUEST_DEFINITIONS } from './definitions.ts';
 
-function completedQuests(questIds: readonly QuestId[]) {
-  const quests = createEmptyQuests();
-  const next = { ...quests };
-  for (const questId of questIds) {
-    next[questId] = { status: 'completed', completedSteps: [], completionCount: 1 };
+function narrativeWithProgress(
+  updates: Partial<Record<QuestId, PersistedState['quests'][QuestId]>>,
+) {
+  const persisted = createFreshPersistedState();
+  const quests = { ...persisted.quests };
+  for (const [questId, progress] of Object.entries(updates)) {
+    if (progress) quests[questId as QuestId] = progress;
   }
-  return next;
+  return createMahalleNarrativeState('ability-tests', { ...persisted, quests });
+}
+
+function completedQuests(questIds: readonly QuestId[]) {
+  const quests: Partial<Record<QuestId, PersistedState['quests'][QuestId]>> = {};
+  for (const questId of questIds) {
+    quests[questId] = { status: 'completed', completedSteps: [], completionCount: 1 };
+  }
+  return narrativeWithProgress(quests);
 }
 
 describe('unlockedBattleActions', () => {
   it('grants nothing until a quest completes', () => {
-    expect(unlockedBattleActions(createEmptyQuests())).toEqual([]);
+    expect(unlockedBattleActions(createMahalleNarrativeState('ability-tests'))).toEqual([]);
   });
 
   it('grants each completed quest its ability, in quest order', () => {
@@ -29,10 +40,11 @@ describe('unlockedBattleActions', () => {
   });
 
   it('ignores non-completed statuses', () => {
-    const quests = createEmptyQuests();
-    quests['quest-helping'] = { status: 'active', completedSteps: [], completionCount: 0 };
-    quests['quest-tidying'] = { status: 'available', completedSteps: [], completionCount: 0 };
-    expect(unlockedBattleActions(quests)).toEqual([]);
+    const narrative = narrativeWithProgress({
+      'quest-helping': { status: 'active', completedSteps: [], completionCount: 0 },
+      'quest-tidying': { status: 'available', completedSteps: [], completionCount: 0 },
+    });
+    expect(unlockedBattleActions(narrative)).toEqual([]);
   });
 
   it('every quest grants exactly one ability — together they cover the vocabulary', () => {
@@ -40,5 +52,12 @@ describe('unlockedBattleActions', () => {
     const unlocked = unlockedBattleActions(all);
     expect(new Set(unlocked).size).toBe(QUEST_DEFINITIONS.length);
     expect([...unlocked].sort()).toEqual([...BATTLE_ABILITY_IDS].sort());
+  });
+
+  it('retains an earned ability when the repeatable quest starts again', () => {
+    const narrative = narrativeWithProgress({
+      'quest-helping': { status: 'active', completedSteps: ['helping-1'], completionCount: 1 },
+    });
+    expect(unlockedBattleActions(narrative)).toContain('action-basket');
   });
 });

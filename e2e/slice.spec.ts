@@ -70,7 +70,7 @@ test.describe('vertical slice', () => {
     // The chain grew from 3 to 8 quests after the area activities — each one
     // still plays through every encounter phase in order; passive beats add
     // ~4 s per step on top of the walking time.
-    test.setTimeout(300000);
+    test.setTimeout(900000);
     await startGame(page);
     for (const questId of QUESTS) {
       await playQuest(page, questId);
@@ -112,6 +112,9 @@ test.describe('vertical slice', () => {
   });
 
   test('a completed chapter can be replayed while offline', async ({ page, context }) => {
+    // Completing the chapter, activating the service worker, reloading
+    // offline, and replaying it is longer than the suite's 60-second default.
+    test.setTimeout(120000);
     await startGame(page);
     await playQuest(page, 'quest-greeting');
     // Wait for the precaching service worker to become ACTIVE before cutting

@@ -43,6 +43,24 @@ export type {
   GameplayTransitionResult,
   GameplayValidationReport,
 } from './definition.js';
+export type {
+  CompiledLightweightEncounter,
+  LightweightEncounterCommand,
+  LightweightEncounterDefinition,
+  LightweightEncounterDiagnostic,
+  LightweightEncounterOutcomeDefinition,
+  LightweightEncounterPhase,
+  LightweightEncounterRound,
+  LightweightEncounterState,
+  LightweightEncounterValidationReport,
+} from './lightweight-encounter.js';
+export {
+  compileLightweightEncounter,
+  createLightweightEncounter,
+  LightweightEncounterDefinitionError,
+  transitionLightweightEncounter,
+  validateLightweightEncounter,
+} from './lightweight-encounter.js';
 export type { GameplayStateDecodeFailureCode, GameplayStateDecodeResult } from './codec.js';
 export { compileGameplay, GameplayDefinitionError } from './compile.js';
 export { decodeGameplayState, encodeGameplayState, GameplayStateCodecError } from './codec.js';

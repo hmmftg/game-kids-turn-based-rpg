@@ -367,6 +367,9 @@ export function validateNarrative(input: unknown): NarrativeValidationReport {
           );
         }
         break;
+      case 'quest-completed':
+        idField(raw.questId, `${path}.questId`);
+        break;
       case 'all':
       case 'any':
         if (!isArray(raw.conditions) || raw.conditions.length === 0)
@@ -448,6 +451,22 @@ export function validateNarrative(input: unknown): NarrativeValidationReport {
       validateCondition(quest.prerequisites, `${path}.prerequisites`);
     if (quest.restartable !== undefined && typeof quest.restartable !== 'boolean')
       add('quest-restartable', `${path}.restartable`, 'restartable must be boolean.');
+    if (quest.repeatable !== undefined && typeof quest.repeatable !== 'boolean')
+      add('quest-repeatable', `${path}.repeatable`, 'repeatable must be boolean.');
+    if (quest.stepIds !== undefined) {
+      if (!isArray(quest.stepIds)) {
+        add('quest-step-ids', `${path}.stepIds`, 'stepIds must be an array when present.');
+      } else {
+        const stepIds = new Set<string>();
+        for (const [stepIndex, stepId] of quest.stepIds.entries()) {
+          const stepPath = `${path}.stepIds[${stepIndex}]`;
+          if (!idField(stepId, stepPath)) continue;
+          if (stepIds.has(stepId))
+            add('duplicate-quest-step-id', stepPath, `Quest step id ${stepId} is duplicated.`);
+          stepIds.add(stepId);
+        }
+      }
+    }
   }
 
   for (const [index, dialogue] of dialogues.entries()) {
@@ -724,7 +743,10 @@ export function validateNarrative(input: unknown): NarrativeValidationReport {
   }
   function validateConditionReferences(condition: NarrativeCondition, path: string): void {
     if (!isObject(condition)) return;
-    if (condition.op === 'quest-status' && !questIds.has(condition.questId))
+    if (
+      (condition.op === 'quest-status' || condition.op === 'quest-completed') &&
+      !questIds.has(condition.questId)
+    )
       add(
         'unknown-quest-reference',
         path,
@@ -751,6 +773,7 @@ function report(diagnostics: NarrativeDiagnostic[]): NarrativeValidationReport {
 
 function questDependencies(condition: NarrativeCondition, mandatory: boolean): Set<string> {
   if (!isObject(condition)) return new Set();
+  if (condition.op === 'quest-completed') return new Set([condition.questId]);
   if (condition.op === 'quest-status' && STATUSES.has(condition.status))
     return new Set([condition.questId]);
   if (condition.op === 'not') return new Set();

@@ -79,10 +79,9 @@ export function transitionNarrative(
           'dialogue-suspended',
           'Resume or finish the suspended dialogue before opening another one.',
         );
-      const suspendedNodeId = state.suspendedDialogue?.nodeId;
-      const entry = dialogue.nodes.find(
-        (node) => node.id === (suspendedNodeId ?? dialogue.entryNodeId),
-      );
+      const startNodeId =
+        command.startNodeId ?? state.suspendedDialogue?.nodeId ?? dialogue.entryNodeId;
+      const entry = dialogue.nodes.find((node) => node.id === startNodeId);
       if (!entry || (entry.when && !evaluateCondition(entry.when, state)))
         return reject(state, 'node-unavailable', 'Dialogue entry node is unavailable.');
       draft.activeDialogue = { dialogueId: dialogue.id, nodeId: entry.id };
@@ -272,18 +271,29 @@ function applyEffects(
         if (!quest) return questFailure(effectIndex, `Unknown quest ${effect.questId}.`);
         const current = draft.quests[quest.id];
         if (current === 'active' || current === 'completed')
-          return questFailure(effectIndex, `Quest ${quest.id} cannot start from ${current}.`);
+          if (current === 'active' || quest.repeatable !== true)
+            return questFailure(effectIndex, `Quest ${quest.id} cannot start from ${current}.`);
         if (current === 'failed' || current === 'cancelled') {
           if (quest.restartable !== true)
             return questFailure(effectIndex, `Quest ${quest.id} is not restartable.`);
-        } else if (getQuestStatus(compiled, draft as NarrativeState, quest.id) !== 'available') {
+        } else if (
+          current !== 'completed' &&
+          getQuestStatus(compiled, draft as NarrativeState, quest.id) !== 'available'
+        ) {
+          return questFailure(effectIndex, `Quest ${quest.id} is locked by its prerequisites.`);
+        }
+        if (
+          current === 'completed' &&
+          quest.prerequisites !== undefined &&
+          !evaluateCondition(quest.prerequisites, draft as NarrativeState)
+        ) {
           return questFailure(effectIndex, `Quest ${quest.id} is locked by its prerequisites.`);
         }
         draft.quests[quest.id] = 'active';
         break;
       }
       case 'complete-quest':
-        if (!setQuestOutcome(draft, effect.questId, 'completed'))
+        if (!completeQuest(compiled, draft, effect.questId))
           return questFailure(
             effectIndex,
             `Quest ${effect.questId} must be active before it can complete.`,
@@ -333,6 +343,25 @@ function setQuestOutcome(
 ): boolean {
   if (typeof questId !== 'string' || draft.quests[questId] !== 'active') return false;
   draft.quests[questId] = status;
+  return true;
+}
+
+function completeQuest(
+  compiled: CompiledNarrative,
+  draft: ReturnType<typeof draftFromState>,
+  questId: string,
+): boolean {
+  const quest = compiledIndexes(compiled).quests.get(questId);
+  if (!quest || draft.quests[questId] !== 'active') return false;
+  const previous = draft.questHistory[questId] ?? { completionCount: 0, completedSteps: [] };
+  if (previous.completionCount >= Number.MAX_SAFE_INTEGER) return false;
+  const completedSteps = new Set(previous.completedSteps);
+  for (const stepId of quest.stepIds ?? []) completedSteps.add(stepId);
+  draft.questHistory[questId] = {
+    completionCount: previous.completionCount + 1,
+    completedSteps: [...completedSteps],
+  };
+  draft.quests[questId] = 'completed';
   return true;
 }
 

@@ -34,6 +34,15 @@ ones it uses. None includes a renderer, story, browser UI, or browser-storage
 implementation. Do not import package internals or copy package algorithms
 into a sample.
 
+The production reference at the repository root, [محله مهربانی](MAHALLE-LIBRARY-ADOPTION.md),
+demonstrates all three packages with a child-specific interaction contract:
+core hosts its runtime and navigation, narrative owns the replayable quest
+history, and gameplay owns generic deterministic one-on-one battle transitions.
+The game keeps physical choices, profile saves, and its renderer in application
+code. Use it to understand package boundaries, but build a new game's state
+adapter and authored content from this guide instead of importing its private
+source files.
+
 ## Generate a portable starting project
 
 Install the creator CLI and package the framework roots that the new game will

@@ -66,6 +66,8 @@
     "creator:preview:test": "playwright test --config=tools/creator/preview/playwright.config.ts",
     "gen:model": "gltfjsx",
     "validate:assets:release": "node --experimental-strip-types scripts/validate-assets.ts --release",
+    "creator:mahalle-catalog": "node --experimental-strip-types scripts/sync-mahalle-asset-catalog.mjs --check",
+    "creator:mahalle-catalog:write": "node --experimental-strip-types scripts/sync-mahalle-asset-catalog.mjs --write",
     "check:budgets": "node --experimental-strip-types scripts/check-budgets.ts",
     "check:deploy": "node --experimental-strip-types scripts/check-deploy.ts",
     "release:rollback:prepare": "node scripts/prepare-release-rollback.mjs",
@@ -90,6 +92,7 @@
     "framework:scene-consumer": "npm run framework:check && npm run framework:build && node scripts/check-framework-scene-consumer.mjs",
     "framework:scene-consumer:prepared": "node scripts/check-framework-scene-consumer.mjs",
     "framework:garden-consumer": "npm run framework:check && npm run framework:build && node scripts/check-framework-garden-consumer.mjs",
+    "framework:mahalle-consumer": "npm run framework:check && npm run framework:build && node scripts/check-framework-mahalle-consumer.mjs",
     "framework:runtime:check": "node scripts/check-framework-runtime.mjs",
     "preexample:build": "npm run framework:build",
     "example:build": "vite build --config examples/hello-world/vite.config.ts",
@@ -98,7 +101,8 @@
     "preexample:dev": "npm run framework:build",
     "example:dev": "vite --config examples/hello-world/vite.config.ts",
     "test:e2e:chrome": "node scripts/run-e2e-system-chrome.mjs",
-    "verify": "npm run format:check && npm run roadmap:check && npm run lint && npm run models:import:test && npm run framework:check && npm run framework:build && npm --ignore-scripts run framework:test:prepared && npm --ignore-scripts run framework:narrative-consumer:prepared && npm --ignore-scripts run typecheck && npm --ignore-scripts run test && npm --ignore-scripts run build && npm --ignore-scripts run example:build && npm --ignore-scripts run example:scene-build"
+    "test:mahalle:migration": "node --experimental-strip-types scripts/mahalle-migration-contract.test.mjs",
+    "verify": "npm run format:check && npm run roadmap:check && npm run lint && npm run models:import:test && npm run creator:mahalle-catalog && npm run framework:check && npm run framework:build && npm --ignore-scripts run framework:test:prepared && npm --ignore-scripts run framework:narrative-consumer:prepared && npm --ignore-scripts run typecheck && npm --ignore-scripts run test && npm run test:mahalle:migration && npm --ignore-scripts run build && npm --ignore-scripts run example:build && npm --ignore-scripts run example:scene-build"
   },
   "dependencies": {
     "@react-three/drei": "10.7.8",

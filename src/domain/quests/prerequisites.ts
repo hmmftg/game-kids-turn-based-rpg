@@ -1,40 +1,42 @@
 import type { GameState, QuestId, QuestStatus } from '../game/types.ts';
-import { QUEST_DEFINITIONS, getQuestDefinition } from './definitions.ts';
+import { QUEST_DEFINITIONS } from './definitions.ts';
+import { getMahalleQuestProgress, MAHALLE_NARRATIVE } from '../game/narrative.ts';
+import { getQuestStatus } from 'waypoint-rpg-narrative';
 
 export function arePrerequisitesMet(state: GameState, questId: QuestId): boolean {
-  return getQuestDefinition(questId).requires.every(
-    (required) => state.quests[required].status === 'completed',
-  );
+  return getQuestStatus(MAHALLE_NARRATIVE, state.narrative, questId) !== 'locked';
 }
 
 /** A quest can be entered when its prerequisites are met — completed quests stay replayable. */
 export function canStartQuest(state: GameState, questId: QuestId): boolean {
   if (state.avatarId === null) return false;
-  return arePrerequisitesMet(state, questId);
+  const status = getQuestStatus(MAHALLE_NARRATIVE, state.narrative, questId);
+  return (
+    status === 'available' ||
+    status === 'completed' ||
+    status === 'cancelled' ||
+    status === 'failed'
+  );
 }
 
 /** Derives the display status of every quest from completion data alone. */
 export function deriveQuestStatuses(state: GameState): Record<QuestId, QuestStatus> {
-  const statuses = {} as Record<QuestId, QuestStatus>;
-  for (const definition of QUEST_DEFINITIONS) {
-    const progress = state.quests[definition.id];
-    if (progress.status === 'completed') {
-      statuses[definition.id] = 'completed';
-    } else if (state.encounter?.questId === definition.id) {
-      statuses[definition.id] = 'active';
-    } else {
-      statuses[definition.id] = arePrerequisitesMet(state, definition.id) ? 'available' : 'locked';
-    }
-  }
-  return statuses;
+  return Object.fromEntries(
+    Object.entries(getMahalleQuestProgress(state.narrative)).map(([questId, progress]) => [
+      questId,
+      state.encounter?.questId === questId && progress.status !== 'completed'
+        ? 'active'
+        : progress.status,
+    ]),
+  ) as Record<QuestId, QuestStatus>;
 }
 
 export function nextSuggestedQuest(state: GameState): QuestId | null {
   const ordered = [...QUEST_DEFINITIONS].sort((a, b) => a.order - b.order);
   for (const definition of ordered) {
     if (
-      state.quests[definition.id].status !== 'completed' &&
-      arePrerequisitesMet(state, definition.id)
+      deriveQuestStatuses(state)[definition.id] !== 'completed' &&
+      deriveQuestStatuses(state)[definition.id] === 'available'
     ) {
       return definition.id;
     }

@@ -103,7 +103,9 @@ localized text field.
 ## Conditions and effects
 
 Conditions include boolean flags, primitive `eq`/`neq`, safe-integer ordering,
-persisted quest statuses, `all`, `any`, and `not`. Missing facts are absent:
+persisted quest statuses, historical `quest-completed`, `all`, `any`, and `not`.
+`quest-completed` remains true after a repeatable attempt restarts because it
+queries completion history rather than the current attempt status. Missing facts are absent:
 flag checks and equality are false; `neq` is true only when a fact exists and
 differs, so it is not the same as `not(eq)`. Ordered comparisons require a
 safe integer fact and a safe integer operand; no coercion occurs. Quest
@@ -120,6 +122,16 @@ ordered effect list is applied to a private draft. A valid `start-quest` then
 whole command without changing state or revision. Failed and cancelled quests
 restart only when the definition opts in. The engine does not name moral
 values, rewards, movement, combat, or rendering.
+
+A quest may opt in to completed-attempt replay with `repeatable: true`; the
+default remains terminal after completion. Optional stable `stepIds` are
+recorded in `NarrativeState.questHistory` when the quest completes. History
+stores a completion count and the unique completed step IDs across attempts.
+`createNarrativeState` accepts a trusted `NarrativeStateSeed` for restoring
+facts, quest status, and quest history without replaying effects. The snapshot
+decoder accepts older narrative snapshots without `questHistory`, preserving
+completed status and deriving at least one completion for legacy completed
+quests.
 
 ## Runtime example
 
@@ -157,6 +169,10 @@ the same conversation can resume without reapplying a choice. An authored
 `closesDialogue` node exposes `close-dialogue`: it clears active and suspended
 cursors without assigning a story ending or reapplying effects. Only that
 explicit endpoint can close this way; ordinary exit continues to suspend.
+`open-dialogue` may name a `startNodeId` in the selected dialogue graph so an
+application can route a validated physical interaction to the matching
+authored node; absent that field, the engine resumes a suspended cursor or
+uses the dialogue entry node.
 
 ## Persistence and external events
 

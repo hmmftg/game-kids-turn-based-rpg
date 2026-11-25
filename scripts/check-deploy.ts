@@ -126,9 +126,13 @@ if (appMapFile) {
       sources?: string[];
       sourcesContent?: Array<string | null>;
     };
-    const coreSourceIndex = map.sources?.findIndex((source) =>
-      source.replaceAll('\\', '/').includes('packages/core/dist/graph.js'),
-    );
+    const coreSourceIndex = map.sources?.findIndex((source) => {
+      const normalized = source.replaceAll('\\', '/');
+      return (
+        normalized.includes('packages/core/dist/graph.js') ||
+        normalized.includes('node_modules/waypoint-rpg-core/dist/graph.js')
+      );
+    });
     must(map.version === 3, `${appMapFile} is not a standard version 3 source map`);
     must(
       coreSourceIndex !== undefined && coreSourceIndex >= 0,

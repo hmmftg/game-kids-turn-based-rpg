@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseSave } from './save.ts';
+import { gameReducer } from './reducer.ts';
+import { getBattleDefinition } from '../../content/fa/battles.ts';
 import {
   createFreshPersistedState,
   SAVE_SCHEMA_VERSION,
@@ -39,6 +41,26 @@ describe('save parsing and migration', () => {
       'schemaVersion',
       'stickers',
     ]);
+  });
+
+  it('keeps an active micro-battle session-only across the save projection', () => {
+    const hub = {
+      ...createInitialState(NOW),
+      mode: 'hub' as const,
+      resumeMode: 'hub' as const,
+      avatarId: 'avatar-aban' as const,
+    };
+    const battling = gameReducer(
+      hub,
+      { type: 'START_BATTLE', definition: getBattleDefinition('battle-playful-mouse')! },
+      NOW,
+    );
+    expect(battling.battle?.phase).toBe('intro');
+
+    const persisted = toPersistedState(battling);
+    expect(persisted).not.toHaveProperty('battle');
+    expect(persisted).not.toHaveProperty('narrative');
+    expect(persisted.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
   });
 
   it('migrates a v1 save with a single mute flag into music/SFX buses', () => {
@@ -143,5 +165,22 @@ describe('save parsing and migration', () => {
     expect(result.state.audio.sfxMuted).toBe(false);
     expect(result.state.qualityTier).toBe('low');
     expect(result.state.checkpoint).toEqual({ kind: 'title', questId: null, at: NOW });
+  });
+
+  it.each([
+    ['an unknown quest', { 'quest-future': { status: 'completed' } }, 'unknown-quest-id'],
+    [
+      'an unknown step id',
+      { 'quest-greeting': { completedSteps: ['greeting-1', 'renamed-step'] } },
+      'unsupported-quest-step-data',
+    ],
+    [
+      'duplicate completed steps',
+      { 'quest-greeting': { completedSteps: ['greeting-1', 'greeting-1'] } },
+      'unsupported-quest-step-data',
+    ],
+  ])('retains saves with %s as recoverable corrupt data', (_name, quests, reason) => {
+    const result = parseSave({ schemaVersion: SAVE_SCHEMA_VERSION, quests }, NOW);
+    expect(result).toEqual({ ok: false, reason });
   });
 });

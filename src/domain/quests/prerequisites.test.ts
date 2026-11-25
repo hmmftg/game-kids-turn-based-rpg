@@ -5,16 +5,33 @@ import {
   deriveQuestStatuses,
   nextSuggestedQuest,
 } from './prerequisites.ts';
-import { createInitialState } from '../game/initialState.ts';
+import { createFreshPersistedState, createInitialState } from '../game/initialState.ts';
+import { QUEST_DEFINITIONS } from './definitions.ts';
+import { createMahalleNarrativeState, getMahalleQuestProgress } from '../game/narrative.ts';
 import type { GameState, QuestId } from '../game/types.ts';
 
 function withCompleted(...completed: QuestId[]): GameState {
   const base = createInitialState(0);
-  const quests = { ...base.quests };
+  const persisted = createFreshPersistedState(0);
+  const quests = { ...persisted.quests };
   for (const id of completed) {
-    quests[id] = { status: 'completed', completedSteps: [], completionCount: 1 };
+    const definition = QUEST_DEFINITIONS.find((quest) => quest.id === id)!;
+    quests[id] = {
+      status: 'completed',
+      completedSteps: definition.steps.map((step) => step.id),
+      completionCount: 1,
+    };
   }
-  return { ...base, avatarId: 'avatar-aban', quests };
+  const narrative = createMahalleNarrativeState('mahalle-prerequisite-fixture', {
+    ...persisted,
+    quests,
+  });
+  return {
+    ...base,
+    avatarId: 'avatar-aban',
+    narrative,
+    quests: getMahalleQuestProgress(narrative),
+  };
 }
 
 describe('quest prerequisites', () => {

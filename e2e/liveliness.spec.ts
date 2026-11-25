@@ -3,7 +3,6 @@ import { startGame, resumeFromPicker } from './harness.ts';
 import {
   attentionProbe,
   tapNpcFigure,
-  tapWorldAnchor,
   tapWorldGround,
   waitForWalkerIdle,
   type WorldProbe,
@@ -123,8 +122,14 @@ test('reduced motion keeps state changes, drops flourish motion', async ({ page 
 
 test('a reload does not replay arrival liveliness', async ({ page }) => {
   await startGame(page);
-  await tapWorldAnchor(page, 'anchor-square');
+  // The locked finale hotspot intentionally swallows taps at the spawn
+  // square's center. Use the same unobstructed south-step-and-return route as
+  // the arrival contract test so this case commits a real arrival first.
+  await tapWorldGround(page, 0, 3);
   await waitForWalkerIdle(page);
+  await tapWorldGround(page, 0, 1.2);
+  await waitForWalkerIdle(page);
+  expect(await noticesFor(page, 'npc-elder')).toHaveLength(1);
   await page.reload();
   await resumeFromPicker(page);
   await page.waitForTimeout(2000);

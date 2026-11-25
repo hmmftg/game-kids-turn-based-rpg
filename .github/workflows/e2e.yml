@@ -95,6 +95,33 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  mahalle-library-consumer:
+    name: Mahalle installed-library consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+      - name: Install locked repository toolchain
+        run: npm ci
+      - name: Install Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Build and test the root game using installed framework archives
+        run: npm run framework:mahalle-consumer
+        env:
+          FRAMEWORK_INSTALL_CHROMIUM: browser-only
+          FRAMEWORK_MAHALLE_DIAGNOSTICS_OUTPUT: ${{ runner.temp }}/mahalle-consumer-diagnostics
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: mahalle-consumer-playwright-diagnostics
+          path: ${{ runner.temp }}/mahalle-consumer-diagnostics/
+          if-no-files-found: ignore
+          retention-days: 14
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 45
