@@ -1,11 +1,20 @@
 import assert from 'node:assert/strict';
-import { readFile, rm, mkdtemp } from 'node:fs/promises';
+import { access, readFile, rm, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { importMeshyPilot, MESHY_PILOT_ASSETS } from './import-meshy-pilot.mjs';
 
 const sourceDirectory = process.env['WAYPOINT_MESHY_SOURCE_DIR'];
+
+test('rejects a staging path under the checkout before creating it', async () => {
+  const outputDirectory = resolve('.release-compat', `meshy-stage-rejected-${process.pid}`);
+  await assert.rejects(
+    importMeshyPilot({ sourceDirectory: tmpdir(), outputDirectory }),
+    /outside the checkout/,
+  );
+  await assert.rejects(access(outputDirectory));
+});
 
 test(
   'imports all five local Meshy GLBs unchanged under the explicit pilot budget',

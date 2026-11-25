@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
-import { build } from 'vite';
+import { build, preview } from 'vite';
 
 async function listFiles(directory) {
   const files = [];
@@ -33,7 +34,13 @@ test('populated unapproved pilot staging stays out of the Garden production buil
     await writeFile(
       join(stagingRoot, 'asset-records.json'),
       JSON.stringify([
-        { id: 'pilot-unapproved', approved: false, private: privateMarker.toString() },
+        {
+          id: 'pilot-unapproved',
+          runtimePath: 'models/pilot-unapproved.glb',
+          outputSha256: createHash('sha256').update(privateMarker).digest('hex'),
+          metrics: { outputBytes: privateMarker.byteLength },
+          private: privateMarker.toString(),
+        },
       ]),
     );
     await writeFile(join(stagingRoot, 'metadata', 'pilot-unapproved.json'), privateMarker);
@@ -47,12 +54,31 @@ test('populated unapproved pilot staging stays out of the Garden production buil
       build: { outDir: outputRoot, emptyOutDir: true },
     });
 
+    const server = await preview({
+      root: gardenRoot,
+      configFile: join(gardenRoot, 'vite.config.ts'),
+      logLevel: 'silent',
+      build: { outDir: outputRoot },
+      preview: { port: 0 },
+    });
+    try {
+      const { port } = server.httpServer.address();
+      const result = await fetch(`http://127.0.0.1:${port}/__meshy/pilot/asset-records.json`);
+      assert.notEqual(result.headers.get('x-waypoint-meshy-pilot'), 'enabled');
+      assert.equal((await result.text()).includes(privateMarker.toString()), false);
+    } finally {
+      await new Promise((resolveClose) => server.httpServer.close(resolveClose));
+    }
     const outputFiles = await listFiles(outputRoot);
     assert.ok(outputFiles.length > 0, 'The production build must emit files.');
-    assert.equal(
-      outputFiles.some((file) => /\.(?:glb|gltf)$/i.test(file)),
-      false,
-      'Private pilot model binaries must not be copied into the production output.',
+    const emittedModels = outputFiles
+      .filter((file) => /\.(?:glb|gltf)$/i.test(file))
+      .map((file) => basename(file))
+      .sort();
+    assert.deepEqual(
+      emittedModels,
+      ['phase5-animated-guardian.glb', 'phase5-textured-static.glb'],
+      'Only the two registered public Garden fixtures may ship; private pilot model binaries must stay out.',
     );
     assert.equal(
       outputFiles.some((file) => /asset-(?:records|catalog)\.json$/i.test(file)),

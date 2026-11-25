@@ -26,6 +26,22 @@ The expected interaction model is:
 DISCOVER → APPROACH → WATCH → TRY → CELEBRATE → EXPLORE
 ```
 
+## Implementation progress tracking
+
+For every multi-step implementation:
+
+- Initialize the native `update_plan` tracker before
+  modifying any files.
+- Represent each implementation milestone as a task.
+- Update task status before starting and after
+  completing each milestone.
+- Mark a task completed only after its acceptance
+  criteria and applicable tests have passed.
+- Reconcile the tracker whenever the plan changes.
+- Keep the tracker synchronized with delegated
+  subagent work.
+- Do not finish with an outdated progress tracker.
+
 ---
 
 # 1. Non-Negotiable Rules
@@ -190,7 +206,7 @@ npm run verify        # format:check + lint + typecheck + unit tests + build (in
 - `*.tsbuildinfo` is gitignored but historically tracked — do not commit changes to it (`git checkout origin/main -- <file>` if a build dirties the diff). Prefer `git rm --cached` cleanup over repeated churn.
 - E2e selectors use `data-testid`; keep them stable and add them for new child-facing controls.
 - Keep PRs scoped: acceptance-style work changes only what evidence shows is broken.
-- After requested work passes its applicable verification, commit only task-scoped files and push the current feature branch to `origin` by default (`git push -u origin <branch>` for its first push). Explicit requests to leave work uncommitted or unpushed, protected branches, and failed approval checks override this rule. Never push directly to `main` or force-push; preserve unrelated worktree changes, and report the commit hash and remote branch. If publishing is blocked, report the reason and exact command to run.
+- After requested work passes its applicable verification, commit only task-scoped files and push the current feature branch to `origin` by default (`git push -u origin <branch>` for its first push). Explicit requests to leave work uncommitted or unpushed, protected branches, and failed approval checks override push execution. Never push directly to `main` or force-push; preserve unrelated worktree changes. Every completion report for a feature-branch task must include the exact push command for that branch, even when the push was not performed: use `git push -u origin <branch>` when there is no upstream, or `git push origin <branch>` when an upstream exists. Also report the commit hash and remote branch. If publishing is blocked, report the reason. Providing the command does not authorize executing the push.
 - On finishing a task that produced a branch, provide the PR link: open the PR when tooling/credentials allow, otherwise output the pre-filled create link `https://github.com/hmmftg/game-kids-turn-based-rpg/pull/new/<branch>`.
 
 ---

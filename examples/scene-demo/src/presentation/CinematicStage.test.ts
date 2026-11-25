@@ -2,7 +2,7 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { PerspectiveCamera } from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CompiledTimeline, TimelineEvent, TimelinePlayer } from './timeline.js';
+import type { CompiledTimeline, TimelineEvent, TimelinePlayer } from 'waypoint-rpg-three';
 
 const r3f = vi.hoisted(() => ({
   frame: null as ((state: unknown, deltaSeconds: number) => void) | null,
@@ -24,7 +24,7 @@ vi.mock('@react-three/fiber', () => ({
 
 import { CinematicStage } from './CinematicStage.js';
 import { bloodLeafTimelineRegistry } from './blood-leaf-cinematic.js';
-import { compileTimeline, createTimelinePlayer } from './timeline.js';
+import { compileTimeline, createTimelinePlayer } from 'waypoint-rpg-three';
 
 const roots: ReturnType<typeof createRoot>[] = [];
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

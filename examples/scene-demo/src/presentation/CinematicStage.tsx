@@ -8,7 +8,7 @@ import type {
   TimelineEvent,
   TimelinePlayer,
   TimelineStatus,
-} from './timeline.js';
+} from 'waypoint-rpg-three';
 import { sceneProbe } from '../probe.js';
 
 const MAX_PRESENTATION_FRAME_SECONDS = 0.05;

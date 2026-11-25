@@ -3,8 +3,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import type { Camera, Scene, WebGLRenderer } from 'three';
 import { transitionGameplay } from 'waypoint-rpg-gameplay';
 import type { GameplayCommand } from 'waypoint-rpg-gameplay';
-import type { CharacterAnimationSnapshot } from './character-animation.js';
-import type { SemanticAction } from 'waypoint-rpg-three';
+import type { CharacterAnimationSnapshot, SemanticAction } from 'waypoint-rpg-three';
 import {
   applyAnimationProjection,
   createAnimationAbilityCommand,

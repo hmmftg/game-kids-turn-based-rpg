@@ -1,10 +1,11 @@
 # باغ قصه‌ها — Garden of Stories
 
-Garden of Stories is a short, family-friendly Persian 3D RPG that exercises
-`waypoint-rpg-core`, `waypoint-rpg-narrative`, and
-`waypoint-rpg-gameplay` as independently packaged libraries. Choose to help a
-gardener restore a tree or follow a clue to a friendly guardian's tactical
-light game. Both paths change the garden and lead to a positive ending.
+Garden of Stories is the repository's single flagship framework sample: a
+family-friendly Persian 3D RPG built on the independently packaged
+`waypoint-rpg-core`, `waypoint-rpg-narrative`, `waypoint-rpg-gameplay`, and
+`waypoint-rpg-three` packages. Choose to help a gardener restore a tree or
+follow a clue to a friendly guardian's tactical light game. Both paths change
+the garden and lead to a positive ending with a Garden-owned cinematic.
 
 The game runs in a browser without a backend, account, analytics, or runtime
 external API. Its RTL interface is DOM-based, including dialogue, inventory,
@@ -41,6 +42,7 @@ flowchart TD
   R --> C[waypoint-rpg-core public root]
   R --> N[waypoint-rpg-narrative public root]
   R --> G[waypoint-rpg-gameplay public root]
+  V[Garden scene and asset host] --> T[waypoint-rpg-three public root]
   S[Game-owned story and gameplay definitions] --> N
   S --> G
   R --> X[Application cross-package transaction]
@@ -49,6 +51,7 @@ flowchart TD
   R -->|facts, quest, progression, map| UI
   R --> P[Garden-owned versioned save adapter]
   P -->|decoded snapshots| R
+  T --> V
 ```
 
 ### Core runtime and world navigation
@@ -75,10 +78,40 @@ This keeps arrival synchronized to rendered motion without a wall-clock timer.
 Camera and rendered consequence probes are used by browser checks. The visible
 tree and warm lantern lighting are projections of committed narrative facts.
 
-Geometry is procedural and sample-owned. Landmark component boundaries in
-`src/scenes/GardenScene.tsx` keep artwork replaceable by locally bundled GLB
-models without moving story, movement, or interaction rules into assets. No
-generated model or external asset service is needed.
+The scene combines Garden-owned procedural fallbacks with two locally bundled,
+hash-verified GLB fixtures: a textured static landmark and a genuinely rigged
+character with four original clips. The bundled fixtures are unchanged
+repository-authored MIT synthetic assets; no private Meshy pilot output is
+included. Model records, rights, source hashes, measured geometry, and Garden
+budgets are in `assets/`. `sample:garden:asset-check` inspects actual source and
+runtime bytes, measurements, mappings, and per-map budgets. Release requires
+separate approval evidence for each exact output hash. Landmark placement uses
+object transforms; imported geometry, attributes, textures, rigs, and poses are
+not modified.
+
+`src/models/GardenModel.tsx` loads assets through the public Three package and
+owns each scene instance's lease. The hero, traveler, and guardian select
+semantic idle, move, interaction, and combat states independently. Shared
+animation blending, interruption, reduced-motion poses, loading cancellation,
+and cleanup live in `waypoint-rpg-three`. Missing or rejected assets leave the
+existing procedural characters and landmarks visible.
+
+### Chapter content and cinematics
+
+`src/content/adventure/catalog.ts` is the extensible Garden-owned index for
+connected maps, chapters, quest alternatives, NPC and dialogue IDs, inventory,
+equipment, abilities, encounters, cinematic IDs, conditional scene objects,
+asset bindings, locale, accessibility, and persistence mapping. The current
+chapter spans the village and garden. Chapter membership derives from the
+already-saved map ID, so the version-2 save format remains unchanged.
+
+`src/presentation/ending-cinematic.ts` defines game-specific camera and
+character choreography for each existing ending. The Three package validates
+and runs the timeline; Garden decides when a committed story outcome requests
+it and presents the existing Persian dialogue. Timelines are transient,
+cancellable, and are not replayed after save restoration. Reduced motion keeps
+the ending meaning and dialogue while skipping camera movement and using a
+static semantic pose.
 
 ### Narrative and gameplay packages
 
@@ -149,14 +182,18 @@ root:
 ```bash
 npm ci
 npm run sample:garden:dev
+npm run sample:garden:preview
 npm run sample:garden:build
 npm run sample:garden:test
 npm run sample:garden:e2e
+npm run sample:garden:asset-check
+npm run sample:garden:release:check
 npm run framework:garden-consumer
 ```
 
-The browser suite runs the complete gardener and guardian paths, including a
-mid-combat reload. The independent consumer gate packs all three compiled
+The browser suite runs both existing endings, the complete gardener and
+guardian paths, cinematic cancellation, restoration without replay, fallback,
+and a mid-combat reload. The independent consumer gate packs all four compiled
 libraries, copies Garden outside the checkout, installs each archive offline,
 verifies root-only ESM and declarations in NodeNext and Bundler modes, then
 type-checks, unit-tests, builds, and launches Chromium against that install.
@@ -173,15 +210,17 @@ npm run sample:garden:previews
 The capture waits for a live canvas, orthographic camera, populated scene,
 active map, and rendered world consequence. It checks each PNG's signature,
 dimensions, size, and hash before writing the source-commit provenance manifest.
-The existing `sample-previews.yml` workflow uploads all sample captures and
-uses the existing reviewable README-gallery pull request path.
+The `sample-previews.yml` workflow uploads the public game captures. The
+developer fixture guide documents separate framework and creator screenshots.
 
 ## Known limits
 
 - Chromium software-WebGL is verified; other browsers and physical touch
   devices remain unverified.
-- Art is lightweight procedural geometry. A locally licensed GLB art pass is
-  a future replacement, not a runtime dependency.
-- The encounter is one deterministic friendly challenge, not a general combat
-  campaign. There is no multiplayer, inventory crafting, or cinematic system.
+- The two included synthetic GLBs are technical sample assets, not a completed
+  production art direction. Private Meshy pilot models remain isolated and
+  require game-specific rights approval before any release use.
+- The current chapter has two connected maps and one deterministic friendly
+  tactical challenge. Future chapter production, crafting, and multiplayer are
+  outside this consolidation phase.
 - Vite reports the expected large Three.js bundle warning in this small sample.

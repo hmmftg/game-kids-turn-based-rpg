@@ -11,7 +11,15 @@ on:
       - scripts/sync-sample-gallery.mjs
       - examples/garden-adventure/**
       - examples/scene-demo/**
+      - packages/core/**
+      - packages/narrative/**
       - packages/gameplay/**
+      - packages/three/**
+      - tools/creator/src/model-import.mjs
+      - scripts/import-model*.mjs
+      - scripts/import-meshy-pilot*.mjs
+      - scripts/meshy-pilot-*.mjs
+      - scripts/validate-garden-assets*.mjs
       - scripts/check-framework-garden-consumer.mjs
       - scripts/check-framework-runtime.mjs
       - docs/MAHALLE-LIBRARY-ADOPTION.md

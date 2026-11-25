@@ -80,6 +80,40 @@ Lifecycle is probed, not assumed: `__worldDisposeEvents` counts real
 `dispose` events on scene-owned resources across remounts, and
 `__worldCritterTimersAtUnmount` must read 0 (`e2e/memory-soak.spec.ts`).
 
+## Framework consumer ownership
+
+Garden is the single public-facing framework sample and the primary consumer
+of all four packages. Narrative and gameplay stay optional: independent
+generated consumers prove that either package can be omitted. The root Mahalle
+application remains a separate first-party product with its own child
+interaction, renderer, content, and persistence contracts. Hello World,
+Blood Leaf, importer/creator previews, and generated projects are technical
+fixtures; they are not additional sample games.
+
+```mermaid
+flowchart LR
+  Core[waypoint-rpg-core] --> Garden[Garden of Stories flagship sample]
+  Narrative[waypoint-rpg-narrative optional] --> Garden
+  Gameplay[waypoint-rpg-gameplay optional] --> Garden
+  Three[waypoint-rpg-three optional] --> Garden
+  Core --> Mahalle[Mahalle first-party product]
+  Narrative --> Mahalle
+  Gameplay --> Mahalle
+  Core --> Hello[Hello World technical fixture]
+  Core --> SceneFixture
+  Narrative --> SceneFixture
+  Gameplay --> SceneFixture
+  Narrative --> NarrativeOnly[Generated narrative-only fixture]
+  Gameplay --> TacticalOnly[Generated tactical-only fixture]
+  Three --> SceneFixture[Blood Leaf and Phase 5 technical fixture]
+```
+
+Garden owns its maps, chapter catalog, narrative and gameplay definitions,
+save adapter, asset mappings, animation state choices, camera direction, and
+cinematic choreography. Shared package contracts remain game-agnostic. The
+complete capability/fixture matrix and verification commands are in
+[`SAMPLE-VERIFICATION.md`](SAMPLE-VERIFICATION.md).
+
 ## Key invariants
 
 - **Domain purity**: `domain/` never imports React, Three, or DOM APIs. All transitions are pure

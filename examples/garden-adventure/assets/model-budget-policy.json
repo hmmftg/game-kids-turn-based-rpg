@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "gameId": "garden-of-stories",
+  "runtimePolicy": {
+    "maxTrianglesPerAsset": 8000,
+    "maxLoadedAssets": 4,
+    "maxDecodedGeometryBytes": 4194304,
+    "maxSceneTriangles": 16000,
+    "allowUnapproved": false
+  },
+  "assets": [
+    {
+      "id": "phase5-animated-guardian",
+      "preparedBy": "synthetic-fixture-author",
+      "maxFileBytes": 3145728,
+      "maxTriangles": 8000,
+      "maxTextureBytes": 2097152,
+      "maxTextureDimension": 512,
+      "maxDecodedBytes": 4194304,
+      "maxJoints": 32,
+      "maxClips": 8
+    },
+    {
+      "id": "phase5-textured-static",
+      "preparedBy": "synthetic-fixture-author",
+      "maxFileBytes": 2621440,
+      "maxTriangles": 4000,
+      "maxTextureBytes": 2097152,
+      "maxTextureDimension": 512,
+      "maxDecodedBytes": 4194304,
+      "maxJoints": 0,
+      "maxClips": 0
+    }
+  ],
+  "maps": {
+    "village": {
+      "modelInstances": {
+        "phase5-animated-guardian": 1
+      },
+      "maxUniqueAssets": 1,
+      "maxAssetInstances": 2,
+      "maxTriangles": 10000,
+      "maxEncodedModelBytes": 3145728,
+      "maxDecodedGeometryBytes": 4194304
+    },
+    "garden": {
+      "modelInstances": {
+        "phase5-animated-guardian": 2,
+        "phase5-textured-static": 1
+      },
+      "maxUniqueAssets": 2,
+      "maxAssetInstances": 4,
+      "maxTriangles": 16000,
+      "maxEncodedModelBytes": 6291456,
+      "maxDecodedGeometryBytes": 8388608
+    }
+  }
+}

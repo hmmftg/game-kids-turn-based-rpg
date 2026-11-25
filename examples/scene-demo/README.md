@@ -1,4 +1,9 @@
-# Independent 3D narrative + gameplay consumer
+# Developer verification fixture: Blood Leaf and Three.js consumer
+
+This remains a technical acceptance consumer, not a public-facing sample game.
+The public sample gallery presents Garden of Stories; the root Mahalle game
+remains its separate first-party product. Keep this fixture while it owns
+unique narrative, transaction, scene-lifecycle, model, and cinematic checks.
 
 This example validates three optional public packages in a separate Three.js
 game: `waypoint-rpg-core` for generic runtime/world primitives,
@@ -65,17 +70,23 @@ Startup validates stored state before the host restores its map at the saved
 anchor. `SceneHost.start(mapId, entryAnchorId?)` keeps the default spawn
 behavior and accepts only a known walkable anchor on that map. The game saves
 a destination only after the scene load commits. Scene registration,
-transitions, load cancellation, resource cleanup, two camera modes, and the
-demand-rendered canvas remain owned by this example; no renderer package is
-introduced.
+transitions, load cancellation, cleanup of scene-level resources, two camera
+modes, and the demand-rendered canvas remain owned by this example. Verified
+model loading, animation controllers, and timeline validation/player come from
+the optional `waypoint-rpg-three` public package root.
 
-## Phase 5 local model preview
+## Shared Three.js model, animation and timeline fixture
 
 Open `/?phase5=assets` in the scene-demo to load one repository-authored
 textured static GLB and one textured skinned GLB with four named clips. Both are
 synthetic fixtures under the root MIT license and load from this example's
 own `public/models/` directory. The preview is isolated from the Blood Leaf
 story and the Kids RPG; it makes no network requests for model data.
+
+Verified model loading, independent character-animation controllers and
+timeline validation/playback are imported from the public
+`waypoint-rpg-three` package root. Game-specific clip mapping and cinematic
+staging remain in this fixture; Garden owns and exercises its own choreography.
 
 The runtime preview also loads two pinned, third-party source models from the
 Khronos glTF Sample Assets repository: **Box** and **Rigged Figure** at commit

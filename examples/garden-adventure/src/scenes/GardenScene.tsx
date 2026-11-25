@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { OrthographicCamera, Vector3, type Group } from 'three';
 import { getFact } from 'waypoint-rpg-narrative';
 import { getAnchor, type AnchorId } from 'waypoint-rpg-core';
+import type { SemanticAction, TimelineEvent } from 'waypoint-rpg-three';
 import type { GardenRuntime, GardenState, GardenWalk } from '../game/runtime.js';
 import { commitRenderedArrival } from '../game/rendered-arrival.js';
 import {
@@ -13,6 +14,10 @@ import {
 } from '../world/world.js';
 import { SceneCamera } from './SceneCamera.js';
 import { isGardenMeshyPilotRequested, MeshyModelVisual } from './MeshyPilot.js';
+import { GardenModelVisual } from '../models/GardenModel.js';
+import { GARDEN_MODEL_IDS } from '../models/asset-records.js';
+import { GardenEndingCinematic } from '../presentation/GardenEndingCinematic.js';
+import type { GardenEndingId } from '../presentation/ending-cinematic.js';
 import { sceneForMap } from './registry.js';
 import {
   currentGardenProbe,
@@ -26,6 +31,13 @@ interface GardenSceneProps {
   readonly sceneGeneration: number;
   readonly onTargetPress: (targetId: GardenTarget['id']) => void;
   readonly onSceneReady: (readiness: GardenSceneReadiness) => void;
+  readonly cinematicRequest: {
+    readonly endingId: GardenEndingId;
+    readonly requestId: string;
+  } | null;
+  readonly cinematicActions: Readonly<Record<string, SemanticAction>>;
+  readonly onCinematicEvent: (event: TimelineEvent) => void;
+  readonly onCinematicComplete: (requestId: string) => void;
 }
 
 export function GardenScene({
@@ -34,16 +46,32 @@ export function GardenScene({
   sceneGeneration,
   onTargetPress,
   onSceneReady,
+  cinematicRequest,
+  cinematicActions,
+  onCinematicEvent,
+  onCinematicComplete,
 }: GardenSceneProps) {
   const definition = sceneForMap(state.mapId);
   const entry = getAnchor(definition.graph, state.anchorId);
   const targets = gardenTargets.filter((target) => target.mapId === state.mapId);
   const treeGrown = getFact(state.narrative, 'tree-grown') === true;
   const lanternLit = getFact(state.narrative, 'lantern-lit') === true;
+  const guardianAction =
+    cinematicActions.guardian ??
+    (lanternLit ? 'interact' : state.gameplay.encounter?.outcome === null ? 'combat' : 'idle');
 
   return (
     <group name={`garden-scene-${state.mapId}`}>
       <SceneCamera mapId={state.mapId} anchorId={state.anchorId} />
+      {cinematicRequest && state.mapId === 'garden' ? (
+        <GardenEndingCinematic
+          key={cinematicRequest.requestId}
+          endingId={cinematicRequest.endingId}
+          requestId={cinematicRequest.requestId}
+          onEvent={onCinematicEvent}
+          onComplete={onCinematicComplete}
+        />
+      ) : null}
       <ContextRecovery />
       <RendererResourceProbe mapId={state.mapId} sceneGeneration={sceneGeneration} />
       <SceneProbe
@@ -72,6 +100,7 @@ export function GardenScene({
           target={target}
           onPress={onTargetPress}
           lanternLit={lanternLit}
+          guardianAction={guardianAction}
         />
       ))}
       <PlayerCharacter
@@ -80,6 +109,7 @@ export function GardenScene({
         walk={state.walk}
         playthroughId={state.narrative.playthroughId}
         mapId={state.mapId}
+        action={cinematicActions.hero ?? (state.walk ? 'move' : 'idle')}
       />
     </group>
   );
@@ -453,12 +483,14 @@ function PlayerCharacter({
   walk,
   playthroughId,
   mapId,
+  action,
 }: {
   readonly anchorId: string;
   readonly anchor: { readonly x: number; readonly z: number };
   readonly walk: GardenWalk | null;
   readonly playthroughId: string;
   readonly mapId: GardenMapId;
+  readonly action: SemanticAction;
 }) {
   const groupRef = useRef<Group>(null);
   const elapsed = useRef(0);
@@ -500,14 +532,24 @@ function PlayerCharacter({
 
   return (
     <group ref={groupRef} position={[anchor.x, 0, anchor.z]} name="garden-player">
-      <mesh position={[0, 0.68, 0]} castShadow>
-        <capsuleGeometry args={[0.28, 0.65, 4, 10]} />
-        <meshStandardMaterial color="#c37850" />
-      </mesh>
-      <mesh position={[0, 1.35, 0]} castShadow>
-        <sphereGeometry args={[0.26, 12, 10]} />
-        <meshStandardMaterial color="#e8b68d" />
-      </mesh>
+      <GardenModelVisual
+        assetId={GARDEN_MODEL_IDS.animatedCharacter}
+        instanceId="garden-hero"
+        action={action}
+        modelPosition={[0, 0.7, 0]}
+        modelScale={[1.2, 1.2, 1.2]}
+      >
+        <group>
+          <mesh position={[0, 0.68, 0]} castShadow>
+            <capsuleGeometry args={[0.28, 0.65, 4, 10]} />
+            <meshStandardMaterial color="#c37850" />
+          </mesh>
+          <mesh position={[0, 1.35, 0]} castShadow>
+            <sphereGeometry args={[0.26, 12, 10]} />
+            <meshStandardMaterial color="#e8b68d" />
+          </mesh>
+        </group>
+      </GardenModelVisual>
     </group>
   );
 }
@@ -516,10 +558,12 @@ function WorldTarget({
   target,
   onPress,
   lanternLit,
+  guardianAction,
 }: {
   readonly target: GardenTarget;
   readonly onPress: GardenSceneProps['onTargetPress'];
   readonly lanternLit: boolean;
+  readonly guardianAction: SemanticAction;
 }) {
   const click = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
@@ -528,7 +572,7 @@ function WorldTarget({
 
   return (
     <group position={target.position} name={`world-target-${target.id}`}>
-      <TargetModel kind={target.kind} lanternLit={lanternLit} />
+      <TargetModel kind={target.kind} lanternLit={lanternLit} guardianAction={guardianAction} />
       <mesh position={[0, 0.9, 0]} onClick={click}>
         <sphereGeometry args={[0.9, 12, 10]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -540,9 +584,11 @@ function WorldTarget({
 function TargetModel({
   kind,
   lanternLit,
+  guardianAction,
 }: {
   readonly kind: GardenTarget['kind'];
   readonly lanternLit: boolean;
+  readonly guardianAction: SemanticAction;
 }) {
   if (kind === 'fountain')
     return (
@@ -565,7 +611,15 @@ function TargetModel({
   if (kind === 'guardian')
     return (
       <MeshyModelVisual modelKey="guardian">
-        <GuardianModel />
+        <GardenModelVisual
+          assetId={GARDEN_MODEL_IDS.animatedCharacter}
+          instanceId="garden-guardian"
+          action={guardianAction}
+          modelPosition={[0, 0.7, 0]}
+          modelScale={[1.2, 1.2, 1.2]}
+        >
+          <GuardianModel />
+        </GardenModelVisual>
       </MeshyModelVisual>
     );
   if (kind === 'lantern') return <LanternModel lit={lanternLit} />;
@@ -717,6 +771,14 @@ function ClueStoneModel() {
 function LanternModel({ lit }: { readonly lit: boolean }) {
   return (
     <group>
+      <group position={[0, 0.12, 0]} scale={[1.25, 0.18, 1.25]}>
+        <GardenModelVisual assetId={GARDEN_MODEL_IDS.lanternBase} instanceId="garden-lantern-base">
+          <mesh position={[0, 0.5, 0]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color="#967d59" />
+          </mesh>
+        </GardenModelVisual>
+      </group>
       {lit ? (
         <pointLight
           name="lantern-warm-light"

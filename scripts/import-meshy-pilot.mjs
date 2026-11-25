@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { error, log } from 'node:console';
 import { copyFile, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
@@ -26,6 +27,50 @@ const MESHY_FREE_PLAN_EVIDENCE_URL =
 const MESHY_TERMS_URL = 'https://www.meshy.ai/terms-of-use';
 const ATTRIBUTION = 'Model created with Meshy – CC BY 4.0 License';
 const GAME_ID = 'garden-adventure';
+const REPOSITORY_ROOT = resolve(import.meta.dirname, '..');
+const COMMON_GIT_DIRECTORY = resolve(
+  REPOSITORY_ROOT,
+  execFileSync('git', ['rev-parse', '--git-common-dir'], {
+    cwd: REPOSITORY_ROOT,
+    encoding: 'utf8',
+  }).trim(),
+);
+const REPOSITORY_ROOTS = [...new Set([REPOSITORY_ROOT, dirname(COMMON_GIT_DIRECTORY)])];
+
+function pathIsInside(root, candidate) {
+  const fromRoot = relative(root, candidate);
+  return (
+    fromRoot === '' ||
+    (fromRoot !== '..' && !fromRoot.startsWith(`..${sep}`) && !isAbsolute(fromRoot))
+  );
+}
+
+function pathsOverlap(left, right) {
+  return pathIsInside(left, right) || pathIsInside(right, left);
+}
+
+async function resolveFuturePath(path) {
+  let current = resolve(path);
+  const missingParts = [];
+  while (true) {
+    const actual = await realpath(current).catch(() => null);
+    if (actual) return resolve(actual, ...missingParts.reverse());
+    const parent = dirname(current);
+    if (parent === current) throw new Error(`Cannot resolve destination path ${path}.`);
+    missingParts.push(basename(current));
+    current = parent;
+  }
+}
+
+async function validatePrivateStaging(sourceDirectory, outputDirectory) {
+  const sourceRoot = await realpath(sourceDirectory);
+  const outputRoot = await resolveFuturePath(outputDirectory);
+  if (REPOSITORY_ROOTS.some((root) => pathIsInside(root, outputRoot)))
+    throw new Error('Private pilot staging must be outside the checkout.');
+  if (pathsOverlap(sourceRoot, outputRoot))
+    throw new Error('Private pilot source and staging directories must be isolated.');
+  return { sourceRoot, outputRoot };
+}
 
 export const MESHY_PILOT_ASSETS = Object.freeze([
   {
@@ -295,8 +340,10 @@ function markdownReport(reports) {
 export async function importMeshyPilot({ sourceDirectory, outputDirectory } = {}) {
   if (typeof sourceDirectory !== 'string' || sourceDirectory.trim() === '')
     throw new Error('Provide the original models directory with --source-dir.');
-  const sourceRoot = await realpath(sourceDirectory);
-  const outputRoot = resolve(outputDirectory ?? join(tmpdir(), 'waypoint-rpg-meshy-pilot'));
+  const { sourceRoot, outputRoot } = await validatePrivateStaging(
+    sourceDirectory,
+    outputDirectory ?? join(tmpdir(), 'waypoint-rpg-meshy-pilot'),
+  );
   await Promise.all(
     ['models', 'sources', 'metadata', 'rights'].map((directory) =>
       mkdir(join(outputRoot, directory), { recursive: true }),

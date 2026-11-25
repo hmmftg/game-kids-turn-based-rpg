@@ -21,6 +21,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run --config vitest.config.ts --root .",
     "prepack": "npm run build"
   },
   "peerDependencies": {
