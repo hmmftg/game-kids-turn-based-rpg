@@ -163,3 +163,30 @@ still be draft and must not be represented as reviewed or approved.
 gameplay library-backed reference consumer. The renderer, profile/save
 coordinator, child-facing story policy, asset release policy, and PWA remain
 application-owned because they are specialized product behavior.
+
+## Post-merge hardening evidence — PR #125
+
+Hardening baseline: merged PR #125 at `7832aaf1ffd6beabf0693812971c50ff48d1858c`. Work was completed in the isolated `codex/mahalle-migration-hardening` worktree.
+
+### H1 — Interrupted quest restore
+
+The application restoration boundary now normalizes a persisted active attempt that has no live encounter: first attempts become cancelled; attempts with completion history return to completed. It retains completed step IDs, counters, stickers, prerequisites, and prior rewards. Encounter-exit paths for hub/map/profile changes were audited so transient choreography cannot leave a permanently active narrative attempt. The generic narrative package's active-attempt rejection remains unchanged. Focused reducer/coordinator/save tests passed: 100 tests across four files, including legacy v2/v3 restores, encounter exit, reload, replay, and availability.
+
+### H2 — Profile persistence ordering
+
+`ProfilePersistenceQueue` now orders writes, resets, and deletes per profile and uses slot epochs/lifecycle generations to reject obsolete completions. A queued write cannot recreate deleted data or overwrite reset progress; a reset for an old selection cannot affect the newly selected profile. Ordinary profile switches still flush legitimate pending progress. Deterministic delayed-repository race tests pass. IndexedDB and the persisted schema remain unchanged.
+
+### H3 — Migration screenshots
+
+The existing production Playwright capture and README gallery generator now produce 13 Mahalle captures. The six new states are completed physical interaction, sticker reward, completed quest replay, real micro-battle, persistent discovery, and restored profile progress. All PNGs and checkpoint records validate; source SHA and per-image hashes are in `docs/previews/legacy-sample/provenance.json`. The current 13-image capture records source commit `8b5d07e4a3164756f9435cf96dfe5d34ebd579ab`. `npm run sample:gallery` and `npm run roadmap:check` pass.
+
+### H4 — Consumers, browser evidence, and CI review
+
+- The native runtime smoke now exercises repeatable narrative quest history and snapshot decoding, plus a real lightweight encounter through the gameplay package's public root. Core, narrative, and gameplay archives were packed, installed offline into an isolated consumer, and probed on the exact Node `22.0.0` runtime. ESM, source-map, progression, quest replay, encounter victory, and snapshot checks passed. This verifies the runtime floor; the root development toolchain still requires Node `>=22.22.2 <23`.
+- Independent core, narrative, gameplay, scene-demo, Garden, and Mahalle consumers passed locally. The Mahalle consumer built the copied root game against the three offline installed archives and passed its Chromium gameplay check.
+- The historical Phase 5 move clip was only 0.5 seconds, shorter than a potentially slow full-page screenshot. The procedural fixture now has a 2.5-second registered move clip. The before/after assertions that require the real gameplay-driven `move` action to be active were retained. `npm run sample:scene:previews` passed: Blood Leaf captures and all nine production Phase 5 captures. The updated Phase 5 manifest records 153 rendered move frames, a 3-frame first-render delta, zero idle model frames, and stable renderer counts across five warmed scene round trips (geometries 6→6, textures 1→1; tolerance +1 each). No GPU memory statistics were inferred.
+- `npm run verify` passed: 588 root tests across 62 files, 15 core, 40 narrative, 35 gameplay, 15 model-import tests, five Mahalle migration contracts, typechecking, content/assets, package boundaries, builds, budgets, and deployment shape. Lint had zero errors and seven existing Fast Refresh warnings. Creator preview typecheck/build and Chromium tests passed 4/4. Six focused save/replay/profile/offline/corruption/battle E2E tests passed. The same-origin upgrade/rollback Playwright test passed 1/1 against the migration baseline.
+- The catalog freshness checker now normalizes CRLF/LF before comparing generated JSON. This fixes a Windows `core.autocrlf` false stale-catalog failure; the asset catalog data was not rewritten, and unknown-rights entries remain unapproved.
+- GitHub diagnostics for PR #125 head `93841791ba6ea125bb405b1b28ad3c25d20836d4` show `verify`, the framework and Mahalle consumers, Garden consumer/gameplay E2E, creator/generated consumers, and E2E shards 1–4 succeeded. The screenshot `capture` job was **cancelled** (Actions run `45559161104`); the `synchronize` check was skipped. The canceled run is not a passing screenshot CI result. No hosted run covers these local hardening commits because they were not pushed.
+
+Screenshots were tested on Windows x64 using headless Chromium with SwiftShader. Physical mobile GPUs and other browser engines remain untested. Root educational content and placeholder-asset warnings remain under the repository's existing draft policy.

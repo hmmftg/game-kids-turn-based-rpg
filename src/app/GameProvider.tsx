@@ -19,6 +19,7 @@ import { GameContext, type GameShell } from './gameContext.ts';
 import { createAppGameRuntime } from './gameRuntime.ts';
 import { musicForState } from './musicRouting.ts';
 import { ProfileCoordinator } from './profileCoordinator.ts';
+import { ProfilePersistenceQueue } from './profilePersistenceQueue.ts';
 import { SaveCoordinator } from './saveCoordinator.ts';
 
 /**
@@ -43,16 +44,19 @@ export function GameProvider({
   const [profiles, setProfiles] = useState<readonly ProfileMeta[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [coordinators] = useState(() => {
+    const persistenceQueue = new ProfilePersistenceQueue();
     const dispatch = (command: Command) => {
       runtime.dispatch(command);
     };
     const profile = new ProfileCoordinator({
       repository,
+      persistenceQueue,
       dispatch,
       onProfiles: setProfiles,
       onActiveProfile: setActiveProfileId,
     });
     const save = new SaveCoordinator({
+      persistenceQueue,
       repository: () => profile.saveRepository,
       activeSlotKey: () => profile.slotKey,
       syncActiveProfileMeta: (snapshot, slotKey) =>

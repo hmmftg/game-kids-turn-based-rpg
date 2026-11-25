@@ -1,5 +1,6 @@
 import { createFreshPersistedState } from '../domain/game/initialState.ts';
 import type { AvatarId, Command, GameState, HeadwearId, Mode } from '../domain/game/types.ts';
+import type { ProfilePersistenceQueue } from './profilePersistenceQueue.ts';
 import { currentOrientation, detectQualityTier, detectWebgl } from '../framework/index.ts';
 import { createSaveRepository } from '../services/persistence/indexedDbRepository.ts';
 import { MemorySaveRepository } from '../services/persistence/memoryRepository.ts';
@@ -39,6 +40,8 @@ function makeProfile(
 export interface ProfileCoordinatorOptions {
   /** Injected for tests; a real IndexedDB repository is created on boot otherwise. */
   readonly repository?: SaveRepository | undefined;
+  /** Shared with autosaves so profile lifecycle operations have one total order. */
+  readonly persistenceQueue: ProfilePersistenceQueue;
   readonly dispatch: (command: Command) => void;
   /** React binding hooks — the coordinator is usable without them in tests. */
   readonly onProfiles?: (profiles: readonly ProfileMeta[]) => void;
@@ -87,9 +90,13 @@ export class ProfileCoordinator {
 
   private writeProfileList(next: readonly ProfileMeta[]): void {
     this.setProfiles(next);
-    void this.repository?.writeProfiles(next).catch(() => {
-      /* storage may be evicted; the game stays playable */
-    });
+    const repository = this.repository;
+    if (!repository) return;
+    void this.options.persistenceQueue
+      .enqueue(() => repository.writeProfiles(next))
+      .catch(() => {
+        /* storage may be evicted; the game stays playable */
+      });
   }
 
   private setActiveProfile(id: string | null): void {
@@ -190,13 +197,15 @@ export class ProfileCoordinator {
   }
 
   /** Loads a profile slot and lands on its checkpoint. Picker mode only. */
-  selectProfile(id: string, mode: Mode): void {
+  selectProfile(id: string, mode: Mode): Promise<void> {
     const repo = this.repository;
-    if (!repo || mode !== 'profileSelect') return;
+    if (!repo || mode !== 'profileSelect' || !this.profiles.some((profile) => profile.id === id)) {
+      return Promise.resolve();
+    }
     const generation = ++this.profileLoadGeneration;
     const { dispatch } = this.options;
-    void repo
-      .load(profileSlotKey(id))
+    return this.options.persistenceQueue
+      .enqueue(() => repo.load(profileSlotKey(id)))
       .then((result) => {
         if (this.cancelled || generation !== this.profileLoadGeneration) return;
         this.setActiveProfile(id);
@@ -245,37 +254,69 @@ export class ProfileCoordinator {
   }
 
   /** Wipes one profile's progress but keeps its card (avatar, badge, name). */
-  resetProfile(id: string): void {
-    this.profileLoadGeneration += 1;
+  resetProfile(id: string): Promise<void> {
+    const generation = ++this.profileLoadGeneration;
     const repo = this.repository;
     const meta = this.profiles.find((entry) => entry.id === id);
-    if (!repo || !meta) return;
+    if (!repo || !meta) return Promise.resolve();
     const now = Date.now();
-    this.writeProfileList(
-      this.profiles.map((entry) =>
-        entry.id === id ? { ...entry, stickerCount: 0, lastPlayedAt: now } : entry,
-      ),
+    const slot = profileSlotKey(id);
+    const nextProfiles = this.profiles.map((entry) =>
+      entry.id === id ? { ...entry, stickerCount: 0, lastPlayedAt: now } : entry,
     );
-    void repo
-      .save({ ...createFreshPersistedState(now), avatarId: meta.avatarId }, profileSlotKey(id))
-      .catch(() => {
-        /* storage may be evicted */
+    const resetCurrentSession = this.activeProfileId === id && this.activeSlotKey === slot;
+    this.setProfiles(nextProfiles);
+    this.options.persistenceQueue.invalidateAndBlockSlots([slot]);
+    return this.options.persistenceQueue
+      .enqueue(async () => {
+        await repo.writeProfiles(nextProfiles).catch(() => {
+          /* the in-memory profile card remains usable */
+        });
+        await repo
+          .save({ ...createFreshPersistedState(now), avatarId: meta.avatarId }, slot)
+          .catch(() => {
+            /* storage may be evicted; the next eligible snapshot can retry */
+          });
+      })
+      .finally(() => {
+        this.options.persistenceQueue.releaseSlots([slot]);
+        if (
+          resetCurrentSession &&
+          generation === this.profileLoadGeneration &&
+          this.activeProfileId === id &&
+          this.activeSlotKey === slot
+        ) {
+          this.options.dispatch({ type: 'RESET_PROGRESS' });
+        }
       });
-    if (this.activeProfileId === id) this.options.dispatch({ type: 'RESET_PROGRESS' });
   }
 
   /** Removes a profile card AND its save slot entirely — no undo. */
-  deleteProfile(id: string): void {
+  deleteProfile(id: string): Promise<void> {
     this.profileLoadGeneration += 1;
-    this.writeProfileList(this.profiles.filter((entry) => entry.id !== id));
-    void this.repository?.clear(profileSlotKey(id)).catch(() => {
-      /* storage may be evicted */
-    });
+    const repo = this.repository;
+    const slot = profileSlotKey(id);
+    const nextProfiles = this.profiles.filter((entry) => entry.id !== id);
+    this.setProfiles(nextProfiles);
+    if (repo) this.options.persistenceQueue.invalidateAndBlockSlots([slot]);
+    const deletion = repo
+      ? this.options.persistenceQueue
+          .enqueue(async () => {
+            await repo.writeProfiles(nextProfiles).catch(() => {
+              /* storage may be evicted */
+            });
+            await repo.clear(slot).catch(() => {
+              /* storage may be evicted */
+            });
+          })
+          .finally(() => this.options.persistenceQueue.releaseSlots([slot]))
+      : Promise.resolve();
     // Deleting the profile the child is playing drops back to the picker.
     if (this.activeProfileId === id) {
       this.setActiveProfile(null);
       this.options.dispatch({ type: 'RESET_PROGRESS' });
     }
+    return deletion;
   }
 
   renameProfile(id: string, nameFa: string): void {
@@ -285,19 +326,32 @@ export class ProfileCoordinator {
   }
 
   /** Full reset: clears the legacy and active slots, then restarts fresh. */
-  resetProgress(): void {
-    this.profileLoadGeneration += 1;
+  resetProgress(): Promise<void> {
+    const generation = ++this.profileLoadGeneration;
     const repo = this.repository;
     const { dispatch } = this.options;
     if (!repo) {
       dispatch({ type: 'RESET_PROGRESS' });
-      return;
+      return Promise.resolve();
     }
-    const keys = [LEGACY_SLOT_KEY, this.activeSlotKey].filter((key): key is string => key !== null);
-    // Clear first so the autosave triggered by the reset cannot race it.
-    void Promise.all(keys.map((key) => repo.clear(key).catch(() => undefined))).finally(() =>
-      dispatch({ type: 'RESET_PROGRESS' }),
-    );
+    const profileId = this.activeProfileId;
+    const activeSlot = this.activeSlotKey;
+    const keys = [
+      ...new Set([LEGACY_SLOT_KEY, activeSlot].filter((key): key is string => key !== null)),
+    ];
+    this.options.persistenceQueue.invalidateAndBlockSlots(keys);
+    return this.options.persistenceQueue
+      .enqueue(async () => {
+        for (const key of keys) await repo.clear(key).catch(() => undefined);
+      })
+      .finally(() => {
+        const isSameSession =
+          generation === this.profileLoadGeneration &&
+          profileId === this.activeProfileId &&
+          activeSlot === this.activeSlotKey;
+        this.options.persistenceQueue.releaseSlots(keys);
+        if (isSameSession) dispatch({ type: 'RESET_PROGRESS' });
+      });
   }
 
   /**

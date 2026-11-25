@@ -193,3 +193,49 @@ Implementation commit: `737f2bb2124c3cfa90091e8a661e6e7d24312776`.
   generated, unknown rights stay unapproved, and renderer remains game-owned.
 - Task 8 — M7 regression, screenshot, and documentation acceptance: complete;
   final documentation/evidence commit is recorded in the handoff.
+
+## Post-merge hardening execution record — PR #125
+
+Baseline was rechecked at merge commit `7832aaf1ffd6beabf0693812971c50ff48d1858c` in a separate `codex/mahalle-migration-hardening` worktree. No source changes were made in the original checkout, and no push or PR was created.
+
+### H1 — Interrupted quest restoration
+
+- Normalize abandoned legacy active attempts at the application restore boundary without weakening generic narrative transition guards.
+- Audit `ENTER_HUB`, map changes, profile switching, and other encounter-exit paths.
+- Preserve quest history, completion counts, completed steps, stickers, and prerequisite availability.
+- Result: focused coordinator/reducer/narrative/save tests passed (100 tests across four files); migration contracts passed 5/5.
+- Commit: `337faee3e3f409511228700658153103e2b00bdd`.
+
+### H2 — Persistence races
+
+- Add a shared per-profile queue for save, reset, delete, load, and list work, plus slot epochs and lifecycle guards.
+- Reproduce delayed repository races and prove stale writes cannot undo reset/delete or alter a newly selected profile. Preserve legitimate writes during ordinary profile switching.
+- Result: deterministic delayed-repository tests and the focused H1/H2 suite passed; save schema and IndexedDB contracts did not change.
+- Commit: `337faee3e3f409511228700658153103e2b00bdd`.
+
+### H3 — Source-rendered Mahalle evidence
+
+- Extend the existing preview route and gallery generator with six gameplay checkpoints; retain the original seven captures.
+- Result: `npm run sample:previews` passed 1/1 in 2.5 minutes and produced 13 validated PNGs with source SHA and per-image SHA-256 checkpoint provenance. `npm run sample:gallery` and `npm run roadmap:check` passed.
+- Preview source SHA: `8b5d07e4a3164756f9435cf96dfe5d34ebd579ab`.
+- Commits: `7c2b2010a7262965f0d29a82e0319c48f420017a` (capture scenario) and `fa29f680f50a92017af821a33ea8b0d3062c3842` (gallery and captures).
+
+### H4 — Remaining gates
+
+- Expanded the copied runtime probes for repeatable narrative quests and lightweight encounters; corrected the output assertions in the runtime probe harness.
+- Packed all three compiled packages, installed the archives offline into a temporary consumer, and passed the full native runtime smoke on Node `22.0.0` with `FRAMEWORK_EXPECT_RUNTIME_NODE=22.0.0`. The development toolchain remains on Node 22.23.5, above the repository floor.
+- Extended the deterministic Phase 5 fixture's registered move clip from 0.5 to 2.5 seconds. The capture still asserts the accepted gameplay move is active before and after the actual browser screenshot. The Phase 5 provenance reports 153 move frames, idle frame delta 0, five warmed map round trips, renderer geometry/texture counts stable at 6/1, and 10 disposed scenes.
+- Result: `npm run sample:scene:previews` passed all Blood Leaf and Phase 5 captures; `npm run sample:previews` passed 13 real source-rendered Mahalle states. The Phase 5 and Mahalle manifests record source SHA `8b5d07e4a3164756f9435cf96dfe5d34ebd579ab`.
+- The full `npm run verify` passed: 588 root tests / 62 files, 15 core, 40 narrative, 35 gameplay, 15 asset importer, five migration contract assertions, typecheck, production builds, budgets, deployment checks, and existing examples. The catalog checker was made CRLF/LF tolerant after confirming `core.autocrlf` caused a false stale-catalog result on Windows; no catalog entries or approvals changed.
+- Independent `framework:consumer`, narrative prepared consumer, `framework:gameplay-consumer`, `framework:scene-consumer`, `framework:garden-consumer`, and `framework:mahalle-consumer` passed. The creator preview typecheck/build and Chromium suite passed 4/4.
+- Focused Chromium save/replay/profile/offline/corrupt-save/transient-battle regressions passed 6/6. Same-origin release upgrade/rollback against `7832aaf` passed 1/1.
+- `npm run roadmap:check` passed. The PR #125 diagnostic snapshot on head `93841791ba6ea125bb405b1b28ad3c25d20836d4` had successful verification, all four E2E shards, framework/Mahalle/Garden consumers, and creator/generated consumers. Its screenshot capture job was cancelled (run `45559161104`) and its synchronization check was skipped. Those statuses describe the merged PR baseline, not the local hardening commits. The local branch was not pushed, so GitHub Actions has not verified these new commits.
+
+### Scoped commits
+
+- `337faee3e3f409511228700658153103e2b00bdd` — quest restore and profile persistence.
+- `7c2b2010a7262965f0d29a82e0319c48f420017a` — production capture checkpoints.
+- `fa29f680f50a92017af821a33ea8b0d3062c3842` — source-rendered Mahalle gallery.
+- `8b5d07e4a3164756f9435cf96dfe5d34ebd579ab` — runtime-floor probes and Phase 5 capture timing.
+
+The remaining local documentation/evidence commit records the final test run and screenshots. No browser or GPU claim extends beyond Windows x64 headless Chromium/SwiftShader; physical mobile GPUs were not tested.

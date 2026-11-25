@@ -3,11 +3,14 @@ import { log } from 'node:console';
 import {
   applyGameplayGrant,
   compileGameplay,
+  compileLightweightEncounter,
   createGameplayState,
+  createLightweightEncounter,
   decodeGameplayState,
   encodeGameplayState,
   getCharacterLevel,
   getUnlockedAbilityIds,
+  transitionLightweightEncounter,
 } from 'waypoint-rpg-gameplay';
 
 const definition = compileGameplay({
@@ -63,7 +66,8 @@ const granted = applyGameplayGrant(definition, initial, {
   experience: [{ characterId: 'hero', amount: 10 }],
 });
 assert.equal(granted.accepted, true);
-if (!granted.accepted) throw new Error('The deterministic gameplay grant was rejected.');
+if (!granted.accepted)
+  throw new Error('The installed gameplay package rejected the deterministic grant.');
 assert.equal(getCharacterLevel(definition, granted.state, 'hero'), 2);
 assert.deepEqual(getUnlockedAbilityIds(definition, granted.state, 'hero'), ['spark', 'focus']);
 const restored = decodeGameplayState(
@@ -74,4 +78,65 @@ assert.equal(restored.ok, true);
 if (!restored.ok) throw new Error('The gameplay snapshot did not decode.');
 assert.equal(restored.state.playthroughId, 'node-22-minimum-probe');
 
-log('gameplay package native ESM runtime and snapshot codec passed');
+const compiledEncounter = compileLightweightEncounter({
+  schemaVersion: 1,
+  id: 'minimum-friendly-encounter',
+  opponentId: 'lantern-guardian',
+  hearts: 1,
+  maxRounds: 1,
+  availableActions: ['kind-word', 'light'],
+  enemyIntentPattern: ['glimmer'],
+  weaknessActionId: 'light',
+  weaknessBonusDamage: 0,
+  outcomes: [
+    {
+      actionId: 'kind-word',
+      intentId: 'glimmer',
+      outcomeId: 'friendly-greeting',
+      effective: true,
+      opponentDamage: 1,
+    },
+    {
+      actionId: 'light',
+      intentId: 'glimmer',
+      outcomeId: 'share-light',
+      effective: true,
+      opponentDamage: 1,
+    },
+  ],
+});
+let encounter = createLightweightEncounter(compiledEncounter, 'node-22-friendly-encounter');
+assert.equal(encounter.phase, 'intro');
+const stale = transitionLightweightEncounter(encounter, {
+  type: 'advance-phase',
+  expectedRevision: encounter.revision + 1,
+});
+assert.equal(stale, encounter);
+encounter = transitionLightweightEncounter(encounter, {
+  type: 'advance-phase',
+  expectedRevision: encounter.revision,
+});
+assert.equal(encounter.phase, 'playerChoice');
+const rejected = transitionLightweightEncounter(encounter, {
+  type: 'choose-action',
+  actionId: 'unknown-action',
+  expectedRevision: encounter.revision,
+});
+assert.equal(rejected, encounter);
+encounter = transitionLightweightEncounter(encounter, {
+  type: 'choose-action',
+  actionId: 'light',
+  expectedRevision: encounter.revision,
+});
+assert.equal(encounter.phase, 'playerResolution');
+assert.equal(encounter.lastOutcomeId, 'share-light');
+assert.equal(encounter.opponentHearts, 0);
+for (let index = 0; index < 3; index += 1) {
+  encounter = transitionLightweightEncounter(encounter, {
+    type: 'advance-phase',
+    expectedRevision: encounter.revision,
+  });
+}
+assert.equal(encounter.phase, 'victory');
+
+log('gameplay package native ESM progression, lightweight encounter, and snapshot runtime passed');

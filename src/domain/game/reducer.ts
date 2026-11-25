@@ -110,6 +110,15 @@ function applyPersisted(
   };
 }
 
+/** Ends the package quest attempt whenever an app transition drops its encounter. */
+function cancelEncounterAttempt(state: GameState): GameState['narrative'] | null {
+  if (state.encounter === null) return state.narrative;
+  return transitionMahalleNarrative(state.narrative, {
+    type: 'cancel-quest',
+    questId: state.encounter.questId,
+  });
+}
+
 /**
  * The single pure transition function for the whole game.
  *
@@ -228,9 +237,17 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // Stable transition: the departing profile autosaves before the picker
       // opens, so progress is never lost by swapping players mid-session.
       if (state.mode !== 'paused' && state.mode !== 'hub') return state;
+      const narrative = cancelEncounterAttempt(state);
+      if (!narrative) return state;
       return stable(
         state,
-        { mode: 'profileSelect', resumeMode: 'profileSelect', encounter: null, dialogue: null },
+        {
+          ...narrativeProjection(narrative, state),
+          mode: 'profileSelect',
+          resumeMode: 'profileSelect',
+          encounter: null,
+          dialogue: null,
+        },
         now,
       );
     }
@@ -274,9 +291,11 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
       // MAP_TRANSITIONS data; the reducer just records where the child now
       // is so a reload restores the same map + safe local spawn.
       if (state.mode !== 'hub' && state.mode !== 'dialogue') return state;
-      const narrative = state.narrative.activeDialogue
-        ? transitionMahalleNarrative(state.narrative, { type: 'exit-dialogue' })
-        : state.narrative;
+      let narrative = cancelEncounterAttempt(state);
+      if (!narrative) return state;
+      narrative = narrative.activeDialogue
+        ? transitionMahalleNarrative(narrative, { type: 'exit-dialogue' })
+        : narrative;
       if (!narrative) return state;
       return stable(
         state,
@@ -295,9 +314,11 @@ export function gameReducer(state: GameState, command: Command, now = 0): GameSt
     case 'ENTER_HUB': {
       if (state.mode === 'hub') return state;
       if (state.mode !== 'dialogue' && state.mode !== 'encounter') return state;
-      const narrative = state.narrative.activeDialogue
-        ? transitionMahalleNarrative(state.narrative, { type: 'exit-dialogue' })
-        : state.narrative;
+      let narrative = cancelEncounterAttempt(state);
+      if (!narrative) return state;
+      if (narrative.activeDialogue) {
+        narrative = transitionMahalleNarrative(narrative, { type: 'exit-dialogue' });
+      }
       if (!narrative) return state;
       return {
         ...state,
