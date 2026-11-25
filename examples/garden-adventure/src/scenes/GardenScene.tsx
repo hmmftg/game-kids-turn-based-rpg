@@ -12,8 +12,13 @@ import {
   type GardenTarget,
 } from '../world/world.js';
 import { SceneCamera } from './SceneCamera.js';
+import { isGardenMeshyPilotRequested, MeshyModelVisual } from './MeshyPilot.js';
 import { sceneForMap } from './registry.js';
-import { currentGardenProbe, type GardenSceneReadiness } from './probe.js';
+import {
+  currentGardenProbe,
+  type GardenRendererResourceProbe,
+  type GardenSceneReadiness,
+} from './probe.js';
 
 interface GardenSceneProps {
   readonly runtime: GardenRuntime;
@@ -40,6 +45,7 @@ export function GardenScene({
     <group name={`garden-scene-${state.mapId}`}>
       <SceneCamera mapId={state.mapId} anchorId={state.anchorId} />
       <ContextRecovery />
+      <RendererResourceProbe mapId={state.mapId} sceneGeneration={sceneGeneration} />
       <SceneProbe
         mapId={state.mapId}
         anchorId={state.anchorId}
@@ -77,6 +83,40 @@ export function GardenScene({
       />
     </group>
   );
+}
+
+function RendererResourceProbe({
+  mapId,
+  sceneGeneration,
+}: {
+  readonly mapId: GardenMapId;
+  readonly sceneGeneration: number;
+}) {
+  const { gl } = useThree();
+
+  useEffect(() => {
+    const rendererProbeRequested =
+      new URLSearchParams(window.location.search).get('rendererprobe') === '1';
+    if (!import.meta.env.DEV && !isGardenMeshyPilotRequested() && !rendererProbeRequested) return;
+    const probe: GardenRendererResourceProbe = {
+      sample: () => ({
+        mapId,
+        sceneGeneration,
+        geometryCount: gl.info.memory.geometries,
+        textureCount: gl.info.memory.textures,
+        drawCalls: gl.info.render.calls,
+        triangles: gl.info.render.triangles,
+        sampledAt: performance.now(),
+      }),
+    };
+    window.__gardenRendererResourceProbe = probe;
+    return () => {
+      if (window.__gardenRendererResourceProbe === probe)
+        delete window.__gardenRendererResourceProbe;
+    };
+  }, [gl, mapId, sceneGeneration]);
+
+  return null;
 }
 
 function ContextRecovery() {
@@ -150,6 +190,7 @@ function SceneProbe({
         camera instanceof OrthographicCamera ? ('orthographic' as const) : ('unknown' as const),
       visibleMeshCount,
       frameCount: 0,
+      totalFrameCount: existingProbe?.totalFrameCount ?? 0,
       cleanupCount,
       playerPosition: { x: Number.NaN, z: Number.NaN },
       playerAtAnchor: false,
@@ -234,6 +275,7 @@ function SceneProbe({
     window.__gardenProbe = {
       ...probe,
       frameCount,
+      totalFrameCount: probe.totalFrameCount + 1,
       playerPosition: { x: playerPosition.x, z: playerPosition.z },
       playerAtAnchor,
       walkRouteId: walk?.routeId ?? null,
@@ -374,7 +416,12 @@ function LandmarkDecorations({
       <SimpleTree position={[6.1, 0, -4.5]} leafColor="#637f45" />
       <SimpleTree position={[-6.1, 0, 3.3]} leafColor="#4a7446" />
       <SimpleTree position={[6.1, 0, 3.3]} leafColor="#718947" />
-      {treeGrown ? <BlossomTree position={[0, 0, -1.8]} /> : null}
+      {treeGrown ? <BlossomTree position={[-2.2, 0, -1.8]} /> : null}
+      <group position={[6, 0, -1.5]} name="garden-shrine">
+        <MeshyModelVisual modelKey="shrine">
+          <ShrineFallback />
+        </MeshyModelVisual>
+      </group>
     </group>
   );
 }
@@ -497,15 +544,30 @@ function TargetModel({
   readonly kind: GardenTarget['kind'];
   readonly lanternLit: boolean;
 }) {
-  if (kind === 'fountain') return <FountainModel />;
+  if (kind === 'fountain')
+    return (
+      <MeshyModelVisual modelKey="fountain">
+        <FountainModel />
+      </MeshyModelVisual>
+    );
   if (kind === 'market') return <MarketModel />;
   if (kind === 'basket') return <BasketModel />;
-  if (kind === 'gardener' || kind === 'traveler')
-    return <NpcModel traveler={kind === 'traveler'} />;
+  if (kind === 'gardener') return <NpcModel traveler={false} />;
+  if (kind === 'traveler')
+    return (
+      <MeshyModelVisual modelKey="sage">
+        <NpcModel traveler />
+      </MeshyModelVisual>
+    );
   if (kind === 'gate') return <GateModel />;
   if (kind === 'bed') return <PlantBedModel />;
   if (kind === 'stone') return <ClueStoneModel />;
-  if (kind === 'guardian') return <GuardianModel />;
+  if (kind === 'guardian')
+    return (
+      <MeshyModelVisual modelKey="guardian">
+        <GuardianModel />
+      </MeshyModelVisual>
+    );
   if (kind === 'lantern') return <LanternModel lit={lanternLit} />;
   return <BenchModel />;
 }
@@ -687,6 +749,16 @@ function LanternModel({ lit }: { readonly lit: boolean }) {
 function BlossomTree({ position }: { readonly position: [number, number, number] }) {
   return (
     <group position={position} name="garden-grown-tree">
+      <MeshyModelVisual modelKey="blossomTree">
+        <BlossomTreeFallback />
+      </MeshyModelVisual>
+    </group>
+  );
+}
+
+function BlossomTreeFallback() {
+  return (
+    <group>
       <mesh position={[0, 0.9, 0]} castShadow>
         <cylinderGeometry args={[0.2, 0.28, 1.8, 8]} />
         <meshStandardMaterial color="#805637" />
@@ -702,6 +774,29 @@ function BlossomTree({ position }: { readonly position: [number, number, number]
       <mesh position={[0.46, 2.55, 0.54]}>
         <sphereGeometry args={[0.3, 12, 10]} />
         <meshStandardMaterial color="#f7e0a0" />
+      </mesh>
+    </group>
+  );
+}
+
+function ShrineFallback() {
+  return (
+    <group>
+      <mesh position={[-0.55, 0.8, 0]} castShadow>
+        <boxGeometry args={[0.22, 1.6, 0.24]} />
+        <meshStandardMaterial color="#bf9a79" />
+      </mesh>
+      <mesh position={[0.55, 0.8, 0]} castShadow>
+        <boxGeometry args={[0.22, 1.6, 0.24]} />
+        <meshStandardMaterial color="#bf9a79" />
+      </mesh>
+      <mesh position={[0, 1.65, 0]} castShadow>
+        <boxGeometry args={[1.35, 0.22, 0.28]} />
+        <meshStandardMaterial color="#d3a5a9" />
+      </mesh>
+      <mesh position={[0, 0.15, 0]}>
+        <boxGeometry args={[1.6, 0.3, 0.55]} />
+        <meshStandardMaterial color="#c6a489" />
       </mesh>
     </group>
   );

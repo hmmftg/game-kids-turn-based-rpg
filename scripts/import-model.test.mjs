@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { NodeIO } from '@gltf-transform/core';
+import { Accessor, Document, NodeIO } from '@gltf-transform/core';
 import { importModel } from './import-model.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '..');
@@ -37,6 +38,46 @@ async function writeMetadata(directory, name, value) {
   return path;
 }
 
+async function writeNonIndexedTriangleGlb(path, triangleCount) {
+  const gltf = new Document();
+  const buffer = gltf.createBuffer();
+  const positions = new Float32Array(triangleCount * 9);
+  for (let index = 0; index < triangleCount; index += 1) {
+    positions.set([-1, 0, 0, 1, 0, 0, 0, 2, 0], index * 9);
+  }
+  const accessor = gltf
+    .createAccessor('positions')
+    .setType(Accessor.Type.VEC3)
+    .setArray(positions)
+    .setBuffer(buffer);
+  const primitive = gltf.createPrimitive().setAttribute('POSITION', accessor);
+  const mesh = gltf.createMesh('high-poly').addPrimitive(primitive);
+  gltf.createScene().addChild(gltf.createNode().setMesh(mesh));
+  const glb = await new NodeIO().writeBinary(gltf);
+  await writeFile(path, glb);
+}
+
+function addValidJsonWhitespace(bytes) {
+  const jsonLength = bytes.readUInt32LE(12);
+  const jsonText = bytes.toString('utf8', 20, 20 + jsonLength).replace(/ +$/u, '');
+  const changedJson = Buffer.from(jsonText.replace('{', '{\r'), 'utf8');
+  const paddedLength = Math.ceil(changedJson.byteLength / 4) * 4;
+  const paddedJson = Buffer.concat([
+    changedJson,
+    Buffer.alloc(paddedLength - changedJson.byteLength, 0x20),
+  ]);
+  const jsonHeader = Buffer.from(bytes.subarray(12, 20));
+  jsonHeader.writeUInt32LE(paddedLength, 0);
+  const updated = Buffer.concat([
+    bytes.subarray(0, 12),
+    jsonHeader,
+    paddedJson,
+    bytes.subarray(20 + jsonLength),
+  ]);
+  updated.writeUInt32LE(updated.byteLength, 8);
+  return updated;
+}
+
 test('imports a self-contained textured static GLB and records verifiable provenance', async () => {
   await withTempDirectory(async (directory) => {
     const result = await importModel({
@@ -53,6 +94,114 @@ test('imports a self-contained textured static GLB and records verifiable proven
     assert.equal(
       await readFile(result.outputPath).then((bytes) => bytes.length),
       result.record.metrics.outputBytes,
+    );
+  });
+});
+
+test('preserves self-contained GLB bytes and hashes when byte preservation is requested', async () => {
+  await withTempDirectory(async (directory) => {
+    const sourcePath = join(directory, 'byte-preservation.glb');
+    const sourceBytes = addValidJsonWhitespace(await readFile(fixture('static-textured.glb')));
+    await writeFile(sourcePath, sourceBytes);
+    const result = await importModel({
+      sourcePath,
+      metadataPath: fixture('static-textured.asset.json'),
+      preserveGlbBytes: true,
+      ...destinations(directory),
+    });
+    const outputBytes = await readFile(result.outputPath);
+    const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+    assert.deepEqual(outputBytes, sourceBytes);
+    assert.equal(result.record.sourceSha256, hash(sourceBytes));
+    assert.equal(result.record.outputSha256, hash(sourceBytes));
+    assert.equal(result.record.metrics.sourceBytes, sourceBytes.byteLength);
+  });
+});
+
+test('keeps the default triangle limit and accepts a high-poly GLB only under the explicit pilot budget', async () => {
+  await withTempDirectory(async (directory) => {
+    const sourcePath = join(directory, 'high-poly.glb');
+    const triangleCount = 60_001;
+    await writeNonIndexedTriangleGlb(sourcePath, triangleCount);
+    const common = {
+      sourcePath,
+      metadataPath: fixture('static-textured.asset.json'),
+      preserveGlbBytes: true,
+      ...destinations(join(directory, 'build')),
+    };
+
+    await assert.rejects(importModel(common), /60001 triangles exceed the limit 60000/);
+    const result = await importModel({ ...common, budget: { maxTriangles: 400_000 } });
+
+    assert.equal(result.record.metrics.triangles, triangleCount);
+    assert.deepEqual(await readFile(result.outputPath), await readFile(sourcePath));
+    assert.equal(result.record.sourceSha256, result.record.outputSha256);
+  });
+});
+
+test('records stable animation indices for unnamed and duplicate source clip names without rewriting GLB', async () => {
+  await withTempDirectory(async (directory) => {
+    const sourcePath = join(directory, 'duplicate-animation-names.glb');
+    const sourceDocument = await new NodeIO().read(fixture('rigged-animated.glb'));
+    const animations = sourceDocument.getRoot().listAnimations();
+    animations[0]?.setName('shared');
+    animations[1]?.setName('shared');
+    animations[2]?.setName('');
+    animations[3]?.setName('combat');
+    const sourceBytes = await new NodeIO().writeBinary(sourceDocument);
+    await writeFile(sourcePath, sourceBytes);
+    const metadata = JSON.parse(await readFile(fixture('rigged-animated.asset.json'), 'utf8'));
+    metadata.clips = {
+      idle: 'clip-1',
+      move: 'clip-2',
+      interact: 'clip-3',
+      combat: 'combat',
+    };
+    const metadataPath = await writeMetadata(directory, 'duplicate-clips.asset.json', metadata);
+    const result = await importModel({
+      sourcePath,
+      metadataPath,
+      preserveGlbBytes: true,
+      ...destinations(directory),
+    });
+
+    assert.deepEqual(await readFile(result.outputPath), Buffer.from(sourceBytes));
+    assert.deepEqual(
+      result.record.clipInventory.map(({ id, animationIndex, name, sourceName }) => ({
+        id,
+        animationIndex,
+        name,
+        sourceName,
+      })),
+      [
+        { id: 'clip-1', animationIndex: 0, name: 'shared', sourceName: 'shared' },
+        { id: 'clip-2', animationIndex: 1, name: 'shared', sourceName: 'shared' },
+        { id: 'clip-3', animationIndex: 2, name: 'clip-3', sourceName: '' },
+        { id: 'clip-4', animationIndex: 3, name: 'combat', sourceName: 'combat' },
+      ],
+    );
+  });
+});
+
+test('validates partial importer budgets and never lets them exceed hard resource limits', async () => {
+  await withTempDirectory(async (directory) => {
+    const common = {
+      sourcePath: fixture('static-textured.glb'),
+      metadataPath: fixture('static-textured.asset.json'),
+      ...destinations(directory),
+    };
+    await assert.rejects(
+      importModel({ ...common, budget: { maxTriangles: 400_001 } }),
+      /maxTriangles cannot exceed the local pilot limit 400000/,
+    );
+    await assert.rejects(
+      importModel({ ...common, budget: { maxTriangles: '400000' } }),
+      /maxTriangles must be a positive safe integer/,
+    );
+    await assert.rejects(
+      importModel({ ...common, budget: { maxFileBytes: 100 * 1024 * 1024 } }),
+      /maxFileBytes cannot exceed its hard limit 12582912/,
     );
   });
 });

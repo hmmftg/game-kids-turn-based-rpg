@@ -11,6 +11,22 @@ export const MODEL_IMPORT_BUDGET = Object.freeze({
   maxClipSeconds: 180,
 });
 
+export interface ModelRuntimePolicy {
+  readonly maxTrianglesPerAsset: number;
+  readonly maxLoadedAssets: number;
+  readonly maxDecodedGeometryBytes: number;
+  readonly maxSceneTriangles: number;
+  readonly allowUnapproved?: boolean;
+}
+
+export const DEFAULT_MODEL_RUNTIME_POLICY: ModelRuntimePolicy = Object.freeze({
+  maxTrianglesPerAsset: MODEL_IMPORT_BUDGET.maxTriangles,
+  maxLoadedAssets: 20,
+  maxDecodedGeometryBytes: 256 * 1024 * 1024,
+  maxSceneTriangles: 300_000,
+  allowUnapproved: false,
+});
+
 export type SemanticAction = 'idle' | 'move' | 'interact' | 'combat' | 'defeat';
 export type RuntimeModelFormat = 'glb';
 export type AxisDirection = 'X' | '-X' | 'Y' | '-Y' | 'Z' | '-Z';
@@ -117,7 +133,13 @@ function nonNegativeInteger(value: unknown, maximum: number): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0 && (value as number) <= maximum;
 }
 
-export function validateModelAssetRecord(value: unknown): readonly ModelAssetDiagnostic[] {
+export function validateModelAssetRecord(
+  value: unknown,
+  policy: Pick<
+    ModelRuntimePolicy,
+    'maxTrianglesPerAsset' | 'allowUnapproved'
+  > = DEFAULT_MODEL_RUNTIME_POLICY,
+): readonly ModelAssetDiagnostic[] {
   const errors: ModelAssetDiagnostic[] = [];
   const issue = (path: string, message: string) => errors.push({ path, message });
   if (!record(value)) return [{ path: '$', message: 'Expected a JSON object.' }];
@@ -171,7 +193,7 @@ export function validateModelAssetRecord(value: unknown): readonly ModelAssetDia
     for (const key of ['commercialUse', 'redistribution', 'approved'] as const) {
       if (typeof value.rights[key] !== 'boolean') issue(`rights.${key}`, 'Expected a boolean.');
     }
-    if (value.rights.approved !== true)
+    if (value.rights.approved !== true && policy.allowUnapproved !== true)
       issue('rights.approved', 'Unapproved assets cannot be used by the release consumer.');
   }
 
@@ -218,7 +240,7 @@ export function validateModelAssetRecord(value: unknown): readonly ModelAssetDia
     const limits = {
       sourceBytes: MODEL_IMPORT_BUDGET.maxFileBytes,
       outputBytes: MODEL_IMPORT_BUDGET.maxFileBytes,
-      triangles: MODEL_IMPORT_BUDGET.maxTriangles,
+      triangles: policy.maxTrianglesPerAsset,
       primitiveCount: MODEL_IMPORT_BUDGET.maxPrimitives,
       textureCount: MODEL_IMPORT_BUDGET.maxPrimitives,
       textureBytes: MODEL_IMPORT_BUDGET.maxDecodedTextureBytes,
@@ -228,8 +250,14 @@ export function validateModelAssetRecord(value: unknown): readonly ModelAssetDia
       estimatedDecodedBytes: MODEL_IMPORT_BUDGET.maxDecodedTextureBytes * 2,
     } as const;
     for (const [key, maximum] of Object.entries(limits)) {
-      if (!nonNegativeInteger(value.metrics[key], maximum))
-        issue(`metrics.${key}`, `Expected a non-negative integer no greater than ${maximum}.`);
+      const actual = value.metrics[key];
+      if (!nonNegativeInteger(actual, maximum)) {
+        const detail =
+          key === 'triangles' && typeof actual === 'number' && Number.isFinite(actual)
+            ? `Measured ${actual} triangles exceeds the configured per-asset threshold ${maximum}.`
+            : `Received ${String(actual)}; expected a non-negative integer no greater than ${maximum}.`;
+        issue(`metrics.${key}`, detail);
+      }
     }
     if (
       !Array.isArray(value.metrics.morphTargetNames) ||
@@ -243,20 +271,20 @@ export function validateModelAssetRecord(value: unknown): readonly ModelAssetDia
       issue(key, 'Expected an array of strings.');
   }
 
-  const clipNames = new Set<string>();
+  const clipNames = new Map<string, number>();
+  const clipIds = new Set<string>();
   if (!Array.isArray(value.clipInventory)) {
     issue('clipInventory', 'Expected a named animation inventory.');
   } else {
     if (value.clipInventory.length > MODEL_IMPORT_BUDGET.maxClips)
       issue('clipInventory', `At most ${MODEL_IMPORT_BUDGET.maxClips} clips are supported.`);
     value.clipInventory.forEach((clip, index) => {
-      if (!record(clip) || typeof clip.name !== 'string' || clip.name.length === 0) {
-        issue(`clipInventory.${index}`, 'Each clip needs a stable name.');
+      if (!record(clip) || typeof clip.name !== 'string') {
+        issue(`clipInventory.${index}`, 'Each clip needs a source name.');
         return;
       }
-      if (clipNames.has(clip.name))
-        issue(`clipInventory.${index}.name`, 'Clip names must be unique.');
-      clipNames.add(clip.name);
+      clipNames.set(clip.name, (clipNames.get(clip.name) ?? 0) + 1);
+      clipIds.add(animationClipId(index));
       if (
         typeof clip.durationSeconds !== 'number' ||
         !Number.isFinite(clip.durationSeconds) ||
@@ -278,8 +306,13 @@ export function validateModelAssetRecord(value: unknown): readonly ModelAssetDia
         issue(`clips.${action}`, 'Unknown semantic action.');
       if (typeof clip !== 'string' || clip.length === 0)
         issue(`clips.${action}`, 'Clip names must be non-empty strings.');
-      else if (!clipNames.has(clip))
+      else if (!clipIds.has(clip) && !clipNames.has(clip))
         issue(`clips.${action}`, 'Semantic mapping references a missing source clip.');
+      else if (!clipIds.has(clip) && clipNames.get(clip) !== 1)
+        issue(
+          `clips.${action}`,
+          'Clip name is ambiguous; reference its stable source-index clip ID instead.',
+        );
     }
   }
   if (value.fallbackAction !== 'idle' && value.fallbackAction !== 'static')
@@ -294,4 +327,20 @@ export function resolveSemanticClip(
   action: SemanticAction,
 ): string | null {
   return record.clips[action] ?? record.clips.idle ?? null;
+}
+
+export function animationClipId(index: number): string {
+  if (!Number.isSafeInteger(index) || index < 0)
+    throw new RangeError('Animation source index must be a non-negative safe integer.');
+  return `clip-${index + 1}`;
+}
+
+export function findAnimationByClipReference<T extends { readonly name: string }>(
+  animations: readonly T[],
+  reference: string,
+): T | null {
+  const match = /^clip-([1-9][0-9]*)$/.exec(reference);
+  if (match) return animations[Number(match[1]) - 1] ?? null;
+  const matches = animations.filter((animation) => animation.name === reference);
+  return matches.length === 1 ? matches[0]! : null;
 }

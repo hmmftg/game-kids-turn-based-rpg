@@ -22,6 +22,7 @@ const frameworkPackages = [
   { name: 'waypoint-rpg-core', workspace: 'packages/core' },
   { name: 'waypoint-rpg-narrative', workspace: 'packages/narrative' },
   { name: 'waypoint-rpg-gameplay', workspace: 'packages/gameplay' },
+  { name: 'waypoint-rpg-three', workspace: 'packages/three' },
 ];
 
 async function packFrameworkPackage(artifactRoot, { name, workspace }) {
@@ -88,6 +89,7 @@ async function removeWorkspaceLinks(consumerRoot) {
     'packages/core',
     'packages/narrative',
     'packages/gameplay',
+    'packages/three',
     'tools/creator',
   ]) {
     delete lock.packages[workspace];
@@ -150,6 +152,8 @@ function declarationProbe(name) {
       return `import { compileNarrative, createNarrativeState, decodeNarrativeState, getDialogueView, getFact, getQuestStatus, transitionNarrative, validateNarrative } from 'waypoint-rpg-narrative';\nvoid [compileNarrative, createNarrativeState, decodeNarrativeState, getDialogueView, getFact, getQuestStatus, transitionNarrative, validateNarrative];\n`;
     case 'waypoint-rpg-gameplay':
       return `import { applyGameplayGrant, compileGameplay, createGameplayState, decodeGameplayState, encodeGameplayState, getCharacterLevel, getCharacterAttributes, getEffectiveCharacterAttributes, getInventorySlotCount, getUnlockedAbilityIds, transitionGameplay, validateGameplay } from 'waypoint-rpg-gameplay';\nvoid [applyGameplayGrant, compileGameplay, createGameplayState, decodeGameplayState, encodeGameplayState, getCharacterLevel, getCharacterAttributes, getEffectiveCharacterAttributes, getInventorySlotCount, getUnlockedAbilityIds, transitionGameplay, validateGameplay];\n`;
+    case 'waypoint-rpg-three':
+      return `import { animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord } from 'waypoint-rpg-three';\nvoid [animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord];\n`;
     default:
       throw new Error(`No public declaration probe for ${name}`);
   }
@@ -169,6 +173,16 @@ async function verifyIndependentArchives(consumerRoot, temporaryRoot, archives) 
           type: 'module',
           dependencies: {
             [name]: `file:${path.relative(probeRoot, archive).replaceAll(path.sep, '/')}`,
+            ...(name === 'waypoint-rpg-three'
+              ? {
+                  three: `file:${path
+                    .relative(probeRoot, path.resolve(repoRoot, 'node_modules/three'))
+                    .replaceAll(path.sep, '/')}`,
+                  '@types/three': `file:${path
+                    .relative(probeRoot, path.resolve(repoRoot, 'node_modules/@types/three'))
+                    .replaceAll(path.sep, '/')}`,
+                }
+              : {}),
           },
         },
         null,
@@ -298,7 +312,7 @@ export async function checkFrameworkMahalleConsumer() {
       [
         '--input-type=module',
         '-e',
-        "import { createGameRuntime, findPath } from 'waypoint-rpg-core'; import { compileNarrative, validateNarrative } from 'waypoint-rpg-narrative'; import { compileGameplay, validateGameplay } from 'waypoint-rpg-gameplay'; if (![createGameRuntime, findPath, compileNarrative, validateNarrative, compileGameplay, validateGameplay].every((item) => typeof item === 'function')) process.exit(1);",
+        "import { createGameRuntime, findPath } from 'waypoint-rpg-core'; import { compileNarrative, validateNarrative } from 'waypoint-rpg-narrative'; import { compileGameplay, validateGameplay } from 'waypoint-rpg-gameplay'; import { animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord } from 'waypoint-rpg-three'; if (![createGameRuntime, findPath, compileNarrative, validateNarrative, compileGameplay, validateGameplay, animationClipId, createModelAssetLoader, resolveSemanticClip, validateModelAssetRecord].every((item) => typeof item === 'function')) process.exit(1);",
       ],
       { cwd: consumerRoot },
     );
@@ -324,7 +338,7 @@ export async function checkFrameworkMahalleConsumer() {
       { cwd: consumerRoot },
     );
     log(
-      'framework Mahalle consumer passed: independent root-game copy, three offline archives, public ESM/types, unit tests, content/assets, production/deploy budgets, and Chromium quest gameplay',
+      'framework Mahalle consumer passed: independent root-game copy, four offline archives, public ESM/types, unit tests, content/assets, production/deploy budgets, and Chromium quest gameplay',
     );
   } catch (error) {
     try {

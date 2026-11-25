@@ -35,6 +35,7 @@ import {
 } from './persistence/garden-autosave.js';
 import { registerGardenServiceWorker } from './pwa.js';
 import { GardenScene } from './scenes/GardenScene.js';
+import { GardenMeshyPilotProvider } from './scenes/MeshyPilot.js';
 import type { GardenSceneReadiness } from './scenes/probe.js';
 import { gardenTargets, getGardenTarget, type GardenTargetId } from './world/world.js';
 
@@ -459,26 +460,28 @@ export function App() {
       ) : (
         <section className="game-shell" aria-label={mapLabel} data-active-scene={state.mapId}>
           <div className="scene-frame" data-testid={`scene-${state.mapId}`}>
-            <Canvas
-              data-testid="garden-canvas-wrapper"
-              frameloop="demand"
-              camera={{ position: [0, 12, 14], fov: 42 }}
-              onCreated={({ gl }) => {
-                gl.domElement.dataset.testid = 'garden-canvas';
-                gl.domElement.dataset.cameraKind = 'loading';
-                setCanvasElement(gl.domElement);
-                setRendererReady(true);
-              }}
-            >
-              <GardenScene
-                key={`${state.mapId}:${sceneGeneration}`}
-                runtime={runtime}
-                state={state}
-                sceneGeneration={sceneGeneration}
-                onTargetPress={onTargetPress}
-                onSceneReady={onSceneReady}
-              />
-            </Canvas>
+            <GardenMeshyPilotProvider>
+              <Canvas
+                data-testid="garden-canvas-wrapper"
+                frameloop="demand"
+                camera={{ position: [0, 12, 14], fov: 42 }}
+                onCreated={({ gl }) => {
+                  gl.domElement.dataset.testid = 'garden-canvas';
+                  gl.domElement.dataset.cameraKind = 'loading';
+                  setCanvasElement(gl.domElement);
+                  setRendererReady(true);
+                }}
+              >
+                <GardenScene
+                  key={`${state.mapId}:${sceneGeneration}`}
+                  runtime={runtime}
+                  state={state}
+                  sceneGeneration={sceneGeneration}
+                  onTargetPress={onTargetPress}
+                  onSceneReady={onSceneReady}
+                />
+              </Canvas>
+            </GardenMeshyPilotProvider>
             {!rendererReady ? (
               <div className="loading-message" role="status">
                 {faUi.loading}

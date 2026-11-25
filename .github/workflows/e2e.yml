@@ -23,8 +23,8 @@ jobs:
             package-lock.json
             packages/core-consumer/package-lock.json
             examples/scene-demo/package-lock.json
-      - name: Install core, narrative, and gameplay build tools
-        run: npm ci --workspace=packages/core --workspace=packages/narrative --workspace=packages/gameplay --include-workspace-root=false
+      - name: Install framework build tools (including Three.js)
+        run: npm ci --workspace=packages/core --workspace=packages/narrative --workspace=packages/gameplay --workspace=packages/three --include-workspace-root=false
       - name: Build and verify the independent tarball consumer
         run: npm run framework:consumer
         env:

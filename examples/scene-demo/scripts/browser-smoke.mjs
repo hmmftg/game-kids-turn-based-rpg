@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { log } from 'node:console';
+import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { preview } from 'vite';
 
@@ -658,31 +659,33 @@ try {
     }
     await route.continue();
   });
-  let staticAssetRequests = 0;
   let releaseSlowAsset;
   let notifySlowAssetStarted;
   const slowAssetStarted = new Promise((resolve) => {
     notifySlowAssetStarted = resolve;
   });
-  await page.route('**/models/phase5-textured-static.glb', async (route) => {
-    staticAssetRequests += 1;
-    if (staticAssetRequests === 2) {
-      notifySlowAssetStarted?.();
-      await new Promise((resolve) => {
-        releaseSlowAsset = resolve;
-      });
-      try {
-        await route.continue();
-      } catch {
-        // The component cancels this request when its selected asset changes.
-      }
-      return;
+  const staticFixturePath = fileURLToPath(
+    new URL('../public/models/phase5-textured-static.glb', import.meta.url),
+  );
+  await page.route('**/models/phase5-slow-static.glb', async (route) => {
+    notifySlowAssetStarted?.();
+    await new Promise((resolve) => {
+      releaseSlowAsset = resolve;
+    });
+    try {
+      await route.fulfill({ path: staticFixturePath });
+    } catch {
+      // The component cancels this request when its selected asset changes.
     }
-    if (staticAssetRequests === 3) {
+  });
+  let errorAssetRequests = 0;
+  await page.route('**/models/phase5-error-static.glb', async (route) => {
+    errorAssetRequests += 1;
+    if (errorAssetRequests === 1) {
       await route.fulfill({ status: 503, body: 'fixture load failure' });
       return;
     }
-    await route.continue();
+    await route.fulfill({ path: staticFixturePath });
   });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(`http://127.0.0.1:${address.port}/?phase5=assets&phase5-test=1`, {
@@ -1077,9 +1080,10 @@ try {
     'bounded animation settles and demand rendering stops while both characters are idle',
   );
 
+  // The visible static and rigged assets expose three immutable source geometries shared across leases.
   await page.waitForFunction(
     () =>
-      (window.__phase5ModelProbe?.renderer.info.memory.geometries ?? 0) >= 4 &&
+      (window.__phase5ModelProbe?.renderer.info.memory.geometries ?? 0) >= 3 &&
       (window.__phase5ModelProbe?.renderer.info.memory.textures ?? 0) >= 5,
   );
   const sceneBeforeOrdinaryReload = await page.evaluate(

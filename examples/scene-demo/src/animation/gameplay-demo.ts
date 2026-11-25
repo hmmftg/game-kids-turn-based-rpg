@@ -5,7 +5,7 @@ import type {
   GameplayState,
   GameplayTransitionResult,
 } from 'waypoint-rpg-gameplay';
-import type { SemanticAction } from './contracts.js';
+import type { SemanticAction } from 'waypoint-rpg-three';
 
 export interface AnimationProjectionState {
   readonly [instanceId: string]: { readonly action: SemanticAction; readonly revision: number };

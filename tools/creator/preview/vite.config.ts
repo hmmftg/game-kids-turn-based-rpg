@@ -4,6 +4,7 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
+import { createMeshyPilotRoutePlugin } from '../../../scripts/meshy-pilot-dev-route.mjs';
 
 const previewRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(previewRoot, '../../..');
@@ -57,7 +58,11 @@ function localAssetRecordRoute(): Plugin {
 export default defineConfig({
   root: previewRoot,
   base: './',
-  plugins: [react(), localAssetRecordRoute()],
+  plugins: [
+    react(),
+    localAssetRecordRoute(),
+    createMeshyPilotRoutePlugin(process.env['WAYPOINT_MESHY_PILOT_DIR']),
+  ],
   publicDir: resolve(projectRoot, 'public'),
   server: {
     host: '127.0.0.1',
