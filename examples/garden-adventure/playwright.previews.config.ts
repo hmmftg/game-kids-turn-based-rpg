@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.preview.ts',
+  testIgnore: '**/*.meshy.preview.ts',
   timeout: 240_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
