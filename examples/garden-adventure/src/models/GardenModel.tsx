@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   createCharacterAnimationController,
@@ -18,6 +26,31 @@ import type { GardenMapId } from '../world/world.js';
 
 const GardenModelContext = createContext<ModelAssetLoader | null>(null);
 
+function createGardenModelLoaderStore() {
+  let loader: ModelAssetLoader | null = null;
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of [...listeners]) listener();
+  };
+
+  return {
+    getSnapshot: () => loader,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    install: (nextLoader: ModelAssetLoader) => {
+      loader = nextLoader;
+      notify();
+    },
+    clear: (ownedLoader: ModelAssetLoader) => {
+      if (loader !== ownedLoader) return;
+      loader = null;
+      notify();
+    },
+  };
+}
+
 function reportModel(
   instanceId: string,
   assetId: string,
@@ -32,16 +65,24 @@ function reportModel(
 }
 
 export function GardenModelProvider({ children }: { readonly children: ReactNode }) {
-  const [loader, setLoader] = useState<ModelAssetLoader | null>(null);
+  const [loaderStore] = useState(createGardenModelLoaderStore);
+  const loader = useSyncExternalStore(
+    loaderStore.subscribe,
+    loaderStore.getSnapshot,
+    loaderStore.getSnapshot,
+  );
 
   useEffect(() => {
     const ownedLoader = createModelAssetLoader(gardenModelRecords, {
       baseUrl: () => new URL(import.meta.env.BASE_URL, window.location.href).href,
       policy: GARDEN_MODEL_RUNTIME_POLICY,
     });
-    setLoader(ownedLoader);
-    return () => ownedLoader.dispose();
-  }, []);
+    loaderStore.install(ownedLoader);
+    return () => {
+      loaderStore.clear(ownedLoader);
+      ownedLoader.dispose();
+    };
+  }, [loaderStore]);
 
   return <GardenModelContext.Provider value={loader}>{children}</GardenModelContext.Provider>;
 }

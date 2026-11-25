@@ -49,7 +49,7 @@ interface GardenCinematicRequest {
 
 export function App() {
   const runtime = useMemo(() => createGardenRuntime(), []);
-  const runtimeLifecycle = useRef(0);
+  const runtimeLifecycle = useRef({ generation: 0 });
   const state = useSyncExternalStore(runtime.subscribe, runtime.getState, runtime.getState);
   const [rendererReady, setRendererReady] = useState(false);
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null);
@@ -109,10 +109,11 @@ export function App() {
   const [battleNotice, setBattleNotice] = useState('');
 
   useEffect(() => {
-    const lifecycle = ++runtimeLifecycle.current;
+    const lifecycleState = runtimeLifecycle.current;
+    const lifecycle = ++lifecycleState.generation;
     return () => {
       queueMicrotask(() => {
-        if (runtimeLifecycle.current === lifecycle) runtime.dispose();
+        if (lifecycleState.generation === lifecycle) runtime.dispose();
       });
     };
   }, [runtime]);
