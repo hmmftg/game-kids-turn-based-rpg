@@ -97,6 +97,108 @@ describe('gameReducer — boot and title', () => {
     expect(state.stickers).toEqual(['sticker-greeting']);
   });
 
+  it.each([
+    ['v2', 2],
+    ['v3', 3],
+  ] as const)(
+    'restores an interrupted %s quest as restartable without losing its history',
+    (_label, version) => {
+      const fresh = createFreshPersistedState(NOW);
+      const activeProgress = {
+        status: 'active' as const,
+        completedSteps: ['helping-1'],
+        completionCount: 0,
+      };
+      const completedGreeting = {
+        status: 'completed' as const,
+        completedSteps: ['greeting-1', 'greeting-2'],
+        completionCount: 2,
+      };
+      const raw = {
+        ...(version === 2
+          ? {
+              version: 2,
+              avatarId: 'avatar-arta',
+              quests: {
+                ...fresh.quests,
+                'quest-greeting': completedGreeting,
+                'quest-helping': activeProgress,
+              },
+              checkpoint: { kind: 'hub', questId: null, at: NOW },
+              stickers: ['sticker-greeting'],
+              audio: fresh.audio,
+              qualityTier: 'high',
+              lastPlayedAt: NOW,
+            }
+          : {
+              ...fresh,
+              avatarId: 'avatar-arta',
+              quests: {
+                ...fresh.quests,
+                'quest-greeting': completedGreeting,
+                'quest-helping': activeProgress,
+              },
+              stickers: ['sticker-greeting'],
+            }),
+      };
+      const parsed = parseSave(raw, NOW);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) return;
+
+      let restored = gameReducer(
+        createInitialState(NOW),
+        { type: 'BOOT_LOADED', persisted: parsed.state, health: 'loaded' },
+        NOW,
+      );
+      expect(restored.narrative.quests['quest-helping']).toBe('cancelled');
+      expect(restored.quests['quest-helping']).toEqual({
+        status: 'available',
+        completedSteps: ['helping-1'],
+        completionCount: 0,
+      });
+      expect(restored.quests['quest-greeting']).toEqual(completedGreeting);
+      expect(restored.stickers).toEqual(['sticker-greeting']);
+
+      restored = gameReducer(restored, { type: 'START_PRESSED' }, NOW);
+      const resumed = gameReducer(restored, { type: 'START_QUEST', questId: 'quest-helping' }, NOW);
+      expect(resumed.mode).toBe('encounter');
+      expect(resumed.encounter?.questId).toBe('quest-helping');
+    },
+  );
+
+  it('restores an interrupted replay as completed history and permits another attempt', () => {
+    const fresh = createFreshPersistedState(NOW);
+    const persisted = {
+      ...fresh,
+      avatarId: 'avatar-aban' as const,
+      quests: {
+        ...fresh.quests,
+        'quest-greeting': {
+          status: 'active' as const,
+          completedSteps: ['greeting-1', 'greeting-2'],
+          completionCount: 2,
+        },
+      },
+      stickers: ['sticker-greeting' as const],
+    };
+    let restored = gameReducer(
+      createInitialState(NOW),
+      { type: 'BOOT_LOADED', persisted, health: 'loaded' },
+      NOW,
+    );
+    expect(restored.quests['quest-greeting']).toEqual({
+      status: 'completed',
+      completedSteps: ['greeting-1', 'greeting-2'],
+      completionCount: 2,
+    });
+    restored = gameReducer(restored, { type: 'START_PRESSED' }, NOW);
+    restored = gameReducer(restored, { type: 'START_QUEST', questId: 'quest-greeting' }, NOW);
+    expect(restored.mode).toBe('encounter');
+    restored = playQuest(restored, 'quest-greeting');
+    expect(restored.quests['quest-greeting'].completionCount).toBe(3);
+    expect(restored.stickers).toEqual(['sticker-greeting']);
+  });
+
   it('flags a recovered (corrupt) save without crashing', () => {
     const state = gameReducer(
       createInitialState(NOW),
@@ -299,6 +401,42 @@ describe('gameReducer — idempotency', () => {
     const retried = gameReducer(wrong, { type: 'ADVANCE_PHASE' }, NOW);
     expect(retried.encounter?.retries).toBe(1);
     expect(retried.narrative).toBe(narrativeBefore);
+  });
+});
+
+describe('gameReducer — interrupted quest exits', () => {
+  it('cancels an encounter when the child leaves through ENTER_HUB and allows restart', () => {
+    let state = gameReducer(atHub(), { type: 'START_QUEST', questId: 'quest-greeting' }, NOW);
+    expect(state.mode).toBe('encounter');
+    state = gameReducer(state, { type: 'ENTER_HUB' }, NOW);
+    expect(state.mode).toBe('hub');
+    expect(state.encounter).toBeNull();
+    expect(state.narrative.quests['quest-greeting']).toBe('cancelled');
+    expect(state.quests['quest-greeting'].status).toBe('available');
+    expect(gameReducer(state, { type: 'START_QUEST', questId: 'quest-greeting' }, NOW).mode).toBe(
+      'encounter',
+    );
+  });
+
+  it('cancels a paused encounter before switching players', () => {
+    let state = gameReducer(atHub(), { type: 'START_QUEST', questId: 'quest-greeting' }, NOW);
+    state = gameReducer(state, { type: 'PAUSE' }, NOW);
+    state = gameReducer(state, { type: 'SWITCH_PLAYER' }, NOW);
+    expect(state.mode).toBe('profileSelect');
+    expect(state.encounter).toBeNull();
+    expect(state.narrative.quests['quest-greeting']).toBe('cancelled');
+    expect(state.quests['quest-greeting'].status).toBe('available');
+  });
+
+  it('does not allow CHANGE_MAP to exit an encounter', () => {
+    const state = gameReducer(atHub(), { type: 'START_QUEST', questId: 'quest-greeting' }, NOW);
+    expect(
+      gameReducer(
+        state,
+        { type: 'CHANGE_MAP', mapId: 'map-cave', anchorId: 'anchor-cave-mouth' },
+        NOW,
+      ),
+    ).toBe(state);
   });
 });
 
