@@ -328,7 +328,7 @@ function createRiggedDocument() {
     rootJoint,
     'translation',
     Accessor.Type.VEC3,
-    [0, 0.25, 0.5],
+    [0, 1.25, 2.5],
     [0, 0, 0, 0.07, 0, 0, 0, 0, 0],
   );
   addAnimation(
