@@ -93,13 +93,19 @@ export function probeRuntimeConsumer(projectRoot, expectedNodeVersion) {
     return;
   }
   const narrativeOutput = runNode(['narrative-runtime-smoke.mjs'], { cwd: root });
-  assert.match(narrativeOutput, /narrative package native ESM runtime passed/);
+  assert.match(
+    narrativeOutput,
+    /narrative package native ESM dialogue, repeatable quest, and snapshot runtime passed/,
+  );
   if (!existsSync(path.join(root, 'gameplay-runtime-smoke.mjs'))) {
     log('framework runtime: native core+narrative ESM and core source maps passed');
     return;
   }
   const gameplayOutput = runNode(['gameplay-runtime-smoke.mjs'], { cwd: root });
-  assert.match(gameplayOutput, /gameplay package native ESM runtime and snapshot codec passed/);
+  assert.match(
+    gameplayOutput,
+    /gameplay package native ESM progression, lightweight encounter, and snapshot runtime passed/,
+  );
   log('framework runtime: native core+narrative+gameplay ESM and core source maps passed');
 }
 

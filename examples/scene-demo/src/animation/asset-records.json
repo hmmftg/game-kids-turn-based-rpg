@@ -52,7 +52,7 @@
       },
       {
         "name": "move",
-        "durationSeconds": 0.5
+        "durationSeconds": 2.5
       },
       {
         "name": "interact",
@@ -74,8 +74,8 @@
     "id": "phase5-animated-guardian",
     "runtimePath": "models/phase5-animated-guardian.glb",
     "runtimeFormat": "glb",
-    "sourceSha256": "efd6cff098f6e10c65d90739446b0f8411bd4e455e565b40ada5820b1e6d90eb",
-    "outputSha256": "b3a29451c19dd5fb572532681bb82dade53958268531c71952af492b204c1fa7"
+    "sourceSha256": "c93a26c286c107f0748c9610862b9c9dfe880659a4de33b419f74b6d34e2200c",
+    "outputSha256": "d227b3f3abd251230352304b078959d964aacfb869b342f575b25f3829f2b5fb"
   },
   {
     "schemaVersion": 1,

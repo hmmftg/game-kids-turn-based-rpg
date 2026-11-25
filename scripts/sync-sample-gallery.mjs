@@ -37,12 +37,24 @@ const games = [
       '05-town-portrait.png',
       '06-guardian-dialogue.png',
       '07-encounter-choice.png',
+      '08-physical-interaction.png',
+      '09-sticker-reward.png',
+      '10-replayed-quest.png',
+      '11-lightweight-battle.png',
+      '12-world-discovery.png',
+      '13-restored-profile.png',
     ],
     columns: [
       ['04-town-hub.png', 'Town hub'],
       ['05-town-portrait.png', 'Town hub · portrait'],
       ['06-guardian-dialogue.png', 'Persian NPC dialogue'],
       ['07-encounter-choice.png', 'Encounter choice'],
+      ['08-physical-interaction.png', 'Completed physical interaction'],
+      ['09-sticker-reward.png', 'Sticker reward'],
+      ['10-replayed-quest.png', 'Completed quest replay'],
+      ['11-lightweight-battle.png', 'Real micro-battle'],
+      ['12-world-discovery.png', 'Persistent world discovery'],
+      ['13-restored-profile.png', 'Restored profile progress'],
     ],
   },
   {
@@ -160,6 +172,12 @@ function verifyImageSet(game) {
     const path = `${game.folder}/${file}`;
     const record = records.get(file);
     if (!record) throw new Error(`Missing screenshot record: ${path}`);
+    if (
+      game.folder === 'docs/previews/legacy-sample' &&
+      (typeof record.checkpoint !== 'string' || record.checkpoint.length < 10)
+    ) {
+      throw new Error(`Gameplay checkpoint is missing from screenshot provenance: ${path}`);
+    }
     const bytes = readFileSync(path);
     const size = statSync(path).size;
     if (size <= 5_000) throw new Error(`Missing or unexpectedly small screenshot: ${path}`);

@@ -2,8 +2,11 @@ import { isStableMode } from '../domain/game/checkpoints.ts';
 import { toPersistedState } from '../domain/game/initialState.ts';
 import type { GameState } from '../domain/game/types.ts';
 import type { SaveRepository } from '../services/persistence/repository.ts';
+import type { ProfilePersistenceQueue } from './profilePersistenceQueue.ts';
 
 export interface SaveCoordinatorOptions {
+  /** Shared with profile lifecycle operations so resets/deletes order with autosaves. */
+  readonly persistenceQueue: ProfilePersistenceQueue;
   /** Read at save time — the boot coordinator may swap in the memory fallback. */
   readonly repository: () => SaveRepository | null;
   /** The active profile's slot key, or null before a player is picked. */
@@ -24,7 +27,6 @@ export class SaveCoordinator {
   private previous: GameState | null = null;
   private lastSavedToken: number | null = null;
   private saveGeneration = 0;
-  private writeQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: SaveCoordinatorOptions) {}
 
@@ -45,12 +47,12 @@ export class SaveCoordinator {
     if (!repository) return;
     const generation = ++this.saveGeneration;
     const snapshot = toPersistedState(state);
-    this.writeQueue = this.writeQueue
-      .catch(() => undefined)
-      .then(() => repository.save(snapshot, key))
-      .then(() => {
-        if (generation === this.saveGeneration && key === this.options.activeSlotKey())
+    void this.options.persistenceQueue
+      .saveSlot(key, () => repository.save(snapshot, key))
+      .then((saved) => {
+        if (saved && generation === this.saveGeneration && key === this.options.activeSlotKey()) {
           this.options.syncActiveProfileMeta(state, key);
+        }
       })
       .catch(() => {
         /* storage may be evicted; the game stays playable */

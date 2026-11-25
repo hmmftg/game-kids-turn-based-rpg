@@ -109,15 +109,22 @@ export function createMahalleNarrativeState(
 ): NarrativeState {
   if (!persisted) return createNarrativeState(MAHALLE_NARRATIVE, playthroughId);
 
-  const quests: Record<string, 'active' | 'completed'> = {};
+  const quests: Record<string, 'active' | 'completed' | 'cancelled'> = {};
   const questHistory: Record<
     string,
     { completionCount: number; completedSteps: readonly string[] }
   > = {};
   for (const definition of QUEST_DEFINITIONS) {
     const progress = persisted.quests[definition.id];
-    if (progress.status === 'active' || progress.status === 'completed')
-      quests[definition.id] = progress.status;
+    // Encounter choreography is session-only. An `active` save therefore
+    // represents an interrupted attempt, not a resumable encounter. Normalize
+    // it at the application restore boundary so the generic narrative engine
+    // can keep rejecting starts for genuinely active in-memory attempts.
+    if (progress.status === 'active') {
+      quests[definition.id] = progress.completionCount > 0 ? 'completed' : 'cancelled';
+    } else if (progress.status === 'completed') {
+      quests[definition.id] = 'completed';
+    }
     const completionCount = Math.max(
       progress.completionCount,
       progress.status === 'completed' ? 1 : 0,

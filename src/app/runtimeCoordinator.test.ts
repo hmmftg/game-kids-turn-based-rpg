@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createFreshPersistedState } from '../domain/game/initialState.ts';
 import { gameReducer } from '../domain/game/reducer.ts';
-import type { Command, GameState } from '../domain/game/types.ts';
+import type { Command, GameState, PersistedState } from '../domain/game/types.ts';
 import { MemorySaveRepository } from '../services/persistence/memoryRepository.ts';
 import {
   LEGACY_SLOT_KEY,
@@ -11,6 +11,7 @@ import {
 } from '../services/persistence/repository.ts';
 import { createAppGameRuntime, gameRuntimeAdapter } from './gameRuntime.ts';
 import { ProfileCoordinator } from './profileCoordinator.ts';
+import { ProfilePersistenceQueue } from './profilePersistenceQueue.ts';
 import { SaveCoordinator } from './saveCoordinator.ts';
 
 const KID1: ProfileMeta = {
@@ -27,14 +28,17 @@ function makeSession(repository?: SaveRepository) {
   const runtime = createAppGameRuntime();
   const commands: Command[] = [];
   const published: GameState[] = [];
+  const persistenceQueue = new ProfilePersistenceQueue();
   const profile = new ProfileCoordinator({
     repository,
+    persistenceQueue,
     dispatch: (command) => {
       commands.push(command);
       runtime.dispatch(command);
     },
   });
   const save = new SaveCoordinator({
+    persistenceQueue,
     repository: () => profile.saveRepository,
     activeSlotKey: () => profile.slotKey,
     syncActiveProfileMeta: (snapshot, slotKey) => profile.syncActiveProfileMeta(snapshot, slotKey),
@@ -59,6 +63,70 @@ function failingRepository(): SaveRepository {
 
 async function flushMicrotasks(): Promise<void> {
   for (let i = 0; i < 10; i += 1) await Promise.resolve();
+}
+
+function deferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function delayFirstSave(base: SaveRepository, targetKey: string) {
+  const started = deferred<void>();
+  const gate = deferred<void>();
+  let waiting = true;
+  const operations: string[] = [];
+  const repository: SaveRepository = {
+    load: (key) => base.load(key),
+    save: async (state, key) => {
+      operations.push(`save:start:${key}`);
+      if (waiting && key === targetKey) {
+        waiting = false;
+        started.resolve();
+        await gate.promise;
+      }
+      await base.save(state, key);
+      operations.push(`save:done:${key}`);
+    },
+    clear: async (key) => {
+      operations.push(`clear:${key}`);
+      await base.clear(key);
+    },
+    listProfiles: () => base.listProfiles(),
+    writeProfiles: async (profiles) => {
+      operations.push('profiles:write');
+      await base.writeProfiles(profiles);
+    },
+  };
+  return { repository, started: started.promise, release: () => gate.resolve(), operations };
+}
+
+function delayFirstClear(base: SaveRepository, targetKey: string) {
+  const started = deferred<void>();
+  const gate = deferred<void>();
+  let waiting = true;
+  const repository: SaveRepository = {
+    load: (key) => base.load(key),
+    save: (state, key) => base.save(state, key),
+    clear: async (key) => {
+      if (waiting && key === targetKey) {
+        waiting = false;
+        started.resolve();
+        await gate.promise;
+      }
+      await base.clear(key);
+    },
+    listProfiles: () => base.listProfiles(),
+    writeProfiles: (profiles) => base.writeProfiles(profiles),
+  };
+  return { repository, started: started.promise, release: () => gate.resolve() };
+}
+
+function peekPersisted(repository: MemorySaveRepository, key: string): PersistedState | undefined {
+  const value = repository.peek(key);
+  return typeof value === 'object' && value !== null ? (value as PersistedState) : undefined;
 }
 
 describe('game runtime (state machine only — no persistence)', () => {
@@ -209,6 +277,7 @@ describe('bootstrap coordinator — hydration order', () => {
     const runtime = createAppGameRuntime();
     const profile = new ProfileCoordinator({
       repository,
+      persistenceQueue: new ProfilePersistenceQueue(),
       dispatch: (command) => {
         commands.push(command);
         runtime.dispatch(command);
@@ -257,6 +326,169 @@ describe('save coordinator — eligibility policy', () => {
     expect(repository.peek(profileSlotKey(meta!.id))).toMatchObject({
       audio: { musicMuted: true },
     });
+  });
+
+  it('does not let an obsolete delayed save recreate a deleted profile', async () => {
+    const storage = new MemorySaveRepository();
+    const slot = profileSlotKey(KID1.id);
+    await storage.writeProfiles([KID1]);
+    await storage.save({ ...createFreshPersistedState(1), avatarId: KID1.avatarId }, slot);
+    const delayed = delayFirstSave(storage, slot);
+    const { runtime, profile } = makeSession(delayed.repository);
+    await profile.boot();
+    profile.selectProfile(KID1.id, runtime.getState().mode);
+    await flushMicrotasks();
+
+    runtime.dispatch({ type: 'DISCOVER', discoveryId: 'discovery-cave-entrance' });
+    await delayed.started;
+    const deletion = profile.deleteProfile(KID1.id);
+    await flushMicrotasks();
+    expect(storage.peek(slot)).toBeDefined();
+
+    delayed.release();
+    await deletion;
+    expect(delayed.operations.slice(-2)).toEqual(['profiles:write', `clear:${slot}`]);
+    expect(storage.peek(slot)).toBeUndefined();
+    expect(await storage.listProfiles()).toEqual([]);
+
+    runtime.dispatch({ type: 'PAUSE' });
+    runtime.dispatch({ type: 'SWITCH_PLAYER' });
+    await profile.selectProfile(KID1.id, runtime.getState().mode);
+    expect(profile.slotKey).toBeNull();
+    expect(runtime.getState().mode).toBe('profileSelect');
+  });
+
+  it('does not let an obsolete delayed save overwrite reset progress', async () => {
+    const storage = new MemorySaveRepository();
+    const slot = profileSlotKey(KID1.id);
+    await storage.writeProfiles([KID1]);
+    await storage.save({ ...createFreshPersistedState(1), avatarId: KID1.avatarId }, slot);
+    const delayed = delayFirstSave(storage, slot);
+    const { runtime, profile } = makeSession(delayed.repository);
+    await profile.boot();
+    profile.selectProfile(KID1.id, runtime.getState().mode);
+    await flushMicrotasks();
+
+    runtime.dispatch({ type: 'DISCOVER', discoveryId: 'discovery-cave-entrance' });
+    await delayed.started;
+    const reset = profile.resetProfile(KID1.id);
+    await flushMicrotasks();
+    expect(peekPersisted(storage, slot)?.discoveries).toEqual([]);
+
+    delayed.release();
+    await reset;
+    expect(peekPersisted(storage, slot)?.discoveries).toEqual([]);
+  });
+
+  it('loads a profile only after its pending writes, preserving progress across a switch', async () => {
+    const storage = new MemorySaveRepository();
+    const kid2 = { ...KID1, id: 'profile-kid2', avatarId: 'avatar-arta' as const };
+    const slot1 = profileSlotKey(KID1.id);
+    await storage.writeProfiles([KID1, kid2]);
+    await storage.save({ ...createFreshPersistedState(1), avatarId: KID1.avatarId }, slot1);
+    await storage.save(
+      { ...createFreshPersistedState(2), avatarId: kid2.avatarId },
+      profileSlotKey(kid2.id),
+    );
+    const delayed = delayFirstSave(storage, slot1);
+    const { runtime, profile } = makeSession(delayed.repository);
+    await profile.boot();
+    profile.selectProfile(KID1.id, runtime.getState().mode);
+    await flushMicrotasks();
+
+    runtime.dispatch({ type: 'DISCOVER', discoveryId: 'discovery-cave-entrance' });
+    await delayed.started;
+    runtime.dispatch({ type: 'PAUSE' });
+    runtime.dispatch({ type: 'SWITCH_PLAYER' });
+    const selectKid2 = profile.selectProfile(kid2.id, runtime.getState().mode);
+    await flushMicrotasks();
+    expect(runtime.getState().mode).toBe('profileSelect');
+
+    delayed.release();
+    await selectKid2;
+    expect(runtime.getState().avatarId).toBe('avatar-arta');
+
+    runtime.dispatch({ type: 'PAUSE' });
+    runtime.dispatch({ type: 'SWITCH_PLAYER' });
+    await profile.selectProfile(KID1.id, runtime.getState().mode);
+    expect(runtime.getState().discoveries).toEqual(['discovery-cave-entrance']);
+  });
+
+  it('does not let a delayed reset completion reset a newly selected profile', async () => {
+    const storage = new MemorySaveRepository();
+    const kid2 = { ...KID1, id: 'profile-kid2', avatarId: 'avatar-arta' as const };
+    await storage.writeProfiles([KID1, kid2]);
+    await storage.save(
+      { ...createFreshPersistedState(1), avatarId: KID1.avatarId },
+      profileSlotKey(KID1.id),
+    );
+    await storage.save(
+      {
+        ...createFreshPersistedState(2),
+        avatarId: kid2.avatarId,
+        discoveries: ['discovery-cave-entrance'],
+      },
+      profileSlotKey(kid2.id),
+    );
+    const delayed = delayFirstClear(storage, profileSlotKey(KID1.id));
+    const { runtime, profile } = makeSession(delayed.repository);
+    await profile.boot();
+    profile.selectProfile(KID1.id, runtime.getState().mode);
+    await flushMicrotasks();
+
+    runtime.dispatch({ type: 'PAUSE' });
+    runtime.dispatch({ type: 'OPEN_PARENT_GATE' });
+    runtime.dispatch({ type: 'PARENT_GATE_PASSED' });
+    const reset = profile.resetProgress();
+    await delayed.started;
+
+    runtime.dispatch({ type: 'CLOSE_PARENT' });
+    runtime.dispatch({ type: 'PAUSE' });
+    runtime.dispatch({ type: 'SWITCH_PLAYER' });
+    const selectKid2 = profile.selectProfile(kid2.id, runtime.getState().mode);
+    await flushMicrotasks();
+    expect(runtime.getState().mode).toBe('profileSelect');
+
+    delayed.release();
+    await Promise.all([reset, selectKid2]);
+    expect(runtime.getState().discoveries).toEqual(['discovery-cave-entrance']);
+
+    runtime.dispatch({ type: 'PAUSE' });
+    runtime.dispatch({ type: 'OPEN_PARENT_GATE' });
+    runtime.dispatch({ type: 'PARENT_GATE_PASSED' });
+
+    expect(profile.slotKey).toBe(profileSlotKey(kid2.id));
+    expect(runtime.getState().discoveries).toEqual(['discovery-cave-entrance']);
+  });
+
+  it('restores a settings-autosaved encounter as an available quest after reload', async () => {
+    const repository = new MemorySaveRepository();
+    const first = makeSession(repository);
+    await first.profile.boot();
+    first.profile.startNewPlayer();
+    first.profile.chooseAvatar('avatar-aban', 'none');
+    await flushMicrotasks();
+    const [meta] = await repository.listProfiles();
+    expect(meta).toBeDefined();
+
+    first.runtime.dispatch({ type: 'START_QUEST', questId: 'quest-greeting' });
+    expect(first.runtime.getState().mode).toBe('encounter');
+    first.runtime.dispatch({ type: 'SET_AUDIO_SETTINGS', audio: { musicMuted: true } });
+    await flushMicrotasks();
+    expect(
+      peekPersisted(repository, profileSlotKey(meta!.id))?.quests['quest-greeting'].status,
+    ).toBe('active');
+
+    const reloaded = makeSession(repository);
+    await reloaded.profile.boot();
+    reloaded.profile.selectProfile(meta!.id, reloaded.runtime.getState().mode);
+    await flushMicrotasks();
+    expect(reloaded.runtime.getState().mode).toBe('hub');
+    expect(reloaded.runtime.getState().quests['quest-greeting'].status).toBe('available');
+    expect(reloaded.runtime.getState().narrative.quests['quest-greeting']).toBe('cancelled');
+
+    reloaded.runtime.dispatch({ type: 'START_QUEST', questId: 'quest-greeting' });
+    expect(reloaded.runtime.getState().mode).toBe('encounter');
   });
 
   it('never overwrites a recovered-corrupt save before a gated reset', async () => {
@@ -355,15 +587,17 @@ describe('reload resume', () => {
     await profile.boot();
 
     profile.selectProfile(KID1.id, runtime.getState().mode);
+    await flushMicrotasks();
     profile.selectProfile(kid2.id, runtime.getState().mode);
-    pending.get(profileSlotKey(kid2.id))?.({
-      status: 'loaded',
-      state: kid2Save,
-    });
     await flushMicrotasks();
     pending.get(profileSlotKey(KID1.id))?.({
       status: 'loaded',
       state: kid1Save,
+    });
+    await flushMicrotasks();
+    pending.get(profileSlotKey(kid2.id))?.({
+      status: 'loaded',
+      state: kid2Save,
     });
     await flushMicrotasks();
 
