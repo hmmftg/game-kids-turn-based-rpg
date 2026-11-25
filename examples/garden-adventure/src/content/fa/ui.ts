@@ -97,6 +97,10 @@ export const faUi = {
   recapHeading: 'پایان داستان',
   gardenerEnding: 'دانه جوانه زد و باغ دوباره سبز شد.',
   lanternEnding: 'فانوس روشن شد و نور به باغ برگشت.',
+  endingNarration: {
+    'tree-ending': 'باغ با مراقبت و دوستی جان گرفت.',
+    'lantern-ending': 'نور فانوس راه را برای همه روشن کرد.',
+  },
   viewRecap: 'دیدن پایان داستان',
   closeRecap: 'بستن پایان',
   targets: {

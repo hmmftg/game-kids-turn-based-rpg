@@ -52,6 +52,7 @@
     "sample:garden:test:prepared": "npm --prefix examples/garden-adventure run test",
     "sample:garden:test": "npm run framework:build && npm --prefix examples/garden-adventure run test",
     "sample:garden:e2e": "npm run sample:garden:build && npm --prefix examples/garden-adventure run test:e2e",
+    "sample:garden:e2e:dev": "npm run sample:garden:build && npm --prefix examples/garden-adventure run test:e2e:dev",
     "sample:garden:meshy": "npm run framework:build && npm --prefix examples/garden-adventure run test:meshy",
     "sample:garden:previews": "npm run sample:garden:build && npm --prefix examples/garden-adventure run previews",
     "prevalidate:content": "npm run framework:build",

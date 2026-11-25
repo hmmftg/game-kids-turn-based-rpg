@@ -26,14 +26,16 @@ function reportModel(
 }
 
 export function GardenModelProvider({ children }: { readonly children: ReactNode }) {
-  const [loader] = useState(() =>
-    createModelAssetLoader(gardenModelRecords, {
+  const [loader, setLoader] = useState<ModelAssetLoader | null>(null);
+
+  useEffect(() => {
+    const ownedLoader = createModelAssetLoader(gardenModelRecords, {
       baseUrl: () => new URL(import.meta.env.BASE_URL, window.location.href).href,
       policy: GARDEN_MODEL_RUNTIME_POLICY,
-    }),
-  );
-
-  useEffect(() => () => loader.dispose(), [loader]);
+    });
+    setLoader(ownedLoader);
+    return () => ownedLoader.dispose();
+  }, []);
 
   return <GardenModelContext.Provider value={loader}>{children}</GardenModelContext.Provider>;
 }
