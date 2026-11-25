@@ -103,10 +103,10 @@ async function verifyEachArchiveIndependently(consumerRoot, temporaryRoot, archi
             ...(archive.name === 'waypoint-rpg-three'
               ? {
                   three: `file:${path
-                    .relative(probeRoot, path.resolve(repoRoot, '../../node_modules/three'))
+                    .relative(probeRoot, path.resolve(repoRoot, 'node_modules/three'))
                     .replaceAll(path.sep, '/')}`,
                   '@types/three': `file:${path
-                    .relative(probeRoot, path.resolve(repoRoot, '../../node_modules/@types/three'))
+                    .relative(probeRoot, path.resolve(repoRoot, 'node_modules/@types/three'))
                     .replaceAll(path.sep, '/')}`,
                 }
               : {}),
