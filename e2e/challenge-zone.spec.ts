@@ -7,7 +7,7 @@ import {
   npcProbe,
   tapWorldAnchor,
   tapWorldGround,
-  waitForProbe,
+  tapNpcUntilBattle,
   waitForWalkerIdle,
   walkToChallengeZone,
   worldPoints,
@@ -49,55 +49,6 @@ async function battleState(page: Page) {
 
 /** town → cave → tunnel → challenge: the child's own route, taps only. */
 const reachChallengeZone = walkToChallengeZone;
-
-/**
- * Taps an opponent's figure where it stands until the battle scene opens —
- * like tapNpcFigure, but the awaited surface is the battle, not a dialogue.
- */
-async function tapOpponentFigure(page: Page, npcId: string, timeout = 60000): Promise<boolean> {
-  await waitForProbe(page);
-  const scene = page.getByTestId('battle-scene');
-  const deadline = Date.now() + timeout;
-  let attempt = 0;
-  for (;;) {
-    if (await scene.isVisible().catch(() => false)) return true;
-    const npc = await npcProbe(page, npcId);
-    const rendered = await page.evaluate((id) => {
-      const w = window as unknown as {
-        __worldScene?: {
-          getObjectByName(n: string):
-            | {
-                position: { clone(): { x: number; z: number } };
-                getWorldPosition(v: { x: number; z: number }): void;
-              }
-            | undefined;
-        };
-      };
-      const group = w.__worldScene?.getObjectByName(`npc-transit-${id}`);
-      if (!group) return null;
-      const v = group.position.clone();
-      group.getWorldPosition(v);
-      return { x: v.x, z: v.z };
-    }, npcId);
-    const spot = rendered ?? npc;
-    const points = spot !== null ? await worldPoints(page, spot.x, spot.z) : [];
-    attempt += 1;
-    const pt = points.length > 0 ? (points[(attempt - 1) % points.length] ?? null) : null;
-    if (pt === null) {
-      if (Date.now() > deadline) return false;
-      await page.waitForTimeout(800);
-      continue;
-    }
-    await page.mouse.click(pt.x, pt.y);
-    const opened = await scene
-      .waitFor({ state: 'visible', timeout: 3000 })
-      .then(() => true)
-      .catch(() => false);
-    if (opened) return true;
-    if (Date.now() > deadline) return false;
-    await page.waitForTimeout(500);
-  }
-}
 
 /** Where the figure VISIBLY stands right now (the transit body, or probe). */
 async function npcSpot(page: Page, npcId: string) {
@@ -290,7 +241,7 @@ test.describe('the Challenge Zone', () => {
       expect(await battleState(page)).toBeNull();
 
       // A deliberate tap on the figure: exactly one battle, the right one.
-      expect(await tapOpponentFigure(page, npcId)).toBe(true);
+      expect(await tapNpcUntilBattle(page, npcId)).toBe(true);
       await expect(page.getByTestId('battle-scene')).toHaveCount(1);
       expect((await battleState(page))?.battleId).toBe(battleId);
       await page.getByTestId('leave-battle').click();
@@ -310,7 +261,7 @@ test.describe('the Challenge Zone', () => {
     await page.getByTestId('zoom-out').click();
     await page.getByTestId('resume-button').click();
     await walkToOpponent(page, 'npc-challenge-bird', 'anchor-challenge-bird');
-    expect(await tapOpponentFigure(page, 'npc-challenge-bird')).toBe(true);
+    expect(await tapNpcUntilBattle(page, 'npc-challenge-bird')).toBe(true);
     expect((await battleState(page))?.battleId).toBe('battle-challenge-bird');
     await winBattle(page, ['rest', 'attack', 'rest']);
     await expect.poll(() => probe(page).discoveries()).toContain('discovery-challenge-bird');
@@ -377,7 +328,7 @@ test.describe('the Challenge Zone', () => {
 
     // Win the butterfly's game → the way to the depths is real now. The
     // depths sit outside the portrait crop — hop-walk the anchor instead.
-    expect(await tapOpponentFigure(page, 'npc-challenge-butterfly')).toBe(true);
+    expect(await tapNpcUntilBattle(page, 'npc-challenge-butterfly')).toBe(true);
     await winBattle(page, ['rest', 'rest', 'attack']);
     await tapWorldAnchor(page, 'anchor-challenge-depths');
     await waitForAnchor(page, 'anchor-challenge-depths');
@@ -417,7 +368,7 @@ test.describe('the Challenge Zone', () => {
     await seedCompletedQuests(page, ['quest-park-kite']);
     await reachChallengeZone(page);
     await walkToOpponent(page, 'npc-challenge-bird', 'anchor-challenge-bird');
-    expect(await tapOpponentFigure(page, 'npc-challenge-bird')).toBe(true);
+    expect(await tapNpcUntilBattle(page, 'npc-challenge-bird')).toBe(true);
     await expect
       .poll(async () => (await battleState(page))?.phase, { timeout: 15000 })
       .toBe('playerChoice');

@@ -271,6 +271,56 @@ export async function tapNpcFigure(page: Page, npcId: string, timeout = 60000): 
   }
 }
 
+/** Taps a challenge character until its lightweight battle opens. */
+export async function tapNpcUntilBattle(
+  page: Page,
+  npcId: string,
+  timeout = 60000,
+): Promise<boolean> {
+  await waitForProbe(page);
+  const scene = page.getByTestId('battle-scene');
+  const deadline = Date.now() + timeout;
+  let attempt = 0;
+  for (;;) {
+    if (await scene.isVisible().catch(() => false)) return true;
+    const npc = await npcProbe(page, npcId);
+    const rendered = await page.evaluate((id) => {
+      const w = window as unknown as {
+        __worldScene?: {
+          getObjectByName(n: string):
+            | {
+                position: { clone(): { x: number; z: number } };
+                getWorldPosition(v: { x: number; z: number }): void;
+              }
+            | undefined;
+        };
+      };
+      const group = w.__worldScene?.getObjectByName(`npc-transit-${id}`);
+      if (!group) return null;
+      const v = group.position.clone();
+      group.getWorldPosition(v);
+      return { x: v.x, z: v.z };
+    }, npcId);
+    const spot = rendered ?? npc;
+    const points = spot !== null ? await worldPoints(page, spot.x, spot.z) : [];
+    attempt += 1;
+    const pt = points.length > 0 ? (points[(attempt - 1) % points.length] ?? null) : null;
+    if (pt === null) {
+      if (Date.now() > deadline) return false;
+      await page.waitForTimeout(800);
+      continue;
+    }
+    await page.mouse.click(pt.x, pt.y);
+    const opened = await scene
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+    if (opened) return true;
+    if (Date.now() > deadline) return false;
+    await page.waitForTimeout(500);
+  }
+}
+
 /**
  * Small screens show the quest journey collapsed behind the trail-toggle
  * chip; large screens have no toggle at all. Idempotent — safe to call
