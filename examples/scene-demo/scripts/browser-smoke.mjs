@@ -3,6 +3,10 @@ import { log } from 'node:console';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { preview } from 'vite';
+import {
+  readSceneRendererMemory,
+  waitForSceneRendererMemoryWithinTolerance,
+} from './scene-renderer-memory.mjs';
 
 const server = await preview({
   preview: { host: '127.0.0.1', port: 0, strictPort: false },
@@ -378,14 +382,34 @@ try {
     return true;
   });
   assert.equal(immediateSkipTriggered, true);
-  await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="cinematic-status"]')?.dataset.status === 'completed' &&
-      document.querySelector('[data-testid="cinematic-caption"]') === null &&
-      document
-        .querySelector('[data-testid="lantern-cinematic-controls"]')
-        ?.getAttribute('aria-busy') === 'false',
-  );
+  try {
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-testid="cinematic-status"]')?.dataset.status ===
+          'completed' &&
+        document.querySelector('[data-testid="cinematic-caption"]') === null &&
+        document
+          .querySelector('[data-testid="lantern-cinematic-controls"]')
+          ?.getAttribute('aria-busy') === 'false',
+    );
+  } catch (error) {
+    process.stderr.write(
+      `Immediate cinematic skip probe: ${JSON.stringify(
+        await page.evaluate(() => ({
+          status: document
+            .querySelector('[data-testid="cinematic-status"]')
+            ?.getAttribute('data-status'),
+          caption: document.querySelector('[data-testid="cinematic-caption"]')?.textContent,
+          controlsBusy: document
+            .querySelector('[data-testid="lantern-cinematic-controls"]')
+            ?.getAttribute('aria-busy'),
+          probe: window.__sceneProbe,
+          hookPresent: Boolean(window.__sceneDemoCinematicTest),
+        })),
+      )}\n`,
+    );
+    throw error;
+  }
 
   const cameraBeforeCancel = await page.evaluate(() => window.__sceneProbe?.cameraPosition);
   await page.getByTestId('cinematic-play').focus();
@@ -457,9 +481,7 @@ try {
   const disposedScenesBeforeTransitions = await page.evaluate(
     () => window.__sceneProbe?.disposedScenes ?? 0,
   );
-  const rendererMemoryBeforeTransitions = await page.evaluate(
-    () => window.__sceneProbe?.rendererMemory,
-  );
+  const rendererMemoryBeforeTransitions = await readSceneRendererMemory(page);
   assert.ok(
     rendererMemoryBeforeTransitions && rendererMemoryBeforeTransitions.geometries > 0,
     `renderer memory probe did not report the committed scene: ${JSON.stringify(await page.evaluate(() => window.__sceneProbe))}`,
@@ -478,8 +500,10 @@ try {
     (count) => (window.__sceneProbe?.disposedScenes ?? 0) >= count + 10,
     disposedScenesBeforeTransitions,
   );
-  const rendererMemoryAfterTransitions = await page.evaluate(
-    () => window.__sceneProbe?.rendererMemory,
+  const rendererMemoryAfterTransitions = await waitForSceneRendererMemoryWithinTolerance(
+    page,
+    rendererMemoryBeforeTransitions,
+    'five warmed map transition cycles',
   );
   assert.ok(rendererMemoryBeforeTransitions && rendererMemoryAfterTransitions);
   assert.ok(

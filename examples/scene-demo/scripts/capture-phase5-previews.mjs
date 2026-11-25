@@ -4,6 +4,10 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { arch, platform, release } from 'node:os';
 import { chromium } from '@playwright/test';
+import {
+  readSceneRendererMemory,
+  waitForSceneRendererMemoryWithinTolerance,
+} from './scene-renderer-memory.mjs';
 import { resolve } from 'node:path';
 import { preview } from 'vite';
 
@@ -382,9 +386,7 @@ try {
   );
 
   await storyPage.waitForFunction(() => (window.__sceneProbe?.rendererMemory.geometries ?? 0) > 0);
-  const rendererMemoryBeforeCycles = await storyPage.evaluate(
-    () => window.__sceneProbe?.rendererMemory,
-  );
+  const rendererMemoryBeforeCycles = await readSceneRendererMemory(storyPage);
   const disposedScenesBeforeCycles = await storyPage.evaluate(
     () => window.__sceneProbe?.disposedScenes ?? 0,
   );
@@ -406,8 +408,10 @@ try {
     () => window.__sceneProbe?.disposedScenes ?? 0,
   );
   await waitForStableFrames(storyPage, 'scene');
-  const rendererMemoryAfterCycles = await storyPage.evaluate(
-    () => window.__sceneProbe?.rendererMemory,
+  const rendererMemoryAfterCycles = await waitForSceneRendererMemoryWithinTolerance(
+    storyPage,
+    rendererMemoryBeforeCycles,
+    'five warmed scene transition cycles',
   );
   const idleSceneFrameStart = await storyPage.evaluate(() => window.__sceneProbe?.frameCount ?? 0);
   await waitForStableFrames(storyPage, 'scene');

@@ -1,3 +1,8 @@
+export interface RendererMemory {
+  readonly geometries: number;
+  readonly textures: number;
+}
+
 export interface SceneProbe {
   frameCount: number;
   disposedScenes: number;
@@ -5,7 +10,8 @@ export interface SceneProbe {
   cameraKind: 'perspective' | 'orthographic' | 'unknown';
   cameraIsOrthographic: boolean;
   cameraPosition: readonly number[];
-  rendererMemory: { readonly geometries: number; readonly textures: number };
+  rendererMemory: RendererMemory;
+  readRendererMemory: (() => RendererMemory) | null;
   lampLit: boolean;
   lanternAccent: boolean;
   guardianAction: string;
@@ -29,6 +35,7 @@ export function sceneProbe(): SceneProbe | null {
     cameraIsOrthographic: false,
     cameraPosition: [],
     rendererMemory: { geometries: 0, textures: 0 },
+    readRendererMemory: null,
     lampLit: false,
     lanternAccent: false,
     guardianAction: 'idle',
