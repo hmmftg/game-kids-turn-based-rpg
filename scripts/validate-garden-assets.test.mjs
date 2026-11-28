@@ -83,31 +83,19 @@ test('asset manifest and map budgets reject altered hashes and over-budget recor
   }
 });
 
-test('map instance budgets must match the declared runtime model bindings', async () => {
+test('map instance budgets must match actual Garden scene placements', async () => {
   const { gameRoot, temporaryRoot } = await copyGardenAssetInputs();
   try {
     const policyPath = path.join(gameRoot, 'assets/model-budget-policy.json');
     const policy = JSON.parse(await readFile(policyPath, 'utf8'));
-    policy.bindings = {
-      'garden-hero': {
-        assetId: 'phase5-animated-guardian',
-        mapIds: ['village', 'garden'],
-      },
-      'garden-guardian': {
-        assetId: 'phase5-animated-guardian',
-        mapIds: ['garden'],
-      },
-      'garden-lantern-base': {
-        assetId: 'phase5-textured-static',
-        mapIds: ['garden'],
-      },
-    };
     policy.maps.village.modelInstances['phase5-animated-guardian'] = 2;
     await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
 
     assert.ok(
       (await validateGardenAssets({ gameRoot })).some((message) =>
-        message.includes('Map village: modelInstances do not match the declared model bindings.'),
+        message.includes(
+          'Map village: modelInstances do not match actual Garden scene placements.',
+        ),
       ),
     );
   } finally {

@@ -1,6 +1,7 @@
 import { gardenNarrativeDefinition } from '../story.js';
 import { gardenGameplayDefinition } from '../gameplay.js';
 import {
+  GARDEN_MODEL_BINDING_VALIDATION,
   GARDEN_MODEL_BINDINGS,
   gardenModelBudgetPolicy,
   gardenModelRecords,
@@ -147,39 +148,14 @@ export function validateGardenAdventureCatalog(
   const chapterIds = new Set<string>();
   const chapterByMap = new Map<string, string>();
 
-  const actualModelInstancesByMap = new Map<string, Record<string, number>>(
-    [...mapKeys].map((mapId) => [mapId, {}]),
-  );
-  for (const [instanceId, binding] of Object.entries(GARDEN_MODEL_BINDINGS)) {
-    const placement = binding.placement;
-    const targetKind = 'targetKind' in placement ? placement.targetKind : undefined;
-    const placements =
-      placement.kind === 'player'
-        ? [...mapKeys].map((mapId) => ({ mapId }))
-        : targetKind
-          ? gardenTargets.filter((target) => target.kind === targetKind)
-          : [];
-    const actualMapIds = [...new Set(placements.map((entry) => entry.mapId))].sort();
-    if (stableJson(actualMapIds) !== stableJson([...binding.mapIds].sort()))
-      errors.push(
-        `Model binding ${instanceId} map ownership does not match its actual scene placement.`,
-      );
-    for (const placementEntry of placements) {
-      const counts = actualModelInstancesByMap.get(placementEntry.mapId);
-      if (!counts) {
-        errors.push(`Model binding ${instanceId} references unknown map ${placementEntry.mapId}.`);
-        continue;
-      }
-      counts[binding.assetId] = (counts[binding.assetId] ?? 0) + 1;
-    }
-  }
+  errors.push(...GARDEN_MODEL_BINDING_VALIDATION.errors);
 
   for (const mapId of mapKeys) {
     const mapPolicy =
       gardenModelBudgetPolicy.maps[mapId as keyof typeof gardenModelBudgetPolicy.maps];
     if (!mapPolicy) errors.push(`Map ${mapId} has no model budget policy.`);
     else if (
-      stableJson(actualModelInstancesByMap.get(mapId) ?? {}) !==
+      stableJson(GARDEN_MODEL_BINDING_VALIDATION.modelInstancesByMap[mapId] ?? {}) !==
       stableJson(mapPolicy.modelInstances)
     )
       errors.push(`Map ${mapId}: model policy counts do not match actual scene placements.`);

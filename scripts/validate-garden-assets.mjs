@@ -4,6 +4,8 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspectModel } from '../tools/creator/src/model-import.mjs';
 import { resolveModelRuntimePolicy } from '../packages/three/dist/index.js';
+import { validateGardenModelBindings } from '../examples/garden-adventure/src/models/model-binding-validation.ts';
+import { gardenMaps, gardenTargets } from '../examples/garden-adventure/src/world/world.ts';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const defaultGameRoot = resolve(repositoryRoot, 'examples/garden-adventure');
@@ -87,51 +89,23 @@ function validatePolicy(policy, records, errors) {
       : {};
   if (mapBudgets !== policy.maps)
     errors.push('model-budget-policy.json: maps must be an object of map budgets.');
-  const declaredInstances = new Map(Object.keys(mapBudgets).map((mapId) => [mapId, {}]));
-  const bindings = policy.bindings;
-  if (!bindings || typeof bindings !== 'object' || Array.isArray(bindings)) {
-    errors.push('model-budget-policy.json: bindings must declare runtime model instances.');
-  } else {
-    for (const [instanceId, binding] of Object.entries(bindings)) {
-      if (!SAFE_ID.test(instanceId))
-        errors.push(`Model binding ${instanceId}: instance ID must be stable.`);
-      if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
-        errors.push(`Model binding ${instanceId} must be an object.`);
-        continue;
-      }
-      if (!recordIds.has(binding.assetId))
-        errors.push(`Model binding ${instanceId} references unknown asset ${binding.assetId}.`);
-      if (!Array.isArray(binding.mapIds) || binding.mapIds.length === 0) {
-        errors.push(`Model binding ${instanceId} must name at least one map.`);
-        continue;
-      }
-      if (new Set(binding.mapIds).size !== binding.mapIds.length)
-        errors.push(`Model binding ${instanceId} repeats a map ID.`);
-      for (const mapId of binding.mapIds) {
-        const counts = declaredInstances.get(mapId);
-        if (!counts) {
-          errors.push(`Model binding ${instanceId} references unknown map ${mapId}.`);
-          continue;
-        }
-        counts[binding.assetId] = (counts[binding.assetId] ?? 0) + 1;
-      }
-      const placement = binding.placement;
-      if (
-        !placement ||
-        !(
-          placement.kind === 'player' ||
-          (placement.kind === 'target' && SAFE_ID.test(placement.targetKind ?? ''))
-        )
-      )
-        errors.push(`Model binding ${instanceId} must declare a player or target placement.`);
-    }
-  }
-
-  for (const [mapId, expected] of declaredInstances) {
-    const actual = mapBudgets[mapId]?.modelInstances;
+  const gardenMapIds = Object.keys(gardenMaps);
+  const bindingValidation = validateGardenModelBindings(policy.bindings, {
+    assetIds: [...recordIds].filter((id) => typeof id === 'string'),
+    mapIds: gardenMapIds,
+    targets: gardenTargets,
+  });
+  errors.push(...bindingValidation.errors);
+  for (const mapId of gardenMapIds) {
+    const mapPolicy = mapBudgets[mapId];
+    if (!mapPolicy) errors.push(`Map ${mapId} has no model budget.`);
+    const actual = mapPolicy?.modelInstances;
+    const expected = bindingValidation.modelInstancesByMap[mapId] ?? {};
     if (JSON.stringify(stableJson(actual ?? {})) !== JSON.stringify(stableJson(expected)))
-      errors.push(`Map ${mapId}: modelInstances do not match the declared model bindings.`);
+      errors.push(`Map ${mapId}: modelInstances do not match actual Garden scene placements.`);
   }
+  for (const mapId of Object.keys(mapBudgets))
+    if (!gardenMapIds.includes(mapId)) errors.push(`Map ${mapId}: unknown Garden map.`);
 
   const positiveMapLimits = [
     'maxUniqueAssets',
