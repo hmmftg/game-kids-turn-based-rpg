@@ -65,7 +65,7 @@ export function validateGardenModelBindings(
   }
 
   const instancesByMap = new Map<string, Record<string, number>>(
-    context.mapIds.map((mapId) => [mapId, {}]),
+    context.mapIds.map((mapId) => [mapId, Object.create(null) as Record<string, number>]),
   );
   const targetBindingIds: Record<string, string> = Object.create(null) as Record<string, string>;
   let playerBindingId: string | null = null;
@@ -156,7 +156,7 @@ export function validateGardenModelBindings(
         `Model binding ${instanceId} map ownership does not match its actual scene placement.`,
       );
 
-    if (typeof assetId === 'string')
+    if (typeof assetId === 'string' && knownAssets.has(assetId))
       for (const mapId of actualMapIds) {
         const counts = instancesByMap.get(mapId);
         if (!counts) continue;

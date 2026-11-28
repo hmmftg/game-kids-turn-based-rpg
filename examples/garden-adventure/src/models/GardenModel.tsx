@@ -234,7 +234,7 @@ export function GardenModelVisual({
 
   return (
     <group>
-      <group ref={modelProbeEnabled ? fallbackGroup : undefined} visible={!lease}>
+      <group ref={modelProbeEnabled ? fallbackGroup : null} visible={!lease}>
         {children}
       </group>
       {lease ? (
