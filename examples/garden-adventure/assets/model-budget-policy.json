@@ -32,6 +32,23 @@
       "maxClips": 0
     }
   ],
+  "bindings": {
+    "garden-hero": {
+      "assetId": "phase5-animated-guardian",
+      "mapIds": ["village", "garden"],
+      "placement": { "kind": "player" }
+    },
+    "garden-guardian": {
+      "assetId": "phase5-animated-guardian",
+      "mapIds": ["garden"],
+      "placement": { "kind": "target", "targetKind": "guardian" }
+    },
+    "garden-lantern-base": {
+      "assetId": "phase5-textured-static",
+      "mapIds": ["garden"],
+      "placement": { "kind": "target", "targetKind": "lantern" }
+    }
+  },
   "maps": {
     "village": {
       "modelInstances": {

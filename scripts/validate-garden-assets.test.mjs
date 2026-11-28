@@ -82,3 +82,77 @@ test('asset manifest and map budgets reject altered hashes and over-budget recor
     await rm(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+test('map instance budgets must match the declared runtime model bindings', async () => {
+  const { gameRoot, temporaryRoot } = await copyGardenAssetInputs();
+  try {
+    const policyPath = path.join(gameRoot, 'assets/model-budget-policy.json');
+    const policy = JSON.parse(await readFile(policyPath, 'utf8'));
+    policy.bindings = {
+      'garden-hero': {
+        assetId: 'phase5-animated-guardian',
+        mapIds: ['village', 'garden'],
+      },
+      'garden-guardian': {
+        assetId: 'phase5-animated-guardian',
+        mapIds: ['garden'],
+      },
+      'garden-lantern-base': {
+        assetId: 'phase5-textured-static',
+        mapIds: ['garden'],
+      },
+    };
+    policy.maps.village.modelInstances['phase5-animated-guardian'] = 2;
+    await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+
+    assert.ok(
+      (await validateGardenAssets({ gameRoot })).some((message) =>
+        message.includes('Map village: modelInstances do not match the declared model bindings.'),
+      ),
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime asset policy rejects zero limits and bindings to unknown assets or maps', async () => {
+  const { gameRoot, temporaryRoot } = await copyGardenAssetInputs();
+  try {
+    const policyPath = path.join(gameRoot, 'assets/model-budget-policy.json');
+    const policy = JSON.parse(await readFile(policyPath, 'utf8'));
+    policy.runtimePolicy.maxLoadedAssets = 0;
+    policy.assets[0].maxFileBytes = 0;
+    policy.maps.village.maxTriangles = 0;
+    policy.bindings = {
+      'garden-hero': { assetId: 'missing-model', mapIds: ['missing-map'] },
+    };
+    await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+
+    const errors = await validateGardenAssets({ gameRoot });
+    assert.ok(
+      errors.some((message) => message.includes('runtime model limits must be positive integers.')),
+    );
+    assert.ok(
+      errors.some((message) =>
+        message.includes('phase5-animated-guardian: maxFileBytes must be a positive integer.'),
+      ),
+    );
+    assert.ok(
+      errors.some((message) =>
+        message.includes('Map village: maxTriangles must be a positive integer.'),
+      ),
+    );
+    assert.ok(
+      errors.some((message) =>
+        message.includes('Model binding garden-hero references unknown asset missing-model.'),
+      ),
+    );
+    assert.ok(
+      errors.some((message) =>
+        message.includes('Model binding garden-hero references unknown map missing-map.'),
+      ),
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});

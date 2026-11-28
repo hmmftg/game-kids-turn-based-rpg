@@ -87,6 +87,8 @@ jobs:
         env:
           FRAMEWORK_INSTALL_CHROMIUM: browser-only
           FRAMEWORK_GARDEN_DIAGNOSTICS_OUTPUT: ${{ runner.temp }}/garden-playwright-diagnostics
+      - name: Verify Garden development Strict Mode lifecycles and ending cues
+        run: npm run sample:garden:e2e:dev
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -14,6 +14,7 @@
     "build": "npm run typecheck && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4180",
     "test:e2e": "playwright test",
+    "test:e2e:dev": "playwright test --config=playwright.dev.config.ts",
     "test:meshy": "playwright test --config=playwright.meshy.config.ts",
     "previews": "playwright test --config=playwright.previews.config.ts"
   },

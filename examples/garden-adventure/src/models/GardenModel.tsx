@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   createCharacterAnimationController,
@@ -8,9 +16,40 @@ import {
   type ModelLease,
   type SemanticAction,
 } from 'waypoint-rpg-three';
-import { GARDEN_MODEL_RUNTIME_POLICY, gardenModelRecords } from './asset-records.js';
+import {
+  GARDEN_MODEL_BINDINGS,
+  GARDEN_MODEL_RUNTIME_POLICY,
+  gardenModelRecords,
+  type GardenModelInstanceId,
+} from './asset-records.js';
+import type { GardenMapId } from '../world/world.js';
 
 const GardenModelContext = createContext<ModelAssetLoader | null>(null);
+
+function createGardenModelLoaderStore() {
+  let loader: ModelAssetLoader | null = null;
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of [...listeners]) listener();
+  };
+
+  return {
+    getSnapshot: () => loader,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    install: (nextLoader: ModelAssetLoader) => {
+      loader = nextLoader;
+      notify();
+    },
+    clear: (ownedLoader: ModelAssetLoader) => {
+      if (loader !== ownedLoader) return;
+      loader = null;
+      notify();
+    },
+  };
+}
 
 function reportModel(
   instanceId: string,
@@ -26,40 +65,53 @@ function reportModel(
 }
 
 export function GardenModelProvider({ children }: { readonly children: ReactNode }) {
-  const [loader] = useState(() =>
-    createModelAssetLoader(gardenModelRecords, {
-      baseUrl: () => new URL(import.meta.env.BASE_URL, window.location.href).href,
-      policy: GARDEN_MODEL_RUNTIME_POLICY,
-    }),
+  const [loaderStore] = useState(createGardenModelLoaderStore);
+  const loader = useSyncExternalStore(
+    loaderStore.subscribe,
+    loaderStore.getSnapshot,
+    loaderStore.getSnapshot,
   );
 
-  useEffect(() => () => loader.dispose(), [loader]);
+  useEffect(() => {
+    const ownedLoader = createModelAssetLoader(gardenModelRecords, {
+      baseUrl: () => new URL(import.meta.env.BASE_URL, window.location.href).href,
+      policy: GARDEN_MODEL_RUNTIME_POLICY,
+    });
+    loaderStore.install(ownedLoader);
+    return () => {
+      loaderStore.clear(ownedLoader);
+      ownedLoader.dispose();
+    };
+  }, [loaderStore]);
 
   return <GardenModelContext.Provider value={loader}>{children}</GardenModelContext.Provider>;
 }
 
 export function GardenModelVisual({
-  assetId,
   instanceId,
+  mapId,
   action = 'idle',
   modelPosition = [0, 0, 0],
   modelScale = [1, 1, 1],
   children,
 }: {
-  readonly assetId: string;
-  readonly instanceId: string;
+  readonly instanceId: GardenModelInstanceId;
+  readonly mapId: GardenMapId;
   readonly action?: SemanticAction;
   readonly modelPosition?: readonly [number, number, number];
   readonly modelScale?: readonly [number, number, number];
   readonly children: ReactNode;
 }) {
+  const binding = GARDEN_MODEL_BINDINGS[instanceId];
+  const assetId = binding.assetId;
+  const allowedOnMap = binding.mapIds.includes(mapId);
   const loader = useContext(GardenModelContext);
   const { invalidate } = useThree();
   const [lease, setLease] = useState<ModelLease | null>(null);
   const animationController = useRef<CharacterAnimationController | null>(null);
 
   useEffect(() => {
-    if (!loader) return;
+    if (!loader || !allowedOnMap) return;
     const request = new AbortController();
     let activeLease: ModelLease | null = null;
     reportModel(instanceId, assetId, 'loading');
@@ -88,7 +140,7 @@ export function GardenModelVisual({
       activeLease?.release();
       setLease(null);
     };
-  }, [assetId, instanceId, invalidate, loader]);
+  }, [allowedOnMap, assetId, instanceId, invalidate, loader]);
 
   useEffect(() => {
     if (!lease || lease.clips.length === 0) return;

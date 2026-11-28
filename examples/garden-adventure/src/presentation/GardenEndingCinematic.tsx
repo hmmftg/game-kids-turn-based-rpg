@@ -36,7 +36,7 @@ export function GardenEndingCinematic({
 }) {
   const { camera, invalidate } = useThree();
   const timeline = useMemo(() => createGardenEndingTimeline(endingId), [endingId]);
-  const player = useMemo<TimelinePlayer>(() => createTimelinePlayer(timeline), [timeline]);
+  const player = useRef<TimelinePlayer | null>(null);
   const callbacks = useRef({ onEvent, onComplete });
   const originalCamera = useRef<CameraPose | null>(null);
   const cameraTrack = useRef<CameraTrack | null>(null);
@@ -49,6 +49,8 @@ export function GardenEndingCinematic({
 
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ownedPlayer = createTimelinePlayer(timeline);
+    player.current = ownedPlayer;
     const pose: CameraPose = {
       position: camera.position.clone(),
       quaternion: camera.quaternion.clone(),
@@ -56,15 +58,16 @@ export function GardenEndingCinematic({
     };
     originalCamera.current = pose;
     completed.current = false;
-    executionId.current = player.play({ reducedMotion });
+    executionId.current = ownedPlayer.play({ reducedMotion });
     reportCinematic(endingId, requestId, 'playing', camera.position.toArray());
     invalidate();
 
     return () => {
-      const activeExecution = player.snapshot().executionId;
-      const finalStatus = player.snapshot().status === 'completed' ? 'completed' : 'cancelled';
-      player.cancel(activeExecution);
-      player.dispose();
+      const snapshot = ownedPlayer.snapshot();
+      const finalStatus = snapshot.status === 'completed' ? 'completed' : 'cancelled';
+      ownedPlayer.cancel(snapshot.executionId);
+      ownedPlayer.dispose();
+      if (player.current === ownedPlayer) player.current = null;
       cameraTrack.current = null;
       const original = originalCamera.current;
       if (original) restoreCamera(camera, original);
@@ -72,20 +75,22 @@ export function GardenEndingCinematic({
       reportCinematic(endingId, requestId, finalStatus, camera.position.toArray());
       invalidate();
     };
-  }, [camera, endingId, invalidate, player, requestId]);
+  }, [camera, endingId, invalidate, requestId, timeline]);
 
   useFrame((state, deltaSeconds) => {
+    const activePlayer = player.current;
+    if (!activePlayer) return;
     const activeCamera = state.camera;
     const activeExecution = executionId.current;
-    const before = player.snapshot();
-    if (before.status !== 'playing' || !player.isCurrentExecution(activeExecution)) return;
+    const before = activePlayer.snapshot();
+    if (before.status !== 'playing' || !activePlayer.isCurrentExecution(activeExecution)) return;
 
-    const events = player.advance(
+    const events = activePlayer.advance(
       activeExecution,
       Math.min(deltaSeconds, MAX_PRESENTATION_FRAME_SECONDS),
     );
     for (const event of events) {
-      if (!player.isCurrentExecution(event.executionId)) continue;
+      if (!activePlayer.isCurrentExecution(event.executionId)) continue;
       if (before.reducedMotion && event.cue.kind !== 'dialogue') continue;
       if (event.cue.kind === 'camera') {
         const preset = timeline.registry.cameras[event.cue.cameraId];
@@ -103,7 +108,7 @@ export function GardenEndingCinematic({
       } else callbacks.current.onEvent(event);
     }
 
-    const after = player.snapshot();
+    const after = activePlayer.snapshot();
     const track = cameraTrack.current;
     if (!after.reducedMotion && after.status === 'playing' && track) {
       const progress =

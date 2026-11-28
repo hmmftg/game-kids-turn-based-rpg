@@ -49,6 +49,7 @@ interface GardenCinematicRequest {
 
 export function App() {
   const runtime = useMemo(() => createGardenRuntime(), []);
+  const runtimeLifecycle = useRef({ generation: 0 });
   const state = useSyncExternalStore(runtime.subscribe, runtime.getState, runtime.getState);
   const [rendererReady, setRendererReady] = useState(false);
   const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(null);
@@ -107,7 +108,15 @@ export function App() {
     state.gameplay.encounter?.outcome === null ? state.gameplay.encounter : null;
   const [battleNotice, setBattleNotice] = useState('');
 
-  useEffect(() => () => runtime.dispose(), [runtime]);
+  useEffect(() => {
+    const lifecycleState = runtimeLifecycle.current;
+    const lifecycle = ++lifecycleState.generation;
+    return () => {
+      queueMicrotask(() => {
+        if (lifecycleState.generation === lifecycle) runtime.dispose();
+      });
+    };
+  }, [runtime]);
 
   const setStorageMode = useCallback((mode: 'persistent' | 'session-only') => {
     setStorageModeState(mode);
@@ -704,7 +713,17 @@ export function App() {
                 <h2 id="garden-ending-heading">
                   {endingId === 'ending-garden' ? faUi.gardenerEnding : faUi.lanternEnding}
                 </h2>
-                <span hidden data-cinematic-dialogue={cinematicDialogueId ?? undefined} />
+                {cinematicDialogueId ? (
+                  <p
+                    className="ending-narration"
+                    data-testid="cinematic-dialogue"
+                    data-cinematic-dialogue={cinematicDialogueId}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {faUi.endingNarration[cinematicDialogueId as keyof typeof faUi.endingNarration]}
+                  </p>
+                ) : null}
                 <p>{questObjective}</p>
                 <button
                   className="primary-button"

@@ -269,6 +269,15 @@ h1 {
   line-height: 1.8;
 }
 
+.ending-narration {
+  padding: 10px 14px;
+  border: 1px solid #d6e2c9;
+  border-radius: 14px;
+  background: #f0f5e8;
+  color: #38523c !important;
+  font-weight: 700;
+}
+
 .dialogue-choices {
   display: grid;
   gap: 10px;

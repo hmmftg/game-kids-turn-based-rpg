@@ -65,6 +65,10 @@ const definitions: Readonly<Record<'ending-garden' | 'ending-lantern', TimelineD
 
 export type GardenEndingId = keyof typeof definitions;
 
+export const gardenEndingTimelineIds: readonly string[] = Object.freeze(
+  Object.values(definitions).map((definition) => definition.id),
+);
+
 export function createGardenEndingTimeline(endingId: GardenEndingId) {
   return compileTimeline(definitions[endingId], gardenEndingRegistry);
 }
