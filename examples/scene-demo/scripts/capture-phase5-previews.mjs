@@ -257,6 +257,7 @@ try {
   );
   records.push(await capture(assetPage, screenshotNames[1]));
 
+  await waitForStableFrames(assetPage, 'model');
   const modelMemory = await assetPage.evaluate(() => ({
     geometries: window.__phase5ModelProbe?.renderer.info.memory.geometries ?? 0,
     textures: window.__phase5ModelProbe?.renderer.info.memory.textures ?? 0,
@@ -386,6 +387,7 @@ try {
   );
 
   await storyPage.waitForFunction(() => (window.__sceneProbe?.rendererMemory.geometries ?? 0) > 0);
+  await waitForStableFrames(storyPage, 'scene');
   const rendererMemoryBeforeCycles = await readSceneRendererMemory(storyPage);
   const disposedScenesBeforeCycles = await storyPage.evaluate(
     () => window.__sceneProbe?.disposedScenes ?? 0,
