@@ -4,8 +4,8 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import {
   MODEL_IMPORT_BUDGET,
-  DEFAULT_MODEL_RUNTIME_POLICY,
   animationClipId,
+  resolveModelRuntimePolicy,
   validateModelAssetRecord,
   type ModelRuntimePolicy,
   type ModelAssetRecord,
@@ -72,12 +72,6 @@ interface GlbGeometryMetrics {
   readonly decodedGeometryBytes: number;
 }
 
-const MAX_RUNTIME_POLICY = Object.freeze({
-  maxTrianglesPerAsset: 1_000_000,
-  maxLoadedAssets: 64,
-  maxDecodedGeometryBytes: 512 * 1024 * 1024,
-  maxSceneTriangles: 4_000_000,
-});
 const MAX_DECODED_GEOMETRY_BYTES_PER_ASSET = MODEL_IMPORT_BUDGET.maxDecodedTextureBytes * 2;
 const MAX_RUNTIME_NODE_REFERENCES = 16_384;
 
@@ -622,24 +616,6 @@ function cloneLease(
   };
 }
 
-function resolveRuntimePolicy(overrides: Partial<ModelRuntimePolicy> = {}): ModelRuntimePolicy {
-  const policy = { ...DEFAULT_MODEL_RUNTIME_POLICY, ...overrides };
-  for (const key of Object.keys(MAX_RUNTIME_POLICY) as (keyof typeof MAX_RUNTIME_POLICY)[]) {
-    const value = policy[key];
-    if (!Number.isSafeInteger(value) || value <= 0 || value > MAX_RUNTIME_POLICY[key])
-      throw new RangeError(
-        `Runtime model policy ${key} must be a positive integer no greater than ${MAX_RUNTIME_POLICY[key]}.`,
-      );
-  }
-  if (policy.maxTrianglesPerAsset > policy.maxSceneTriangles)
-    throw new RangeError(
-      'Per-asset triangle policy cannot exceed the active-scene triangle policy.',
-    );
-  if (typeof policy.allowUnapproved !== 'boolean')
-    throw new TypeError('Runtime model policy allowUnapproved must be a boolean.');
-  return Object.freeze(policy);
-}
-
 function formatRecordDiagnostics(
   diagnostics: readonly { readonly path: string; readonly message: string }[],
 ): string {
@@ -650,7 +626,7 @@ export function createModelAssetLoader(
   authoredRecords: readonly unknown[],
   dependencies: ModelLoaderDependencies = {},
 ): ModelAssetLoader {
-  const policy = resolveRuntimePolicy(dependencies.policy);
+  const policy = resolveModelRuntimePolicy(dependencies.policy);
   const records = new Map<string, ModelAssetRecord>();
   for (const authored of authoredRecords) {
     const diagnostics = validateModelAssetRecord(authored, policy);
