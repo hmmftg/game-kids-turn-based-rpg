@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspectModel } from '../tools/creator/src/model-import.mjs';
+import { resolveModelRuntimePolicy } from '../packages/three/dist/index.js';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const defaultGameRoot = resolve(repositoryRoot, 'examples/garden-adventure');
@@ -43,20 +44,13 @@ function validatePolicy(policy, records, errors) {
     errors.push('model-budget-policy.json: expected Garden of Stories policy schema version 1.');
     return null;
   }
-  const runtime = policy.runtimePolicy;
-  if (
-    !runtime ||
-    runtime.allowUnapproved !== false ||
-    !Number.isSafeInteger(runtime.maxTrianglesPerAsset) ||
-    runtime.maxTrianglesPerAsset < 1 ||
-    !Number.isSafeInteger(runtime.maxLoadedAssets) ||
-    runtime.maxLoadedAssets < 1 ||
-    !Number.isSafeInteger(runtime.maxDecodedGeometryBytes) ||
-    runtime.maxDecodedGeometryBytes < 1 ||
-    !Number.isSafeInteger(runtime.maxSceneTriangles) ||
-    runtime.maxSceneTriangles < 1
-  ) {
-    errors.push('model-budget-policy.json: runtime model limits must be positive integers.');
+  let runtimePolicy = null;
+  try {
+    runtimePolicy = resolveModelRuntimePolicy(policy.runtimePolicy, { mode: 'production' });
+  } catch (error) {
+    errors.push(
+      `model-budget-policy.json: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
   const policyAssets = Array.isArray(policy.assets) ? policy.assets : [];
@@ -185,15 +179,17 @@ function validatePolicy(policy, records, errors) {
       errors.push(`Map ${mapId}: encoded-byte budget exceeded.`);
     if (decodedBytes > map.maxDecodedGeometryBytes)
       errors.push(`Map ${mapId}: decoded-geometry budget exceeded.`);
-    if (decodedBytes > (runtime?.maxDecodedGeometryBytes ?? 0))
-      errors.push(`Map ${mapId}: runtime decoded-geometry limit exceeded.`);
-    if (uniqueIds.length > (runtime?.maxLoadedAssets ?? 0))
-      errors.push(`Map ${mapId}: runtime loaded-asset limit exceeded.`);
-    if (totalTriangles > runtime.maxSceneTriangles)
-      errors.push(`Map ${mapId}: runtime scene triangle limit exceeded.`);
+    if (runtimePolicy) {
+      if (decodedBytes > runtimePolicy.maxDecodedGeometryBytes)
+        errors.push(`Map ${mapId}: runtime decoded-geometry limit exceeded.`);
+      if (uniqueIds.length > runtimePolicy.maxLoadedAssets)
+        errors.push(`Map ${mapId}: runtime loaded-asset limit exceeded.`);
+      if (totalTriangles > runtimePolicy.maxSceneTriangles)
+        errors.push(`Map ${mapId}: runtime scene triangle limit exceeded.`);
+    }
   }
 
-  return budgets;
+  return { budgets, runtimePolicy };
 }
 
 function validateApproval(receipt, record, budget, errors) {
@@ -245,7 +241,9 @@ export async function validateGardenAssets({
       errors.push(`${record.id}: runtime path or recorded GLB hash is invalid.`);
   }
   const records = [...recordsById.values()];
-  const budgets = validatePolicy(policy, records, errors);
+  const validatedPolicy = validatePolicy(policy, records, errors);
+  const budgets = validatedPolicy?.budgets;
+  const runtimePolicy = validatedPolicy?.runtimePolicy;
   const modelPublicRoot = resolve(root, 'public');
   const realPublicRoot = await realpath(modelPublicRoot).catch(() => null);
   const actualModelPaths = new Set();
@@ -327,7 +325,7 @@ export async function validateGardenAssets({
         errors.push(`${record.id}: joint budget exceeded.`);
       if (actual.clipInventory.length > budget.maxClips)
         errors.push(`${record.id}: clip budget exceeded.`);
-      if (metrics.triangles > (policy.runtimePolicy?.maxTrianglesPerAsset ?? 0))
+      if (runtimePolicy && metrics.triangles > runtimePolicy.maxTrianglesPerAsset)
         errors.push(`${record.id}: runtime per-asset triangle limit exceeded.`);
       if (!actual.rights.commercialUse || !actual.rights.redistribution || !actual.rights.approved)
         errors.push(`${record.id}: approved commercial redistribution rights are required.`);

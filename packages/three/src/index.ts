@@ -4,6 +4,7 @@ export {
   MODEL_IMPORT_BUDGET,
   animationClipId,
   findAnimationByClipReference,
+  resolveModelRuntimePolicy,
   resolveSemanticClip,
   validateModelAssetRecord,
 } from './contracts.js';

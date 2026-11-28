@@ -1,15 +1,15 @@
 import records from '../../assets/asset-records.json';
 import gardenPolicy from '../../assets/model-budget-policy.json';
-import type { ModelAssetRecord, ModelRuntimePolicy } from 'waypoint-rpg-three';
+import { resolveModelRuntimePolicy, type ModelAssetRecord } from 'waypoint-rpg-three';
 
 /** Game-owned, integrity-pinned models. Missing or rejected files use the scene geometry. */
 export const gardenModelRecords = records as unknown as readonly ModelAssetRecord[];
 
 /** Shared runtime/release policy; the asset checker validates this same JSON document. */
 export const gardenModelBudgetPolicy = gardenPolicy;
-export const GARDEN_MODEL_RUNTIME_POLICY: Readonly<ModelRuntimePolicy> = Object.freeze(
-  gardenPolicy.runtimePolicy as ModelRuntimePolicy,
-);
+export const GARDEN_MODEL_RUNTIME_POLICY = resolveModelRuntimePolicy(gardenPolicy.runtimePolicy, {
+  mode: 'production',
+});
 
 /** Runtime instance bindings and map ownership come from the validated release policy. */
 export const GARDEN_MODEL_BINDINGS = gardenPolicy.bindings;

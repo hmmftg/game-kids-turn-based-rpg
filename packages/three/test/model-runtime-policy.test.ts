@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveModelRuntimePolicy } from '../src/contracts.js';
+import { resolveModelRuntimePolicy } from '../src/index.js';
 import { createModelAssetLoader } from '../src/model-loader.js';
 
 const production = { mode: 'production' } as const;
