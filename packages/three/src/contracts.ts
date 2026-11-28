@@ -27,6 +27,13 @@ export const DEFAULT_MODEL_RUNTIME_POLICY: ModelRuntimePolicy = Object.freeze({
   allowUnapproved: false,
 });
 
+const MAX_RUNTIME_POLICY = Object.freeze({
+  maxTrianglesPerAsset: 1_000_000,
+  maxLoadedAssets: 64,
+  maxDecodedGeometryBytes: 512 * 1024 * 1024,
+  maxSceneTriangles: 4_000_000,
+});
+
 export type SemanticAction = 'idle' | 'move' | 'interact' | 'combat' | 'defeat';
 export type RuntimeModelFormat = 'glb';
 export type AxisDirection = 'X' | '-X' | 'Y' | '-Y' | 'Z' | '-Z';
@@ -131,6 +138,60 @@ function finiteQuaternion(value: unknown): value is readonly [number, number, nu
 
 function nonNegativeInteger(value: unknown, maximum: number): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0 && (value as number) <= maximum;
+}
+
+export function resolveModelRuntimePolicy(
+  value: unknown = {},
+  options: { readonly mode?: 'runtime' | 'production' } = {},
+): ModelRuntimePolicy {
+  const { mode = 'runtime' } = options;
+  if (!record(value)) throw new TypeError('Runtime model policy must be a plain object.');
+
+  for (const key of Reflect.ownKeys(value)) {
+    if (key !== 'allowUnapproved' && !Object.hasOwn(MAX_RUNTIME_POLICY, key))
+      throw new TypeError(`Unknown runtime model policy field ${String(key)}.`);
+  }
+
+  const field = (key: keyof ModelRuntimePolicy): unknown => {
+    if (Object.hasOwn(value, key)) return value[key];
+    if (mode === 'production')
+      throw new TypeError(`Production model policy requires an explicit ${key}.`);
+    return DEFAULT_MODEL_RUNTIME_POLICY[key];
+  };
+
+  const limit = (key: keyof typeof MAX_RUNTIME_POLICY): number => {
+    const actual = field(key);
+    const maximum = MAX_RUNTIME_POLICY[key];
+    if (!nonNegativeInteger(actual, maximum) || actual === 0)
+      throw new RangeError(
+        `Runtime model policy ${key} must be a positive integer no greater than ${maximum}.`,
+      );
+    return actual;
+  };
+
+  const maxTrianglesPerAsset = limit('maxTrianglesPerAsset');
+  const maxLoadedAssets = limit('maxLoadedAssets');
+  const maxDecodedGeometryBytes = limit('maxDecodedGeometryBytes');
+  const maxSceneTriangles = limit('maxSceneTriangles');
+
+  if (maxTrianglesPerAsset > maxSceneTriangles)
+    throw new RangeError(
+      'Per-asset triangle policy cannot exceed the active-scene triangle policy.',
+    );
+
+  const allowUnapproved = field('allowUnapproved');
+  if (typeof allowUnapproved !== 'boolean')
+    throw new TypeError('Runtime model policy allowUnapproved must be a boolean.');
+  if (mode === 'production' && allowUnapproved)
+    throw new TypeError('Production model policy allowUnapproved must be explicitly false.');
+
+  return Object.freeze({
+    maxTrianglesPerAsset,
+    maxLoadedAssets,
+    maxDecodedGeometryBytes,
+    maxSceneTriangles,
+    allowUnapproved,
+  });
 }
 
 export function validateModelAssetRecord(

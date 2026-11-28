@@ -42,10 +42,12 @@ The main commands are:
 | Garden production preview                            | `npm run sample:garden:preview`       |
 | Garden production build                              | `npm run sample:garden:build`         |
 | Garden unit acceptance                               | `npm run sample:garden:test`          |
+| Garden development-server browser regressions        | `npm run sample:garden:e2e:dev`       |
 | Garden real-browser acceptance                       | `npm run sample:garden:e2e`           |
 | Garden consumer from installed framework tarballs    | `npm run framework:garden-consumer`   |
 | Capture Garden production gameplay screenshots       | `npm run sample:garden:previews`      |
 | Check Garden actual assets and game-specific budgets | `npm run sample:garden:asset-check`   |
+| Test Garden asset policy and integrity regressions   | `npm run sample:garden:asset-test`    |
 | Check independent release approvals and budgets      | `npm run sample:garden:release:check` |
 | Full root repository verification                    | `npm run verify`                      |
 
@@ -53,6 +55,12 @@ The release check requires a different reviewer and evidence for every exact
 release asset hash. It currently stops until those approvals are recorded.
 The source/output-integrity and technical-budget check does not grant release
 approval.
+
+The standalone Garden asset-check, asset-test, and release-check commands build
+`waypoint-rpg-three` before validation. They use its public runtime-policy
+resolver, and compare declared model bindings and map-instance budgets against
+Garden's actual map and target definitions. The `:prepared` variants are for
+root workflows that have already built the framework once.
 
 ## Asset preparation and private pilot
 

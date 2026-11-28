@@ -478,6 +478,7 @@ try {
   }
 
   await page.waitForFunction(() => (window.__sceneProbe?.rendererMemory.geometries ?? 0) > 0);
+  await waitForStableSceneFrames(page);
   const disposedScenesBeforeTransitions = await page.evaluate(
     () => window.__sceneProbe?.disposedScenes ?? 0,
   );
@@ -500,6 +501,10 @@ try {
     (count) => (window.__sceneProbe?.disposedScenes ?? 0) >= count + 10,
     disposedScenesBeforeTransitions,
   );
+  const disposedScenesAfterTransitions = await page.evaluate(
+    () => window.__sceneProbe?.disposedScenes ?? 0,
+  );
+  await waitForStableSceneFrames(page);
   const rendererMemoryAfterTransitions = await waitForSceneRendererMemoryWithinTolerance(
     page,
     rendererMemoryBeforeTransitions,
@@ -510,6 +515,9 @@ try {
     rendererMemoryAfterTransitions.geometries <= rendererMemoryBeforeTransitions.geometries + 1 &&
       rendererMemoryAfterTransitions.textures <= rendererMemoryBeforeTransitions.textures + 1,
     `five warmed map transition cycles exceeded the measured renderer tolerance: ${JSON.stringify({ rendererMemoryBeforeTransitions, rendererMemoryAfterTransitions })}`,
+  );
+  log(
+    `five warmed map transitions settled renderer memory ${JSON.stringify({ rendererMemoryBeforeTransitions, rendererMemoryAfterTransitions, disposedScenesBeforeTransitions, disposedScenesAfterTransitions })}`,
   );
   const workshopSubscriptions = await page.evaluate(
     () => window.__sceneProbe?.runtimeSubscriptions,
@@ -1125,7 +1133,8 @@ try {
     (oldSceneId) =>
       window.__phase5ModelProbe?.scene.uuid !== oldSceneId &&
       document.querySelector('[data-testid="model-status-static"]')?.dataset.status === 'ready' &&
-      document.querySelector('[data-testid="model-status-rigged"]')?.dataset.status === 'ready',
+      document.querySelector('[data-testid="model-status-traveler"]')?.dataset.status === 'ready' &&
+      document.querySelector('[data-testid="model-status-guardian"]')?.dataset.status === 'ready',
     sceneBeforeOrdinaryReload,
   );
   await page.evaluate(async () => await window.__phase5RetiredCanvasLost);
@@ -1138,6 +1147,7 @@ try {
     await page.evaluate(() => window.__phase5ModelProbe?.renderer.getContext().isContextLost()),
     false,
   );
+  await waitForStableModelFrames(page);
   const initialRendererMemory = await page.evaluate(() => ({
     geometries: window.__phase5ModelProbe?.renderer.info.memory.geometries ?? -1,
     textures: window.__phase5ModelProbe?.renderer.info.memory.textures ?? -1,
@@ -1156,12 +1166,13 @@ try {
         document
           .querySelector('[data-testid="model-status-static"]')
           ?.getAttribute('data-status') === 'ready' &&
-        document
-          .querySelector('[data-testid="model-status-rigged"]')
-          ?.getAttribute('data-status') === 'ready',
+        document.querySelector('[data-testid="model-status-traveler"]')?.dataset.status ===
+          'ready' &&
+        document.querySelector('[data-testid="model-status-guardian"]')?.dataset.status === 'ready',
       previousSceneId,
     );
   }
+  await waitForStableModelFrames(page);
   await page.waitForFunction(
     (baseline) =>
       (window.__phase5ModelProbe?.renderer.info.memory.geometries ?? 0) >= baseline.geometries &&

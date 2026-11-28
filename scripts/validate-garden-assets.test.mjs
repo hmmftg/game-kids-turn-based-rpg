@@ -83,31 +83,19 @@ test('asset manifest and map budgets reject altered hashes and over-budget recor
   }
 });
 
-test('map instance budgets must match the declared runtime model bindings', async () => {
+test('map instance budgets must match actual Garden scene placements', async () => {
   const { gameRoot, temporaryRoot } = await copyGardenAssetInputs();
   try {
     const policyPath = path.join(gameRoot, 'assets/model-budget-policy.json');
     const policy = JSON.parse(await readFile(policyPath, 'utf8'));
-    policy.bindings = {
-      'garden-hero': {
-        assetId: 'phase5-animated-guardian',
-        mapIds: ['village', 'garden'],
-      },
-      'garden-guardian': {
-        assetId: 'phase5-animated-guardian',
-        mapIds: ['garden'],
-      },
-      'garden-lantern-base': {
-        assetId: 'phase5-textured-static',
-        mapIds: ['garden'],
-      },
-    };
     policy.maps.village.modelInstances['phase5-animated-guardian'] = 2;
     await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
 
     assert.ok(
       (await validateGardenAssets({ gameRoot })).some((message) =>
-        message.includes('Map village: modelInstances do not match the declared model bindings.'),
+        message.includes(
+          'Map village: modelInstances do not match actual Garden scene placements.',
+        ),
       ),
     );
   } finally {
@@ -129,9 +117,7 @@ test('runtime asset policy rejects zero limits and bindings to unknown assets or
     await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
 
     const errors = await validateGardenAssets({ gameRoot });
-    assert.ok(
-      errors.some((message) => message.includes('runtime model limits must be positive integers.')),
-    );
+    assert.ok(errors.some((message) => message.includes('maxLoadedAssets')));
     assert.ok(
       errors.some((message) =>
         message.includes('phase5-animated-guardian: maxFileBytes must be a positive integer.'),
@@ -152,6 +138,40 @@ test('runtime asset policy rejects zero limits and bindings to unknown assets or
         message.includes('Model binding garden-hero references unknown map missing-map.'),
       ),
     );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('release validation shares runtime policy safety rules', async () => {
+  const { gameRoot, temporaryRoot } = await copyGardenAssetInputs();
+  try {
+    const policyPath = path.join(gameRoot, 'assets/model-budget-policy.json');
+    const originalPolicy = JSON.parse(await readFile(policyPath, 'utf8'));
+    const invalidPolicies = [
+      ['zero limit', { maxLoadedAssets: 0 }, /maxLoadedAssets.*positive integer/i],
+      ['negative limit', { maxLoadedAssets: -1 }, /maxLoadedAssets.*positive integer/i],
+      ['fractional limit', { maxLoadedAssets: 1.5 }, /maxLoadedAssets.*positive integer/i],
+      ['excessive limit', { maxLoadedAssets: 65 }, /maxLoadedAssets.*64/],
+      ['malformed limit type', { maxLoadedAssets: '4' }, /maxLoadedAssets.*positive integer/i],
+      ['malformed allowance type', { allowUnapproved: 'false' }, /allowUnapproved.*boolean/i],
+      [
+        'per-asset limit above scene limit',
+        { maxTrianglesPerAsset: 12_000, maxSceneTriangles: 10_000 },
+        /per-asset triangle policy cannot exceed/i,
+      ],
+    ];
+
+    for (const [label, runtimeOverrides, expectedError] of invalidPolicies) {
+      const policy = structuredClone(originalPolicy);
+      Object.assign(policy.runtimePolicy, runtimeOverrides);
+      await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+      const errors = await validateGardenAssets({ gameRoot });
+      assert.ok(
+        errors.some((message) => expectedError.test(message)),
+        `${label}: ${errors}`,
+      );
+    }
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }

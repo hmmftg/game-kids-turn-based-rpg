@@ -19,6 +19,7 @@ import {
   gardenModelInstanceIdForTarget,
   gardenPlayerModelInstanceId,
 } from '../models/asset-records.js';
+import { GARDEN_MODEL_TARGET_KIND } from '../models/model-binding-validation.js';
 import { GardenEndingCinematic } from '../presentation/GardenEndingCinematic.js';
 import type { GardenEndingId } from '../presentation/ending-cinematic.js';
 import { sceneForMap } from './registry.js';
@@ -622,7 +623,7 @@ function TargetModel({
     return (
       <MeshyModelVisual modelKey="guardian">
         <GardenModelVisual
-          instanceId={gardenModelInstanceIdForTarget('guardian')}
+          instanceId={gardenModelInstanceIdForTarget(GARDEN_MODEL_TARGET_KIND.guardian)}
           mapId={mapId}
           action={guardianAction}
           modelPosition={[0, 0.7, 0]}
@@ -782,7 +783,10 @@ function LanternModel({ lit, mapId }: { readonly lit: boolean; readonly mapId: G
   return (
     <group>
       <group position={[0, 0.12, 0]} scale={[1.25, 0.18, 1.25]}>
-        <GardenModelVisual instanceId={gardenModelInstanceIdForTarget('lantern')} mapId={mapId}>
+        <GardenModelVisual
+          instanceId={gardenModelInstanceIdForTarget(GARDEN_MODEL_TARGET_KIND.lantern)}
+          mapId={mapId}
+        >
           <mesh position={[0, 0.5, 0]}>
             <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial color="#967d59" />

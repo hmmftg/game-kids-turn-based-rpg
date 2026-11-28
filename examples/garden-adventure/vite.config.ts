@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const gardenRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(gardenRoot, '../..');
+const persianFontRoot = resolve(repositoryRoot, 'node_modules/vazirmatn');
 const frameworkPackageRoots = ['core', 'narrative', 'gameplay', 'three'].map((name) =>
   resolve(repositoryRoot, 'packages', name, 'dist'),
 );
@@ -26,7 +27,7 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 4180,
-    fs: { strict: true, allow: [gardenRoot, ...frameworkPackageRoots] },
+    fs: { strict: true, allow: [gardenRoot, persianFontRoot, ...frameworkPackageRoots] },
   },
   preview: { host: '127.0.0.1', port: 4180 },
 });

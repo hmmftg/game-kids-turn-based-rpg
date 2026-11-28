@@ -51,6 +51,7 @@ export function CinematicStage({
   const originalCamera = useRef<CameraPose | null>(null);
   const cameraTrack = useRef<CameraTrack | null>(null);
   const previousExecution = useRef(0);
+  const releasedExecution = useRef(0);
   const previousStatus = useRef<TimelineStatus>('idle');
   const activeEffects = useRef(new Map<string, number>());
   const leaseOwned = useRef(false);
@@ -172,7 +173,10 @@ export function CinematicStage({
     if (after.status !== previousStatus.current) callbacks.current.onStatus(after.status);
     const ended =
       after.status === 'completed' || after.status === 'cancelled' || after.status === 'disposed';
-    if (ended && previousStatus.current !== after.status) releasePresentation();
+    if (ended && releasedExecution.current !== after.executionId) {
+      releasePresentation();
+      releasedExecution.current = after.executionId;
+    }
     previousStatus.current = after.status;
     const probe = sceneProbe();
     if (probe) probe.cameraPosition = camera.position.toArray();

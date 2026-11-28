@@ -22,6 +22,12 @@ lease.release();
 loader.dispose();
 ```
 
+`resolveModelRuntimePolicy(policy, { mode: 'production' })` validates a complete
+game-owned release policy with the same positive-integer limits and hard safety
+ceilings enforced by the loader. It also requires an explicit `false` value for
+`allowUnapproved`. Development tools such as a private local asset pilot can
+use the default `runtime` mode for partial trusted overrides.
+
 Three.js is a peer dependency so applications keep one renderer runtime. The
 loader caches verified GLB revisions by asset ID and SHA-256. Each load returns
 an independent transform tree and, for rigged models, an independent skeleton.
