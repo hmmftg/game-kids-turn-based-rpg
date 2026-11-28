@@ -19,6 +19,15 @@ async function interact(page: Page, targetId: string) {
   await target.click();
 }
 
+test('development server serves the Persian variable font', async ({ page }) => {
+  const fontResponse = page.waitForResponse((response) => {
+    const pathname = decodeURIComponent(new URL(response.url()).pathname);
+    return pathname.endsWith('/Vazirmatn[wght].woff2');
+  });
+  await page.goto('/');
+  expect((await fontResponse).status()).toBe(200);
+});
+
 function capturePageErrors(page: Page) {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
