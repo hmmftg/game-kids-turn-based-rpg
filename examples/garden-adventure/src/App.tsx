@@ -251,7 +251,6 @@ export function App() {
     cinematicRequestRef.current = null;
     setCinematicRequest(null);
     setCinematicActions({});
-    setCinematicDialogueId(null);
   }, []);
 
   useEffect(() => {
